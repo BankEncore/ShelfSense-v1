@@ -35,31 +35,35 @@ The frontend dependency strategy is not yet settled. Importmap, Turbo, and Stimu
 
 ## Quick start
 
-Install Ruby 3.4.9, PostgreSQL, Bundler, and the native packages required by the `pg` and `image_processing` gems. Create a PostgreSQL role matching the credentials below, then run:
+Local development is Docker-only. Install Docker Desktop and VS Code; Ruby, Rails, Bundler, PostgreSQL, gems, and command-line utilities run inside containers.
 
 ```sh
-export DATABASE_HOST=localhost
-export DATABASE_PORT=5432
-export DATABASE_USERNAME=postgres
-export DATABASE_PASSWORD=postgres
-
-bin/setup --skip-server
-bin/dev
+docker compose build
+docker compose run --rm web bin/setup --skip-server
+docker compose up
 ```
 
 Open <http://localhost:3000>. The Rails health endpoint is available at <http://localhost:3000/up>.
 
-The database defaults are intended for local development only. Use environment-specific credentials and secret management for production. See the [development guide](docs/development.md) for setup, database, console, migration, testing, and troubleshooting details.
+Use the project helper for application commands. It executes in the running `web` container when available and otherwise starts a temporary container:
+
+```sh
+./dev/rails-docker bin/rails console
+./dev/rails-docker bin/rails db:migrate
+./dev/rails-docker bin/rails test
+```
+
+See the [development guide](docs/development.md) for the complete Docker workflow, database behavior, validation commands, volume management, and troubleshooting.
 
 ## Validation
 
 Run the same categories of checks enforced by CI:
 
 ```sh
-bin/rails test
-bin/rubocop
-bin/brakeman --no-pager
-bin/bundler-audit
+./dev/rails-docker bin/rails test
+./dev/rails-docker bin/rubocop
+./dev/rails-docker bin/brakeman --no-pager
+./dev/rails-docker bin/bundler-audit
 ```
 
 CI prepares its PostgreSQL test database before running the Rails suite. See [Testing and CI](docs/testing.md) for the active checks and the conditions for restoring system tests and JavaScript dependency auditing.
