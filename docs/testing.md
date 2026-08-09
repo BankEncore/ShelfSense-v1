@@ -34,7 +34,7 @@ Restore a separate system-test job when ShelfSense has user workflows that requi
 1. Add `test/application_system_test_case.rb`.
 2. Add at least one test under `test/system/`.
 3. Select and configure a supported browser driver, such as Selenium with headless Chrome.
-4. Confirm the tests pass locally with `bin/rails test:system`.
+4. Confirm the tests pass locally with `./dev/rails-docker bin/rails test:system`.
 5. Ensure the CI runner installs any browser or operating-system packages required by the driver.
 
 The restored CI command can then be:
@@ -68,7 +68,7 @@ If ShelfSense adopts Importmap:
 1. Install and configure `importmap-rails`.
 2. Confirm `bin/importmap` and `config/importmap.rb` are committed.
 3. Add the application's JavaScript pins.
-4. Verify `bin/importmap audit` locally.
+4. Verify `./dev/rails-docker bin/importmap audit` locally.
 5. Restore a CI job that runs `bin/importmap audit`.
 
 If ShelfSense instead adopts npm, Yarn, pnpm, Bun, or another package manager, do not restore the importmap command. Add the audit command appropriate to the chosen package manager and ensure CI installs dependencies from the committed lockfile.
