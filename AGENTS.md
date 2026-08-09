@@ -87,7 +87,7 @@ Apply this rule:
 
 Do not add generic edit or delete behavior to completed transactions, tenders, cash movements, inventory ledger entries, posted financial records, receipts, audit events, or immutable event payloads.
 
-Use explicit lifecycle fields and operationsâ€”active/inactive, revoked, expired, discontinued, cancelled, supersededâ€”rather than applying `deleted_at` indiscriminately. Hard deletion is limited to unreferenced mistakes, disposable drafts, technical data, or authorized privacy cleanup.
+Use explicit lifecycle fields and operations—active/inactive, revoked, expired, discontinued, cancelled, supersededâ€”rather than applying `deleted_at` indiscriminately. Hard deletion is limited to unreferenced mistakes, disposable drafts, technical data, or authorized privacy cleanup.
 
 Keep mutable delivery, acknowledgment, retry, and reconciliation state separate from immutable business content when it has a real lifecycle.
 
@@ -129,6 +129,9 @@ Business changes and outbox messages commit in the same database transaction. De
 
 ## 10. Database and migration rules
 
+- PostgreSQL is authoritative. Do not introduce SQLite-specific behavior or assumptions.
+- Do not edit `db/schema.rb` directly; change the schema through migrations and commit the regenerated schema.
+- Use the project's UUIDv7 policy for new durable business entities. If framework support is not yet established, document and settle the implementation before creating affected tables.
 - Prefer explicit foreign keys and database constraints for durable invariants.
 - Use polymorphic references only when the open-ended relationship is intentional, such as audit subjects.
 - Name constraints and indexes consistently when the framework permits it.
@@ -164,7 +167,21 @@ At minimum, cover as applicable:
 
 Use deterministic clocks, identifiers, and test data when supported. Do not weaken production constraints merely to simplify fixtures.
 
-Run the smallest relevant test set during development and the full project validation required by CI before handoff. Once the implementation stack is selected, record exact format, lint, test, migration, and build commands in this file.
+Run the smallest relevant test set during development and the full project validation required by CI before handoff.
+
+Use these repository commands:
+
+```sh
+bin/rails test
+bin/rubocop
+bin/brakeman --no-pager
+bin/bundler-audit
+bin/rails db:prepare
+```
+
+Use `bin/setup --skip-server` to install dependencies and prepare a development database, and `bin/dev` to run the application. If a task uses an external execution environment, run the same `bin/` commands inside that environment rather than inventing different validation paths.
+
+System tests and JavaScript dependency auditing are intentionally deferred. Do not add either CI check until the prerequisites in `docs/testing.md` are satisfied.
 
 ## 12. Security and privacy
 
@@ -187,7 +204,9 @@ Create an ADR when a decision is cross-cutting, difficult to reverse, affects of
 
 An ADR should include status, context, decision, and consequences. Mark unresolved choices `Proposed`; do not describe them as accepted elsewhere.
 
-Keep README setup instructions executable and current after the technology scaffold is selected. Remove placeholders only when working commands replace them.
+Keep README setup instructions executable and current. Development procedures belong in `docs/development.md`; CI coverage and deferred checks belong in `docs/testing.md`.
+
+Use Rails-native patterns unless an accepted ADR or an established project pattern requires otherwise. The frontend dependency strategy is not yet settled: do not assume the presence of `importmap-rails`, Turbo, or Stimulus in the Gemfile means those tools have been installed or adopted.
 
 ## 14. Change discipline
 
@@ -196,7 +215,7 @@ Keep README setup instructions executable and current after the technology scaff
 - Do not perform broad refactors while implementing a narrow feature without explicit agreement.
 - Prefer clear domain services or commands over callbacks that hide consequential behavior.
 - Avoid speculative abstractions and infrastructure not required by an accepted decision or current phase.
-- Include validation, authorization, audit, tests, and documentation as part of the featureâ€”not as optional cleanup.
+- Include validation, authorization, audit, tests, and documentation as part of the feature—not as optional cleanup.
 - Explain assumptions and unresolved policy in the handoff.
 - Do not claim a command or test passed unless it was run successfully.
 
