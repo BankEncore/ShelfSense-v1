@@ -2,13 +2,13 @@
 
 ShelfSense is an inventory, purchasing, customer-service, and point-of-sale system for independent bookstores. It is designed for one organization operating one or more stores, with a central organization server and store workstations that can continue ordinary checkout during temporary connectivity loss.
 
-The project is currently in the planning and foundation stage. Phase 0 established the governing architecture decisions. Phase 1 will deliver the minimum operable foundation needed to initialize and administer a store, authenticate users, authorize store access, configure workstations, and record audit events.
+The project is in the planning and foundation stage. Phase 0 established the governing architecture decisions. A Ruby on Rails application foundation is now in place; Phase 1 business implementation has not yet begun. Phase 1 will deliver the minimum operable foundation needed to initialize and administer a store, authenticate users, authorize store access, configure workstations, and record audit events.
 
 ## Goals
 
 ShelfSense is intended to provide a coherent operational system for:
 
-- Books, music, video, games, periodicals, sidelines, cafÃ© items, services, and other bookstore merchandise
+- Books, music, video, games, periodicals, sidelines, café items, services, and other bookstore merchandise
 - New, used, remainder, promotional, and consignment inventory
 - Purchasing, receiving, supplier returns, customer orders, and reservations
 - Fast, keyboard-friendly point of sale with offline continuity
@@ -17,6 +17,52 @@ ShelfSense is intended to provide a coherent operational system for:
 - Exact financial calculations and reconstructable operational history
 
 ShelfSense is a single-tenant application: each installation serves one organization, while retaining explicit store scope wherever operationally meaningful.
+
+## Technology foundation
+
+The accepted application scaffold currently uses:
+
+- Ruby 3.4.9
+- Rails 8.1
+- PostgreSQL
+- Puma
+- Propshaft
+- Rails' database-backed Solid Cache, Solid Queue, and Solid Cable adapters
+- Minitest, RuboCop, Brakeman, and Bundler Audit
+- GitHub Actions for continuous integration
+
+The frontend dependency strategy is not yet settled. Importmap, Turbo, and Stimulus gems are present in the scaffold, but Importmap has not been installed or configured. Browser-based system testing is also intentionally deferred. See [Testing and CI](docs/testing.md).
+
+## Quick start
+
+Install Ruby 3.4.9, PostgreSQL, Bundler, and the native packages required by the `pg` and `image_processing` gems. Create a PostgreSQL role matching the credentials below, then run:
+
+```sh
+export DATABASE_HOST=localhost
+export DATABASE_PORT=5432
+export DATABASE_USERNAME=postgres
+export DATABASE_PASSWORD=postgres
+
+bin/setup --skip-server
+bin/dev
+```
+
+Open <http://localhost:3000>. The Rails health endpoint is available at <http://localhost:3000/up>.
+
+The database defaults are intended for local development only. Use environment-specific credentials and secret management for production. See the [development guide](docs/development.md) for setup, database, console, migration, testing, and troubleshooting details.
+
+## Validation
+
+Run the same categories of checks enforced by CI:
+
+```sh
+bin/rails test
+bin/rubocop
+bin/brakeman --no-pager
+bin/bundler-audit
+```
+
+CI prepares its PostgreSQL test database before running the Rails suite. See [Testing and CI](docs/testing.md) for the active checks and the conditions for restoring system tests and JavaScript dependency auditing.
 
 ## Architecture at a glance
 
@@ -30,7 +76,7 @@ ShelfSense uses a central-server/store-workstation topology:
 - Human-facing document numbers are separate from technical identifiers.
 - Transactional outboxes and idempotent consumers provide at-least-once delivery across asynchronous boundaries.
 
-Detailed architectural policy is recorded in [`shelfsense-adrs/`](shelfsense-adrs/README.md). Accepted ADRs govern implementation. Proposed ADRs identify unresolved policy and must not be treated as settled.
+Detailed architectural policy is recorded in the [Architecture Decision Records](docs/adr/README.md). Accepted ADRs govern implementation. Proposed ADRs identify unresolved policy and must not be treated as settled.
 
 ## Domain map
 
@@ -48,7 +94,7 @@ Detailed architectural policy is recorded in [`shelfsense-adrs/`](shelfsense-adr
 
 ## Roadmap
 
-### Phase 0 Architecture and planning
+### Phase 0: Architecture and planning
 
 Status: complete.
 
@@ -59,7 +105,9 @@ Two policies remain proposed and require later business decisions:
 - Offline returns
 - Business-day closure when a workstation has not reported
 
-### Phase 1 Operable foundation
+### Phase 1: Operable foundation
+
+Status: scaffold established; business implementation not yet begun.
 
 Phase 1 implements only what is required to initialize, operate, and administer the application foundation:
 
@@ -110,18 +158,17 @@ Initial roles are expected to include `system_administrator`, `store_manager`, a
 - Effective configuration is superseded; completed facts are reversed or compensated, not edited.
 - Lifecycle-specific states such as inactive, revoked, expired, discontinued, or cancelled are preferred to generic soft deletion.
 
-## Project status and setup
-
-The implementation language, frameworks, build commands, and deployment tooling have not yet been formally selected for this project. Add reproducible setup, migration, test, and run instructions here as soon as the initial scaffold is accepted. Until then, architecture and schema work should remain technology-neutral and should not imply that an exploratory stack choice is settled.
-
 ## Documentation
 
-- [`shelfsense-adrs/README.md`](shelfsense-adrs/README.md) Architecture Decision Record index
-- [`AGENTS.md`](AGENTS.md) Rules for contributors and coding agents
-- `docs/` Domain models, workflows, schema reference, glossary, security guidance, and roadmap documentation as they are added
+Start with the [documentation index](docs/README.md). Key references include:
+
+- [Architecture Decision Records](docs/adr/README.md)
+- [Development guide](docs/development.md)
+- [Testing and CI](docs/testing.md)
+- [Contributor and coding-agent rules](AGENTS.md)
 
 When implementation reveals a conflict with an accepted ADR, propose a new ADR that supersedes the old decision. Do not silently diverge in code.
 
 ## Contributing
 
-Keep changes narrowly scoped, preserve established domain language, and update tests and documentation with behavior changes. Read [`AGENTS.md`](AGENTS.md) before modifying the project.
+Keep changes narrowly scoped, preserve established domain language, and update tests and documentation with behavior changes. Read [AGENTS.md](AGENTS.md) before modifying the project.
