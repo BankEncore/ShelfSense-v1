@@ -87,7 +87,7 @@ Apply this rule:
 
 Do not add generic edit or delete behavior to completed transactions, tenders, cash movements, inventory ledger entries, posted financial records, receipts, audit events, or immutable event payloads.
 
-Use explicit lifecycle fields and operations—active/inactive, revoked, expired, discontinued, cancelled, supersededâ€”rather than applying `deleted_at` indiscriminately. Hard deletion is limited to unreferenced mistakes, disposable drafts, technical data, or authorized privacy cleanup.
+Use explicit lifecycle fields and operations—active/inactive, revoked, expired, discontinued, cancelled, superseded—rather than applying `deleted_at` indiscriminately. Hard deletion is limited to unreferenced mistakes, disposable drafts, technical data, or authorized privacy cleanup.
 
 Keep mutable delivery, acknowledgment, retry, and reconciliation state separate from immutable business content when it has a real lifecycle.
 
