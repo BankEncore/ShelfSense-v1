@@ -48,7 +48,7 @@ Detailed architectural policy is recorded in [`shelfsense-adrs/`](shelfsense-adr
 
 ## Roadmap
 
-### Phase 0 â€” Architecture and planning
+### Phase 0 Architecture and planning
 
 Status: complete.
 
@@ -59,7 +59,7 @@ Two policies remain proposed and require later business decisions:
 - Offline returns
 - Business-day closure when a workstation has not reported
 
-### Phase 1 â€” Operable foundation
+### Phase 1 Operable foundation
 
 Phase 1 implements only what is required to initialize, operate, and administer the application foundation:
 
@@ -116,9 +116,9 @@ The implementation language, frameworks, build commands, and deployment tooling 
 
 ## Documentation
 
-- [`shelfsense-adrs/README.md`](shelfsense-adrs/README.md) â€” Architecture Decision Record index
-- [`AGENTS.md`](AGENTS.md) â€” Rules for contributors and coding agents
-- `docs/` â€” Domain models, workflows, schema reference, glossary, security guidance, and roadmap documentation as they are added
+- [`shelfsense-adrs/README.md`](shelfsense-adrs/README.md) Architecture Decision Record index
+- [`AGENTS.md`](AGENTS.md) Rules for contributors and coding agents
+- `docs/` Domain models, workflows, schema reference, glossary, security guidance, and roadmap documentation as they are added
 
 When implementation reveals a conflict with an accepted ADR, propose a new ADR that supersedes the old decision. Do not silently diverge in code.
 
