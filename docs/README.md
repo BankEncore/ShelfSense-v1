@@ -7,7 +7,7 @@ This directory contains the project’s technical authority, development guidanc
 | Document | Purpose |
 |---|---|
 | [Architecture Decision Records](adr/README.md) | Accepted and proposed cross-cutting architecture decisions |
-| [Development guide](development.md) | Local setup, PostgreSQL configuration, application commands, and troubleshooting |
+| [Development guide](development.md) | Docker-only local setup, PostgreSQL configuration, application commands, and troubleshooting |
 | [Testing and CI](testing.md) | Active GitHub Actions checks and prerequisites for deferred checks |
 | [Project README](../README.md) | Project purpose, status, roadmap, architecture summary, and quick start |
 | [Contributor rules](../AGENTS.md) | Required practices for human contributors and coding agents |
