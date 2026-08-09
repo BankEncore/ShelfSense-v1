@@ -1,139 +1,184 @@
 # Development guide
 
-This guide describes the development workflow supported by the current ShelfSense repository. The project does not currently include Docker Compose or a development-container definition, so the documented setup runs Ruby and Rails directly on the development machine.
+ShelfSense uses a Docker-only local development workflow. Ruby, Rails, Bundler, PostgreSQL, gems, and project utilities run in containers; they do not need to be installed on the host.
 
-## Prerequisites
+## Supported host environment
 
-Install:
+The current development setup targets:
 
-- Ruby 3.4.9
-- Bundler
-- PostgreSQL
-- PostgreSQL client libraries and development headers required by the `pg` gem
-- libvips for image processing
+- Mac with Apple Silicon
+- Docker Desktop for Mac
+- VS Code on the host
+- Git
 
-Confirm Ruby and PostgreSQL are available:
+The images are multi-platform. Do not force `platform: linux/amd64` on Apple Silicon, because doing so replaces native ARM execution with slower emulation.
 
-```sh
-ruby --version
-bundle --version
-psql --version
-```
+## Development services
 
-## Database configuration
+Docker Compose defines two services:
 
-Development defaults to these local values:
-
-| Variable | Default |
+| Service | Purpose |
 |---|---|
-| `DATABASE_HOST` | `localhost` |
-| `DATABASE_PORT` | `5432` |
-| `DATABASE_USERNAME` | `postgres` |
-| `DATABASE_PASSWORD` | `postgres` |
-| `DATABASE_NAME` | `shelfsense_development` |
-| `TEST_DATABASE_NAME` | `shelfsense_test` |
-| `RAILS_MAX_THREADS` | `5` |
+| `web` | Ruby 3.4, Rails, gems, and application commands |
+| `db` | PostgreSQL 17 |
 
-The defaults are conveniences for a local PostgreSQL installation only. Override them when your local role, password, host, port, or database names differ:
+Named volumes persist:
 
-```sh
-export DATABASE_HOST=localhost
-export DATABASE_PORT=5432
-export DATABASE_USERNAME=postgres
-export DATABASE_PASSWORD=postgres
-```
+| Volume | Purpose |
+|---|---|
+| `bundle` | Installed Ruby gems |
+| `postgres-data` | PostgreSQL data |
 
-Do not commit local or production credentials. ShelfSense does not currently provide an `.env` loader or an `.env.example`; configure variables through your shell, development environment, or secret manager.
-
-The configured PostgreSQL role must be able to connect and, for automatic setup, create the development and test databases.
+The source repository is bind-mounted at `/app`, so edits made in VS Code are immediately visible to Rails.
 
 ## Initial setup
 
 From the repository root:
 
 ```sh
-bin/setup --skip-server
-```
-
-This command:
-
-1. Installs missing gems with Bundler.
-2. prepares the development database;
-3. clears old logs and temporary files.
-
-To prepare the application and immediately start the server, run `bin/setup` without `--skip-server`.
-
-## Run the application
-
-```sh
-bin/dev
+docker compose build
+docker compose run --rm web bin/setup --skip-server
+docker compose up
 ```
 
 Open <http://localhost:3000>. Verify application health at <http://localhost:3000/up>.
 
-Stop the server with Ctrl+C.
+Use `docker compose up -d` to run in the background and `docker compose down` to stop the services without deleting their data volumes.
 
-## Rails console and database tasks
+## Run application commands
+
+Use the project-local helper:
 
 ```sh
-bin/rails console
-bin/rails db:prepare
-bin/rails db:migrate
-bin/rails db:rollback
+./dev/rails-docker COMMAND [ARGUMENTS...]
 ```
 
-Use `bin/rails db:reset` only when it is safe to discard and rebuild your local development data. The setup script also supports `bin/setup --reset`.
+If the `web` service is running, the helper executes the command in that container. Otherwise, it starts a temporary `web` container and removes it afterward.
 
-Create schema changes through Rails migrations. Do not edit `db/schema.rb` directly.
+Examples:
+
+```sh
+./dev/rails-docker ruby --version
+./dev/rails-docker bundle install
+./dev/rails-docker bin/rails console
+./dev/rails-docker bin/rails routes
+./dev/rails-docker bin/rails db:prepare
+./dev/rails-docker bin/rails db:migrate
+./dev/rails-docker bin/rails db:rollback
+```
+
+Prefer committed `bin/` executables, such as `bin/rails` and `bin/rubocop`, when they exist.
+
+## Database configuration
+
+Docker Compose supplies these development values:
+
+| Variable | Value |
+|---|---|
+| `DATABASE_HOST` | `db` |
+| `DATABASE_PORT` | `5432` |
+| `DATABASE_USERNAME` | `postgres` |
+| `DATABASE_PASSWORD` | `postgres` |
+| `DATABASE_NAME` | `shelfsense_development` |
+| `TEST_DATABASE_NAME` | `shelfsense_test` |
+
+The `db` hostname is the Compose service name and is reachable from the `web` container. From the Mac host, the published PostgreSQL port is `localhost:5432`, but host-side Ruby and Rails commands are not part of the supported workflow.
+
+The PostgreSQL image applies `POSTGRES_USER`, `POSTGRES_PASSWORD`, and `POSTGRES_DB` only when initializing an empty data volume. Changing those values in `compose.yml` does not rewrite an existing database volume.
+
+Do not commit production credentials. Production values must come from the deployment environment. The ERB in `config/database.yml` must not use strict `ENV.fetch` calls without defaults for production-only variables, because Rails evaluates the entire file before selecting an environment; strict production lookups would also break development and CI startup.
 
 ## Tests and validation
 
 Run the Rails test suite:
 
 ```sh
-bin/rails test
+./dev/rails-docker bin/rails test
 ```
 
-Run the other checks used by CI:
+Run the other checks enforced by CI:
 
 ```sh
-bin/rubocop
-bin/brakeman --no-pager
-bin/bundler-audit
+./dev/rails-docker bin/rubocop
+./dev/rails-docker bin/brakeman --no-pager
+./dev/rails-docker bin/bundler-audit
 ```
 
-GitHub Actions supplies a PostgreSQL `DATABASE_URL` and prepares the test database before running tests. See [Testing and CI](testing.md) for the active workflow and intentionally deferred checks.
+GitHub Actions uses its own Ruby runner and PostgreSQL service, then invokes the same committed `bin/` commands directly. See [Testing and CI](testing.md) for active and deferred checks.
 
-## Production database configuration
+## Rebuild and dependency changes
 
-Production must supply its database connection values through the deployment environment:
+Rebuild the image after changing `Dockerfile.dev`, system packages, Ruby, or build arguments:
 
-- `DATABASE_NAME`
-- `DATABASE_USERNAME`
-- `DATABASE_PASSWORD`
-- `DATABASE_HOST`
-- optionally `DATABASE_PORT` and `RAILS_MAX_THREADS`
+```sh
+docker compose build
+```
 
-Do not use the local defaults in production. Missing production values should fail deployment or connection rather than silently selecting a development database.
+After changing the Gemfile or lockfile, either rebuild or install into the named gem volume:
+
+```sh
+./dev/rails-docker bundle install
+```
+
+Commit `Gemfile.lock` whenever dependency resolution changes.
+
+## Reset local data
+
+Ordinary shutdown preserves data:
+
+```sh
+docker compose down
+```
+
+To rebuild the development database through Rails while retaining the PostgreSQL volume:
+
+```sh
+./dev/rails-docker bin/rails db:reset
+```
+
+Deleting volumes permanently removes local PostgreSQL data and the cached gem volume. Use this only when that loss is intended:
+
+```sh
+docker compose down --volumes
+```
+
+After deleting volumes, rebuild and rerun the initial setup commands.
 
 ## Troubleshooting
 
-### Rails cannot connect to host `localhost`
+### Rails cannot connect to PostgreSQL
 
-Confirm PostgreSQL is running and listening on the configured port. If Rails runs inside a container or remote environment, `localhost` refers to that environment; set `DATABASE_HOST` to the reachable PostgreSQL hostname.
+Confirm both services exist and inspect their status:
 
-### PostgreSQL authentication fails
+```sh
+docker compose ps
+docker compose logs db
+```
 
-Confirm `DATABASE_USERNAME`, `DATABASE_PASSWORD`, and the server's authentication rules agree. Test the same connection with `psql`.
+Inside the `web` container, `DATABASE_HOST` must be `db`, not `localhost`.
 
-### Rails cannot create the database
+### PostgreSQL settings changed but nothing happened
 
-Create `shelfsense_development` and `shelfsense_test` manually, or grant the configured local role permission to create databases.
+The existing `postgres-data` volume retains the database initialized under the old settings. Either migrate or update that database deliberately, or delete the volume if the local data is disposable.
 
-### Native gem installation fails
+### Gems are missing after a Gemfile change
 
-Install the PostgreSQL client development package for your operating system before installing the `pg` gem. Install libvips before using image-processing features.
+Run:
+
+```sh
+./dev/rails-docker bundle install
+```
+
+Rebuild the image when native packages or image-level dependencies changed.
+
+### A stale server PID prevents startup
+
+The Compose command removes `tmp/pids/server.pid` before starting Rails. If startup still fails, stop the services with `docker compose down`, inspect `tmp/pids`, and restart.
+
+### File ownership is unexpected
+
+The development image creates a non-root `rails` user with configurable `APP_UID` and `APP_GID`, both defaulting to 1000. If host permissions require different IDs, supply matching build arguments and rebuild the image.
 
 ### CI and local behavior differ
 
-Use Ruby 3.4.9, run `bin/rails db:prepare`, and verify that the same database-related environment variables are present. CI details are recorded in [Testing and CI](testing.md).
+Confirm the committed Ruby version, Gemfile lockfile, and database schema are current. Local commands run in Docker, while CI provisions Ruby and PostgreSQL on the GitHub runner; both should use the repository's committed executables and configuration.
