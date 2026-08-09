@@ -169,17 +169,19 @@ Use deterministic clocks, identifiers, and test data when supported. Do not weak
 
 Run the smallest relevant test set during development and the full project validation required by CI before handoff.
 
-Use these repository commands:
+Local development is Docker-only. Do not require contributors to install Ruby, Rails, Bundler, or PostgreSQL on the host. Use the project helper for application commands:
 
 ```sh
-bin/rails test
-bin/rubocop
-bin/brakeman --no-pager
-bin/bundler-audit
-bin/rails db:prepare
+./dev/rails-docker bin/rails test
+./dev/rails-docker bin/rubocop
+./dev/rails-docker bin/brakeman --no-pager
+./dev/rails-docker bin/bundler-audit
+./dev/rails-docker bin/rails db:prepare
 ```
 
-Use `bin/setup --skip-server` to install dependencies and prepare a development database, and `bin/dev` to run the application. If a task uses an external execution environment, run the same `bin/` commands inside that environment rather than inventing different validation paths.
+Build and initialize the environment with `docker compose build` and `docker compose run --rm web bin/setup --skip-server`. Run the application with `docker compose up`. The helper uses `docker compose exec` when `web` is running and `docker compose run --rm` otherwise.
+
+GitHub Actions is a separate controlled environment and may invoke the same committed `bin/` commands directly after setting up Ruby and PostgreSQL.
 
 System tests and JavaScript dependency auditing are intentionally deferred. Do not add either CI check until the prerequisites in `docs/testing.md` are satisfied.
 
