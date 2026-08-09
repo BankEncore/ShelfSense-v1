@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SERVICE="${RAILS_DOCKER_SERVICE:-web}"
+
+if docker compose ps --status running "$SERVICE" | grep -q "$SERVICE"; then
+  docker compose exec "$SERVICE" "$@"
+else
+  docker compose run --rm "$SERVICE" "$@"
+fi

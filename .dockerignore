@@ -1,0 +1,11 @@
+.git
+.bundle
+log/*
+tmp/*
+node_modules
+coverage
+storage/*
+!storage/.keep
+.byebug_history
+.DS_Store
+.env

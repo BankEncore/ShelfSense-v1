@@ -1,0 +1,39 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    image: shelfsense-web:dev
+    command: bash -lc "rm -f tmp/pids/server.pid && bin/rails server -b 0.0.0.0"
+    volumes:
+      - .:/app
+      - bundle:/bundle
+    ports:
+      - "3000:3000"
+    environment:
+      RAILS_ENV: development
+      DATABASE_HOST: db
+      DATABASE_PORT: 5432
+      DATABASE_USERNAME: postgres
+      DATABASE_PASSWORD: postgres
+      DATABASE_NAME: shelfsense_development
+      TEST_DATABASE_NAME: shelfsense_test
+    depends_on:
+      - db
+    stdin_open: true
+    tty: true
+
+  db:
+    image: postgres:17-bookworm
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: shelfsense_development
+    ports:
+      - "5432:5432"
+
+volumes:
+  bundle:
+  postgres-data:

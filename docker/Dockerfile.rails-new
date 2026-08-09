@@ -1,0 +1,17 @@
+FROM ruby:3.4-bookworm
+
+RUN apt-get update -qq && \
+    apt-get install -y --no-install-recommends \
+      build-essential \
+      git \
+      libpq-dev \
+      pkg-config \
+      curl \
+      ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+RUN gem install rails
+
+CMD ["bash"]
