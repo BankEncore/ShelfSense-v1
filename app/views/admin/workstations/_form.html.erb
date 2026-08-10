@@ -1,0 +1,8 @@
+<%= form_with model: [:admin, workstation] do |form| %>
+  <% if workstation.errors.any? %><ul><% workstation.errors.full_messages.each do |m| %><li><%= m %></li><% end %></ul><% end %>
+  <%= form.hidden_field :lock_version %>
+  <p><%= form.label :code %><%= form.text_field :code %></p>
+  <p><%= form.label :name %><%= form.text_field :name %></p>
+  <p><%= form.label :description %><%= form.text_area :description %></p>
+  <p><%= form.submit %></p>
+<% end %>

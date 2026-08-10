@@ -1,0 +1,15 @@
+<% content_for :title, "Edit settings" %>
+<h1>Edit system settings</h1>
+<%= form_with model: @settings, url: admin_system_settings_path, method: :patch do |form| %>
+  <%= form.hidden_field :lock_version %>
+  <p><%= form.label :organization_name %><%= form.text_field :organization_name %></p>
+  <p><%= form.label :legal_name %><%= form.text_field :legal_name %></p>
+  <p><%= form.label :base_currency_code %><%= form.text_field :base_currency_code %></p>
+  <p><%= form.label :default_timezone %><%= form.text_field :default_timezone %></p>
+  <p><%= form.label :default_country_code %><%= form.text_field :default_country_code %></p>
+  <p><%= form.label :default_region_code %><%= form.text_field :default_region_code %></p>
+  <p><%= form.label :fiscal_year_start_month %><%= form.number_field :fiscal_year_start_month %></p>
+  <p><%= form.label :default_receipt_header %><%= form.text_area :default_receipt_header %></p>
+  <p><%= form.label :default_receipt_footer %><%= form.text_area :default_receipt_footer %></p>
+  <p><%= form.submit "Save" %></p>
+<% end %>

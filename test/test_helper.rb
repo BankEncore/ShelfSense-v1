@@ -7,8 +7,8 @@ module ActiveSupport
     # Run tests in parallel with specified workers
     parallelize(workers: :number_of_processors)
 
-    # Setup all fixtures in test/fixtures/*.yml for all tests in alphabetical order.
-    fixtures :all
+    # Fixtures are opt-in per test case until a stable fixture set exists.
+    # fixtures :all
 
     # Add more helper methods to be used by all tests here...
   end

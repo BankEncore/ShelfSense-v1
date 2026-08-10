@@ -1,0 +1,16 @@
+<% content_for :title, "Home" %>
+
+<section>
+  <h1>ShelfSense</h1>
+  <% if current_user %>
+    <p>Signed in as <%= current_user.display_name %>.</p>
+    <% if current_store %>
+      <p>Current store: <%= current_store.name %> (<%= current_store.code %>).</p>
+    <% elsif accessible_stores.exists? %>
+      <p><%= link_to "Select a store", new_store_selection_path %></p>
+    <% else %>
+      <p>No accessible store is available for your account.</p>
+    <% end %>
+    <p><%= button_to "Sign out", session_path, method: :delete %></p>
+  <% end %>
+</section>

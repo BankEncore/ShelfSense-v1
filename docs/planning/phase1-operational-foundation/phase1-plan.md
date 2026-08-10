@@ -1,5 +1,7 @@
 # Phase 1 \- Operational Foundation
 
+**Authority:** Field-level schema is defined in [phase1-schema.md](phase1-schema.md). Permission catalog, role grants, and evaluation rules are defined in [phase1-authorization.md](phase1-authorization.md). Where this plan’s earlier draft tables conflict (for example historical `user_roles` / `registers` / conceptual `version` wording), prefer the schema, authorization contract, and the settled decisions at the end of this document. Mutable aggregate concurrency uses Rails `lock_version`.
+
 Phase 1 is appropriately scoped, but I would make three structural adjustments before implementation:
 
 1. Treat `user_roles` as scoped role assignments, with an optional `store_id`.  
@@ -44,7 +46,7 @@ The central application should be usable at the end of Phase 1, but the workstat
 | `roles` | Reusable permission bundles |
 | `permissions` | System-defined authorization capabilities |
 | `role_permissions` | Permissions included in each role |
-| `user_roles` | Global or store-scoped role assignments |
+| `role_assignments` | Global or store-scoped role assignments |
 | `workstations` | Durable store-assigned POS workstation identities |
 | `audit_events` | Append-only record of material actions |
 | Authentication/session storage | Credential recovery, sessions, and related authentication state |
@@ -61,7 +63,7 @@ erDiagram
     STORES ||--o{ WORKSTATIONS : contains
 ```
 
-A null `user_roles.store_id` means the assignment is organization-wide. A populated `store_id` means it applies only while operating in that store.
+A null `role_assignments.store_id` means the assignment is organization-wide. A populated `store_id` means it applies only while operating in that store.
 
 This gives us explicit store access without a separate `user_stores` table: a user can access a store only if they have at least one active role assignment applicable to it.
 
@@ -87,7 +89,7 @@ This should be a true singleton representing the organization using this ShelfSe
 | `default_customer_reservation_expiration_days` | smallint | null: false; default 7 |
 | `default_receipt_header` | text |  |
 | `default_receipt_footer` | text |  |
-| `version` | integer | null: false; default 1 |
+| `lock_version` | integer | null: false; default 1 |
 | `created_at` | timestamp | null: false |
 | `updated_at` | timestamp | null: false |
 
@@ -149,7 +151,7 @@ A store is an operational and reporting boundary. Even though Phase 1 initially 
 | `receipt_header` | text | optional override |
 | `receipt_footer` | text | optional override |
 | `active` | boolean | null: false; default true |
-| `version` | integer | null: false; default 1 |
+| `lock_version` | integer | null: false; default 1 |
 | `created_at` | timestamp | null: false |
 | `updated_at` | timestamp | null: false |
 
@@ -192,7 +194,7 @@ A user is a durable actor identity. Shared cashier accounts should not be permit
 | `last_signed_in_at` | timestamp |  |
 | `failed_sign_in_count` | integer | null: false; default 0 |
 | `locked_at` | timestamp |  |
-| `version` | integer | null: false; default 1 |
+| `lock_version` | integer | null: false; default 1 |
 | `created_at` | timestamp | null: false |
 | `updated_at` | timestamp | null: false |
 
@@ -249,7 +251,7 @@ The application must prevent an administrator from removing the final usable glo
 | `description` | text |  |
 | `system_role` | boolean | null: false; default false |
 | `active` | boolean | null: false; default true |
-| `version` | integer | null: false; default 1 |
+| `lock_version` | integer | null: false; default 1 |
 | `created_at` | timestamp | null: false |
 | `updated_at` | timestamp | null: false |
 
@@ -308,7 +310,7 @@ Primary or unique constraint:
 unique(role_id, permission_id)
 ```
 
-Changes to the set should increment `roles.version`.
+Changes to the set should increment `roles.lock_version`.
 
 ---
 
@@ -375,7 +377,7 @@ We previously settled on **Workstation** as the durable configured identity. A f
 | `activated_at` | timestamp | future provisioning support |
 | `revoked_at` | timestamp |  |
 | `last_seen_at` | timestamp | later synchronization use |
-| `version` | integer | null: false; default 1 |
+| `lock_version` | integer | null: false; default 1 |
 | `created_at` | timestamp | null: false |
 | `updated_at` | timestamp | null: false |
 
@@ -636,7 +638,7 @@ Bootstrap credentials should come from an explicit installation workflow or depl
 
 * Audit-event browser  
 * Filters by actor, store, action, subject, outcome, and date  
-* Concurrency checks using `version`  
+* Concurrency checks using `lock_version`  
 * Protected-record invariants  
 * Security and authorization tests
 

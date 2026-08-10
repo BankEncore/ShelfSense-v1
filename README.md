@@ -111,7 +111,9 @@ Two policies remain proposed and require later business decisions:
 
 ### Phase 1: Operable foundation
 
-Status: scaffold established; business implementation not yet begun.
+Status: operable foundation implemented (bootstrap, authentication, authorization, administration, audit).
+
+Phase 1 uses server-rendered Rails HTML. Turbo and Stimulus may be installed when a specific interaction requires them; no client-side application framework or JavaScript package-management strategy is required for early Phase 1 slices. Durable domain identifiers use Rails-generated UUIDv7 (`SecureRandom.uuid_v7`) while the project remains on PostgreSQL 17.
 
 Phase 1 implements only what is required to initialize, operate, and administer the application foundation:
 
@@ -167,8 +169,10 @@ Initial roles are expected to include `system_administrator`, `store_manager`, a
 Start with the [documentation index](docs/README.md). Key references include:
 
 - [Architecture Decision Records](docs/adr/README.md)
+- [Phase 1 plan](docs/planning/phase1-operational-foundation/phase1-plan.md), [schema](docs/planning/phase1-operational-foundation/phase1-schema.md), and [authorization contract](docs/planning/phase1-operational-foundation/phase1-authorization.md)
 - [Development guide](docs/development.md)
 - [Testing and CI](docs/testing.md)
+- [GitHub work management](docs/github-workflow.md)
 - [Contributor and coding-agent rules](AGENTS.md)
 
 When implementation reveals a conflict with an accepted ADR, propose a new ADR that supersedes the old decision. Do not silently diverge in code.

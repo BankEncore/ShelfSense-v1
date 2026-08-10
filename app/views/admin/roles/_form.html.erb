@@ -1,0 +1,18 @@
+<%= form_with model: [:admin, role] do |form| %>
+  <% if role.errors.any? %><ul><% role.errors.full_messages.each do |m| %><li><%= m %></li><% end %></ul><% end %>
+  <%= form.hidden_field :lock_version %>
+  <p><%= form.label :key %><%= form.text_field :key %></p>
+  <p><%= form.label :name %><%= form.text_field :name %></p>
+  <p><%= form.label :description %><%= form.text_area :description %></p>
+  <p><%= form.label :assignment_scope %><%= form.select :assignment_scope, Role::ASSIGNMENT_SCOPES %></p>
+  <fieldset>
+    <legend>Permissions</legend>
+    <% permissions.each do |permission| %>
+      <label>
+        <%= check_box_tag "role[permission_ids][]", permission.id, role.permission_ids.include?(permission.id) %>
+        <%= permission.key %>
+      </label><br>
+    <% end %>
+  </fieldset>
+  <p><%= form.submit %></p>
+<% end %>

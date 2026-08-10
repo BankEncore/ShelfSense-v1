@@ -119,7 +119,7 @@ Never place passwords, password digests, bearer tokens, reset tokens, private ke
 
 ## 9. Design for concurrency, retries, and delivery
 
-Use an integer `version` on mutable aggregate roots. Updates must compare the expected version and increment it atomically. Child changes increment the root version. Do not use `updated_at` as a concurrency token.
+Use Rails optimistic locking via an integer `lock_version` on mutable aggregate roots. Updates must compare the expected `lock_version` and increment it atomically. Child changes increment the root `lock_version`. Do not use `updated_at` as a concurrency token.
 
 Retryable commands require a scoped idempotency key, operation type, source identity, canonical payload hash, status, and stored outcome or response reference. Reusing a key with different input is an error.
 
@@ -131,7 +131,7 @@ Business changes and outbox messages commit in the same database transaction. De
 
 - PostgreSQL is authoritative. Do not introduce SQLite-specific behavior or assumptions.
 - Do not edit `db/schema.rb` directly; change the schema through migrations and commit the regenerated schema.
-- Use the project's UUIDv7 policy for new durable business entities. If framework support is not yet established, document and settle the implementation before creating affected tables.
+- Use the project's UUIDv7 policy for new durable business entities. Domain models assign UUIDv7 through the shared Rails concern (`SecureRandom.uuid_v7` before validation on create). Migrations use `create_uuid_table` / `id: :uuid, default: nil` so PostgreSQL does not install `gen_random_uuid()`.
 - Prefer explicit foreign keys and database constraints for durable invariants.
 - Use polymorphic references only when the open-ended relationship is intentional, such as audit subjects.
 - Name constraints and indexes consistently when the framework permits it.
@@ -206,7 +206,7 @@ Create an ADR when a decision is cross-cutting, difficult to reverse, affects of
 
 An ADR should include status, context, decision, and consequences. Mark unresolved choices `Proposed`; do not describe them as accepted elsewhere.
 
-Keep README setup instructions executable and current. Development procedures belong in `docs/development.md`; CI coverage and deferred checks belong in `docs/testing.md`.
+Keep README setup instructions executable and current. Development procedures belong in `docs/development.md`; CI coverage and deferred checks belong in `docs/testing.md`. Issue, PR, milestone, and release conventions belong in `docs/github-workflow.md`.
 
 Use Rails-native patterns unless an accepted ADR or an established project pattern requires otherwise. The frontend dependency strategy is not yet settled: do not assume the presence of `importmap-rails`, Turbo, or Stimulus in the Gemfile means those tools have been installed or adopted.
 

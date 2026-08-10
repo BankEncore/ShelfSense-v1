@@ -1,0 +1,8 @@
+<% content_for :title, "Stores" %>
+<h1>Stores</h1>
+<% if effective_permissions.include?("stores.create") %><p><%= link_to "New store", new_admin_store_path %></p><% end %>
+<ul>
+  <% @stores.each do |store| %>
+    <li><%= link_to "#{store.name} (#{store.code})", admin_store_path(store) %> <%= "inactive" unless store.active? %></li>
+  <% end %>
+</ul>

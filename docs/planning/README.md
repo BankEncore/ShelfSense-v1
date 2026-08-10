@@ -85,6 +85,12 @@ For offline POS, explicitly distinguish:
 
 ### Phase 1 — Operable foundation
 
+Authoritative Phase 1 documents:
+
+* [phase1-plan.md](phase1-operational-foundation/phase1-plan.md) — scope, slices, acceptance criteria  
+* [phase1-schema.md](phase1-operational-foundation/phase1-schema.md) — tables, fields, constraints  
+* [phase1-authorization.md](phase1-operational-foundation/phase1-authorization.md) — permission catalog, role grants, evaluation rules  
+
 Implement only what is necessary to run and administer one store:
 
 * `system_settings`  
@@ -93,12 +99,14 @@ Implement only what is necessary to run and administer one store:
 * `roles`  
 * `permissions`  
 * `role_permissions`  
-* `user_roles`  
-* `registers`  
+* `role_assignments`  
+* `workstations`  
+* `user_sessions`  
+* `audit_events`  
 * authentication and authorization  
-* audit-event recording
+* audit-event recording  
 
-Deliverable: a user can sign in, access an authorized store, and manage essential system configuration.
+Deliverable: a user can sign in, access an authorized store, and manage essential system configuration according to globally or store-scoped permissions, with material actions recorded in the audit log.
 
 ### Phase 2 — Minimal merchandise catalog
 
