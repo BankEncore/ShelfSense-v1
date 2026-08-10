@@ -7,7 +7,8 @@
 * All primary business identifiers use UUIDv7  
 * Lifecycle records are deactivated or revoked rather than deleted  
 * Timestamps are `timestamptz`  
-* Mutable configuration records use optimistic-concurrency versions
+* Mutable configuration records use optimistic-concurrency `lock_version`
+* Authorization contract: [phase1-authorization.md](phase1-authorization.md)
 
 ## 1\. `system_settings`
 
@@ -28,13 +29,14 @@ One row representing installation-wide configuration.
 | `default_customer_reservation_expiration_days` | smallint | null: false; default `7`; check `>= 0` | Default for customer reservations |
 | `default_receipt_header` | text |  |  |
 | `default_receipt_footer` | text |  |  |
+| `initialized_at` | timestamptz |  | Set only as the final successful bootstrap step; null means install incomplete / retryable |
 | `lock_version` | integer | null: false; default `0` | Optimistic concurrency |
 | `created_at` | timestamptz | null: false |  |
 | `updated_at` | timestamptz | null: false |  |
 
 `singleton_key` gives PostgreSQL a simple way to prevent a second settings row without relying on a magic integer ID.
 
-There should be no normal create or delete operation after bootstrap.
+There should be no normal create or delete operation after bootstrap. Bootstrap uses a transactional service with an advisory lock (and/or locking the singleton row). Concurrent bootstrap attempts must fail cleanly. A rolled-back failure leaves `initialized_at` null so installation remains retryable. Phase 1 does not provide an ordinary administrative reopen of bootstrap.
 
 ---
 
@@ -87,7 +89,7 @@ A durable human or system actor identity.
 | `email` | varchar |  | Case-insensitive unique when present |
 | `display_name` | varchar | null: false | Historical audit records also snapshot this |
 | `actor_type` | varchar | null: false; default `human` | `human`, `system`, `integration`, `scheduled_job` |
-| `password_digest` | varchar |  | Required for interactive human users |
+| `password_digest` | varchar |  | Required for interactive human users; omitted for the protected system actor |
 | `active` | boolean | null: false; default `true` |  |
 | `password_changed_at` | timestamptz |  |  |
 | `password_reset_required` | boolean | null: false; default `false` | Useful for administrator-initiated resets |
@@ -109,13 +111,14 @@ unique(lower(email)) where email is not null
 
 Recommended invariants:
 
-* `actor_type = 'human'` requires `password_digest` for interactive accounts.  
+* Interactive `actor_type = 'human'` accounts require `password_digest` (`has_secure_password` + `bcrypt`).  
+* The protected system actor (`actor_type = 'system'`) cannot authenticate, cannot receive interactive sessions or role assignments, and is exempt from password-presence validation. Authentication must reject system actors even if a digest exists.  
 * Non-human actors cannot sign in interactively.  
 * The protected system actor cannot be deactivated or deleted.  
 * Deactivation revokes all active `user_sessions`.  
-* ShelfSense must retain at least one active human with a current global `system_administrator` role assignment.
+* ShelfSense must retain at least one active human with a current global `system_administrator` role assignment (enforced with transactional locking; see authorization contract).
 
-I would not retain an `administrator` user type. Administrator status comes entirely from roles and permissions.
+Administrator status comes entirely from roles and permissions. There is no separate administrator user type.
 
 ---
 
@@ -130,6 +133,7 @@ Reusable permission bundles.
 | `name` | varchar | null: false | Human-facing name |
 | `description` | text |  |  |
 | `system_role` | boolean | null: false; default `false` | Seeded/protected role |
+| `assignment_scope` | varchar | null: false | `global`, `store`, or `either` — where the role may be assigned |
 | `active` | boolean | null: false; default `true` |  |
 | `deactivated_at` | timestamptz |  |  |
 | `deactivated_by_id` | uuid | FK: `users`; nullable |  |
@@ -150,7 +154,8 @@ Recommended rules:
 * System roles cannot be deleted.  
 * Deactivated roles grant no permissions.  
 * The `system_administrator` role does not bypass authorization; it receives its capabilities through `role_permissions`.  
-* Any change to `role_permissions` increments `roles.lock_version`.
+* Any change to `role_permissions` increments `roles.lock_version`.  
+* Seeded assignment scopes: `system_administrator` → `global`; `store_manager` / `associate` → `store`. See [phase1-authorization.md](phase1-authorization.md).
 
 Initial roles:
 
@@ -431,38 +436,6 @@ erDiagram
     WORKSTATIONS o|--o{ AUDIT_EVENTS : originates
 ```
 
-## Phase 1 permission catalog
+## Phase 1 permission catalog and role matrix
 
-A practical initial catalog would be:
-
-```
-system_settings.view
-system_settings.manage
-
-stores.view
-stores.create
-stores.manage
-stores.deactivate
-
-users.view
-users.create
-users.manage
-users.deactivate
-users.assign_roles
-users.revoke_sessions
-
-roles.view
-roles.create
-roles.manage
-roles.deactivate
-
-workstations.view
-workstations.create
-workstations.manage
-workstations.deactivate
-workstations.revoke
-
-audit_events.view
-```
-
-The next useful step would be to define the exact permission-to-role matrix for `system_administrator`, `store_manager`, and `associate`, because that will expose any ambiguity in how global versus store-scoped administration should behave.  
+The authoritative permission catalog, role grants, assignment scopes, evaluation sequence, and last-administrator rules are defined in [phase1-authorization.md](phase1-authorization.md).  

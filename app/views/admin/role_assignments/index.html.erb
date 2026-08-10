@@ -1,0 +1,15 @@
+<% content_for :title, "Role assignments" %>
+<h1>Role assignments</h1>
+<p><%= link_to "Assign role", new_admin_role_assignment_path %></p>
+<ul>
+  <% @role_assignments.each do |assignment| %>
+    <li>
+      <%= assignment.user.username %> → <%= assignment.role.key %>
+      <%= assignment.store ? " @ #{assignment.store.code}" : " (global)" %>
+      <%= "revoked" if assignment.revoked? %>
+      <% unless assignment.revoked? %>
+        <%= button_to "Revoke", admin_role_assignment_path(assignment), method: :delete %>
+      <% end %>
+    </li>
+  <% end %>
+</ul>

@@ -1,0 +1,7 @@
+<% content_for :title, @workstation.name %>
+<h1><%= @workstation.name %></h1>
+<p><%= @workstation.code %> · <%= @workstation.store.name %></p>
+<%= link_to "Edit", edit_admin_workstation_path(@workstation) if effective_permissions.include?("workstations.manage") %>
+<% if effective_permissions.include?("workstations.deactivate") && @workstation.active? %>
+  <%= button_to "Deactivate", admin_workstation_path(@workstation), method: :delete %>
+<% end %>

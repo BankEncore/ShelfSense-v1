@@ -1,0 +1,9 @@
+<% content_for :title, "Assign role" %>
+<h1>Assign role</h1>
+<%= form_with model: [:admin, @role_assignment] do |form| %>
+  <% if @role_assignment.errors.any? %><ul><% @role_assignment.errors.full_messages.each do |m| %><li><%= m %></li><% end %></ul><% end %>
+  <p><%= form.label :user_id %><%= form.collection_select :user_id, @users, :id, :username %></p>
+  <p><%= form.label :role_id %><%= form.collection_select :role_id, @roles, :id, :name %></p>
+  <p><%= form.label :store_id %><%= form.collection_select :store_id, @stores, :id, :name, include_blank: "Global" %></p>
+  <p><%= form.submit "Assign" %></p>
+<% end %>

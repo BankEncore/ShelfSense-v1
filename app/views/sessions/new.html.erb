@@ -1,0 +1,17 @@
+<% content_for :title, "Sign in" %>
+
+<section class="auth">
+  <h1>Sign in</h1>
+
+  <%= form_with url: session_path, scope: :session do |form| %>
+    <p>
+      <%= form.label :username %>
+      <%= form.text_field :username, autocomplete: "username", required: true %>
+    </p>
+    <p>
+      <%= form.label :password %>
+      <%= form.password_field :password, autocomplete: "current-password", required: true %>
+    </p>
+    <p><%= form.submit "Sign in" %></p>
+  <% end %>
+</section>

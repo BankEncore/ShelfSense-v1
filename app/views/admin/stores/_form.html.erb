@@ -1,0 +1,12 @@
+<%= form_with model: [:admin, store] do |form| %>
+  <% if store.errors.any? %><ul><% store.errors.full_messages.each do |m| %><li><%= m %></li><% end %></ul><% end %>
+  <%= form.hidden_field :lock_version %>
+  <p><%= form.label :store_number %><%= form.text_field :store_number %></p>
+  <p><%= form.label :code %><%= form.text_field :code %></p>
+  <p><%= form.label :name %><%= form.text_field :name %></p>
+  <p><%= form.label :country_code %><%= form.text_field :country_code %></p>
+  <p><%= form.label :timezone %><%= form.text_field :timezone %></p>
+  <p><%= form.label :receipt_header %><%= form.text_area :receipt_header %></p>
+  <p><%= form.label :receipt_footer %><%= form.text_area :receipt_footer %></p>
+  <p><%= form.submit %></p>
+<% end %>

@@ -1,0 +1,10 @@
+<%= form_with model: [:admin, user] do |form| %>
+  <% if user.errors.any? %><ul><% user.errors.full_messages.each do |m| %><li><%= m %></li><% end %></ul><% end %>
+  <%= form.hidden_field :lock_version %>
+  <p><%= form.label :username %><%= form.text_field :username %></p>
+  <p><%= form.label :display_name %><%= form.text_field :display_name %></p>
+  <p><%= form.label :email %><%= form.email_field :email %></p>
+  <p><%= form.label :password %><%= form.password_field :password %></p>
+  <p><%= form.label :password_confirmation %><%= form.password_field :password_confirmation %></p>
+  <p><%= form.submit %></p>
+<% end %>

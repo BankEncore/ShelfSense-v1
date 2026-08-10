@@ -88,6 +88,40 @@ The PostgreSQL image applies `POSTGRES_USER`, `POSTGRES_PASSWORD`, and `POSTGRES
 
 Do not commit production credentials. Production values must come from the deployment environment. The ERB in `config/database.yml` must not use strict `ENV.fetch` calls without defaults for production-only variables, because Rails evaluates the entire file before selecting an environment; strict production lookups would also break development and CI startup.
 
+## Identifiers and migrations
+
+Phase 1 domain tables use UUID primary keys without a PostgreSQL default. Rails assigns RFC 9562 UUIDv7 values in a shared `before_validation` callback (`SecureRandom.uuid_v7`) when `id` is blank. Prefer the migration helper:
+
+```ruby
+create_uuid_table :example_records do |t|
+  t.references :store, null: false, type: :uuid, foreign_key: true
+  t.timestamptz :created_at, null: false
+  t.timestamptz :updated_at, null: false
+end
+```
+
+Callback-bypassing APIs such as `insert_all` must supply IDs explicitly.
+
+## Bootstrap a development installation
+
+After `db:prepare` / `db:migrate`, initialize once:
+
+```sh
+./dev/rails-docker env \
+  ORGANIZATION_NAME="Example Books" \
+  STORE_NUMBER=1 \
+  STORE_CODE=main \
+  STORE_NAME="Main Store" \
+  STORE_TIMEZONE=America/New_York \
+  STORE_COUNTRY_CODE=US \
+  ADMIN_USERNAME=admin \
+  ADMIN_DISPLAY_NAME="Admin User" \
+  ADMIN_PASSWORD='ChangeMe123!' \
+  bin/rails shelfsense:bootstrap
+```
+
+Do not commit real passwords. Bootstrap is concurrency-safe and sets `system_settings.initialized_at` only on success.
+
 ## Tests and validation
 
 Run the Rails test suite:

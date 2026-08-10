@@ -1,0 +1,9 @@
+<% content_for :title, @role.name %>
+<h1><%= @role.name %></h1>
+<p>Key: <%= @role.key %> · Scope: <%= @role.assignment_scope %></p>
+<ul>
+  <% @role.permissions.order(:key).each do |permission| %>
+    <li><%= permission.key %></li>
+  <% end %>
+</ul>
+<%= link_to "Edit", edit_admin_role_path(@role) if !@role.system_role? && effective_permissions.include?("roles.manage") %>

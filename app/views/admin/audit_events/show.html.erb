@@ -1,0 +1,10 @@
+<% content_for :title, "Audit event" %>
+<h1><%= @audit_event.action %></h1>
+<p>Outcome: <%= @audit_event.outcome %></p>
+<p>Actor: <%= @audit_event.actor_label %> (<%= @audit_event.actor_type %>)</p>
+<p>Occurred: <%= @audit_event.occurred_at %></p>
+<p>Store: <%= @audit_event.store&.name || "none" %></p>
+<p>Subject: <%= @audit_event.subject_type %> <%= @audit_event.subject_label %></p>
+<pre><%= JSON.pretty_generate(@audit_event.before_values || {}) %></pre>
+<pre><%= JSON.pretty_generate(@audit_event.after_values || {}) %></pre>
+<pre><%= JSON.pretty_generate(@audit_event.metadata || {}) %></pre>

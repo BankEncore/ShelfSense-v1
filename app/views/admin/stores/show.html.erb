@@ -1,0 +1,9 @@
+<% content_for :title, @store.name %>
+<h1><%= @store.name %></h1>
+<p>Code: <%= @store.code %> · Number: <%= @store.store_number %> · <%= @store.timezone %></p>
+<p>
+  <%= link_to "Edit", edit_admin_store_path(@store) if effective_permissions.include?("stores.manage") %>
+  <% if effective_permissions.include?("stores.deactivate") && @store.active? %>
+    <%= button_to "Deactivate", admin_store_path(@store), method: :delete, form: { data: { turbo_confirm: "Deactivate this store?" } } %>
+  <% end %>
+</p>

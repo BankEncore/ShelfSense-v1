@@ -41,34 +41,24 @@ POS databases will use a native UUID type when reliably supported. Otherwise, UU
 
 ## Central generation
 
-Centrally created records should normally omit the `id` during insertion and allow the configured PostgreSQL default to generate it:
+### Selected implementation profile (PostgreSQL 17)
 
-```sql
-id uuid PRIMARY KEY DEFAULT uuidv7()
-```
+ShelfSense remains on PostgreSQL 17 for now and generates UUIDv7 values in Rails:
 
-An explicitly supplied identifier must be preserved:
+* Domain models assign `SecureRandom.uuid_v7` in a shared `before_validation`, `on: :create` callback when `id` is blank and the primary-key attribute type is `:uuid`.
+* Explicitly supplied identifiers are preserved.
+* Migrations declare `id: :uuid` and UUID foreign keys without a PostgreSQL `DEFAULT uuidv7()`.
+* Callback-bypassing APIs such as `insert_all`, `upsert_all`, and raw SQL must supply IDs explicitly; otherwise inserts fail with a null primary key.
+* Framework-owned tables keep framework defaults and must not inherit blind UUID assignment.
+
+Revisit native database generation (`uuidv7()`) when the project adopts PostgreSQL 18. Changing the generator implementation later does not change this ADR, provided the generated identifiers remain RFC 9562-compatible and existing IDs are preserved.
+
+An explicitly supplied identifier must be preserved on insert and synchronization:
 
 ```sql
 INSERT INTO pos_transactions (id, ...)
 VALUES ('019...', ...);
 ```
-
-A database default runs only when no value is supplied. It must not overwrite POS-generated identifiers.
-
-### PostgreSQL version requirement
-
-ShelfSense currently targets PostgreSQL 17, which does not provide PostgreSQL 18’s native `uuidv7()` function.
-
-Before the first UUID migration is committed, the project must choose and test one of these implementation profiles:
-
-1. Upgrade to PostgreSQL 18 and use its native `uuidv7()` function.
-2. Remain on PostgreSQL 17 and install a reviewed UUIDv7 extension or project-defined database function.
-3. Generate UUIDv7 values in Rails until native database support is adopted.
-
-The selected mechanism must produce RFC 9562-compatible UUIDv7 values and must be available in development, test, CI, and production.
-
-Changing the generator implementation later does not change this ADR, provided the generated identifiers remain compatible and existing IDs are preserved.
 
 ## Offline POS generation
 
@@ -147,23 +137,21 @@ Any exception for a ShelfSense domain table must be documented.
 
 ## Rails migration convention
 
-UUID-backed domain tables must declare their primary and foreign-key types explicitly:
+UUID-backed domain tables must declare their primary and foreign-key types explicitly, without a database UUID default while on PostgreSQL 17:
 
 ```ruby
-create_table :stores, id: :uuid, default: -> { "uuidv7()" } do |t|
+create_table :stores, id: :uuid, default: nil do |t|
   # ...
   t.timestamps
 end
 
-create_table :workstations, id: :uuid, default: -> { "uuidv7()" } do |t|
+create_table :workstations, id: :uuid, default: nil do |t|
   t.references :store, null: false, type: :uuid, foreign_key: true
   # ...
 end
 ```
 
-The literal default shown above is illustrative until the PostgreSQL 17/18 implementation profile is selected.
-
-The project should provide a shared migration convention or helper so individual migrations do not choose their own generator.
+Use `default: nil` so Rails does not install PostgreSQL’s `gen_random_uuid()` default. Domain models include the shared UUID assignment concern (or equivalent conditional callback). Individual migrations must not invent alternate generators.
 
 ## Validation and testing
 
@@ -199,20 +187,6 @@ The implementation must test that:
 
 ## Implementation follow-up
 
-Before Phase 1 migrations land:
-
-1. Select the PostgreSQL 17 implementation or upgrade the project to PostgreSQL 18.
-2. Configure Rails migrations to use that generator consistently.
-3. Add generator conformance tests.
-4. Document the future POS requirement without selecting its programming-language library prematurely.
-
----
-
-My preference for ShelfSense would be:
-
-* Keep the durable ADR neutral about whether PostgreSQL 17 uses an extension or Rails generation.
-* Add a short implementation decision immediately before Slice 1.
-* If remaining on PostgreSQL 17, seriously consider application-generated UUIDv7 in Rails as the initial implementation. It avoids introducing a database extension solely for ID generation and gives Rails objects permanent IDs before insertion.
-* Revisit native database generation when moving to PostgreSQL 18.
-
-That would slightly revise our earlier recommendation: creator-assigned UUIDv7 is the architectural rule; database-generated versus application-generated is an implementation profile. The offline POS always generates its own IDs.
+1. Keep Rails `SecureRandom.uuid_v7` conformance tests green in development, test, and CI.
+2. When adopting PostgreSQL 18, evaluate switching central defaults to native `uuidv7()` without changing origin-assigned ID semantics.
+3. Document the future POS language-specific UUIDv7 library when the workstation client stack is selected.
