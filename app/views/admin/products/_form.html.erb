@@ -1,0 +1,34 @@
+<%= form_with model: [:admin, product] do |form| %>
+  <% if product.errors.any? %><ul><% product.errors.full_messages.each do |m| %><li><%= m %></li><% end %></ul><% end %>
+  <%= form.hidden_field :lock_version %>
+  <% if creating %>
+    <p>
+      <%= form.label :identifier_mode, "Identifier mode" %>
+      <%= select_tag "product[identifier_mode]", options_for_select([["Enter external", "enter"], ["Generate ShelfSense (222)", "generate"]], params.dig(:product, :identifier_mode) || "enter") %>
+    </p>
+    <p>
+      <%= form.label :external_identifier, "External identifier" %>
+      <%= text_field_tag "product[external_identifier]", params.dig(:product, :external_identifier) %>
+    </p>
+  <% else %>
+    <p>Primary identifier: <%= product.primary_identifier %></p>
+  <% end %>
+  <p><%= form.label :name %><%= form.text_field :name %></p>
+  <p><%= form.label :subtitle %><%= form.text_field :subtitle %></p>
+  <p><%= form.label :description %><%= form.text_area :description %></p>
+  <p><%= form.label :brand_name %><%= form.text_field :brand_name %></p>
+  <p><%= form.label :product_model, "Model" %><%= form.text_field :product_model %></p>
+  <p>
+    <%= form.label :merchandise_category_id, "Category" %>
+    <%= form.select :merchandise_category_id, @merchandise_categories.map { |c| [c.name, c.id] }, include_blank: "None" %>
+  </p>
+  <p><%= form.label :list_price_cents %><%= form.number_field :list_price_cents %></p>
+  <p><%= form.label :release_date %><%= form.date_field :release_date %></p>
+  <p>
+    <%= form.label :status %>
+    <%= form.select :status, Product::STATUSES.reject { |s| s == "discontinued" }.map { |s| [s.humanize, s] } %>
+  </p>
+  <p><%= form.label :variant_option_name_1 %><%= form.text_field :variant_option_name_1 %></p>
+  <p><%= form.label :variant_option_name_2 %><%= form.text_field :variant_option_name_2 %></p>
+  <p><%= form.submit %></p>
+<% end %>

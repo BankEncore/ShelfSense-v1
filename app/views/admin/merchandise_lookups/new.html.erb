@@ -1,0 +1,25 @@
+<% content_for :title, "Merchandise lookup" %>
+<h1>Merchandise lookup</h1>
+<%= form_with url: admin_merchandise_lookups_path, scope: :lookup do |form| %>
+  <p><%= form.label :raw, "Identifier" %><%= form.text_field :raw, value: @raw %></p>
+  <p><%= form.submit "Look up" %></p>
+<% end %>
+
+<% if @result %>
+  <h2>Result</h2>
+  <p>Status: <%= @result.status %></p>
+  <% if @result.message.present? %><p><%= @result.message %></p><% end %>
+  <% if @result.product %>
+    <p>Product: <%= link_to "#{@result.product.primary_identifier} — #{@result.product.name}", admin_product_path(@result.product) %></p>
+  <% end %>
+  <% if @result.variant %>
+    <p>Variant: <%= link_to "#{@result.variant.sku} — #{@result.variant.name.presence || "unnamed"}", admin_product_variant_path(@result.variant) %></p>
+  <% end %>
+  <% if @result.variants.present? %>
+    <ul>
+      <% @result.variants.each do |variant| %>
+        <li><%= link_to "#{variant.sku} — #{variant.name.presence || "unnamed"}", admin_product_variant_path(variant) %></li>
+      <% end %>
+    </ul>
+  <% end %>
+<% end %>

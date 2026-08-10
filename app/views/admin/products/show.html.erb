@@ -1,0 +1,32 @@
+<% content_for :title, @product.name %>
+<h1><%= @product.name %></h1>
+<p>
+  Identifier: <%= @product.primary_identifier %> ·
+  Status: <%= @product.status %> ·
+  Category: <%= @product.merchandise_category&.name || "—" %>
+</p>
+<% if @product.description.present? %><p><%= @product.description %></p><% end %>
+
+<h2>Variants</h2>
+<% if effective_permissions.include?("product_variants.create") %>
+  <p><%= link_to "New variant", new_admin_product_product_variant_path(@product) %></p>
+<% end %>
+<ul>
+  <% @product_variants.each do |variant| %>
+    <li>
+      <%= link_to "#{variant.sku} — #{variant.name.presence || "unnamed"}", admin_product_variant_path(variant) %>
+      (<%= variant.status %>)
+    </li>
+  <% end %>
+</ul>
+
+<p>
+  <%= link_to "Edit", edit_admin_product_path(@product) if effective_permissions.include?("products.update") %>
+  <% if effective_permissions.include?("products.discontinue") && @product.status != "discontinued" %>
+    <%= button_to "Discontinue", discontinue_admin_product_path(@product), method: :post, form: { data: { turbo_confirm: "Discontinue this product?" } } %>
+  <% end %>
+  <% if effective_permissions.include?("products.update") && @product.draft? %>
+    <%= button_to "Delete draft", admin_product_path(@product), method: :delete, form: { data: { turbo_confirm: "Delete this draft product and retire its identifier?" } } %>
+  <% end %>
+</p>
+<p><%= link_to "Back to products", admin_products_path %></p>

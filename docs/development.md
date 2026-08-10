@@ -122,6 +122,12 @@ After `db:prepare` / `db:migrate`, initialize once:
 
 Do not commit real passwords. Bootstrap is concurrency-safe and sets `system_settings.initialized_at` only on success.
 
+After pulling catalog changes (for example Phase 2 permission keys), re-seed permissions and system role grants on an already-initialized database:
+
+```sh
+./dev/rails-docker bin/rails shelfsense:seed_permissions
+```
+
 ## Tests and validation
 
 Run the Rails test suite:

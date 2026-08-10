@@ -1,0 +1,17 @@
+<% content_for :title, @department.name %>
+<h1><%= @department.code %> — <%= @department.name %></h1>
+<p>
+  Number: <%= @department.department_number.presence || "—" %> ·
+  Tax class: <%= @department.default_tax_class.code %> ·
+  Margin bps: <%= @department.default_target_margin_bps.presence || "—" %> ·
+  Order: <%= @department.display_order %> ·
+  <%= @department.active? ? "active" : "inactive" %>
+</p>
+<% if @department.description.present? %><p><%= @department.description %></p><% end %>
+<p>
+  <%= link_to "Edit", edit_admin_department_path(@department) if effective_permissions.include?("departments.update") %>
+  <% if effective_permissions.include?("departments.deactivate") && @department.active? %>
+    <%= button_to "Deactivate", admin_department_path(@department), method: :delete, form: { data: { turbo_confirm: "Deactivate this department?" } } %>
+  <% end %>
+</p>
+<p><%= link_to "Back to departments", admin_departments_path %></p>

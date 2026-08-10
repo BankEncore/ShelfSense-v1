@@ -108,22 +108,26 @@ Implement only what is necessary to run and administer one store:
 
 Deliverable: a user can sign in, access an authorized store, and manage essential system configuration according to globally or store-scoped permissions, with material actions recorded in the audit log.
 
-### Phase 2 — Minimal merchandise catalog
+### Phase 2 — Financial classification and merchandise foundation
+
+Status: implemented.
+
+Authoritative Phase 2 documents:
+
+* [phase2-plan.md](phase2-financial-classification-and-merchandise-foundation/phase2-plan.md) — scope, slices, completion criteria  
+* [phase-2-database-schema.md](phase2-financial-classification-and-merchandise-foundation/phase-2-database-schema.md) — tables, fields, constraints  
+* [phase2-authorization.md](phase2-financial-classification-and-merchandise-foundation/phase2-authorization.md) — permissions and role grants  
 
 Implement:
 
-* merchandise classes  
-* merchandise categories  
-* merchandise conditions  
-* tax classes  
-* departments  
-* products  
-* product variants  
-* product lookup and barcode resolution
+* `gl_accounts`, `tax_classes`, `departments`  
+* `merchandise_classes`, `merchandise_categories`, `merchandise_conditions`  
+* `products` (mandatory primary identifier), `product_variants`, `identifier_registry`  
+* unified identifier lookup and minimal CSV import  
 
-Deliverable: create or import a product, create its sellable variant, assign pricing/tax/department behavior, and find it by identifier.
+Deliverable: an authorized user can configure financial classifications, create a product with one or more sellable variants (each with an immutable `221` SKU), assign department/tax/class/condition/price, and retrieve by product identifier, variant SKU, or variant industry identifier.
 
-Avoid implementing every bibliographic or external-classification feature in this phase.
+Avoid inventory, tax calculation, journal posting, and bibliographic enrichment in this phase.
 
 ### Phase 3 — Inventory foundation
 

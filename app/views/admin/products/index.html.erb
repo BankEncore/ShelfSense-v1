@@ -1,0 +1,11 @@
+<% content_for :title, "Products" %>
+<h1>Products</h1>
+<% if effective_permissions.include?("products.create") %><p><%= link_to "New product", new_admin_product_path %></p><% end %>
+<ul>
+  <% @products.each do |product| %>
+    <li>
+      <%= link_to "#{product.primary_identifier} — #{product.name}", admin_product_path(product) %>
+      (<%= product.status %>)
+    </li>
+  <% end %>
+</ul>

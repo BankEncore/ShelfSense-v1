@@ -1,0 +1,11 @@
+<% content_for :title, "Departments" %>
+<h1>Departments</h1>
+<% if effective_permissions.include?("departments.create") %><p><%= link_to "New department", new_admin_department_path %></p><% end %>
+<ul>
+  <% @departments.each do |department| %>
+    <li>
+      <%= link_to "#{department.code} — #{department.name}", admin_department_path(department) %>
+      <%= "inactive" unless department.active? %>
+    </li>
+  <% end %>
+</ul>

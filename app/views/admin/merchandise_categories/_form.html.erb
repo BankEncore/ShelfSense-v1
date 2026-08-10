@@ -1,0 +1,17 @@
+<%= form_with model: [:admin, merchandise_category] do |form| %>
+  <% if merchandise_category.errors.any? %><ul><% merchandise_category.errors.full_messages.each do |m| %><li><%= m %></li><% end %></ul><% end %>
+  <%= form.hidden_field :lock_version %>
+  <p><%= form.label :code %><%= form.text_field :code %></p>
+  <p><%= form.label :name %><%= form.text_field :name %></p>
+  <p><%= form.label :description %><%= form.text_area :description %></p>
+  <p>
+    <%= form.label :parent_id, "Parent" %>
+    <%= form.select :parent_id, @parent_options.map { |c| [c.name, c.id] }, include_blank: "None" %>
+  </p>
+  <p>
+    <%= form.label :default_merchandise_class_id, "Default merchandise class" %>
+    <%= form.select :default_merchandise_class_id, @merchandise_classes.map { |c| ["#{c.code} — #{c.name}", c.id] }, include_blank: "None" %>
+  </p>
+  <p><%= form.label :display_order %><%= form.number_field :display_order %></p>
+  <p><%= form.submit %></p>
+<% end %>

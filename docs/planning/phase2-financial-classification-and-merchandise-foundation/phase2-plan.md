@@ -166,7 +166,7 @@ Phase 2 should support:
 * optional list price;  
 * optional publication or release metadata;  
 * merchandise category;  
-* optional unique primary identifier;  
+* mandatory unique primary identifier (entered external ID or generated `222` at creation);  
 * active or discontinued status;  
 * optimistic locking;  
 * auditing of material changes.
@@ -175,26 +175,26 @@ The model must support books, media, games, gifts, stationery, café items, serv
 
 ### Primary identifier
 
-`products.primary_identifier` is nullable and unique when present.
+`products.primary_identifier` is required and unique for every product, including drafts.
 
 It may contain:
 
-* a publisher- or manufacturer-assigned identifier;  
+* a publisher- or manufacturer-assigned identifier; or  
 * a ShelfSense-generated EAN-13-compatible identifier beginning with `222`.
 
 Rules:
 
+* Product creation requires a mutually exclusive choice: enter an external identifier, or generate a ShelfSense identifier.  
 * Remove permitted formatting such as spaces and hyphens.  
 * Convert valid ISBN-10 input to ISBN-13.  
 * Store ISBNs in their canonical 13-digit representation.  
-* Normalize UPC-A to its 13-digit representation if canonical GTIN-13 storage is adopted.  
-* Generate `222` identifiers only when explicitly requested.  
-* Store entered and generated identifiers in the same field.  
-* Do not store identifier type or provenance.  
+* Normalize UPC-A to GTIN-13 by adding a leading zero.  
+* Reject user-entered values in the reserved `222` namespace.  
+* Generate `222` identifiers only when that create-time choice is selected.  
+* Store entered and generated identifiers in the same field (no source column).  
 * Generate a valid check digit.  
-* Prevent reuse and collisions with a unique database index.
-
-Products without identifiers remain valid.
+* Prevent reuse and collisions via `identifier_registry` and a unique database index.  
+* Reserve the identifier in the same transaction as product persistence.
 
 ---
 
@@ -405,7 +405,7 @@ At minimum, enforce:
 * unique GL account numbers;  
 * unique department codes or numbers;  
 * unique reference-data codes;  
-* unique `products.primary_identifier` when non-null;  
+* unique `products.primary_identifier`;  
 * unique `product_variants.sku`;  
 * unique `product_variants.industry_identifier` when non-null;  
 * valid `221` prefix and check digit for generated SKUs;  
@@ -413,7 +413,7 @@ At minimum, enforce:
 * nonnegative monetary values;  
 * valid basis-point ranges;  
 * no self-parenting categories or GL accounts;  
-* required classifications for sellable variants;  
+* required classifications for **active** sellable variants (drafts may omit class/department/tax);  
 * immutable variant SKUs.
 
 Application validation should provide usable messages, but database constraints remain the final protection.
@@ -464,11 +464,11 @@ Phase 2 is complete when:
 * Financial classifications, tax classes, and departments can be administered securely.  
 * Departments can hold the account mappings required by perpetual inventory.  
 * Merchandise categories, classes, and conditions can provide creation defaults.  
-* Products may exist with or without a primary identifier.  
-* Users can enter an identifier or explicitly generate a unique `222` identifier.  
+* Every product has a mandatory primary identifier (entered or generated at creation).  
+* Product creation offers enter-external or generate-`222` as mutually exclusive choices.  
 * Every variant automatically receives an immutable, unique `221` SKU.  
-* Variants store approved class, department, tax class, condition, and regular price assignments.  
-* A valid variant can be identified as sellable, while incomplete variants cannot.  
+* Variants store approved class, department, tax class, condition, and regular price assignments when activated.  
+* A valid variant can be identified as sellable, while incomplete draft variants cannot be activated.  
 * Identifier lookup resolves products and variants without ambiguity.  
 * Minimal product and variant imports are repeatable without duplicates.  
 * Material changes are authorized, audited, and protected against concurrent overwrites.  

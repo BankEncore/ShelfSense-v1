@@ -7,7 +7,7 @@ Phase 2 establishes the financial classifications and merchandise records requir
 - Products contain shared catalog identity and descriptive information.
 - Product variants are the sellable records used by later inventory, purchasing, customer-request, and POS workflows.
 - Every variant receives an immutable, system-generated `221` EAN-13-compatible SKU.
-- A product may optionally use an entered trade identifier or an explicitly generated `222` EAN-13-compatible identifier.
+- Every product has exactly one mandatory `primary_identifier` (entered external GTIN/ISBN or system-generated `222` EAN-13) established at creation.
 - Defaults assist record creation; approved classifications and prices are stored on each variant and are not dynamically inherited afterward.
 - Department GL mappings are explicit nullable foreign-key columns on `departments`.
 - ShelfSense uses perpetual inventory accounting: inventory assets and cost of goods sold are separate mappings.
@@ -279,17 +279,17 @@ The approved result is stored as `product_variants.regular_price_cents`. Using `
 
 ## 7. `products`
 
-Stores shared catalog identity and descriptive information. A product may exist without a variant and without a primary identifier.
+Stores shared catalog identity and descriptive information. A product may exist without a variant, but every product—including draft—must have a primary identifier.
 
 | **Field** | **Type** | **Constraints** | **Notes** |
 |---|---|---|---|
 | id | uuid | PK; UUIDv7 | |
-| primary_identifier | char(13) | unique when present; nullable | Canonical GTIN-13/ISBN-13 or generated `222` identifier |
+| primary_identifier | char(13) | null: false; unique | Canonical manufacturer-assigned GTIN/ISBN or system-generated 222 EAN-13 |
 | name | varchar | null: false | Title or product name |
 | subtitle | varchar | | Optional subtitle or secondary name |
 | description | text | | |
 | brand_name | varchar | | Publisher, brand, manufacturer, or equivalent free-text name |
-| model_name | varchar | | Optional model, edition, series, or format designation |
+| product_model | varchar | | Optional model, edition, series, or format designation (column is `product_model` to avoid Active Record's `model_name`) |
 | merchandise_category_id | uuid | FK: `merchandise_categories`; nullable | Descriptive classification |
 | list_price_cents | bigint | nullable; check `>= 0` | Publisher or manufacturer list price |
 | release_date | date | | Publication, release, or on-sale date |
@@ -302,22 +302,23 @@ Stores shared catalog identity and descriptive information. A product may exist 
 
 ### Primary identifier rules
 
+- Product creation requires a mutually exclusive choice: enter an external identifier, or generate a ShelfSense `222` identifier. Generation is part of creation, not a later optional action.
 - Remove permitted spaces and hyphens before validation.
 - Convert a valid ISBN-10 to its equivalent ISBN-13.
 - Store ISBNs only in their canonical 13-digit form.
-- Normalize UPC-A to GTIN-13 by adding a leading zero if canonical GTIN-13 storage is adopted consistently.
+- Normalize UPC-A to GTIN-13 by adding a leading zero.
 - Validate the GTIN/EAN check digit.
-- Generate a `222` identifier only when explicitly requested.
+- Reject a user-entered value in the reserved `222` namespace.
 - A generated identifier must have exactly 13 digits, begin with `222`, have a valid check digit, remain globally unique, and never be reused.
-- Do not store identifier type or provenance.
-- Products without identifiers remain valid.
+- Do not store identifier type or provenance; audit events may record entered versus generated.
+- Reserve the value in `identifier_registry` in the same transaction as product persistence.
 
-The database should enforce the 13-digit shape and uniqueness. The shared identifier service should perform formatting removal, ISBN conversion, check-digit validation, and registry reservation.
+The database enforces the 13-digit shape and uniqueness. The shared identifier service performs formatting removal, ISBN conversion, check-digit validation, and registry reservation.
 
 Recommended indexes:
 
 ```text
-unique (primary_identifier) where primary_identifier is not null
+unique (primary_identifier)
 index (merchandise_category_id)
 index (status, name)
 ```
@@ -337,11 +338,11 @@ Represents the actual sellable SKU used by later inventory, purchasing, customer
 | name | varchar | | Optional distinguishing display name |
 | option_value_1 | varchar | | Corresponds to `products.variant_option_name_1` |
 | option_value_2 | varchar | | Corresponds to `products.variant_option_name_2` |
-| merchandise_condition_id | uuid | FK: `merchandise_conditions`; null: false | Approved condition |
-| merchandise_class_id | uuid | FK: `merchandise_classes`; null: false | Approved operational behavior |
-| department_id | uuid | FK: `departments`; null: false | Stored financial and reporting classification |
-| tax_class_id | uuid | FK: `tax_classes`; null: false | Stored tax classification |
-| regular_price_cents | bigint | nullable; check `>= 0` | Required when the pricing method requires a fixed price |
+| merchandise_condition_id | uuid | FK: `merchandise_conditions`; null: false | Approved condition; required for drafts and active variants |
+| merchandise_class_id | uuid | FK: `merchandise_classes`; nullable in draft; required when active | Approved operational behavior |
+| department_id | uuid | FK: `departments`; nullable in draft; required when active | Stored financial and reporting classification |
+| tax_class_id | uuid | FK: `tax_classes`; nullable in draft; required when active | Stored tax classification |
+| regular_price_cents | bigint | nullable; check `>= 0` | Activation requirements depend on merchandise class pricing method |
 | status | varchar | null: false; default `draft`; check enum | `draft`, `active`, `discontinued` |
 | lock_version | integer | null: false; default `0` | Optimistic concurrency |
 | created_at | timestamptz | null: false | |
@@ -415,11 +416,20 @@ Reserves operational identifiers across product and variant namespaces so that a
 | id | uuid | PK; UUIDv7 | |
 | value | char(13) | null: false; unique | Normalized lookup value |
 | identifier_kind | varchar | null: false; check enum | `product_primary`, `variant_sku`, `variant_industry` |
-| product_id | uuid | FK: `products`; nullable | Owner for `product_primary` |
-| product_variant_id | uuid | FK: `product_variants`; nullable | Owner for either variant kind |
+| product_id | uuid | FK: `products` ON DELETE SET NULL; nullable | Owner for `product_primary` when present |
+| product_variant_id | uuid | FK: `product_variants` ON DELETE SET NULL; nullable | Owner for either variant kind when present |
 | retired_at | timestamptz | nullable | Set when an identifier is removed from ordinary lookup but must remain reserved |
 | created_at | timestamptz | null: false | |
 | updated_at | timestamptz | null: false | |
+
+Registry ownership invariants:
+
+- An **active** registry row (`retired_at` null) has exactly one owner.
+- A **retired** registry row may have zero or one owner.
+- An unowned registry row must have `retired_at` populated.
+- `value` remains globally unique for both active and retired rows.
+
+Before deleting an eligible draft product or variant, retire its registry rows in the same transaction.
 
 Required checks and indexes:
 
@@ -457,13 +467,13 @@ If a product has multiple eligible variants, the user selects one. ISBN-10 input
 
 The shared generator should:
 
-1. generate or allocate the nine-digit payload following the `221` or `222` prefix;
-2. calculate the EAN-13 check digit;
+1. allocate the next nine-digit payload from a non-cycling PostgreSQL sequence (`MINVALUE 0`, `MAXVALUE 999999999`, `NO CYCLE`) for prefix `221` or `222`;
+2. zero-pad the payload to nine digits and calculate the EAN-13 check digit;
 3. attempt to reserve the complete value in `identifier_registry`;
-4. retry on a unique conflict;
+4. retry only on a unique conflict (not on sequence exhaustion);
 5. assign the identifier to the owner in the same transaction.
 
-A sequence or random payload is acceptable if uniqueness conflicts are handled transactionally and allocated values are never reused.
+Sequence exhaustion must raise a clear operational error and must not wrap.
 
 ---
 
@@ -562,8 +572,8 @@ Phase 2 is complete when:
 
 - GL accounts, tax classes, departments, merchandise classes, categories, and conditions can be securely administered.
 - Departments can hold explicit account mappings required by future perpetual-inventory and sales posting.
-- Products may exist with or without a primary identifier.
-- Users can enter a valid identifier or explicitly generate a unique `222` identifier.
+- Products always have a mandatory primary identifier (entered or generated at creation).
+- Users enter a valid external identifier or explicitly generate a unique `222` identifier during product creation.
 - Every variant automatically receives an immutable, unique `221` SKU.
 - Cross-namespace identifier collisions and reuse are prevented.
 - Variants store approved class, condition, department, tax class, and regular-price assignments.

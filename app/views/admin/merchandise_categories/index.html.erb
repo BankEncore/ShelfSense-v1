@@ -1,0 +1,11 @@
+<% content_for :title, "Merchandise Categories" %>
+<h1>Merchandise Categories</h1>
+<% if effective_permissions.include?("merchandise_categories.create") %><p><%= link_to "New category", new_admin_merchandise_category_path %></p><% end %>
+<ul>
+  <% @merchandise_categories.each do |category| %>
+    <li>
+      <%= link_to "#{category.code.presence || "—"} — #{category.name}", admin_merchandise_category_path(category) %>
+      <%= "inactive" unless category.active? %>
+    </li>
+  <% end %>
+</ul>

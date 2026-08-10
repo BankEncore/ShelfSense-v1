@@ -1,0 +1,33 @@
+<%= form_with model: product_variant.persisted? ? [:admin, product_variant] : [:admin, product, product_variant] do |form| %>
+  <% if product_variant.errors.any? %><ul><% product_variant.errors.full_messages.each do |m| %><li><%= m %></li><% end %></ul><% end %>
+  <%= form.hidden_field :lock_version %>
+  <% if product_variant.persisted? %>
+    <p>SKU: <%= product_variant.sku %></p>
+  <% end %>
+  <p><%= form.label :name %><%= form.text_field :name %></p>
+  <p><%= form.label :option_value_1 %><%= form.text_field :option_value_1 %></p>
+  <p><%= form.label :option_value_2 %><%= form.text_field :option_value_2 %></p>
+  <p>
+    <%= form.label :merchandise_condition_id, "Condition" %>
+    <%= form.select :merchandise_condition_id, @merchandise_conditions.map { |c| ["#{c.code} — #{c.name}", c.id] }, include_blank: true %>
+  </p>
+  <p>
+    <%= form.label :merchandise_class_id, "Merchandise class" %>
+    <%= form.select :merchandise_class_id, @merchandise_classes.map { |c| ["#{c.code} — #{c.name}", c.id] }, include_blank: "Resolve default" %>
+  </p>
+  <p>
+    <%= form.label :department_id, "Department" %>
+    <%= form.select :department_id, @departments.map { |d| ["#{d.code} — #{d.name}", d.id] }, include_blank: "Resolve default" %>
+  </p>
+  <p>
+    <%= form.label :tax_class_id, "Tax class" %>
+    <%= form.select :tax_class_id, @tax_classes.map { |t| ["#{t.code} — #{t.name}", t.id] }, include_blank: "Resolve default" %>
+  </p>
+  <p><%= form.label :regular_price_cents %><%= form.number_field :regular_price_cents %></p>
+  <p><%= form.label :industry_identifier %><%= form.text_field :industry_identifier %></p>
+  <p>
+    <%= form.label :status %>
+    <%= form.select :status, ProductVariant::STATUSES.reject { |s| s == "discontinued" }.map { |s| [s.humanize, s] } %>
+  </p>
+  <p><%= form.submit %></p>
+<% end %>

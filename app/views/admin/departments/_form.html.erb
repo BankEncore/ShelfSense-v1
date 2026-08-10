@@ -1,0 +1,32 @@
+<%= form_with model: [:admin, department] do |form| %>
+  <% if department.errors.any? %><ul><% department.errors.full_messages.each do |m| %><li><%= m %></li><% end %></ul><% end %>
+  <%= form.hidden_field :lock_version %>
+  <p><%= form.label :code %><%= form.text_field :code %></p>
+  <p><%= form.label :department_number %><%= form.text_field :department_number %></p>
+  <p><%= form.label :name %><%= form.text_field :name %></p>
+  <p><%= form.label :description %><%= form.text_area :description %></p>
+  <p>
+    <%= form.label :default_tax_class_id, "Default tax class" %>
+    <%= form.select :default_tax_class_id, @tax_classes.map { |t| ["#{t.code} — #{t.name}", t.id] }, include_blank: true %>
+  </p>
+  <p><%= form.label :default_target_margin_bps %><%= form.number_field :default_target_margin_bps %></p>
+  <% [
+    [:inventory_asset_gl_account_id, "Inventory asset GL"],
+    [:cost_of_goods_sold_gl_account_id, "COGS GL"],
+    [:sales_revenue_gl_account_id, "Sales revenue GL"],
+    [:sales_returns_gl_account_id, "Sales returns GL"],
+    [:receiving_clearing_gl_account_id, "Receiving clearing GL"],
+    [:freight_in_gl_account_id, "Freight in GL"],
+    [:inventory_shrinkage_gl_account_id, "Shrinkage GL"],
+    [:inventory_adjustment_gain_gl_account_id, "Adjustment gain GL"],
+    [:inventory_adjustment_loss_gl_account_id, "Adjustment loss GL"],
+    [:inventory_write_down_gl_account_id, "Write-down GL"]
+  ].each do |field, label| %>
+    <p>
+      <%= form.label field, label %>
+      <%= form.select field, @gl_accounts.map { |a| ["#{a.account_number} — #{a.name}", a.id] }, include_blank: "None" %>
+    </p>
+  <% end %>
+  <p><%= form.label :display_order %><%= form.number_field :display_order %></p>
+  <p><%= form.submit %></p>
+<% end %>

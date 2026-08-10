@@ -48,4 +48,8 @@ class UserSession < ApplicationRecord
   def revoke!(by: nil)
     update!(revoked_at: Time.current, revoked_by: by)
   end
+
+  def revoked?
+    revoked_at.present?
+  end
 end

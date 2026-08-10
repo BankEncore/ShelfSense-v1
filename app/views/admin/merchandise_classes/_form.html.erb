@@ -1,0 +1,28 @@
+<%= form_with model: [:admin, merchandise_class] do |form| %>
+  <% if merchandise_class.errors.any? %><ul><% merchandise_class.errors.full_messages.each do |m| %><li><%= m %></li><% end %></ul><% end %>
+  <%= form.hidden_field :lock_version %>
+  <p><%= form.label :code %><%= form.text_field :code %></p>
+  <p><%= form.label :name %><%= form.text_field :name %></p>
+  <p><%= form.label :description %><%= form.text_area :description %></p>
+  <p>
+    <%= form.label :inventory_tracking_mode %>
+    <%= form.select :inventory_tracking_mode, MerchandiseClass::TRACKING_MODES.map { |m| [m.humanize, m] } %>
+  </p>
+  <p>
+    <%= form.label :pricing_method %>
+    <%= form.select :pricing_method, MerchandiseClass::PRICING_METHODS.map { |m| [m.humanize, m] } %>
+  </p>
+  <p>
+    <%= form.label :default_standard_department_id, "Default standard department" %>
+    <%= form.select :default_standard_department_id, @departments.map { |d| ["#{d.code} — #{d.name}", d.id] }, include_blank: "None" %>
+  </p>
+  <p>
+    <%= form.label :default_used_department_id, "Default used department" %>
+    <%= form.select :default_used_department_id, @departments.map { |d| ["#{d.code} — #{d.name}", d.id] }, include_blank: "None" %>
+  </p>
+  <p><%= form.check_box :used_merchandise_allowed %><%= form.label :used_merchandise_allowed %></p>
+  <p><%= form.check_box :buyback_allowed %><%= form.label :buyback_allowed %></p>
+  <p><%= form.check_box :default_returnable %><%= form.label :default_returnable %></p>
+  <p><%= form.label :display_order %><%= form.number_field :display_order %></p>
+  <p><%= form.submit %></p>
+<% end %>
