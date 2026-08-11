@@ -62,11 +62,9 @@ module ProductVariants
             merchandise_class: resolved.merchandise_class,
             department: resolved.department,
             tax_class: resolved.tax_class,
-            regular_price_cents: if @attributes.key?(:regular_price_cents)
-                                   @attributes[:regular_price_cents]
-                                 else
-                                   resolved.suggested_price_cents
-                                 end,
+            # DefaultResolver already applies list_price suggestions when the
+            # submitted regular_price_cents is nil (blank UI fields still send the key).
+            regular_price_cents: resolved.suggested_price_cents,
             status: @attributes[:status].presence || "draft"
           )
         )

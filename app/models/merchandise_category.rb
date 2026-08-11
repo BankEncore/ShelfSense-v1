@@ -24,6 +24,27 @@ class MerchandiseCategory < ApplicationRecord
     active?
   end
 
+  # Root categories return their name; nested categories return "Parent > Child > …".
+  def path_label(separator: " > ")
+    names = []
+    current = self
+    seen = Set.new
+
+    while current
+      break if seen.include?(current.id)
+
+      seen << current.id
+      names.unshift(current.name)
+      current = current.parent
+    end
+
+    names.join(separator)
+  end
+
+  def self.options_for_select(records)
+    Array(records).map { |category| [category.path_label, category.id] }
+  end
+
   def reactivation_blockers
     blockers = []
     blockers << "parent category must be active" if parent.present? && !parent.active?

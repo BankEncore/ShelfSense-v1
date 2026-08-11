@@ -14,7 +14,7 @@
   <p><%= form.label :description %><%= form.text_area :description %></p>
   <p>
     <%= form.label :parent_id, "Parent" %>
-    <%= form.select :parent_id, @parent_options.map { |c| [c.name, c.id] }, include_blank: "None" %>
+    <%= form.select :parent_id, MerchandiseCategory.options_for_select(@parent_options), include_blank: "None" %>
   </p>
   <p>
     <%= form.label :default_merchandise_class_id, "Default merchandise class" %>

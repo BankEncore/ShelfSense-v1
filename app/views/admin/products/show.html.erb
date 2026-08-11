@@ -3,7 +3,8 @@
 <p>
   Identifier: <%= @product.primary_identifier %> ·
   Status: <%= @product.status %> ·
-  Category: <%= @product.merchandise_category&.name || "—" %>
+  Merchandise category: <%= @product.merchandise_category&.path_label || "—" %> ·
+  List price: <%= @product.list_price_cents.present? ? format("%.2f", @product.list_price_cents / 100.0) : "—" %>
 </p>
 <% if @product.description.present? %><p><%= @product.description %></p><% end %>
 

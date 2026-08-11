@@ -4,7 +4,7 @@
 <ul>
   <% @merchandise_categories.each do |category| %>
     <li>
-      <%= link_to "#{category.code.presence || "—"} — #{category.name}", admin_merchandise_category_path(category) %>
+      <%= link_to "#{category.code.presence || "—"} — #{category.path_label}", admin_merchandise_category_path(category) %>
       <%= "inactive" unless category.active? %>
     </li>
   <% end %>

@@ -209,6 +209,20 @@ class ProductVariants::CreateAndActivationTest < ActiveSupport::TestCase
     assert_equal @like_new.name, used.name
   end
 
+  test "blank regular_price_cents from UI still defaults under list_price" do
+    variant = ProductVariants::Create.call(
+      product: @product,
+      actor: @actor,
+      attributes: {
+        variant_type: "standard",
+        merchandise_class_id: @klass.id,
+        regular_price_cents: nil
+      }
+    )
+
+    assert_equal 2_000, variant.regular_price_cents
+  end
+
   test "fixed pricing method does not default from product list price" do
     fixed = merchandise_class(
       code: "fixed_book",

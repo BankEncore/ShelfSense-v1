@@ -57,6 +57,17 @@ class MerchandiseReferenceTest < ActiveSupport::TestCase
     assert_includes parent.errors[:parent_id], "would create a hierarchy cycle"
   end
 
+  test "merchandise category path_label includes ancestors" do
+    root = merchandise_category(name: "Books", code: "books_root")
+    parent = merchandise_category(name: "Fiction", code: "fiction", parent: root)
+    child = merchandise_category(name: "Mystery", code: "mystery", parent: parent)
+
+    assert_equal "Books", root.path_label
+    assert_equal "Books > Fiction", parent.path_label
+    assert_equal "Books > Fiction > Mystery", child.path_label
+    assert_equal [["Books > Fiction > Mystery", child.id]], MerchandiseCategory.options_for_select([child])
+  end
+
   test "inventory_mode accepts inventory and non_inventory" do
     inventory = merchandise_class(code: "book", inventory_mode: "inventory", default_standard_department: @department)
     service = merchandise_class(code: "service", inventory_mode: "non_inventory", default_standard_department: @department)
