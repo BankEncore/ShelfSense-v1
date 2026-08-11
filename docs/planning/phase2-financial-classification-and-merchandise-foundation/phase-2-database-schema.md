@@ -445,6 +445,7 @@ Reserves operational identifiers across product and variant namespaces so that a
 
 Registry ownership invariants:
 
+- Every registry row has at most one owner (`product_id` or `product_variant_id`, never both).
 - An **active** registry row (`retired_at` null) has exactly one owner, and that owner must match `identifier_kind`:
   - `product_primary` → `product_id` only
   - `variant_sku` / `variant_industry` → `product_variant_id` only
@@ -457,9 +458,11 @@ Before deleting an eligible draft product or variant, retire its registry rows i
 Required checks and indexes:
 
 ```text
-check exactly one of product_id or product_variant_id is present
-check product_primary requires product_id
-check variant_sku and variant_industry require product_variant_id
+check at most one of product_id or product_variant_id is present
+check active rows have a kind-matching owner
+check unowned rows are retired
+check product_primary requires product_id when active
+check variant_sku and variant_industry require product_variant_id when active
 
 unique (value)
 unique (product_id) where identifier_kind = 'product_primary' and retired_at is null
@@ -467,7 +470,7 @@ unique (product_variant_id) where identifier_kind = 'variant_sku'
 unique (product_variant_id) where identifier_kind = 'variant_industry' and retired_at is null
 ```
 
-The registry protects the namespace, while the identifier columns on `products` and `product_variants` remain the business-facing values. Assignment, replacement, retirement, and owner updates must occur in one transaction so the registry and owner cannot diverge.
+Product and variant identifier columns are writable only through the create/assignment services (`identifier_writes_enabled`). Ordinary Active Record creates/updates that change `primary_identifier`, `sku`, or `industry_identifier` are rejected so registry synchronization cannot be bypassed on those paths.
 
 - A current product or variant industry identifier has an active registry row.
 - Replacing or removing one retires the old row rather than deleting it, preventing reuse.

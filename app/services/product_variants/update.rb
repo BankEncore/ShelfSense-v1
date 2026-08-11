@@ -21,19 +21,20 @@ module ProductVariants
     def call
       ProductVariant.transaction do
         before = @variant.attributes.slice(*audit_keys)
+        @variant.lock_version = @lock_version unless @lock_version.nil?
 
         if @attributes.key?(:industry_identifier)
           Identifiers::AssignIndustry.call(
             variant: @variant,
             raw_value: @attributes[:industry_identifier],
             actor: @actor,
-            source: @source
+            source: @source,
+            persist: false
           )
         end
 
         non_id_attrs = @attributes.except(:industry_identifier)
         @variant.assign_attributes(non_id_attrs) if non_id_attrs.any?
-        @variant.lock_version = @lock_version unless @lock_version.nil?
         @variant.save!
 
         Audit::Recorder.record!(

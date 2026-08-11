@@ -97,6 +97,71 @@ class Identifiers::GeneratorAndRegistryTest < ActiveSupport::TestCase
     end
   end
 
+  test "retired registry rows may not have two owners" do
+    product = Products::Create.call(
+      attributes: { name: "Dual owner", status: "draft" },
+      actor: @actor,
+      identifier_mode: "generate"
+    )
+    variant = ProductVariants::Create.call(
+      product: product,
+      actor: @actor,
+      attributes: { variant_type: "standard" }
+    )
+
+    row = IdentifierRegistry.new(
+      value: Identifiers::Ean13.complete("978", "555555555"),
+      identifier_kind: "variant_industry",
+      product: product,
+      product_variant: variant,
+      retired_at: Time.current
+    )
+    assert_not row.valid?
+    assert_includes row.errors[:base], "registry rows may have at most one owner"
+
+    assert_raises(ActiveRecord::StatementInvalid) do
+      IdentifierRegistry.insert!({
+        id: SecureRandom.uuid_v7,
+        value: Identifiers::Ean13.complete("978", "666666666"),
+        identifier_kind: "variant_industry",
+        product_id: product.id,
+        product_variant_id: variant.id,
+        retired_at: Time.current,
+        created_at: Time.current,
+        updated_at: Time.current
+      })
+    end
+  end
+
+  test "direct product and variant persistence cannot bypass identifier services" do
+    assert_raises(ActiveRecord::RecordInvalid) do
+      Product.create!(
+        name: "Bypass",
+        primary_identifier: Identifiers::Ean13.complete("978", "777777777"),
+        status: "draft"
+      )
+    end
+
+    product = Products::Create.call(
+      attributes: { name: "Guarded", status: "draft" },
+      actor: @actor,
+      identifier_mode: "generate"
+    )
+    assert_raises(ActiveRecord::RecordInvalid) do
+      product.update!(primary_identifier: Identifiers::Ean13.complete("978", "888888888"))
+    end
+
+    variant = ProductVariants::Create.call(
+      product: product,
+      actor: @actor,
+      attributes: { variant_type: "standard" }
+    )
+    assert_raises(ActiveRecord::RecordInvalid) do
+      variant.update!(industry_identifier: Identifiers::Ean13.complete("978", "999999999"))
+    end
+    assert_nil variant.reload.industry_identifier
+  end
+
   test "failed product create rolls back reservation" do
     external = external_isbn13
     before_products = Product.count

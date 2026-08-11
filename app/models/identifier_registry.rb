@@ -23,6 +23,9 @@ class IdentifierRegistry < ApplicationRecord
   private
 
   def ownership_rules
+    owner_count = [ product_id, product_variant_id ].count(&:present?)
+    errors.add(:base, "registry rows may have at most one owner") if owner_count > 1
+
     if active?
       case identifier_kind
       when "product_primary"
@@ -32,7 +35,7 @@ class IdentifierRegistry < ApplicationRecord
         errors.add(:product_variant_id, "is required for active #{identifier_kind} rows") if product_variant_id.blank?
         errors.add(:product_id, "must be blank for #{identifier_kind} rows") if product_id.present?
       end
-    elsif product_id.blank? && product_variant_id.blank? && retired_at.blank?
+    elsif owner_count.zero? && retired_at.blank?
       errors.add(:retired_at, "must be set when unowned")
     end
   end

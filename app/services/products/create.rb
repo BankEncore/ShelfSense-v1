@@ -30,6 +30,7 @@ module Products
           end
 
         product = Product.new(@attributes.merge(primary_identifier: primary))
+        product.identifier_writes_enabled = true
         product.save!
 
         Identifiers::Registry.reserve!(value: primary, kind: "product_primary", product: product)

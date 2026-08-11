@@ -67,6 +67,7 @@ module ProductVariants
             status: @attributes[:status].presence || "draft"
           )
         )
+        variant.identifier_writes_enabled = true
         variant.save!
 
         Identifiers::Registry.reserve!(value: sku, kind: "variant_sku", product_variant: variant)

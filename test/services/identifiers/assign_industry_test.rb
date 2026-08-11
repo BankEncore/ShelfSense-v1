@@ -51,12 +51,16 @@ class Identifiers::AssignIndustryTest < ActiveSupport::TestCase
     ProductVariants::Update.call(
       variant: @variant,
       actor: @actor,
-      attributes: { industry_identifier: @industry }
+      attributes: { industry_identifier: @industry, lock_version: @variant.lock_version }
     )
     ProductVariants::Update.call(
       variant: @variant.reload,
       actor: @actor,
-      attributes: { industry_identifier: @replacement, name: "Renamed" }
+      attributes: {
+        industry_identifier: @replacement,
+        name: "Renamed",
+        lock_version: @variant.lock_version
+      }
     )
 
     @variant.reload
@@ -68,6 +72,47 @@ class Identifiers::AssignIndustryTest < ActiveSupport::TestCase
       subject_type: "ProductVariant",
       subject_id: @variant.id
     ).count, :>=, 2
+  end
+
+  test "updating industry identifier with current lock_version succeeds" do
+    Identifiers::AssignIndustry.call(variant: @variant, raw_value: @industry)
+    @variant.reload
+
+    assert_nothing_raised do
+      ProductVariants::Update.call(
+        variant: @variant,
+        actor: @actor,
+        attributes: {
+          industry_identifier: @replacement,
+          lock_version: @variant.lock_version
+        }
+      )
+    end
+
+    assert_equal @replacement, @variant.reload.industry_identifier
+  end
+
+  test "stale lock_version rejects industry identifier update and rolls back registry" do
+    Identifiers::AssignIndustry.call(variant: @variant, raw_value: @industry)
+    @variant.reload
+    stale = @variant.lock_version
+    @variant.update!(name: "Concurrent edit")
+
+    assert_raises(ActiveRecord::StaleObjectError) do
+      ProductVariants::Update.call(
+        variant: ProductVariant.find(@variant.id),
+        actor: @actor,
+        attributes: {
+          industry_identifier: @replacement,
+          lock_version: stale
+        }
+      )
+    end
+
+    @variant.reload
+    assert_equal @industry, @variant.industry_identifier
+    assert_nil IdentifierRegistry.find_by(value: @replacement)
+    assert_nil IdentifierRegistry.find_by!(value: @industry).retired_at
   end
 
   private

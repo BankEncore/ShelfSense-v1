@@ -278,6 +278,34 @@ class ProductVariants::CreateAndActivationTest < ActiveSupport::TestCase
     assert_equal @klass.id, variant.reload.merchandise_class_id
   end
 
+  test "active used variant with deactivated condition allows unrelated edits" do
+    @product.update!(status: "active")
+    variant = ProductVariants::Create.call(
+      product: @product,
+      actor: @actor,
+      attributes: {
+        variant_type: "used",
+        merchandise_condition_id: @like_new.id,
+        merchandise_class_id: @used_klass.id,
+        department_id: @used_dept.id,
+        tax_class_id: @tax.id,
+        regular_price_cents: 1_200,
+        status: "active"
+      }
+    )
+
+    @like_new.update!(active: false)
+    variant.reload
+
+    assert_not variant.sellable?
+    assert variant.update(name: "Still editable")
+    assert_equal "Still editable", variant.reload.name
+
+    retired_condition = merchandise_condition(code: "fair", active: false)
+    assert_not variant.update(merchandise_condition: retired_condition)
+    assert_includes variant.errors[:merchandise_condition_id], "must be an active condition"
+  end
+
   test "used price suggestion uses integer half-up rounding" do
     @product.update!(list_price_cents: 1_005)
     @like_new.update!(price_adjustment_bps: 3_333)

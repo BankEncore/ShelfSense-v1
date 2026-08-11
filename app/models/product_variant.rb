@@ -4,6 +4,8 @@ class ProductVariant < ApplicationRecord
   STATUSES = %w[draft active discontinued].freeze
   VARIANT_TYPES = %w[standard used].freeze
 
+  attr_accessor :identifier_writes_enabled
+
   belongs_to :product
   belongs_to :merchandise_condition, optional: true
   belongs_to :merchandise_class, optional: true
@@ -18,8 +20,9 @@ class ProductVariant < ApplicationRecord
   validates :regular_price_cents, numericality: { only_integer: true, greater_than_or_equal_to: 0 }, allow_nil: true
   validate :condition_matches_variant_type
   validate :validate_changed_references
-  validate :sku_immutable, on: :update
+  validate :identifier_write_rules
   validate :activation_requirements, if: -> { status == "active" }
+  after_save { self.identifier_writes_enabled = false }
 
   scope :active, -> { where(status: "active") }
   scope :draft, -> { where(status: "draft") }
@@ -57,17 +60,23 @@ class ProductVariant < ApplicationRecord
       merchandise_class&.assignable? &&
       department&.assignable? &&
       tax_class&.assignable? &&
-      type_and_condition_valid_for_class? &&
+      type_and_condition_valid_for_class?(require_assignable_condition: true) &&
       price_satisfies_pricing_method?
   end
 
-  def type_and_condition_valid_for_class?
+  def type_and_condition_valid_for_class?(require_assignable_condition: true)
     return false if merchandise_class.blank?
 
     if standard?
       merchandise_condition_id.blank?
     elsif used?
-      merchandise_condition&.assignable? &&
+      condition_ok =
+        if require_assignable_condition
+          merchandise_condition&.assignable?
+        else
+          merchandise_condition.present?
+        end
+      condition_ok &&
         merchandise_class.used_merchandise_allowed? &&
         merchandise_class.inventory?
     else
@@ -90,8 +99,19 @@ class ProductVariant < ApplicationRecord
 
   private
 
-  def sku_immutable
+  def identifier_write_rules
+    if new_record?
+      unless identifier_writes_enabled
+        errors.add(:base, "identifiers must be assigned through ProductVariants::Create")
+      end
+      return
+    end
+
     errors.add(:sku, "cannot be changed") if sku_changed?
+
+    if industry_identifier_changed? && !identifier_writes_enabled
+      errors.add(:industry_identifier, "must be changed through Identifiers::AssignIndustry")
+    end
   end
 
   def condition_matches_variant_type
@@ -121,13 +141,17 @@ class ProductVariant < ApplicationRecord
     errors.add(:merchandise_class_id, "is required to activate") if merchandise_class_id.blank?
     errors.add(:department_id, "is required to activate") if department_id.blank?
     errors.add(:tax_class_id, "is required to activate") if tax_class_id.blank?
-    unless type_and_condition_valid_for_class?
+
+    require_assignable_condition = status_changed? || merchandise_condition_id_changed?
+    unless type_and_condition_valid_for_class?(require_assignable_condition: require_assignable_condition)
       if used? && merchandise_class.present? && merchandise_class.non_inventory?
         errors.add(:merchandise_class_id, "used variants cannot use a non-inventory merchandise class")
       elsif used? && merchandise_class.present? && !merchandise_class.used_merchandise_allowed?
         errors.add(:base, "used variants require a merchandise class that allows used merchandise")
       elsif used? && merchandise_condition.blank?
         errors.add(:merchandise_condition_id, "is required for used variants")
+      elsif used? && require_assignable_condition && merchandise_condition.present? && !merchandise_condition.assignable?
+        errors.add(:merchandise_condition_id, "must be an active condition")
       elsif standard? && merchandise_condition_id.present?
         errors.add(:merchandise_condition_id, "must be blank for standard variants")
       else

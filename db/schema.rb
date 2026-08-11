@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_10_210000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_10_220000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -121,8 +121,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_10_210000) do
     t.index ["product_variant_id"], name: "index_identifier_registry_active_variant_industry", unique: true, where: "(((identifier_kind)::text = 'variant_industry'::text) AND (retired_at IS NULL))"
     t.index ["product_variant_id"], name: "index_identifier_registry_variant_sku", unique: true, where: "((identifier_kind)::text = 'variant_sku'::text)"
     t.index ["value"], name: "index_identifier_registry_on_value", unique: true
+    t.check_constraint "((product_id IS NOT NULL)::integer + (product_variant_id IS NOT NULL)::integer) <= 1 AND (retired_at IS NOT NULL OR identifier_kind::text = 'product_primary'::text AND product_id IS NOT NULL AND product_variant_id IS NULL OR (identifier_kind::text = ANY (ARRAY['variant_sku'::character varying, 'variant_industry'::character varying]::text[])) AND product_variant_id IS NOT NULL AND product_id IS NULL)", name: "identifier_registry_owner_matches_kind"
     t.check_constraint "identifier_kind::text = ANY (ARRAY['product_primary'::character varying, 'variant_sku'::character varying, 'variant_industry'::character varying]::text[])", name: "identifier_registry_kind_valid"
-    t.check_constraint "retired_at IS NOT NULL OR identifier_kind::text = 'product_primary'::text AND product_id IS NOT NULL AND product_variant_id IS NULL OR (identifier_kind::text = ANY (ARRAY['variant_sku'::character varying, 'variant_industry'::character varying]::text[])) AND product_variant_id IS NOT NULL AND product_id IS NULL", name: "identifier_registry_owner_matches_kind"
     t.check_constraint "value::text ~ '^[0-9]{13}$'::text", name: "identifier_registry_value_shape"
   end
 
