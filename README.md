@@ -154,6 +154,18 @@ The Phase 2 deliverable is:
 
 Phase 2 does not include inventory, journal posting, tax calculation, suppliers/purchasing, POS, buyback, promotions, or bibliographic enrichment.
 
+### Phase 2.1: Merchandise correctness and operability
+
+Status: implemented (reference-data reactivation, immutable normalized codes, GL category↔type and buyback invariants, `default_supplier_returnable`, pricing-method-aware variant defaults, product category/list-price UX, CSV import template).
+
+Phase 2.1 is a focused patch between the Phase 2 merchandise foundation and Phase 3 inventory. It hardens merchandise contracts inventory will depend on without introducing inventory, purchasing, buyback, or POS workflows.
+
+The Phase 2.1 deliverable is:
+
+> An authorized administrator can reactivate core financial and merchandise reference data, create products and variants with complete fields and pricing-method-aware defaults, and use a documented CSV import template, with database-enforced merchandise and GL-account invariants.
+
+Authoritative plan: [phase-2.1-platform-and-merchandise-refinements.md](docs/planning/phase2.1-platform-merchandise-refinement/phase-2.1-platform-and-merchandise-refinements.md).
+
 ## Phase 1 authorization model
 
 Permissions are additive and supplied by roles:

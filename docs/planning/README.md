@@ -129,6 +129,23 @@ Deliverable: an authorized user can configure financial classifications, create 
 
 Avoid inventory, tax calculation, journal posting, and bibliographic enrichment in this phase.
 
+### Phase 2.1 — Merchandise correctness and operability
+
+Status: implemented.
+
+Authoritative Phase 2.1 document:
+
+* [phase-2.1-platform-and-merchandise-refinements.md](phase2.1-platform-merchandise-refinement/phase-2.1-platform-and-merchandise-refinements.md) — scope, contracts, and acceptance criteria  
+
+Phase 2.1 hardens merchandise and financial reference-data contracts before inventory:
+
+* reactivation for GL accounts, tax classes, departments, merchandise classes/categories/conditions  
+* shared code normalization with post-create immutability  
+* GL category↔type mapping, buyback implication, and `default_supplier_returnable`  
+* pricing-method-aware variant defaults, product category/list-price form fields, CSV import template  
+
+Deliverable: an authorized administrator can reactivate core reference data, create products and variants with complete fields and pricing-method-aware defaults, and use a documented CSV import template, with database-enforced merchandise and GL-account invariants.
+
 ### Phase 3 — Inventory foundation
 
 Implement:

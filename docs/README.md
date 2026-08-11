@@ -13,7 +13,7 @@ This directory contains the project’s technical authority, development guidanc
 | [Phase 2 plan](planning/phase2-financial-classification-and-merchandise-foundation/phase2-plan.md) | Phase 2 scope, slices, and completion criteria |
 | [Phase 2 schema](planning/phase2-financial-classification-and-merchandise-foundation/phase-2-database-schema.md) | Phase 2 tables, fields, and constraints |
 | [Phase 2 authorization](planning/phase2-financial-classification-and-merchandise-foundation/phase2-authorization.md) | Phase 2 permission catalog and role grants |
-| [Phase 2.1 refinements](planning/phase2.1-platform-merchandise-refinement/phase-2.1-platform-and-merchandise-refinements.md) | Merchandise correctness and operability patch before inventory |
+| [Phase 2.1 refinements](planning/phase2.1-platform-merchandise-refinement/phase-2.1-platform-and-merchandise-refinements.md) | Implemented merchandise correctness and operability patch before inventory |
 | [Development guide](development.md) | Docker-only local setup, PostgreSQL configuration, application commands, and troubleshooting |
 | [Testing and CI](testing.md) | Active GitHub Actions checks and prerequisites for deferred checks |
 | [GitHub work management](github-workflow.md) | Issues, PRs, milestones, labels, and release tagging |

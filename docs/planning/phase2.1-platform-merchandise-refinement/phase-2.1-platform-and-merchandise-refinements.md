@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed implementation specification
+Implemented.
 
 ## Purpose
 
