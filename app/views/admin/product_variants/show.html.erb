@@ -1,0 +1,25 @@
+<% content_for :title, @product_variant.sku %>
+<h1><%= @product_variant.sku %></h1>
+<p>
+  Product: <%= link_to @product_variant.product.name, admin_product_path(@product_variant.product) %> ·
+  Type: <%= @product_variant.variant_type %> ·
+  Status: <%= @product_variant.status %> ·
+  Condition: <%= @product_variant.merchandise_condition&.code || "—" %> ·
+  Price cents: <%= @product_variant.regular_price_cents.presence || "—" %>
+</p>
+<p>
+  Class: <%= @product_variant.merchandise_class&.code || "—" %> ·
+  Department: <%= @product_variant.department&.code || "—" %> ·
+  Tax class: <%= @product_variant.tax_class&.code || "—" %> ·
+  Industry ID: <%= @product_variant.industry_identifier.presence || "—" %>
+</p>
+<p>
+  <%= link_to "Edit", edit_admin_product_variant_path(@product_variant) if effective_permissions.include?("product_variants.update") %>
+  <% if effective_permissions.include?("product_variants.discontinue") && @product_variant.status != "discontinued" %>
+    <%= button_to "Discontinue", discontinue_admin_product_variant_path(@product_variant), method: :post, form: { data: { turbo_confirm: "Discontinue this variant?" } } %>
+  <% end %>
+  <% if effective_permissions.include?("product_variants.update") && @product_variant.draft? %>
+    <%= button_to "Delete draft", admin_product_variant_path(@product_variant), method: :delete, form: { data: { turbo_confirm: "Delete this draft variant and retire its identifiers?" } } %>
+  <% end %>
+</p>
+<p><%= link_to "Back to product", admin_product_path(@product_variant.product) %></p>

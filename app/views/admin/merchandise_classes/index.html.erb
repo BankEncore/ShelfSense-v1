@@ -1,0 +1,11 @@
+<% content_for :title, "Merchandise Classes" %>
+<h1>Merchandise Classes</h1>
+<% if effective_permissions.include?("merchandise_classes.create") %><p><%= link_to "New merchandise class", new_admin_merchandise_class_path %></p><% end %>
+<ul>
+  <% @merchandise_classes.each do |merchandise_class| %>
+    <li>
+      <%= link_to "#{merchandise_class.code} — #{merchandise_class.name}", admin_merchandise_class_path(merchandise_class) %>
+      <%= "inactive" unless merchandise_class.active? %>
+    </li>
+  <% end %>
+</ul>

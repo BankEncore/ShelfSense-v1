@@ -1,0 +1,11 @@
+<% content_for :title, "Tax Classes" %>
+<h1>Tax Classes</h1>
+<% if effective_permissions.include?("tax_classes.create") %><p><%= link_to "New tax class", new_admin_tax_class_path %></p><% end %>
+<ul>
+  <% @tax_classes.each do |tax_class| %>
+    <li>
+      <%= link_to "#{tax_class.code} — #{tax_class.name}", admin_tax_class_path(tax_class) %>
+      <%= "inactive" unless tax_class.active? %>
+    </li>
+  <% end %>
+</ul>

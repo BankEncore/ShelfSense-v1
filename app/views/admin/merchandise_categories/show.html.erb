@@ -1,0 +1,16 @@
+<% content_for :title, @merchandise_category.name %>
+<h1><%= @merchandise_category.code.presence || "—" %> — <%= @merchandise_category.name %></h1>
+<p>
+  Parent: <%= @merchandise_category.parent&.name || "—" %> ·
+  Default class: <%= @merchandise_category.default_merchandise_class&.code || "—" %> ·
+  Order: <%= @merchandise_category.display_order %> ·
+  <%= @merchandise_category.active? ? "active" : "inactive" %>
+</p>
+<% if @merchandise_category.description.present? %><p><%= @merchandise_category.description %></p><% end %>
+<p>
+  <%= link_to "Edit", edit_admin_merchandise_category_path(@merchandise_category) if effective_permissions.include?("merchandise_categories.update") %>
+  <% if effective_permissions.include?("merchandise_categories.deactivate") && @merchandise_category.active? %>
+    <%= button_to "Deactivate", admin_merchandise_category_path(@merchandise_category), method: :delete, form: { data: { turbo_confirm: "Deactivate this category?" } } %>
+  <% end %>
+</p>
+<p><%= link_to "Back to categories", admin_merchandise_categories_path %></p>

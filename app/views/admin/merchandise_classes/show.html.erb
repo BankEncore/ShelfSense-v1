@@ -1,0 +1,16 @@
+<% content_for :title, @merchandise_class.name %>
+<h1><%= @merchandise_class.code %> — <%= @merchandise_class.name %></h1>
+<p>
+  Inventory: <%= @merchandise_class.inventory_mode %> ·
+  Pricing: <%= @merchandise_class.pricing_method %> ·
+  Order: <%= @merchandise_class.display_order %> ·
+  <%= @merchandise_class.active? ? "active" : "inactive" %>
+</p>
+<% if @merchandise_class.description.present? %><p><%= @merchandise_class.description %></p><% end %>
+<p>
+  <%= link_to "Edit", edit_admin_merchandise_class_path(@merchandise_class) if effective_permissions.include?("merchandise_classes.update") %>
+  <% if effective_permissions.include?("merchandise_classes.deactivate") && @merchandise_class.active? %>
+    <%= button_to "Deactivate", admin_merchandise_class_path(@merchandise_class), method: :delete, form: { data: { turbo_confirm: "Deactivate this merchandise class?" } } %>
+  <% end %>
+</p>
+<p><%= link_to "Back to merchandise classes", admin_merchandise_classes_path %></p>

@@ -1,6 +1,7 @@
 ENV["RAILS_ENV"] ||= "test"
 require_relative "../config/environment"
 require "rails/test_help"
+require_relative "support/phase2_fixtures"
 
 module ActiveSupport
   class TestCase
@@ -10,6 +11,6 @@ module ActiveSupport
     # Fixtures are opt-in per test case until a stable fixture set exists.
     # fixtures :all
 
-    # Add more helper methods to be used by all tests here...
+    include Phase2Fixtures
   end
 end

@@ -137,6 +137,23 @@ The Phase 1 deliverable is:
 
 Phase 1 does not include business days, POS sessions, cash drawers, transactions, inventory, merchandise, customers, suppliers, offline workstation synchronization, or purchasing workflows.
 
+### Phase 2: Financial classification and merchandise foundation
+
+Status: implemented (GL/tax/departments, merchandise reference data, products with mandatory primary identifiers, variants with immutable `221` SKUs, identifier registry tombstones, lookup, and CSV import).
+
+Phase 2 extends Phase 1 patterns for organization-wide catalog master data:
+
+- Financial classifications: `gl_accounts`, `tax_classes`, `departments`
+- Merchandise reference: `merchandise_classes`, `merchandise_categories`, `merchandise_conditions`
+- Catalog: `products` (mandatory `primary_identifier`, enter-external or generate-`222` at create), `product_variants` (immutable generated `221` SKU), `identifier_registry`
+- Unified identifier lookup (`merchandise.lookup`) and minimal CSV import (`merchandise.import`)
+
+The Phase 2 deliverable is:
+
+> An authorized user can configure financial classifications, create a product with one or more sellable standard or used variants (each with an immutable `221` SKU), assign department/tax/class/price (and condition for used variants), and retrieve by product identifier, variant SKU, or variant industry identifier.
+
+Phase 2 does not include inventory, journal posting, tax calculation, suppliers/purchasing, POS, buyback, promotions, or bibliographic enrichment.
+
 ## Phase 1 authorization model
 
 Permissions are additive and supplied by roles:
@@ -170,6 +187,7 @@ Start with the [documentation index](docs/README.md). Key references include:
 
 - [Architecture Decision Records](docs/adr/README.md)
 - [Phase 1 plan](docs/planning/phase1-operational-foundation/phase1-plan.md), [schema](docs/planning/phase1-operational-foundation/phase1-schema.md), and [authorization contract](docs/planning/phase1-operational-foundation/phase1-authorization.md)
+- [Phase 2 plan](docs/planning/phase2-financial-classification-and-merchandise-foundation/phase2-plan.md), [schema](docs/planning/phase2-financial-classification-and-merchandise-foundation/phase-2-database-schema.md), and [authorization contract](docs/planning/phase2-financial-classification-and-merchandise-foundation/phase2-authorization.md)
 - [Development guide](docs/development.md)
 - [Testing and CI](docs/testing.md)
 - [GitHub work management](docs/github-workflow.md)

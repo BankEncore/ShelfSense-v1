@@ -4,7 +4,7 @@ module Authorization
   module PermissionCatalog
     module_function
 
-    PERMISSIONS = [
+    PHASE1_PERMISSIONS = [
       { key: "system_settings.view", group_key: "system_settings", name: "View system settings", scope_type: "global" },
       { key: "system_settings.manage", group_key: "system_settings", name: "Manage system settings", scope_type: "global" },
       { key: "stores.view", group_key: "stores", name: "View stores", scope_type: "either" },
@@ -29,6 +29,60 @@ module Authorization
       { key: "audit_events.view", group_key: "audit_events", name: "View audit events", scope_type: "either" }
     ].freeze
 
+    # View/lookup keys use scope_type "either" so store-scoped roles (associate,
+    # store_manager) can read organization-wide catalog data in an active store.
+    # Create/update/lifecycle keys remain "global" and require a global assignment.
+    PHASE2_PERMISSIONS = [
+      { key: "gl_accounts.view", group_key: "gl_accounts", name: "View GL accounts", scope_type: "either" },
+      { key: "gl_accounts.create", group_key: "gl_accounts", name: "Create GL accounts", scope_type: "global" },
+      { key: "gl_accounts.update", group_key: "gl_accounts", name: "Update GL accounts", scope_type: "global" },
+      { key: "gl_accounts.deactivate", group_key: "gl_accounts", name: "Deactivate GL accounts", scope_type: "global" },
+      { key: "tax_classes.view", group_key: "tax_classes", name: "View tax classes", scope_type: "either" },
+      { key: "tax_classes.create", group_key: "tax_classes", name: "Create tax classes", scope_type: "global" },
+      { key: "tax_classes.update", group_key: "tax_classes", name: "Update tax classes", scope_type: "global" },
+      { key: "tax_classes.deactivate", group_key: "tax_classes", name: "Deactivate tax classes", scope_type: "global" },
+      { key: "departments.view", group_key: "departments", name: "View departments", scope_type: "either" },
+      { key: "departments.create", group_key: "departments", name: "Create departments", scope_type: "global" },
+      { key: "departments.update", group_key: "departments", name: "Update departments", scope_type: "global" },
+      { key: "departments.deactivate", group_key: "departments", name: "Deactivate departments", scope_type: "global" },
+      { key: "merchandise_classes.view", group_key: "merchandise_classes", name: "View merchandise classes", scope_type: "either" },
+      { key: "merchandise_classes.create", group_key: "merchandise_classes", name: "Create merchandise classes", scope_type: "global" },
+      { key: "merchandise_classes.update", group_key: "merchandise_classes", name: "Update merchandise classes", scope_type: "global" },
+      { key: "merchandise_classes.deactivate", group_key: "merchandise_classes", name: "Deactivate merchandise classes", scope_type: "global" },
+      { key: "merchandise_categories.view", group_key: "merchandise_categories", name: "View merchandise categories", scope_type: "either" },
+      { key: "merchandise_categories.create", group_key: "merchandise_categories", name: "Create merchandise categories", scope_type: "global" },
+      { key: "merchandise_categories.update", group_key: "merchandise_categories", name: "Update merchandise categories", scope_type: "global" },
+      { key: "merchandise_categories.deactivate", group_key: "merchandise_categories", name: "Deactivate merchandise categories", scope_type: "global" },
+      { key: "merchandise_conditions.view", group_key: "merchandise_conditions", name: "View merchandise conditions", scope_type: "either" },
+      { key: "merchandise_conditions.create", group_key: "merchandise_conditions", name: "Create merchandise conditions", scope_type: "global" },
+      { key: "merchandise_conditions.update", group_key: "merchandise_conditions", name: "Update merchandise conditions", scope_type: "global" },
+      { key: "merchandise_conditions.deactivate", group_key: "merchandise_conditions", name: "Deactivate merchandise conditions", scope_type: "global" },
+      { key: "products.view", group_key: "products", name: "View products", scope_type: "either" },
+      { key: "products.create", group_key: "products", name: "Create products", scope_type: "global" },
+      { key: "products.update", group_key: "products", name: "Update products", scope_type: "global" },
+      { key: "products.discontinue", group_key: "products", name: "Discontinue products", scope_type: "global" },
+      { key: "product_variants.view", group_key: "product_variants", name: "View product variants", scope_type: "either" },
+      { key: "product_variants.create", group_key: "product_variants", name: "Create product variants", scope_type: "global" },
+      { key: "product_variants.update", group_key: "product_variants", name: "Update product variants", scope_type: "global" },
+      { key: "product_variants.discontinue", group_key: "product_variants", name: "Discontinue product variants", scope_type: "global" },
+      { key: "merchandise.lookup", group_key: "merchandise", name: "Look up merchandise by identifier", scope_type: "either" },
+      { key: "merchandise.import", group_key: "merchandise", name: "Import merchandise", scope_type: "global" }
+    ].freeze
+
+    PERMISSIONS = (PHASE1_PERMISSIONS + PHASE2_PERMISSIONS).freeze
+
+    STORE_MANAGER_PHASE2_VIEWS = %w[
+      gl_accounts.view
+      tax_classes.view
+      departments.view
+      merchandise_classes.view
+      merchandise_categories.view
+      merchandise_conditions.view
+      products.view
+      product_variants.view
+      merchandise.lookup
+    ].freeze
+
     ROLES = [
       {
         key: "system_administrator",
@@ -49,13 +103,18 @@ module Authorization
           workstations.deactivate
           workstations.revoke
           audit_events.view
-        ]
+        ] + STORE_MANAGER_PHASE2_VIEWS
       },
       {
         key: "associate",
         name: "Associate",
         assignment_scope: "store",
-        permission_keys: %w[stores.view]
+        permission_keys: %w[
+          stores.view
+          merchandise.lookup
+          products.view
+          product_variants.view
+        ]
       }
     ].freeze
 

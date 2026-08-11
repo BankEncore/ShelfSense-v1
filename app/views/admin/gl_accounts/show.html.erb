@@ -1,0 +1,19 @@
+<% content_for :title, @gl_account.name %>
+<h1><%= @gl_account.account_number %> — <%= @gl_account.name %></h1>
+<p>
+  Type: <%= @gl_account.account_type %> · Category: <%= @gl_account.account_category %> ·
+  Posting: <%= @gl_account.posting_allowed? ? "allowed" : "not allowed" %> ·
+  Order: <%= @gl_account.display_order %> ·
+  <%= @gl_account.active? ? "active" : "inactive" %>
+</p>
+<% if @gl_account.description.present? %><p><%= @gl_account.description %></p><% end %>
+<% if @gl_account.parent.present? %>
+  <p>Parent: <%= link_to "#{@gl_account.parent.account_number} — #{@gl_account.parent.name}", admin_gl_account_path(@gl_account.parent) %></p>
+<% end %>
+<p>
+  <%= link_to "Edit", edit_admin_gl_account_path(@gl_account) if effective_permissions.include?("gl_accounts.update") %>
+  <% if effective_permissions.include?("gl_accounts.deactivate") && @gl_account.active? %>
+    <%= button_to "Deactivate", admin_gl_account_path(@gl_account), method: :delete, form: { data: { turbo_confirm: "Deactivate this GL account?" } } %>
+  <% end %>
+</p>
+<p><%= link_to "Back to GL accounts", admin_gl_accounts_path %></p>

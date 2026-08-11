@@ -1,0 +1,15 @@
+<% content_for :title, @merchandise_condition.name %>
+<h1><%= @merchandise_condition.code %> — <%= @merchandise_condition.name %></h1>
+<p>
+  Price adjustment bps: <%= @merchandise_condition.price_adjustment_bps %> ·
+  Order: <%= @merchandise_condition.display_order %> ·
+  <%= @merchandise_condition.active? ? "active" : "inactive" %>
+</p>
+<% if @merchandise_condition.description.present? %><p><%= @merchandise_condition.description %></p><% end %>
+<p>
+  <%= link_to "Edit", edit_admin_merchandise_condition_path(@merchandise_condition) if effective_permissions.include?("merchandise_conditions.update") %>
+  <% if effective_permissions.include?("merchandise_conditions.deactivate") && @merchandise_condition.active? %>
+    <%= button_to "Deactivate", admin_merchandise_condition_path(@merchandise_condition), method: :delete, form: { data: { turbo_confirm: "Deactivate this condition?" } } %>
+  <% end %>
+</p>
+<p><%= link_to "Back to conditions", admin_merchandise_conditions_path %></p>

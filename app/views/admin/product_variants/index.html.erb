@@ -1,0 +1,14 @@
+<% content_for :title, "Variants" %>
+<h1>Variants for <%= @product.name %></h1>
+<% if effective_permissions.include?("product_variants.create") %>
+  <p><%= link_to "New variant", new_admin_product_product_variant_path(@product) %></p>
+<% end %>
+<ul>
+  <% @product_variants.each do |variant| %>
+    <li>
+      <%= link_to "#{variant.sku} — #{variant.name.presence || "unnamed"}", admin_product_variant_path(variant) %>
+      (<%= variant.status %>)
+    </li>
+  <% end %>
+</ul>
+<p><%= link_to "Back to product", admin_product_path(@product) %></p>

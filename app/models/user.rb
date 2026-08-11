@@ -23,6 +23,7 @@ class User < ApplicationRecord
 
   scope :active, -> { where(active: true) }
   scope :human, -> { where(actor_type: "human") }
+  scope :system_actors, -> { where(actor_type: "system") }
 
   def system_actor?
     actor_type == "system"

@@ -20,9 +20,37 @@
         <% if effective_permissions.include?("stores.view") || effective_permissions.include?("stores.create") %>
           <%= link_to "Stores", admin_stores_path %>
         <% end %>
+        <% if effective_permissions.include?("gl_accounts.view") %>
+          <%= link_to "GL Accounts", admin_gl_accounts_path %>
+        <% end %>
+        <% if effective_permissions.include?("tax_classes.view") %>
+          <%= link_to "Tax Classes", admin_tax_classes_path %>
+        <% end %>
+        <% if effective_permissions.include?("departments.view") %>
+          <%= link_to "Departments", admin_departments_path %>
+        <% end %>
+        <% if effective_permissions.include?("merchandise_classes.view") %>
+          <%= link_to "Merchandise classes", admin_merchandise_classes_path %>
+        <% end %>
+        <% if effective_permissions.include?("merchandise_categories.view") %>
+          <%= link_to "Categories", admin_merchandise_categories_path %>
+        <% end %>
+        <% if effective_permissions.include?("merchandise_conditions.view") %>
+          <%= link_to "Conditions", admin_merchandise_conditions_path %>
+        <% end %>
+        <% if effective_permissions.include?("products.view") %>
+          <%= link_to "Products", admin_products_path %>
+        <% end %>
+        <% if effective_permissions.include?("merchandise.lookup") %>
+          <%= link_to "Lookup", new_admin_merchandise_lookup_path %>
+        <% end %>
+        <% if effective_permissions.include?("merchandise.import") %>
+          <%= link_to "Import", new_admin_merchandise_import_path %>
+        <% end %>
         <% if effective_permissions.include?("users.view") %>
           <%= link_to "Users", admin_users_path %>
         <% end %>
+
         <% if effective_permissions.include?("roles.view") %>
           <%= link_to "Roles", admin_roles_path %>
         <% end %>

@@ -1,0 +1,24 @@
+<% content_for :title, "Merchandise import" %>
+<h1>Merchandise CSV import</h1>
+<%= form_with url: admin_merchandise_imports_path, scope: :import, html: { multipart: true } do |form| %>
+  <p><%= form.label :file, "CSV file" %><%= form.file_field :file, accept: ".csv,text/csv" %></p>
+  <p><%= form.submit "Import" %></p>
+<% end %>
+
+<% if @result %>
+  <h2>Import result</h2>
+  <ul>
+    <li>Products created: <%= @result.created_products %></li>
+    <li>Products updated: <%= @result.updated_products %></li>
+    <li>Variants created: <%= @result.created_variants %></li>
+    <li>Variants updated: <%= @result.updated_variants %></li>
+  </ul>
+  <% if @result.errors.any? %>
+    <h3>Row errors</h3>
+    <ul>
+      <% @result.errors.each do |error| %>
+        <li>Row <%= error[:row] %>: <%= error[:message] %></li>
+      <% end %>
+    </ul>
+  <% end %>
+<% end %>

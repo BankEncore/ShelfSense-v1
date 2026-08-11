@@ -1,0 +1,11 @@
+<% content_for :title, "Merchandise Conditions" %>
+<h1>Merchandise Conditions</h1>
+<% if effective_permissions.include?("merchandise_conditions.create") %><p><%= link_to "New condition", new_admin_merchandise_condition_path %></p><% end %>
+<ul>
+  <% @merchandise_conditions.each do |condition| %>
+    <li>
+      <%= link_to "#{condition.code} — #{condition.name}", admin_merchandise_condition_path(condition) %>
+      <%= "inactive" unless condition.active? %>
+    </li>
+  <% end %>
+</ul>

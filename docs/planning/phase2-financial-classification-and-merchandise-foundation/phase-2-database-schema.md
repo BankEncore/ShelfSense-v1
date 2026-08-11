@@ -7,7 +7,7 @@ Phase 2 establishes the financial classifications and merchandise records requir
 - Products contain shared catalog identity and descriptive information.
 - Product variants are the sellable records used by later inventory, purchasing, customer-request, and POS workflows.
 - Every variant receives an immutable, system-generated `221` EAN-13-compatible SKU.
-- A product may optionally use an entered trade identifier or an explicitly generated `222` EAN-13-compatible identifier.
+- Every product has exactly one mandatory `primary_identifier` (entered external GTIN/ISBN or system-generated `222` EAN-13) established at creation.
 - Defaults assist record creation; approved classifications and prices are stored on each variant and are not dynamically inherited afterward.
 - Department GL mappings are explicit nullable foreign-key columns on `departments`.
 - ShelfSense uses perpetual inventory accounting: inventory assets and cost of goods sold are separate mappings.
@@ -186,11 +186,11 @@ Examples include `book`, `recorded_music`, `video`, `greeting_card`, `apparel`, 
 | code | varchar | null: false; unique | Stable machine-readable code |
 | name | varchar | null: false | |
 | description | text | | |
-| inventory_tracking_mode | varchar | null: false; check enum | `quantity`, `individual`, `non_inventory` |
+| inventory_mode | varchar | null: false; check enum | `inventory` or `non_inventory` |
 | pricing_method | varchar | null: false; check enum | `fixed`, `list_price`, `cost_based`, `open_price` |
-| default_standard_department_id | uuid | FK: `departments`; nullable | Default for standard-basis conditions |
-| default_used_department_id | uuid | FK: `departments`; nullable | Default for used-basis conditions |
-| used_merchandise_allowed | boolean | null: false; default `false` | Whether used conditions may be assigned |
+| default_standard_department_id | uuid | FK: `departments`; nullable | Default for standard variants |
+| default_used_department_id | uuid | FK: `departments`; nullable | Default for used variants |
+| used_merchandise_allowed | boolean | null: false; default `false` | Whether used variants may use this class |
 | buyback_allowed | boolean | null: false; default `false` | Future behavior; buyback is deferred |
 | default_returnable | boolean | null: false; default `true` | Default used by later purchasing and return workflows |
 | active | boolean | null: false; default `true` | |
@@ -199,13 +199,21 @@ Examples include `book`, `recorded_music`, `video`, `greeting_card`, `apparel`, 
 | created_at | timestamptz | null: false | |
 | updated_at | timestamptz | null: false | |
 
-### Inventory tracking modes
+### Inventory mode and derived tracking
+
+Quantity versus individual tracking is not chosen independently on the merchandise class. It is derived from `inventory_mode` and the variant’s `variant_type`:
+
+| Class `inventory_mode` | Variant type | Derived tracking |
+|---|---|---|
+| `inventory` | `standard` | Quantity-tracked |
+| `inventory` | `used` | Individually unit-tracked |
+| `non_inventory` | `standard` | Not inventory-tracked (for example services) |
+| `non_inventory` | `used` | Invalid |
 
 | Value | Meaning |
 |---|---|
-| `quantity` | Interchangeable units tracked by quantity |
-| `individual` | Each physical unit will require a future inventory-unit record |
-| `non_inventory` | Sellable, but does not create or relieve merchandise inventory |
+| `inventory` | Participates in merchandise inventory |
+| `non_inventory` | Sellable without creating or relieving merchandise inventory |
 
 ### Pricing methods
 
@@ -251,45 +259,44 @@ Application logic must prevent hierarchy cycles. Changing a category's default c
 
 ## 6. `merchandise_conditions`
 
-Describes the commercial condition of a variant and indicates whether department resolution should use a merchandise class's standard or used default.
+Describes the condition and pricing tier of a **used variant** (for example `like_new`, `good`, `acceptable`). Conditions belong only to used variants; standard variants must not reference a condition. A future `inventory_unit` represents each physical used copy assigned to that variant.
 
 | **Field** | **Type** | **Constraints** | **Notes** |
 |---|---|---|---|
 | id | uuid | PK; UUIDv7 | |
-| code | varchar | null: false; unique | Examples: `new`, `used_good`, `used_acceptable`, `collectible`, `remainder` |
+| code | varchar | null: false; unique | Examples: `like_new`, `good`, `acceptable`, `collectible` |
 | name | varchar | null: false | |
 | description | text | | |
-| department_basis | varchar | null: false; check enum | `standard` or `used` |
-| price_adjustment_bps | integer | null: false; default `10000`; check `>= 0` | Price multiplier; `10000` means 100% |
+| price_adjustment_bps | integer | null: false; default `10000`; check `>= 0` | Price multiplier for used-variant suggestions; `10000` means 100% |
 | active | boolean | null: false; default `true` | |
 | display_order | integer | null: false; default `0` | |
 | lock_version | integer | null: false; default `0` | Optimistic concurrency |
 | created_at | timestamptz | null: false | |
 | updated_at | timestamptz | null: false | |
 
-The condition adjustment produces only a suggested price:
+The condition adjustment produces only a suggested price for used variants:
 
 \[
 \text{suggested price} = \text{base price} \times \frac{\text{price adjustment bps}}{10000}
 \]
 
-The approved result is stored as `product_variants.regular_price_cents`. Using `department_basis` allows several used or collectible conditions to share the used-department resolution path without treating “used” as a separate variant type.
+The approved result is stored as `product_variants.regular_price_cents`. Department defaults are selected from the variant’s `variant_type`, not from the condition.
 
 ---
 
 ## 7. `products`
 
-Stores shared catalog identity and descriptive information. A product may exist without a variant and without a primary identifier.
+Stores shared catalog identity and descriptive information. A product may exist without a variant, but every product—including draft—must have a primary identifier.
 
 | **Field** | **Type** | **Constraints** | **Notes** |
 |---|---|---|---|
 | id | uuid | PK; UUIDv7 | |
-| primary_identifier | char(13) | unique when present; nullable | Canonical GTIN-13/ISBN-13 or generated `222` identifier |
+| primary_identifier | char(13) | null: false; unique | Canonical manufacturer-assigned GTIN/ISBN or system-generated 222 EAN-13 |
 | name | varchar | null: false | Title or product name |
 | subtitle | varchar | | Optional subtitle or secondary name |
 | description | text | | |
 | brand_name | varchar | | Publisher, brand, manufacturer, or equivalent free-text name |
-| model_name | varchar | | Optional model, edition, series, or format designation |
+| product_model | varchar | | Optional model, edition, series, or format designation (column is `product_model` to avoid Active Record's `model_name`) |
 | merchandise_category_id | uuid | FK: `merchandise_categories`; nullable | Descriptive classification |
 | list_price_cents | bigint | nullable; check `>= 0` | Publisher or manufacturer list price |
 | release_date | date | | Publication, release, or on-sale date |
@@ -302,22 +309,23 @@ Stores shared catalog identity and descriptive information. A product may exist 
 
 ### Primary identifier rules
 
+- Product creation requires a mutually exclusive choice: enter an external identifier, or generate a ShelfSense `222` identifier. Generation is part of creation, not a later optional action.
 - Remove permitted spaces and hyphens before validation.
 - Convert a valid ISBN-10 to its equivalent ISBN-13.
 - Store ISBNs only in their canonical 13-digit form.
-- Normalize UPC-A to GTIN-13 by adding a leading zero if canonical GTIN-13 storage is adopted consistently.
+- Normalize UPC-A to GTIN-13 by adding a leading zero.
 - Validate the GTIN/EAN check digit.
-- Generate a `222` identifier only when explicitly requested.
+- Reject a user-entered value in the reserved `222` namespace.
 - A generated identifier must have exactly 13 digits, begin with `222`, have a valid check digit, remain globally unique, and never be reused.
-- Do not store identifier type or provenance.
-- Products without identifiers remain valid.
+- Do not store identifier type or provenance; audit events may record entered versus generated.
+- Reserve the value in `identifier_registry` in the same transaction as product persistence.
 
-The database should enforce the 13-digit shape and uniqueness. The shared identifier service should perform formatting removal, ISBN conversion, check-digit validation, and registry reservation.
+The database enforces the 13-digit shape and uniqueness. The shared identifier service performs formatting removal, ISBN conversion, check-digit validation, and registry reservation.
 
 Recommended indexes:
 
 ```text
-unique (primary_identifier) where primary_identifier is not null
+unique (primary_identifier)
 index (merchandise_category_id)
 index (status, name)
 ```
@@ -326,26 +334,37 @@ index (status, name)
 
 ## 8. `product_variants`
 
-Represents the actual sellable SKU used by later inventory, purchasing, customer-request, and POS workflows.
+Represents the actual sellable SKU used by later inventory, purchasing, customer-request, and POS workflows. A product is condition-neutral and may own both **standard variants** and **used variants**.
 
 | **Field** | **Type** | **Constraints** | **Notes** |
 |---|---|---|---|
 | id | uuid | PK; UUIDv7 | |
 | product_id | uuid | FK: `products`; null: false | |
+| variant_type | varchar | null: false; check enum | `standard` or `used` |
 | sku | char(13) | null: false; unique; immutable | System-generated `221` EAN-13-compatible SKU |
 | industry_identifier | char(13) | unique when present; nullable | Trade identifier belonging specifically to this variant |
 | name | varchar | | Optional distinguishing display name |
 | option_value_1 | varchar | | Corresponds to `products.variant_option_name_1` |
 | option_value_2 | varchar | | Corresponds to `products.variant_option_name_2` |
-| merchandise_condition_id | uuid | FK: `merchandise_conditions`; null: false | Approved condition |
-| merchandise_class_id | uuid | FK: `merchandise_classes`; null: false | Approved operational behavior |
-| department_id | uuid | FK: `departments`; null: false | Stored financial and reporting classification |
-| tax_class_id | uuid | FK: `tax_classes`; null: false | Stored tax classification |
-| regular_price_cents | bigint | nullable; check `>= 0` | Required when the pricing method requires a fixed price |
+| merchandise_condition_id | uuid | FK: `merchandise_conditions`; nullable | Required for used variants; must be null for standard variants |
+| merchandise_class_id | uuid | FK: `merchandise_classes`; nullable in draft; required when active | Approved operational behavior |
+| department_id | uuid | FK: `departments`; nullable in draft; required when active | Stored financial and reporting classification |
+| tax_class_id | uuid | FK: `tax_classes`; nullable in draft; required when active | Stored tax classification |
+| regular_price_cents | bigint | nullable; check `>= 0` | Activation requirements depend on merchandise class pricing method |
 | status | varchar | null: false; default `draft`; check enum | `draft`, `active`, `discontinued` |
 | lock_version | integer | null: false; default `0` | Optimistic concurrency |
 | created_at | timestamptz | null: false | |
 | updated_at | timestamptz | null: false | |
+
+Database invariant:
+
+```sql
+CHECK (
+  (variant_type = 'standard' AND merchandise_condition_id IS NULL)
+  OR
+  (variant_type = 'used' AND merchandise_condition_id IS NOT NULL)
+)
+```
 
 ### SKU rules
 
@@ -370,9 +389,9 @@ When creating or explicitly reclassifying a variant, resolve values in this orde
 | Assignment | Resolution order |
 |---|---|
 | Merchandise class | Explicit selection; product category's default class; unresolved |
-| Department | Explicit selection; class used department when condition basis is `used`; class standard department otherwise; unresolved |
+| Department | Explicit selection; class used department when `variant_type` is `used`; class standard department when `variant_type` is `standard`; unresolved |
 | Tax class | Explicit selection; resolved department's default tax class; unresolved |
-| Price | Explicit price; applicable product-list-price or condition suggestion; later cost-based suggestion |
+| Price | Explicit price; for used variants, list price × condition adjustment; for standard variants, list price as-is; later cost-based suggestion |
 
 The user approves the resolved values before activation. ShelfSense stores those values on the variant. Changing a category, class, condition, or department default later does not silently modify existing variants.
 
@@ -383,8 +402,10 @@ Sellability should be a model or domain-service predicate, not a duplicated stor
 - its status is `active`;
 - its product is active;
 - its SKU is valid;
-- its merchandise class, condition, department, and tax class are active;
-- its condition is permitted by its merchandise class;
+- its merchandise class, department, and tax class are active;
+- for used variants, its merchandise condition is active and the class allows used merchandise (`used_merchandise_allowed`);
+- for used variants, the merchandise class `inventory_mode` is `inventory` (non-inventory used variants are invalid);
+- for standard variants, `merchandise_condition_id` is null;
 - its regular price satisfies the merchandise class's pricing method;
 - required option values and any class-specific attributes are present.
 
@@ -396,13 +417,14 @@ Recommended indexes:
 unique (sku)
 unique (industry_identifier) where industry_identifier is not null
 index (product_id, status)
+index (product_id, variant_type)
 index (merchandise_class_id)
 index (merchandise_condition_id)
 index (department_id)
 index (tax_class_id)
 ```
 
-Do not impose a general uniqueness constraint on `(product_id, option values, condition)` until the option model is proven sufficient for every merchandise class. Individually distinguishable physical copies belong in future `inventory_units`, not duplicate variant records.
+Do not impose a general uniqueness constraint on `(product_id, option values, condition)` until the option model is proven sufficient for every merchandise class. Individually distinguishable physical copies belong in future `inventory_units` under a used variant, not as duplicate variant records.
 
 ---
 
@@ -415,18 +437,32 @@ Reserves operational identifiers across product and variant namespaces so that a
 | id | uuid | PK; UUIDv7 | |
 | value | char(13) | null: false; unique | Normalized lookup value |
 | identifier_kind | varchar | null: false; check enum | `product_primary`, `variant_sku`, `variant_industry` |
-| product_id | uuid | FK: `products`; nullable | Owner for `product_primary` |
-| product_variant_id | uuid | FK: `product_variants`; nullable | Owner for either variant kind |
+| product_id | uuid | FK: `products` ON DELETE SET NULL; nullable | Owner for `product_primary` when present |
+| product_variant_id | uuid | FK: `product_variants` ON DELETE SET NULL; nullable | Owner for either variant kind when present |
 | retired_at | timestamptz | nullable | Set when an identifier is removed from ordinary lookup but must remain reserved |
 | created_at | timestamptz | null: false | |
 | updated_at | timestamptz | null: false | |
 
+Registry ownership invariants:
+
+- Every registry row has at most one owner (`product_id` or `product_variant_id`, never both).
+- An **active** registry row (`retired_at` null) has exactly one owner, and that owner must match `identifier_kind`:
+  - `product_primary` → `product_id` only
+  - `variant_sku` / `variant_industry` → `product_variant_id` only
+- A **retired** registry row may have zero or one owner.
+- An unowned registry row must have `retired_at` populated.
+- `value` remains globally unique for both active and retired rows.
+
+Before deleting an eligible draft product or variant, retire its registry rows in the same transaction.
+
 Required checks and indexes:
 
 ```text
-check exactly one of product_id or product_variant_id is present
-check product_primary requires product_id
-check variant_sku and variant_industry require product_variant_id
+check at most one of product_id or product_variant_id is present
+check active rows have a kind-matching owner
+check unowned rows are retired
+check product_primary requires product_id when active
+check variant_sku and variant_industry require product_variant_id when active
 
 unique (value)
 unique (product_id) where identifier_kind = 'product_primary' and retired_at is null
@@ -434,7 +470,7 @@ unique (product_variant_id) where identifier_kind = 'variant_sku'
 unique (product_variant_id) where identifier_kind = 'variant_industry' and retired_at is null
 ```
 
-The registry protects the namespace, while the identifier columns on `products` and `product_variants` remain the business-facing values. Assignment, replacement, retirement, and owner updates must occur in one transaction so the registry and owner cannot diverge.
+Product and variant identifier columns are writable only through the create/assignment services (`identifier_writes_enabled`). Ordinary Active Record creates/updates that change `primary_identifier`, `sku`, or `industry_identifier` are rejected so registry synchronization cannot be bypassed on those paths.
 
 - A current product or variant industry identifier has an active registry row.
 - Replacing or removing one retires the old row rather than deleting it, preventing reuse.
@@ -457,13 +493,13 @@ If a product has multiple eligible variants, the user selects one. ISBN-10 input
 
 The shared generator should:
 
-1. generate or allocate the nine-digit payload following the `221` or `222` prefix;
-2. calculate the EAN-13 check digit;
+1. allocate the next nine-digit payload from a non-cycling PostgreSQL sequence (`MINVALUE 0`, `MAXVALUE 999999999`, `NO CYCLE`) for prefix `221` or `222`;
+2. zero-pad the payload to nine digits and calculate the EAN-13 check digit;
 3. attempt to reserve the complete value in `identifier_registry`;
-4. retry on a unique conflict;
+4. retry only on a unique conflict (not on sequence exhaustion);
 5. assign the identifier to the owner in the same transaction.
 
-A sequence or random payload is acceptable if uniqueness conflicts are handled transactionally and allocated values are never reused.
+Sequence exhaustion must raise a clear operational error and must not wrap.
 
 ---
 
@@ -506,11 +542,15 @@ It should:
 
 - accept products and variants;
 - normalize identifiers before matching;
+- group rows by normalized product primary identifier and persist each group atomically;
 - match products by normalized primary identifier;
 - match variants by SKU or variant industry identifier where appropriate;
 - apply ordinary creation defaults without overwriting explicit imported assignments;
-- remain idempotent when the same file is imported again;
-- report row-level errors;
+- treat blank codes as defaults, but reject explicitly supplied unknown reference codes;
+- remain idempotent when the same file is imported again for rows that include a durable product identifier;
+- treat `generate_primary_identifier=true` with a blank primary identifier as create-only (not idempotent across reimports);
+- reuse ordinary audited create/update services for product and variant writes;
+- report row-level (or group-level) errors;
 - avoid partially importing an invalid product-and-variant group.
 
 No separate staging table is required for the minimal Phase 2 importer. If later import volume, resumability, or review requirements justify persisted import jobs, those tables can be added without changing the merchandise contract.
@@ -562,8 +602,8 @@ Phase 2 is complete when:
 
 - GL accounts, tax classes, departments, merchandise classes, categories, and conditions can be securely administered.
 - Departments can hold explicit account mappings required by future perpetual-inventory and sales posting.
-- Products may exist with or without a primary identifier.
-- Users can enter a valid identifier or explicitly generate a unique `222` identifier.
+- Products always have a mandatory primary identifier (entered or generated at creation).
+- Users enter a valid external identifier or explicitly generate a unique `222` identifier during product creation.
 - Every variant automatically receives an immutable, unique `221` SKU.
 - Cross-namespace identifier collisions and reuse are prevented.
 - Variants store approved class, condition, department, tax class, and regular-price assignments.

@@ -10,6 +10,9 @@ This directory contains the project’s technical authority, development guidanc
 | [Phase 1 plan](planning/phase1-operational-foundation/phase1-plan.md) | Phase 1 scope, slices, and acceptance criteria |
 | [Phase 1 schema](planning/phase1-operational-foundation/phase1-schema.md) | Phase 1 tables, fields, and constraints |
 | [Phase 1 authorization](planning/phase1-operational-foundation/phase1-authorization.md) | Permission catalog, role grants, and evaluation rules |
+| [Phase 2 plan](planning/phase2-financial-classification-and-merchandise-foundation/phase2-plan.md) | Phase 2 scope, slices, and completion criteria |
+| [Phase 2 schema](planning/phase2-financial-classification-and-merchandise-foundation/phase-2-database-schema.md) | Phase 2 tables, fields, and constraints |
+| [Phase 2 authorization](planning/phase2-financial-classification-and-merchandise-foundation/phase2-authorization.md) | Phase 2 permission catalog and role grants |
 | [Development guide](development.md) | Docker-only local setup, PostgreSQL configuration, application commands, and troubleshooting |
 | [Testing and CI](testing.md) | Active GitHub Actions checks and prerequisites for deferred checks |
 | [GitHub work management](github-workflow.md) | Issues, PRs, milestones, labels, and release tagging |
