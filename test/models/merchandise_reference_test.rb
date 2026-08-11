@@ -65,7 +65,7 @@ class MerchandiseReferenceTest < ActiveSupport::TestCase
     assert_equal "Books", root.path_label
     assert_equal "Books > Fiction", parent.path_label
     assert_equal "Books > Fiction > Mystery", child.path_label
-    assert_equal [["Books > Fiction > Mystery", child.id]], MerchandiseCategory.options_for_select([child])
+    assert_equal [ [ "Books > Fiction > Mystery", child.id ] ], MerchandiseCategory.options_for_select([ child ])
   end
 
   test "inventory_mode accepts inventory and non_inventory" do

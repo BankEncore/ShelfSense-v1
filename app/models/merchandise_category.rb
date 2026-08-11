@@ -42,7 +42,7 @@ class MerchandiseCategory < ApplicationRecord
   end
 
   def self.options_for_select(records)
-    Array(records).map { |category| [category.path_label, category.id] }
+    Array(records).map { |category| [ category.path_label, category.id ] }
   end
 
   def reactivation_blockers
