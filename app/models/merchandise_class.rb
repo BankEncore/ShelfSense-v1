@@ -1,19 +1,20 @@
 # frozen_string_literal: true
 
 class MerchandiseClass < ApplicationRecord
+  include HasMachineCode
+
   INVENTORY_MODES = %w[inventory non_inventory].freeze
   PRICING_METHODS = %w[fixed list_price cost_based open_price].freeze
 
   belongs_to :default_standard_department, class_name: "Department", optional: true
   belongs_to :default_used_department, class_name: "Department", optional: true
 
-  before_validation :normalize_code
-
   validates :code, :name, :inventory_mode, :pricing_method, presence: true
-  validates :code, uniqueness: true
+  validates :code, uniqueness: true, format: { with: Codes::Normalizer::FORMAT }
   validates :inventory_mode, inclusion: { in: INVENTORY_MODES }
   validates :pricing_method, inclusion: { in: PRICING_METHODS }
   validate :validate_changed_departments
+  validate :buyback_implication
 
   scope :active, -> { where(active: true) }
   scope :assignable, -> { active }
@@ -30,11 +31,18 @@ class MerchandiseClass < ApplicationRecord
     inventory_mode == "non_inventory"
   end
 
-  private
-
-  def normalize_code
-    self.code = code.to_s.strip.downcase.tr(" ", "_")
+  def reactivation_blockers
+    blockers = []
+    if default_standard_department.present? && !default_standard_department.active?
+      blockers << "default standard department must be active"
+    end
+    if default_used_department.present? && !default_used_department.active?
+      blockers << "default used department must be active"
+    end
+    blockers
   end
+
+  private
 
   def validate_changed_departments
     if default_standard_department_id_changed? && default_standard_department.present? && !default_standard_department.assignable?
@@ -42,6 +50,14 @@ class MerchandiseClass < ApplicationRecord
     end
     if default_used_department_id_changed? && default_used_department.present? && !default_used_department.assignable?
       errors.add(:default_used_department_id, "must be an active department")
+    end
+  end
+
+  def buyback_implication
+    return unless buyback_allowed?
+
+    unless used_merchandise_allowed? && inventory?
+      errors.add(:buyback_allowed, "requires used merchandise allowed and inventory mode")
     end
   end
 end

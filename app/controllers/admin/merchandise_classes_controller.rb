@@ -5,8 +5,8 @@ module Admin
     before_action -> { require_permission!("merchandise_classes.view") }, only: %i[index show]
     before_action -> { require_permission!("merchandise_classes.create") }, only: %i[new create]
     before_action -> { require_permission!("merchandise_classes.update") }, only: %i[edit update]
-    before_action -> { require_permission!("merchandise_classes.deactivate") }, only: :destroy
-    before_action :set_merchandise_class, only: %i[show edit update destroy]
+    before_action -> { require_permission!("merchandise_classes.deactivate") }, only: %i[destroy reactivate]
+    before_action :set_merchandise_class, only: %i[show edit update destroy reactivate]
 
     def index
       @merchandise_classes = MerchandiseClass.order(:display_order, :code)
@@ -45,12 +45,12 @@ module Admin
       rescue_stale do
         if save_and_audit!(
           @merchandise_class,
-          attrs: merchandise_class_params,
+          attrs: merchandise_class_params.except(:code),
           action: "merchandise_classes.update",
           before_keys: %w[
-            code name description inventory_mode pricing_method
+            name description inventory_mode pricing_method
             default_standard_department_id default_used_department_id
-            used_merchandise_allowed buyback_allowed default_returnable display_order
+            used_merchandise_allowed buyback_allowed default_supplier_returnable display_order
           ]
         )
           redirect_to admin_merchandise_class_path(@merchandise_class), notice: "Merchandise class updated."
@@ -68,6 +68,15 @@ module Admin
       redirect_to admin_merchandise_classes_path, notice: "Merchandise class deactivated."
     end
 
+    def reactivate
+      reactivate_configuration!(
+        @merchandise_class,
+        permission_key: "merchandise_classes.deactivate",
+        audit_action: "merchandise_classes.reactivate",
+        redirect_path: admin_merchandise_class_path(@merchandise_class)
+      )
+    end
+
     private
 
     def set_merchandise_class
@@ -82,7 +91,7 @@ module Admin
       permitted = params.require(:merchandise_class).permit(
         :code, :name, :description, :inventory_mode, :pricing_method,
         :default_standard_department_id, :default_used_department_id,
-        :used_merchandise_allowed, :buyback_allowed, :default_returnable,
+        :used_merchandise_allowed, :buyback_allowed, :default_supplier_returnable,
         :display_order, :lock_version
       )
       %i[default_standard_department_id default_used_department_id].each do |key|

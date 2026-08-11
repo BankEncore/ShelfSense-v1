@@ -6,6 +6,8 @@
   <%= link_to "Edit", edit_admin_tax_class_path(@tax_class) if effective_permissions.include?("tax_classes.update") %>
   <% if effective_permissions.include?("tax_classes.deactivate") && @tax_class.active? %>
     <%= button_to "Deactivate", admin_tax_class_path(@tax_class), method: :delete, form: { data: { turbo_confirm: "Deactivate this tax class?" } } %>
+  <% elsif effective_permissions.include?("tax_classes.deactivate") && !@tax_class.active? %>
+    <%= button_to "Reactivate", reactivate_admin_tax_class_path(@tax_class), method: :post, params: { lock_version: @tax_class.lock_version } %>
   <% end %>
 </p>
 <p><%= link_to "Back to tax classes", admin_tax_classes_path %></p>

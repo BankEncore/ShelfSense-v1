@@ -5,8 +5,8 @@ module Admin
     before_action -> { require_permission!("merchandise_conditions.view") }, only: %i[index show]
     before_action -> { require_permission!("merchandise_conditions.create") }, only: %i[new create]
     before_action -> { require_permission!("merchandise_conditions.update") }, only: %i[edit update]
-    before_action -> { require_permission!("merchandise_conditions.deactivate") }, only: :destroy
-    before_action :set_merchandise_condition, only: %i[show edit update destroy]
+    before_action -> { require_permission!("merchandise_conditions.deactivate") }, only: %i[destroy reactivate]
+    before_action :set_merchandise_condition, only: %i[show edit update destroy reactivate]
 
     def index
       @merchandise_conditions = MerchandiseCondition.order(:display_order, :code)
@@ -40,9 +40,9 @@ module Admin
       rescue_stale do
         if save_and_audit!(
           @merchandise_condition,
-          attrs: merchandise_condition_params,
+          attrs: merchandise_condition_params.except(:code),
           action: "merchandise_conditions.update",
-          before_keys: %w[code name description price_adjustment_bps display_order]
+          before_keys: %w[name description price_adjustment_bps display_order]
         )
           redirect_to admin_merchandise_condition_path(@merchandise_condition), notice: "Merchandise condition updated."
         else
@@ -56,6 +56,15 @@ module Admin
         @merchandise_condition.update!(active: false)
       end
       redirect_to admin_merchandise_conditions_path, notice: "Merchandise condition deactivated."
+    end
+
+    def reactivate
+      reactivate_configuration!(
+        @merchandise_condition,
+        permission_key: "merchandise_conditions.deactivate",
+        audit_action: "merchandise_conditions.reactivate",
+        redirect_path: admin_merchandise_condition_path(@merchandise_condition)
+      )
     end
 
     private

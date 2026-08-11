@@ -80,5 +80,20 @@ module Admin
         )
       end
     end
+
+    def reactivate_configuration!(record, permission_key:, audit_action:, redirect_path:)
+      rescue_stale do
+        Configuration::Reactivate.call(
+          record: record,
+          actor: current_user,
+          store: current_store,
+          lock_version: params.dig(record.model_name.param_key, :lock_version) || params[:lock_version],
+          audit_action: audit_action
+        )
+        redirect_to redirect_path, notice: "#{record.class.model_name.human} reactivated."
+      rescue Configuration::Reactivate::Error => e
+        redirect_to redirect_path, alert: e.message
+      end
+    end
   end
 end

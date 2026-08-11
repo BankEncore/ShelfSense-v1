@@ -1,10 +1,10 @@
 # frozen_string_literal: true
 
 class MerchandiseCondition < ApplicationRecord
-  before_validation :normalize_code
+  include HasMachineCode
 
   validates :code, :name, presence: true
-  validates :code, uniqueness: true
+  validates :code, uniqueness: true, format: { with: Codes::Normalizer::FORMAT }
   validates :price_adjustment_bps, numericality: { only_integer: true, greater_than_or_equal_to: 0 }
 
   scope :active, -> { where(active: true) }
@@ -14,9 +14,7 @@ class MerchandiseCondition < ApplicationRecord
     active?
   end
 
-  private
-
-  def normalize_code
-    self.code = code.to_s.strip.downcase.tr(" ", "_")
+  def reactivation_blockers
+    []
   end
 end

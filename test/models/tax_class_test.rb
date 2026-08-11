@@ -15,4 +15,22 @@ class TaxClassTest < ActiveSupport::TestCase
     record = TaxClass.create!(code: " Physical Book ", name: "Physical book")
     assert_equal "physical_book", record.code
   end
+
+  test "code cannot change after create" do
+    record = tax_class(code: "books")
+    record.code = "other"
+    assert_not record.valid?
+    assert_includes record.errors[:code], "cannot be changed after creation"
+  end
+
+  test "reactivate succeeds when inactive" do
+    actor = actor_user
+    record = tax_class(code: "inactive_tax", active: false)
+    Configuration::Reactivate.call(
+      record: record,
+      actor: actor,
+      audit_action: "tax_classes.reactivate"
+    )
+    assert record.reload.active?
+  end
 end

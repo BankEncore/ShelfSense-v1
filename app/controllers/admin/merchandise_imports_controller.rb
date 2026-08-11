@@ -1,10 +1,26 @@
 # frozen_string_literal: true
 
+require "csv"
+
 module Admin
   class MerchandiseImportsController < BaseController
+    TEMPLATE_HEADERS = %w[
+      primary_identifier name generate_primary_identifier status sku variant_type variant_name
+      industry_identifier variant_condition_code merchandise_class_code department_code
+      tax_class_code regular_price_cents
+    ].freeze
+
     before_action -> { require_permission!("merchandise.import") }
 
     def new; end
+
+    def template
+      csv = CSV.generate(force_quotes: false) { |out| out << TEMPLATE_HEADERS }
+      send_data csv,
+                filename: "merchandise_import_template.csv",
+                type: "text/csv; charset=utf-8",
+                disposition: "attachment"
+    end
 
     def create
       upload = params.require(:import).permit(:file)[:file]

@@ -192,7 +192,7 @@ Examples include `book`, `recorded_music`, `video`, `greeting_card`, `apparel`, 
 | default_used_department_id | uuid | FK: `departments`; nullable | Default for used variants |
 | used_merchandise_allowed | boolean | null: false; default `false` | Whether used variants may use this class |
 | buyback_allowed | boolean | null: false; default `false` | Future behavior; buyback is deferred |
-| default_returnable | boolean | null: false; default `true` | Default used by later purchasing and return workflows |
+| default_supplier_returnable | boolean | null: false; default `true` | Default used by later purchasing supplier-return workflows |
 | active | boolean | null: false; default `true` | |
 | display_order | integer | null: false; default `0` | |
 | lock_version | integer | null: false; default `0` | Optimistic concurrency |

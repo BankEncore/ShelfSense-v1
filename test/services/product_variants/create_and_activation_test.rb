@@ -10,14 +10,14 @@ class ProductVariants::CreateAndActivationTest < ActiveSupport::TestCase
     @used_dept = department(code: "used_books", default_tax_class: @tax)
     @klass = merchandise_class(
       code: "book",
-      pricing_method: "fixed",
+      pricing_method: "list_price",
       used_merchandise_allowed: false,
       default_standard_department: @standard_dept,
       default_used_department: @used_dept
     )
     @used_klass = merchandise_class(
       code: "used_book",
-      pricing_method: "fixed",
+      pricing_method: "list_price",
       used_merchandise_allowed: true,
       default_standard_department: @standard_dept,
       default_used_department: @used_dept
@@ -192,6 +192,7 @@ class ProductVariants::CreateAndActivationTest < ActiveSupport::TestCase
     assert_equal @tax.id, standard.tax_class_id
     assert_equal 2_000, standard.regular_price_cents
     assert_equal "quantity", standard.derived_inventory_tracking
+    assert_equal "Standard", standard.name
 
     used = ProductVariants::Create.call(
       product: @product,
@@ -205,6 +206,42 @@ class ProductVariants::CreateAndActivationTest < ActiveSupport::TestCase
     assert_equal @used_dept.id, used.department_id
     assert_equal 1_200, used.regular_price_cents
     assert_equal "individual", used.derived_inventory_tracking
+    assert_equal @like_new.name, used.name
+  end
+
+  test "blank regular_price_cents from UI still defaults under list_price" do
+    variant = ProductVariants::Create.call(
+      product: @product,
+      actor: @actor,
+      attributes: {
+        variant_type: "standard",
+        merchandise_class_id: @klass.id,
+        regular_price_cents: nil
+      }
+    )
+
+    assert_equal 2_000, variant.regular_price_cents
+  end
+
+  test "fixed pricing method does not default from product list price" do
+    fixed = merchandise_class(
+      code: "fixed_book",
+      pricing_method: "fixed",
+      default_standard_department: @standard_dept
+    )
+    category = merchandise_category(name: "Fixed Cat", default_merchandise_class: fixed)
+    product = Products::Create.call(
+      attributes: { name: "Fixed Price Book", status: "draft", merchandise_category: category, list_price_cents: 2_000 },
+      actor: @actor,
+      identifier_mode: "generate"
+    )
+
+    variant = ProductVariants::Create.call(
+      product: product,
+      actor: @actor,
+      attributes: { variant_type: "standard" }
+    )
+    assert_nil variant.regular_price_cents
   end
 
   test "changing class defaults does not mutate existing variants" do

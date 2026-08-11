@@ -33,9 +33,18 @@ class MerchandiseReferenceTest < ActiveSupport::TestCase
   end
 
   test "merchandise category root name uniqueness is enforced" do
-    merchandise_category(name: "Fiction")
+    merchandise_category(name: "Fiction", code: "fiction_root")
     assert_raises(ActiveRecord::RecordNotUnique) do
-      MerchandiseCategory.create!(name: "fiction", display_order: 0)
+      MerchandiseCategory.insert!({
+        id: SecureRandom.uuid_v7,
+        name: "fiction",
+        code: "fiction_other",
+        active: true,
+        display_order: 0,
+        lock_version: 0,
+        created_at: Time.current,
+        updated_at: Time.current
+      })
     end
   end
 
@@ -46,6 +55,17 @@ class MerchandiseReferenceTest < ActiveSupport::TestCase
     parent.parent = child
     assert_not parent.valid?
     assert_includes parent.errors[:parent_id], "would create a hierarchy cycle"
+  end
+
+  test "merchandise category path_label includes ancestors" do
+    root = merchandise_category(name: "Books", code: "books_root")
+    parent = merchandise_category(name: "Fiction", code: "fiction", parent: root)
+    child = merchandise_category(name: "Mystery", code: "mystery", parent: parent)
+
+    assert_equal "Books", root.path_label
+    assert_equal "Books > Fiction", parent.path_label
+    assert_equal "Books > Fiction > Mystery", child.path_label
+    assert_equal [ [ "Books > Fiction > Mystery", child.id ] ], MerchandiseCategory.options_for_select([ child ])
   end
 
   test "inventory_mode accepts inventory and non_inventory" do
@@ -62,5 +82,35 @@ class MerchandiseReferenceTest < ActiveSupport::TestCase
     )
     assert_not invalid.valid?
     assert_includes invalid.errors[:inventory_mode], "is not included in the list"
+  end
+
+  test "buyback requires used merchandise and inventory mode" do
+    klass = merchandise_class(code: "gift_card", inventory_mode: "non_inventory", default_standard_department: @department)
+    klass.buyback_allowed = true
+    assert_not klass.valid?
+    assert_includes klass.errors[:buyback_allowed], "requires used merchandise allowed and inventory mode"
+  end
+
+  test "default_supplier_returnable is the returnability column" do
+    klass = merchandise_class(code: "book", default_standard_department: @department)
+    assert klass.respond_to?(:default_supplier_returnable)
+    assert_not klass.respond_to?(:default_returnable)
+  end
+
+  test "codes are immutable after create" do
+    klass = merchandise_class(code: "immutable", default_standard_department: @department)
+    klass.code = "changed"
+    assert_not klass.valid?
+    assert_includes klass.errors[:code], "cannot be changed after creation"
+  end
+
+  test "blank code generates from name" do
+    klass = MerchandiseClass.create!(
+      name: "Used Books & Media",
+      inventory_mode: "inventory",
+      pricing_method: "fixed",
+      default_standard_department: @department
+    )
+    assert_equal "used_books_media", klass.code
   end
 end

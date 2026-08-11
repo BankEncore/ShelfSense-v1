@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_10_220000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_11_154000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -86,6 +86,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_10_220000) do
     t.index ["receiving_clearing_gl_account_id"], name: "index_departments_on_receiving_clearing_gl_account_id"
     t.index ["sales_returns_gl_account_id"], name: "index_departments_on_sales_returns_gl_account_id"
     t.index ["sales_revenue_gl_account_id"], name: "index_departments_on_sales_revenue_gl_account_id"
+    t.check_constraint "code::text ~ '^[a-z0-9]+(_[a-z0-9]+)*$'::text", name: "departments_code_format"
     t.check_constraint "default_target_margin_bps IS NULL OR default_target_margin_bps >= 0 AND default_target_margin_bps < 10000", name: "departments_margin_bps_range"
   end
 
@@ -105,6 +106,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_10_220000) do
     t.index ["account_number"], name: "index_gl_accounts_on_account_number", unique: true
     t.index ["active", "account_number"], name: "index_gl_accounts_on_active_and_account_number"
     t.index ["parent_id"], name: "index_gl_accounts_on_parent_id"
+    t.check_constraint "account_category::text = 'cash'::text AND account_type::text = 'asset'::text OR account_category::text = 'accounts_receivable'::text AND account_type::text = 'asset'::text OR account_category::text = 'inventory'::text AND account_type::text = 'asset'::text OR account_category::text = 'other_current_asset'::text AND account_type::text = 'asset'::text OR account_category::text = 'fixed_asset'::text AND account_type::text = 'asset'::text OR account_category::text = 'accounts_payable'::text AND account_type::text = 'liability'::text OR account_category::text = 'other_current_liability'::text AND account_type::text = 'liability'::text OR account_category::text = 'long_term_liability'::text AND account_type::text = 'liability'::text OR account_category::text = 'equity'::text AND account_type::text = 'equity'::text OR account_category::text = 'sales'::text AND account_type::text = 'revenue'::text OR account_category::text = 'sales_returns'::text AND account_type::text = 'revenue'::text OR account_category::text = 'other_revenue'::text AND account_type::text = 'revenue'::text OR account_category::text = 'cost_of_goods_sold'::text AND account_type::text = 'expense'::text OR account_category::text = 'freight_in'::text AND account_type::text = 'expense'::text OR account_category::text = 'inventory_shrinkage'::text AND account_type::text = 'expense'::text OR account_category::text = 'inventory_adjustment'::text AND account_type::text = 'expense'::text OR account_category::text = 'inventory_write_down'::text AND account_type::text = 'expense'::text OR account_category::text = 'other_expense'::text AND account_type::text = 'expense'::text", name: "gl_accounts_category_matches_type"
     t.check_constraint "account_type::text = ANY (ARRAY['asset'::character varying, 'liability'::character varying, 'equity'::character varying, 'revenue'::character varying, 'expense'::character varying]::text[])", name: "gl_accounts_account_type_valid"
     t.check_constraint "parent_id IS NULL OR parent_id <> id", name: "gl_accounts_parent_not_self"
   end
@@ -140,6 +142,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_10_220000) do
     t.index "lower((name)::text)", name: "index_merchandise_categories_root_name", unique: true, where: "(parent_id IS NULL)"
     t.index "parent_id, lower((name)::text)", name: "index_merchandise_categories_sibling_name", unique: true, where: "(parent_id IS NOT NULL)"
     t.index ["code"], name: "index_merchandise_categories_on_code", unique: true, where: "(code IS NOT NULL)"
+    t.check_constraint "code IS NULL OR code::text ~ '^[a-z0-9]+(_[a-z0-9]+)*$'::text", name: "merchandise_categories_code_format"
     t.check_constraint "parent_id IS NULL OR parent_id <> id", name: "merchandise_categories_parent_not_self"
   end
 
@@ -148,8 +151,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_10_220000) do
     t.boolean "buyback_allowed", default: false, null: false
     t.string "code", null: false
     t.timestamptz "created_at", null: false
-    t.boolean "default_returnable", default: true, null: false
     t.uuid "default_standard_department_id"
+    t.boolean "default_supplier_returnable", default: true, null: false
     t.uuid "default_used_department_id"
     t.text "description"
     t.integer "display_order", default: 0, null: false
@@ -160,6 +163,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_10_220000) do
     t.timestamptz "updated_at", null: false
     t.boolean "used_merchandise_allowed", default: false, null: false
     t.index ["code"], name: "index_merchandise_classes_on_code", unique: true
+    t.check_constraint "NOT buyback_allowed OR used_merchandise_allowed AND inventory_mode::text = 'inventory'::text", name: "merchandise_classes_buyback_implies_used_inventory"
+    t.check_constraint "code::text ~ '^[a-z0-9]+(_[a-z0-9]+)*$'::text", name: "merchandise_classes_code_format"
     t.check_constraint "inventory_mode::text = ANY (ARRAY['inventory'::character varying, 'non_inventory'::character varying]::text[])", name: "merchandise_classes_inventory_mode_valid"
     t.check_constraint "pricing_method::text = ANY (ARRAY['fixed'::character varying, 'list_price'::character varying, 'cost_based'::character varying, 'open_price'::character varying]::text[])", name: "merchandise_classes_pricing_method_valid"
   end
@@ -175,6 +180,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_10_220000) do
     t.integer "price_adjustment_bps", default: 10000, null: false
     t.timestamptz "updated_at", null: false
     t.index ["code"], name: "index_merchandise_conditions_on_code", unique: true
+    t.check_constraint "code::text ~ '^[a-z0-9]+(_[a-z0-9]+)*$'::text", name: "merchandise_conditions_code_format"
     t.check_constraint "price_adjustment_bps >= 0", name: "merchandise_conditions_price_adjustment_nonnegative"
   end
 
@@ -333,7 +339,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_10_220000) do
     t.boolean "singleton_key", default: true, null: false
     t.timestamptz "updated_at", null: false
     t.index ["singleton_key"], name: "index_system_settings_on_singleton_key", unique: true
-    t.check_constraint "default_customer_reservation_expiration_days >= 0", name: "system_settings_reservation_days_nonnegative"
+    t.check_constraint "default_customer_reservation_expiration_days > 0", name: "system_settings_reservation_days_positive"
     t.check_constraint "default_supplier_cancellation_days >= 0", name: "system_settings_supplier_cancellation_days_nonnegative"
     t.check_constraint "fiscal_year_start_month >= 1 AND fiscal_year_start_month <= 12", name: "system_settings_fiscal_year_start_month_range"
     t.check_constraint "singleton_key = true", name: "system_settings_singleton_key_true"
@@ -349,6 +355,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_10_220000) do
     t.string "name", null: false
     t.timestamptz "updated_at", null: false
     t.index ["code"], name: "index_tax_classes_on_code", unique: true
+    t.check_constraint "code::text ~ '^[a-z0-9]+(_[a-z0-9]+)*$'::text", name: "tax_classes_code_format"
   end
 
   create_table "user_sessions", id: :uuid, default: nil, force: :cascade do |t|

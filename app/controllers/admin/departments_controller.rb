@@ -5,8 +5,8 @@ module Admin
     before_action -> { require_permission!("departments.view") }, only: %i[index show]
     before_action -> { require_permission!("departments.create") }, only: %i[new create]
     before_action -> { require_permission!("departments.update") }, only: %i[edit update]
-    before_action -> { require_permission!("departments.deactivate") }, only: :destroy
-    before_action :set_department, only: %i[show edit update destroy]
+    before_action -> { require_permission!("departments.deactivate") }, only: %i[destroy reactivate]
+    before_action :set_department, only: %i[show edit update destroy reactivate]
 
     def index
       @departments = Department.order(:display_order, :code)
@@ -41,9 +41,9 @@ module Admin
       rescue_stale do
         if save_and_audit!(
           @department,
-          attrs: department_params,
+          attrs: department_params.except(:code),
           action: "departments.update",
-          before_keys: audit_attribute_keys
+          before_keys: audit_attribute_keys - %w[code]
         )
           redirect_to admin_department_path(@department), notice: "Department updated."
         else
@@ -56,6 +56,15 @@ module Admin
     def destroy
       mutate_and_audit!(@department, action: "departments.deactivate") { @department.update!(active: false) }
       redirect_to admin_departments_path, notice: "Department deactivated."
+    end
+
+    def reactivate
+      reactivate_configuration!(
+        @department,
+        permission_key: "departments.deactivate",
+        audit_action: "departments.reactivate",
+        redirect_path: admin_department_path(@department)
+      )
     end
 
     private

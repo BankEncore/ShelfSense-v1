@@ -1,7 +1,7 @@
-<% content_for :title, @merchandise_category.name %>
-<h1><%= @merchandise_category.code.presence || "—" %> — <%= @merchandise_category.name %></h1>
+<% content_for :title, @merchandise_category.path_label %>
+<h1><%= @merchandise_category.code.presence || "—" %> — <%= @merchandise_category.path_label %></h1>
 <p>
-  Parent: <%= @merchandise_category.parent&.name || "—" %> ·
+  Parent: <%= @merchandise_category.parent&.path_label || "—" %> ·
   Default class: <%= @merchandise_category.default_merchandise_class&.code || "—" %> ·
   Order: <%= @merchandise_category.display_order %> ·
   <%= @merchandise_category.active? ? "active" : "inactive" %>
@@ -11,6 +11,8 @@
   <%= link_to "Edit", edit_admin_merchandise_category_path(@merchandise_category) if effective_permissions.include?("merchandise_categories.update") %>
   <% if effective_permissions.include?("merchandise_categories.deactivate") && @merchandise_category.active? %>
     <%= button_to "Deactivate", admin_merchandise_category_path(@merchandise_category), method: :delete, form: { data: { turbo_confirm: "Deactivate this category?" } } %>
+  <% elsif effective_permissions.include?("merchandise_categories.deactivate") && !@merchandise_category.active? %>
+    <%= button_to "Reactivate", reactivate_admin_merchandise_category_path(@merchandise_category), method: :post, params: { lock_version: @merchandise_category.lock_version } %>
   <% end %>
 </p>
 <p><%= link_to "Back to categories", admin_merchandise_categories_path %></p>

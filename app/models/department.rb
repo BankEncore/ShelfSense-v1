@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class Department < ApplicationRecord
+  include HasMachineCode
+
   GL_MAPPING_EXPECTATIONS = {
     inventory_asset_gl_account_id: { account_type: "asset", account_category: "inventory" },
     cost_of_goods_sold_gl_account_id: { account_type: "expense", account_category: "cost_of_goods_sold" },
@@ -29,10 +31,10 @@ class Department < ApplicationRecord
   belongs_to :inventory_adjustment_loss_gl_account, class_name: "GlAccount", optional: true
   belongs_to :inventory_write_down_gl_account, class_name: "GlAccount", optional: true
 
-  before_validation :normalize_code
+  before_validation :normalize_department_number
 
   validates :code, :name, :default_tax_class_id, presence: true
-  validates :code, uniqueness: true
+  validates :code, uniqueness: true, format: { with: Codes::Normalizer::FORMAT }
   validates :default_target_margin_bps,
             numericality: { only_integer: true, greater_than_or_equal_to: 0, less_than: 10_000 },
             allow_nil: true
@@ -46,10 +48,38 @@ class Department < ApplicationRecord
     active?
   end
 
+  def reactivation_blockers
+    blockers = []
+    if default_tax_class.blank? || !default_tax_class.active?
+      blockers << "default tax class must be active"
+    end
+
+    GL_MAPPING_EXPECTATIONS.each do |field, expectation|
+      account = public_send(field.to_s.delete_suffix("_id"))
+      next if account.nil?
+
+      unless account.assignable?
+        blockers << "#{field} must be an active posting account"
+        next
+      end
+      if account.account_type != expectation[:account_type] || account.account_category != expectation[:account_category]
+        blockers << "#{field} must be #{expectation[:account_type]}/#{expectation[:account_category]}"
+      end
+    end
+
+    FLEXIBLE_GL_FIELDS.each do |field|
+      account = public_send(field.delete_suffix("_id"))
+      next if account.nil?
+
+      blockers << "#{field} must be an active posting account" unless account.assignable?
+    end
+
+    blockers
+  end
+
   private
 
-  def normalize_code
-    self.code = code.to_s.strip.downcase.tr(" ", "_")
+  def normalize_department_number
     self.department_number = department_number.to_s.strip.presence
   end
 

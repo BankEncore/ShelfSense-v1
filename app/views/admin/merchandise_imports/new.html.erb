@@ -1,5 +1,28 @@
 <% content_for :title, "Merchandise import" %>
 <h1>Merchandise CSV import</h1>
+
+<p>
+  <%= link_to "Download CSV template", template_admin_merchandise_imports_path %>
+</p>
+
+<section>
+  <h2>Column dictionary</h2>
+  <ul>
+    <li><code>primary_identifier</code> — required unless <code>generate_primary_identifier</code> is true</li>
+    <li><code>name</code> — required for a new product</li>
+    <li><code>generate_primary_identifier</code> — <code>true</code>/<code>false</code>; blank+true is create-only and not idempotent on reimport</li>
+    <li><code>status</code> — optional product status</li>
+    <li><code>sku</code> — identifies an existing variant for update; cannot assign a SKU to a new variant</li>
+    <li><code>variant_type</code> — <code>standard</code> or <code>used</code> for new variants</li>
+    <li><code>variant_name</code> — maps to <code>product_variants.name</code>; blank uses shared create defaults</li>
+    <li><code>industry_identifier</code> — optional GTIN/ISBN-style identifier</li>
+    <li><code>variant_condition_code</code> — required for used; prohibited for standard; exact canonical code match</li>
+    <li><code>merchandise_class_code</code>, <code>department_code</code>, <code>tax_class_code</code> — exact canonical codes; blank uses defaults; unknown codes error</li>
+    <li><code>regular_price_cents</code> — integer minor units (cents)</li>
+  </ul>
+  <p>Rows sharing a normalized entered product identifier are one transaction group; a failure rolls back that group.</p>
+</section>
+
 <%= form_with url: admin_merchandise_imports_path, scope: :import, html: { multipart: true } do |form| %>
   <p><%= form.label :file, "CSV file" %><%= form.file_field :file, accept: ".csv,text/csv" %></p>
   <p><%= form.submit "Import" %></p>

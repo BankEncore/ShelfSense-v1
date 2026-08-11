@@ -10,6 +10,8 @@
   <%= link_to "Edit", edit_admin_merchandise_condition_path(@merchandise_condition) if effective_permissions.include?("merchandise_conditions.update") %>
   <% if effective_permissions.include?("merchandise_conditions.deactivate") && @merchandise_condition.active? %>
     <%= button_to "Deactivate", admin_merchandise_condition_path(@merchandise_condition), method: :delete, form: { data: { turbo_confirm: "Deactivate this condition?" } } %>
+  <% elsif effective_permissions.include?("merchandise_conditions.deactivate") && !@merchandise_condition.active? %>
+    <%= button_to "Reactivate", reactivate_admin_merchandise_condition_path(@merchandise_condition), method: :post, params: { lock_version: @merchandise_condition.lock_version } %>
   <% end %>
 </p>
 <p><%= link_to "Back to conditions", admin_merchandise_conditions_path %></p>

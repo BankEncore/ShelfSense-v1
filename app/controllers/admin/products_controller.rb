@@ -139,14 +139,26 @@ module Admin
     def product_params
       permitted = params.require(:product).permit(
         :name, :subtitle, :description, :brand_name, :product_model, :merchandise_category_id,
-        :list_price_cents, :release_date, :status, :variant_option_name_1, :variant_option_name_2,
+        :list_price, :list_price_cents, :release_date, :status, :variant_option_name_1, :variant_option_name_2,
         :lock_version
       )
+
+      if permitted.key?(:list_price) || params[:product]&.key?(:list_price)
+        raw = permitted.delete(:list_price).presence || params.dig(:product, :list_price)
+        permitted[:list_price_cents] = raw.blank? ? nil : dollars_to_cents(raw)
+      end
+
       %i[merchandise_category_id list_price_cents release_date subtitle description brand_name
          product_model variant_option_name_1 variant_option_name_2].each do |key|
         permitted[key] = nil if permitted[key].blank?
       end
       permitted
+    end
+
+    def dollars_to_cents(raw)
+      (BigDecimal(raw.to_s.strip) * 100).round.to_i
+    rescue ArgumentError
+      raise ActionController::BadRequest, "list price is not a valid amount"
     end
   end
 end

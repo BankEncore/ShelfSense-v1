@@ -1,7 +1,15 @@
 <%= form_with model: [:admin, merchandise_condition] do |form| %>
   <% if merchandise_condition.errors.any? %><ul><% merchandise_condition.errors.full_messages.each do |m| %><li><%= m %></li><% end %></ul><% end %>
   <%= form.hidden_field :lock_version %>
-  <p><%= form.label :code %><%= form.text_field :code %></p>
+  <% if merchandise_condition.persisted? %>
+    <p>Code: <code><%= merchandise_condition.code %></code> (immutable)</p>
+  <% else %>
+    <p>
+      <%= form.label :code %>
+      <%= form.text_field :code %>
+      <span>Leave blank to generate from the name. Later changes are not allowed.</span>
+    </p>
+  <% end %>
   <p><%= form.label :name %><%= form.text_field :name %></p>
   <p><%= form.label :description %><%= form.text_area :description %></p>
   <p><%= form.label :price_adjustment_bps %><%= form.number_field :price_adjustment_bps %></p>
