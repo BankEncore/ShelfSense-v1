@@ -1,0 +1,88 @@
+# frozen_string_literal: true
+
+require "test_helper"
+
+class Phase22ProductUxTest < ActionDispatch::IntegrationTest
+  setup do
+    @bootstrap = bootstrap!
+    @admin = @bootstrap[:administrator]
+    @actor = @admin
+    @category = merchandise_category(name: "Fiction")
+    @product = Products::Create.call(
+      attributes: {
+        name: "Example Book",
+        status: "draft",
+        merchandise_category: @category,
+        list_price_cents: 1999
+      },
+      actor: @actor,
+      identifier_mode: "generate"
+    )
+  end
+
+  test "product index search filter and currency form round trip" do
+    sign_in_as("admin")
+
+    get admin_products_path, params: { q: "Example", status: "draft", merchandise_category_id: @category.id }
+    assert_response :success
+    assert_match(/Example Book/, response.body)
+    assert_match(/\$19\.99/, response.body)
+
+    get edit_admin_product_path(@product)
+    assert_response :success
+
+    patch admin_product_path(@product), params: {
+      product: {
+        name: "Example Book",
+        status: "draft",
+        merchandise_category_id: @category.id,
+        list_price: "25.50",
+        lock_version: @product.lock_version
+      }
+    }
+    assert_redirected_to admin_product_path(@product)
+    assert_equal 2550, @product.reload.list_price_cents
+
+    patch admin_product_path(@product), params: {
+      product: {
+        name: "Example Book",
+        status: "draft",
+        list_price: "nope",
+        lock_version: @product.lock_version
+      }
+    }
+    assert_response :unprocessable_entity
+    assert_match(/not a valid amount|error/i, response.body)
+    assert_equal 2550, @product.reload.list_price_cents
+  end
+
+  test "variant regular price uses currency parsing" do
+    sign_in_as("admin")
+    tax = tax_class(code: "books")
+    dept = department(code: "new_books", default_tax_class: tax)
+    klass = merchandise_class(code: "book", pricing_method: "fixed", default_standard_department: dept)
+
+    post admin_product_product_variants_path(@product), params: {
+      product_variant: {
+        variant_type: "standard",
+        merchandise_class_id: klass.id,
+        department_id: dept.id,
+        tax_class_id: tax.id,
+        regular_price: "14.00",
+        status: "draft"
+      }
+    }
+    assert_response :redirect
+    variant = @product.product_variants.order(:created_at).last
+    assert_equal 1400, variant.regular_price_cents
+  end
+
+  private
+
+  def sign_in_as(username)
+    delete session_path
+    follow_redirect! while response.redirect?
+    post session_path, params: { session: { username: username, password: "correct-horse-battery" } }
+    follow_redirect! if response.redirect?
+  end
+end

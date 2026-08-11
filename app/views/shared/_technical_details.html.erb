@@ -1,0 +1,11 @@
+<%#
+  locals:
+    title: optional
+    rows: [[label, value], ...]
+%>
+<details class="technical-details">
+  <summary><%= local_assigns.fetch(:title, "Technical details") %></summary>
+  <div class="section">
+    <%= render "shared/definition_list", rows: rows %>
+  </div>
+</details>

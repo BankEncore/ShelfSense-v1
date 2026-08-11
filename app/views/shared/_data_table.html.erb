@@ -1,0 +1,36 @@
+<%#
+  locals:
+    headers: array of strings or { text:, class: }
+    rows: array of arrays of cell content (HTML-safe ok)
+    empty: optional HTML when no rows
+%>
+<% if rows.blank? %>
+  <%= local_assigns[:empty] %>
+<% else %>
+  <div class="table-scroll">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <% headers.each do |header| %>
+            <% if header.is_a?(Hash) %>
+              <th class="<%= header[:class] %>"><%= header[:text] %></th>
+            <% else %>
+              <th><%= header %></th>
+            <% end %>
+          <% end %>
+        </tr>
+      </thead>
+      <tbody>
+        <% rows.each do |row| %>
+          <tr>
+            <% row.each_with_index do |cell, index| %>
+              <% header = headers[index] %>
+              <% css = header.is_a?(Hash) ? header[:class] : nil %>
+              <td class="<%= css %>"><%= cell %></td>
+            <% end %>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+<% end %>

@@ -1,36 +1,69 @@
-<%= form_with model: [:admin, merchandise_class] do |form| %>
-  <% if merchandise_class.errors.any? %><ul><% merchandise_class.errors.full_messages.each do |m| %><li><%= m %></li><% end %></ul><% end %>
+<%= form_with model: [:admin, merchandise_class], class: "form" do |form| %>
+  <%= render "shared/form_errors", record: merchandise_class %>
   <%= form.hidden_field :lock_version %>
-  <% if merchandise_class.persisted? %>
-    <p>Code: <code><%= merchandise_class.code %></code> (immutable)</p>
-  <% else %>
-    <p>
-      <%= form.label :code %>
-      <%= form.text_field :code %>
-      <span>Leave blank to generate from the name. Later changes are not allowed.</span>
-    </p>
+
+  <%= render layout: "shared/form_section", locals: { title: "Identity" } do %>
+    <% if merchandise_class.persisted? %>
+      <div class="form-field">
+        <span class="muted">Code</span>
+        <div><code><%= merchandise_class.code %></code> (immutable)</div>
+      </div>
+    <% else %>
+      <div class="form-field">
+        <%= form.label :code %>
+        <%= form.text_field :code %>
+        <span class="field-help">Leave blank to generate from the name. Later changes are not allowed.</span>
+      </div>
+    <% end %>
+    <div class="form-field">
+      <%= form.label :name %>
+      <%= form.text_field :name %>
+    </div>
+    <div class="form-field">
+      <%= form.label :description %>
+      <%= form.text_area :description, rows: 3 %>
+    </div>
+    <div class="form-field">
+      <%= form.label :display_order %>
+      <%= form.number_field :display_order %>
+    </div>
   <% end %>
-  <p><%= form.label :name %><%= form.text_field :name %></p>
-  <p><%= form.label :description %><%= form.text_area :description %></p>
-  <p>
-    <%= form.label :inventory_mode %>
-    <%= form.select :inventory_mode, MerchandiseClass::INVENTORY_MODES.map { |m| [m.humanize, m] } %>
-  </p>
-  <p>
-    <%= form.label :pricing_method %>
-    <%= form.select :pricing_method, MerchandiseClass::PRICING_METHODS.map { |m| [m.humanize, m] } %>
-  </p>
-  <p>
-    <%= form.label :default_standard_department_id, "Default standard department" %>
-    <%= form.select :default_standard_department_id, @departments.map { |d| ["#{d.code} — #{d.name}", d.id] }, include_blank: "None" %>
-  </p>
-  <p>
-    <%= form.label :default_used_department_id, "Default used department" %>
-    <%= form.select :default_used_department_id, @departments.map { |d| ["#{d.code} — #{d.name}", d.id] }, include_blank: "None" %>
-  </p>
-  <p><%= form.check_box :used_merchandise_allowed %><%= form.label :used_merchandise_allowed %></p>
-  <p><%= form.check_box :buyback_allowed %><%= form.label :buyback_allowed, "Buyback allowed (requires used + inventory)" %></p>
-  <p><%= form.check_box :default_supplier_returnable %><%= form.label :default_supplier_returnable, "Default supplier returnable" %></p>
-  <p><%= form.label :display_order %><%= form.number_field :display_order %></p>
-  <p><%= form.submit %></p>
+
+  <%= render layout: "shared/form_section", locals: { title: "Behavior" } do %>
+    <div class="form-field">
+      <%= form.label :inventory_mode %>
+      <%= form.select :inventory_mode, MerchandiseClass::INVENTORY_MODES.map { |m| [m.humanize, m] } %>
+    </div>
+    <div class="form-field">
+      <%= form.label :pricing_method %>
+      <%= form.select :pricing_method, MerchandiseClass::PRICING_METHODS.map { |m| [m.humanize, m] } %>
+    </div>
+    <div class="form-field">
+      <%= form.label :default_standard_department_id, "Default standard department" %>
+      <%= form.select :default_standard_department_id, @departments.map { |d| ["#{d.code} — #{d.name}", d.id] }, include_blank: "None" %>
+    </div>
+    <div class="form-field">
+      <%= form.label :default_used_department_id, "Default used department" %>
+      <%= form.select :default_used_department_id, @departments.map { |d| ["#{d.code} — #{d.name}", d.id] }, include_blank: "None" %>
+    </div>
+    <div class="form-field">
+      <%= form.check_box :used_merchandise_allowed %>
+      <%= form.label :used_merchandise_allowed, "Used merchandise allowed" %>
+    </div>
+    <div class="form-field">
+      <%= form.check_box :buyback_allowed %>
+      <%= form.label :buyback_allowed, "Buyback allowed (requires used + inventory)" %>
+    </div>
+    <div class="form-field">
+      <%= form.check_box :default_supplier_returnable %>
+      <%= form.label :default_supplier_returnable, "Default supplier returnable" %>
+    </div>
+  <% end %>
+
+  <div class="actions">
+    <%= form.submit class: "btn" %>
+    <%= link_to "Cancel",
+          merchandise_class.persisted? ? admin_merchandise_class_path(merchandise_class) : admin_merchandise_classes_path,
+          class: "btn btn--ghost" %>
+  </div>
 <% end %>

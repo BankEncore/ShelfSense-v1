@@ -1,12 +1,78 @@
-<%= form_with model: [:admin, store] do |form| %>
-  <% if store.errors.any? %><ul><% store.errors.full_messages.each do |m| %><li><%= m %></li><% end %></ul><% end %>
+<%= form_with model: [:admin, store], class: "form" do |form| %>
+  <%= render "shared/form_errors", record: store %>
   <%= form.hidden_field :lock_version %>
-  <p><%= form.label :store_number %><%= form.text_field :store_number %></p>
-  <p><%= form.label :code %><%= form.text_field :code %></p>
-  <p><%= form.label :name %><%= form.text_field :name %></p>
-  <p><%= form.label :country_code %><%= form.text_field :country_code %></p>
-  <p><%= form.label :timezone %><%= form.text_field :timezone %></p>
-  <p><%= form.label :receipt_header %><%= form.text_area :receipt_header %></p>
-  <p><%= form.label :receipt_footer %><%= form.text_area :receipt_footer %></p>
-  <p><%= form.submit %></p>
+
+  <%= render layout: "shared/form_section", locals: { title: "Identity" } do %>
+    <div class="form-field">
+      <%= form.label :store_number %>
+      <%= form.text_field :store_number %>
+    </div>
+    <div class="form-field">
+      <%= form.label :code %>
+      <%= form.text_field :code %>
+    </div>
+    <div class="form-field">
+      <%= form.label :name %>
+      <%= form.text_field :name %>
+    </div>
+    <div class="form-field">
+      <%= form.label :legal_name, "Legal name" %>
+      <%= form.text_field :legal_name %>
+    </div>
+    <div class="form-field">
+      <%= form.label :phone %>
+      <%= form.text_field :phone %>
+    </div>
+    <div class="form-field">
+      <%= form.label :san, "SAN" %>
+      <%= form.text_field :san %>
+    </div>
+  <% end %>
+
+  <%= render layout: "shared/form_section", locals: { title: "Address" } do %>
+    <div class="form-field">
+      <%= form.label :street_address_1, "Street address 1" %>
+      <%= form.text_field :street_address_1 %>
+    </div>
+    <div class="form-field">
+      <%= form.label :street_address_2, "Street address 2" %>
+      <%= form.text_field :street_address_2 %>
+    </div>
+    <div class="form-field">
+      <%= form.label :city %>
+      <%= form.text_field :city %>
+    </div>
+    <div class="form-field">
+      <%= form.label :region_code, "Region" %>
+      <%= form.text_field :region_code %>
+    </div>
+    <div class="form-field">
+      <%= form.label :postal_code, "Postal code" %>
+      <%= form.text_field :postal_code %>
+    </div>
+    <div class="form-field">
+      <%= form.label :country_code, "Country code" %>
+      <%= form.text_field :country_code %>
+    </div>
+    <div class="form-field">
+      <%= form.label :timezone %>
+      <%= form.text_field :timezone %>
+    </div>
+  <% end %>
+
+  <%= render layout: "shared/form_section", locals: { title: "Receipt text", help: "Blank receipt header/footer semantics remain unchanged in this phase." } do %>
+    <div class="form-field">
+      <%= form.label :receipt_header %>
+      <%= form.text_area :receipt_header, rows: 3 %>
+    </div>
+    <div class="form-field">
+      <%= form.label :receipt_footer %>
+      <%= form.text_area :receipt_footer, rows: 3 %>
+    </div>
+  <% end %>
+
+  <div class="actions">
+    <%= form.submit class: "btn" %>
+    <%= link_to "Cancel", store.persisted? ? admin_store_path(store) : admin_stores_path, class: "btn btn--ghost" %>
+  </div>
 <% end %>

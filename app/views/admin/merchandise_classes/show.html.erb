@@ -1,18 +1,52 @@
 <% content_for :title, @merchandise_class.name %>
-<h1><%= @merchandise_class.code %> — <%= @merchandise_class.name %></h1>
-<p>
-  Inventory: <%= @merchandise_class.inventory_mode %> ·
-  Pricing: <%= @merchandise_class.pricing_method %> ·
-  Order: <%= @merchandise_class.display_order %> ·
-  <%= @merchandise_class.active? ? "active" : "inactive" %>
-</p>
-<% if @merchandise_class.description.present? %><p><%= @merchandise_class.description %></p><% end %>
-<p>
-  <%= link_to "Edit", edit_admin_merchandise_class_path(@merchandise_class) if effective_permissions.include?("merchandise_classes.update") %>
-  <% if effective_permissions.include?("merchandise_classes.deactivate") && @merchandise_class.active? %>
-    <%= button_to "Deactivate", admin_merchandise_class_path(@merchandise_class), method: :delete, form: { data: { turbo_confirm: "Deactivate this merchandise class?" } } %>
-  <% elsif effective_permissions.include?("merchandise_classes.deactivate") && !@merchandise_class.active? %>
-    <%= button_to "Reactivate", reactivate_admin_merchandise_class_path(@merchandise_class), method: :post, params: { lock_version: @merchandise_class.lock_version } %>
-  <% end %>
-</p>
-<p><%= link_to "Back to merchandise classes", admin_merchandise_classes_path %></p>
+
+<%= render "shared/breadcrumbs", crumbs: [
+  { name: "Home", path: root_path },
+  { name: "Merchandise classes", path: admin_merchandise_classes_path },
+  { name: @merchandise_class.name }
+] %>
+
+<% actions = [configuration_status_badge(@merchandise_class.active?)] %>
+<% if effective_permissions.include?("merchandise_classes.update") %>
+  <% actions << link_to("Edit", edit_admin_merchandise_class_path(@merchandise_class), class: "btn btn--secondary") %>
+<% end %>
+<% if effective_permissions.include?("merchandise_classes.deactivate") && @merchandise_class.active? %>
+  <% actions << button_to("Deactivate", admin_merchandise_class_path(@merchandise_class), method: :delete, class: "btn btn--danger") %>
+<% elsif effective_permissions.include?("merchandise_classes.deactivate") && !@merchandise_class.active? %>
+  <% actions << button_to("Reactivate", reactivate_admin_merchandise_class_path(@merchandise_class), method: :post, params: { lock_version: @merchandise_class.lock_version }, class: "btn") %>
+<% end %>
+
+<%= render "shared/page_header",
+      title: @merchandise_class.name,
+      subtitle: @merchandise_class.code,
+      actions: safe_join(actions, " ") %>
+
+<section class="section surface">
+  <%= render "shared/definition_list", rows: [
+        ["Code", @merchandise_class.code],
+        ["Inventory mode", @merchandise_class.inventory_mode.humanize],
+        ["Pricing method", @merchandise_class.pricing_method.humanize],
+        ["Used merchandise allowed", @merchandise_class.used_merchandise_allowed? ? "Yes" : "No"],
+        ["Buyback allowed", @merchandise_class.buyback_allowed? ? "Yes" : "No"],
+        ["Default supplier returnable", @merchandise_class.default_supplier_returnable? ? "Yes" : "No"],
+        ["Default standard department", (
+          if @merchandise_class.default_standard_department
+            link_to("#{@merchandise_class.default_standard_department.code} — #{@merchandise_class.default_standard_department.name}", admin_department_path(@merchandise_class.default_standard_department))
+          end
+        )],
+        ["Default used department", (
+          if @merchandise_class.default_used_department
+            link_to("#{@merchandise_class.default_used_department.code} — #{@merchandise_class.default_used_department.name}", admin_department_path(@merchandise_class.default_used_department))
+          end
+        )],
+        ["Display order", @merchandise_class.display_order],
+        ["Description", @merchandise_class.description]
+      ] %>
+</section>
+
+<%= render "shared/technical_details", rows: [
+      ["ID", @merchandise_class.id],
+      ["Created", format_timestamp(@merchandise_class.created_at)],
+      ["Updated", format_timestamp(@merchandise_class.updated_at)],
+      ["Lock version", @merchandise_class.lock_version]
+    ] %>

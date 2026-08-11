@@ -1,74 +1,86 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
   <head>
-    <title><%= content_for(:title) || "ShelfSense" %></title>
+    <title><%= content_for?(:title) ? "#{content_for(:title)} · ShelfSense" : "ShelfSense" %></title>
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <%= csrf_meta_tags %>
     <%= csp_meta_tag %>
     <%= yield :head %>
-    <%= stylesheet_link_tag "application", "data-turbo-track": "reload" %>
+    <%= stylesheet_link_tag "application" %>
   </head>
   <body>
-    <% if notice.present? %><p class="notice"><%= notice %></p><% end %>
-    <% if alert.present? %><p class="alert"><%= alert %></p><% end %>
-    <% if signed_in? %>
-      <nav>
-        <%= link_to "Home", root_path %>
-        <% if effective_permissions.include?("system_settings.view") %>
-          <%= link_to "Settings", admin_system_settings_path %>
-        <% end %>
-        <% if effective_permissions.include?("stores.view") || effective_permissions.include?("stores.create") %>
-          <%= link_to "Stores", admin_stores_path %>
-        <% end %>
-        <% if effective_permissions.include?("gl_accounts.view") %>
-          <%= link_to "GL Accounts", admin_gl_accounts_path %>
-        <% end %>
-        <% if effective_permissions.include?("tax_classes.view") %>
-          <%= link_to "Tax Classes", admin_tax_classes_path %>
-        <% end %>
-        <% if effective_permissions.include?("departments.view") %>
-          <%= link_to "Departments", admin_departments_path %>
-        <% end %>
-        <% if effective_permissions.include?("merchandise_classes.view") %>
-          <%= link_to "Merchandise classes", admin_merchandise_classes_path %>
-        <% end %>
-        <% if effective_permissions.include?("merchandise_categories.view") %>
-          <%= link_to "Categories", admin_merchandise_categories_path %>
-        <% end %>
-        <% if effective_permissions.include?("merchandise_conditions.view") %>
-          <%= link_to "Conditions", admin_merchandise_conditions_path %>
-        <% end %>
-        <% if effective_permissions.include?("products.view") %>
-          <%= link_to "Products", admin_products_path %>
-        <% end %>
-        <% if effective_permissions.include?("merchandise.lookup") %>
-          <%= link_to "Lookup", new_admin_merchandise_lookup_path %>
-        <% end %>
-        <% if effective_permissions.include?("merchandise.import") %>
-          <%= link_to "Import", new_admin_merchandise_import_path %>
-        <% end %>
-        <% if effective_permissions.include?("users.view") %>
-          <%= link_to "Users", admin_users_path %>
-        <% end %>
+    <div class="app-shell">
+      <%= render "shared/flash" %>
 
-        <% if effective_permissions.include?("roles.view") %>
-          <%= link_to "Roles", admin_roles_path %>
-        <% end %>
-        <% if effective_permissions.include?("users.assign_roles") %>
-          <%= link_to "Role assignments", admin_role_assignments_path %>
-        <% end %>
-        <% if effective_permissions.include?("workstations.view") %>
-          <%= link_to "Workstations", admin_workstations_path %>
-        <% end %>
-        <% if effective_permissions.include?("audit_events.view") %>
-          <%= link_to "Audit", admin_audit_events_path %>
-        <% end %>
-        <% if accessible_stores.many? %>
-          <%= link_to "Switch store", new_store_selection_path %>
-        <% end %>
-        <%= button_to "Sign out", session_path, method: :delete %>
-      </nav>
-    <% end %>
-    <%= yield %>
+      <% if signed_in? %>
+        <header class="app-header">
+          <div>
+            <%= link_to "ShelfSense", root_path, class: "app-brand" %>
+            <% if current_store.present? %>
+              <div class="app-header-meta">Current store: <%= current_store.name %> (<%= current_store.code %>)</div>
+            <% end %>
+          </div>
+          <nav class="app-nav" aria-label="Primary">
+            <%= link_to "Home", root_path %>
+            <% if effective_permissions.include?("system_settings.view") %>
+              <%= link_to "Settings", admin_system_settings_path %>
+            <% end %>
+            <% if effective_permissions.include?("stores.view") || effective_permissions.include?("stores.create") %>
+              <%= link_to "Stores", admin_stores_path %>
+            <% end %>
+            <% if effective_permissions.include?("gl_accounts.view") %>
+              <%= link_to "GL Accounts", admin_gl_accounts_path %>
+            <% end %>
+            <% if effective_permissions.include?("tax_classes.view") %>
+              <%= link_to "Tax Classes", admin_tax_classes_path %>
+            <% end %>
+            <% if effective_permissions.include?("departments.view") %>
+              <%= link_to "Departments", admin_departments_path %>
+            <% end %>
+            <% if effective_permissions.include?("merchandise_classes.view") %>
+              <%= link_to "Merchandise classes", admin_merchandise_classes_path %>
+            <% end %>
+            <% if effective_permissions.include?("merchandise_categories.view") %>
+              <%= link_to "Categories", admin_merchandise_categories_path %>
+            <% end %>
+            <% if effective_permissions.include?("merchandise_conditions.view") %>
+              <%= link_to "Conditions", admin_merchandise_conditions_path %>
+            <% end %>
+            <% if effective_permissions.include?("products.view") %>
+              <%= link_to "Products", admin_products_path %>
+            <% end %>
+            <% if effective_permissions.include?("merchandise.lookup") %>
+              <%= link_to "Lookup", new_admin_merchandise_lookup_path %>
+            <% end %>
+            <% if effective_permissions.include?("merchandise.import") %>
+              <%= link_to "Import", new_admin_merchandise_import_path %>
+            <% end %>
+            <% if effective_permissions.include?("users.view") %>
+              <%= link_to "Users", admin_users_path %>
+            <% end %>
+            <% if effective_permissions.include?("roles.view") %>
+              <%= link_to "Roles", admin_roles_path %>
+            <% end %>
+            <% if effective_permissions.include?("users.assign_roles") %>
+              <%= link_to "Role assignments", admin_role_assignments_path %>
+            <% end %>
+            <% if effective_permissions.include?("workstations.view") %>
+              <%= link_to "Workstations", admin_workstations_path %>
+            <% end %>
+            <% if effective_permissions.include?("audit_events.view") %>
+              <%= link_to "Audit", admin_audit_events_path %>
+            <% end %>
+            <% if accessible_stores.many? %>
+              <%= link_to "Switch store", new_store_selection_path %>
+            <% end %>
+            <%= button_to "Sign out", session_path, method: :delete, class: "btn btn--ghost" %>
+          </nav>
+        </header>
+      <% end %>
+
+      <main class="app-content">
+        <%= yield %>
+      </main>
+    </div>
   </body>
 </html>

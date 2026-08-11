@@ -1,0 +1,11 @@
+<%#
+  locals:
+    title:, help: optional
+%>
+<section class="section form-section">
+  <h2 class="section__title"><%= title %></h2>
+  <% if local_assigns[:help].present? %>
+    <p class="section__help"><%= help %></p>
+  <% end %>
+  <%= yield %>
+</section>

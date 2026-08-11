@@ -1,0 +1,22 @@
+<%#
+  locals:
+    crumbs: array of { name:, path: } — last may omit path for current page
+%>
+<% if local_assigns[:crumbs].present? %>
+  <nav aria-label="Breadcrumb">
+    <ol class="breadcrumbs">
+      <% crumbs.each_with_index do |crumb, index| %>
+        <li>
+          <% if crumb[:path].present? && index < crumbs.length - 1 %>
+            <%= link_to crumb[:name], crumb[:path] %>
+          <% else %>
+            <span<%= " aria-current=page" if index == crumbs.length - 1 %>><%= crumb[:name] %></span>
+          <% end %>
+          <% unless index == crumbs.length - 1 %>
+            <span aria-hidden="true"> / </span>
+          <% end %>
+        </li>
+      <% end %>
+    </ol>
+  </nav>
+<% end %>

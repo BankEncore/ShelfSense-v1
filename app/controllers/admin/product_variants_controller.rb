@@ -22,14 +22,23 @@ module Admin
     end
 
     def create
+      attrs = variant_attributes
+      if @money_error
+        @product_variant = @product.product_variants.build(attrs)
+        @product_variant.errors.add(:regular_price, @money_error)
+        load_form_options
+        render :new, status: :unprocessable_entity
+        return
+      end
+
       @product_variant = ProductVariants::Create.call(
         product: @product,
-        attributes: variant_attributes,
+        attributes: attrs,
         actor: current_user
       )
       redirect_to admin_product_variant_path(@product_variant), notice: "Product variant created."
     rescue ProductVariants::Create::Error => e
-      @product_variant = @product.product_variants.build(variant_attributes)
+      @product_variant = @product.product_variants.build(attrs)
       @product_variant.errors.add(:base, e.message)
       load_form_options
       render :new, status: :unprocessable_entity
@@ -43,6 +52,14 @@ module Admin
     def update
       rescue_stale do
         attrs = product_variant_params
+        if @money_error
+          @product = @product_variant.product
+          @product_variant.errors.add(:regular_price, @money_error)
+          load_form_options
+          render :edit, status: :unprocessable_entity
+          return
+        end
+
         if attrs[:status] == "discontinued"
           @product_variant.errors.add(:status, "use Discontinue instead")
           @product = @product_variant.product
@@ -124,23 +141,30 @@ module Admin
       @tax_classes = TaxClass.assignable.order(:display_order, :code)
     end
 
-    def audit_attribute_keys
-      %w[
-        variant_type name option_value_1 option_value_2 merchandise_condition_id merchandise_class_id
-        department_id tax_class_id regular_price_cents status industry_identifier
-      ]
-    end
-
     def variant_attributes
       product_variant_params.except(:lock_version, :sku).to_h.symbolize_keys
     end
 
     def product_variant_params
+      @money_error = nil
+      @regular_price_raw = params.dig(:product_variant, :regular_price)
       permitted = params.require(:product_variant).permit(
         :variant_type, :name, :option_value_1, :option_value_2, :merchandise_condition_id,
-        :merchandise_class_id, :department_id, :tax_class_id, :regular_price_cents,
+        :merchandise_class_id, :department_id, :tax_class_id, :regular_price, :regular_price_cents,
         :industry_identifier, :status, :lock_version
       )
+
+      if permitted.key?(:regular_price) || params[:product_variant]&.key?(:regular_price)
+        raw = permitted.delete(:regular_price)
+        raw = params.dig(:product_variant, :regular_price) if raw.nil?
+        begin
+          permitted[:regular_price_cents] = Money::ParseCents.call(raw)
+        rescue Money::ParseCents::Error => e
+          @money_error = e.message
+          permitted.delete(:regular_price_cents)
+        end
+      end
+
       %i[name option_value_1 option_value_2 merchandise_condition_id merchandise_class_id department_id tax_class_id
          regular_price_cents industry_identifier].each do |key|
         permitted[key] = nil if permitted[key].blank?

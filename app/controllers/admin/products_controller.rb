@@ -10,11 +10,22 @@ module Admin
     before_action :set_product, only: %i[show edit update destroy discontinue]
 
     def index
-      @products = Product.order(:name)
+      @index = Products::AdminIndexQuery.call(
+        q: params[:q],
+        status: params[:status],
+        merchandise_category_id: params[:merchandise_category_id],
+        page: params[:page]
+      )
+      @products = @index.records.includes(:merchandise_category)
+      @variant_counts = ProductVariant.where(product_id: @products.map(&:id)).group(:product_id).count
+      @merchandise_categories = MerchandiseCategory.assignable.order(:display_order, :name)
     end
 
     def show
-      @product_variants = @product.product_variants.order(:sku)
+      @product_variants = @product.product_variants
+        .includes(:merchandise_class, :department, :tax_class, :merchandise_condition)
+        .order(:sku)
+      @recent_audit_events = recent_product_audit_events
     end
 
     def new
@@ -23,15 +34,24 @@ module Admin
     end
 
     def create
+      attrs = product_attributes
+      if @money_error
+        @product = Product.new(attrs)
+        @product.errors.add(:list_price, @money_error)
+        load_form_options
+        render :new, status: :unprocessable_entity
+        return
+      end
+
       @product = Products::Create.call(
-        attributes: product_attributes,
+        attributes: attrs,
         actor: current_user,
         identifier_mode: identifier_mode,
         external_identifier: external_identifier.presence
       )
       redirect_to admin_product_path(@product), notice: "Product created."
     rescue Products::Create::Error => e
-      @product = Product.new(product_attributes)
+      @product = Product.new(attrs)
       @product.errors.add(:base, e.message)
       load_form_options
       render :new, status: :unprocessable_entity
@@ -44,6 +64,11 @@ module Admin
     def update
       rescue_stale do
         attrs = product_params
+        if @money_error
+          render_form_with_money_error(:edit)
+          return
+        end
+
         if attrs[:status] == "discontinued"
           @product.errors.add(:status, "use Discontinue instead")
           load_form_options
@@ -115,11 +140,19 @@ module Admin
       @merchandise_categories = MerchandiseCategory.assignable.order(:display_order, :name)
     end
 
-    def audit_attribute_keys
-      %w[
-        name subtitle description brand_name product_model merchandise_category_id
-        list_price_cents release_date status variant_option_name_1 variant_option_name_2
-      ]
+    def recent_product_audit_events
+      return [] unless effective_permissions.include?("audit_events.view")
+
+      scope = AuditEvent.where(subject_type: "Product", subject_id: @product.id)
+      global_view = Authorization::PermissionEvaluator.allowed?(
+        user: current_user,
+        permission_key: "audit_events.view",
+        store: nil
+      )
+      unless global_view
+        scope = scope.where(store_id: accessible_stores.select(:id))
+      end
+      scope.order(occurred_at: :desc).limit(5).to_a
     end
 
     def identifier_mode
@@ -137,6 +170,8 @@ module Admin
     end
 
     def product_params
+      @money_error = nil
+      @list_price_raw = params.dig(:product, :list_price)
       permitted = params.require(:product).permit(
         :name, :subtitle, :description, :brand_name, :product_model, :merchandise_category_id,
         :list_price, :list_price_cents, :release_date, :status, :variant_option_name_1, :variant_option_name_2,
@@ -144,8 +179,14 @@ module Admin
       )
 
       if permitted.key?(:list_price) || params[:product]&.key?(:list_price)
-        raw = permitted.delete(:list_price).presence || params.dig(:product, :list_price)
-        permitted[:list_price_cents] = raw.blank? ? nil : dollars_to_cents(raw)
+        raw = permitted.delete(:list_price)
+        raw = params.dig(:product, :list_price) if raw.nil?
+        begin
+          permitted[:list_price_cents] = Money::ParseCents.call(raw)
+        rescue Money::ParseCents::Error => e
+          @money_error = e.message
+          permitted.delete(:list_price_cents)
+        end
       end
 
       %i[merchandise_category_id list_price_cents release_date subtitle description brand_name
@@ -155,10 +196,12 @@ module Admin
       permitted
     end
 
-    def dollars_to_cents(raw)
-      (BigDecimal(raw.to_s.strip) * 100).round.to_i
-    rescue ArgumentError
-      raise ActionController::BadRequest, "list price is not a valid amount"
+    def render_form_with_money_error(template)
+      @product ||= Product.new
+      @product.assign_attributes(product_params.except(:list_price_cents, :lock_version)) if params[:product]
+      @product.errors.add(:list_price, @money_error)
+      load_form_options
+      render template, status: :unprocessable_entity
     end
   end
 end

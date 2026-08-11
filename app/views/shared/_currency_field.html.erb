@@ -1,0 +1,24 @@
+<%#
+  locals:
+    form: optional FormBuilder
+    name:, id:, label:, value:, help: optional, error: optional, required: false
+%>
+<% field_id = local_assigns.fetch(:id, name) %>
+<% described_by = [] %>
+<% described_by << "#{field_id}_help" if local_assigns[:help].present? %>
+<% described_by << "#{field_id}_error" if local_assigns[:error].present? %>
+<div class="form-field">
+  <%= label_tag field_id, label, class: ("required" if local_assigns[:required]) %>
+  <%= text_field_tag name, value,
+        id: field_id,
+        inputmode: "decimal",
+        autocomplete: "off",
+        "aria-invalid": local_assigns[:error].present? ? "true" : nil,
+        "aria-describedby": described_by.presence&.join(" ") %>
+  <% if local_assigns[:help].present? %>
+    <span class="field-help" id="<%= field_id %>_help"><%= help %></span>
+  <% end %>
+  <% if local_assigns[:error].present? %>
+    <span class="field-error" id="<%= field_id %>_error"><%= error %></span>
+  <% end %>
+</div>

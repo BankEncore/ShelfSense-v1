@@ -1,0 +1,23 @@
+<%#
+  locals:
+    record:
+    attribute_ids: optional hash of attribute => dom id for linking
+%>
+<% if record.errors.any? %>
+  <div class="form-errors" id="form-error-summary" tabindex="-1" autofocus role="alert">
+    <h2><%= pluralize(record.errors.count, "error") %> prevented this form from being saved</h2>
+    <ul>
+      <% record.errors.each do |error| %>
+        <% attr = error.attribute %>
+        <% field_id = local_assigns.dig(:attribute_ids, attr) || "#{record.model_name.param_key}_#{attr}" %>
+        <li>
+          <% if attr == :base %>
+            <%= error.full_message %>
+          <% else %>
+            <a href="#<%= field_id %>"><%= error.full_message %></a>
+          <% end %>
+        </li>
+      <% end %>
+    </ul>
+  </div>
+<% end %>
