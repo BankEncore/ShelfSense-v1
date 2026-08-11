@@ -20,16 +20,11 @@ module Admin
 
     def create
       @tax_class = TaxClass.new(tax_class_params.except(:lock_version))
-      if @tax_class.save
-        Audit::Recorder.record!(
-          action: "tax_classes.create",
-          outcome: "succeeded",
-          actor_user: current_user,
-          actor_label: current_user.display_name,
-          store: current_store,
-          subject: @tax_class,
-          after_values: { code: @tax_class.code, name: @tax_class.name }
-        )
+      if create_and_audit!(
+        @tax_class,
+        action: "tax_classes.create",
+        after_values: { code: @tax_class.code, name: @tax_class.name }
+      )
         redirect_to admin_tax_class_path(@tax_class), notice: "Tax class created."
       else
         render :new, status: :unprocessable_entity
@@ -40,18 +35,12 @@ module Admin
 
     def update
       rescue_stale do
-        before = @tax_class.attributes.slice("code", "name", "description", "display_order")
-        if @tax_class.update(tax_class_params)
-          Audit::Recorder.record!(
-            action: "tax_classes.update",
-            outcome: "succeeded",
-            actor_user: current_user,
-            actor_label: current_user.display_name,
-            store: current_store,
-            subject: @tax_class,
-            before_values: before,
-            after_values: @tax_class.attributes.slice(*before.keys)
-          )
+        if save_and_audit!(
+          @tax_class,
+          attrs: tax_class_params,
+          action: "tax_classes.update",
+          before_keys: %w[code name description display_order]
+        )
           redirect_to admin_tax_class_path(@tax_class), notice: "Tax class updated."
         else
           render :edit, status: :unprocessable_entity
@@ -60,15 +49,7 @@ module Admin
     end
 
     def destroy
-      @tax_class.update!(active: false)
-      Audit::Recorder.record!(
-        action: "tax_classes.deactivate",
-        outcome: "succeeded",
-        actor_user: current_user,
-        actor_label: current_user.display_name,
-        store: current_store,
-        subject: @tax_class
-      )
+      mutate_and_audit!(@tax_class, action: "tax_classes.deactivate") { @tax_class.update!(active: false) }
       redirect_to admin_tax_classes_path, notice: "Tax class deactivated."
     end
 

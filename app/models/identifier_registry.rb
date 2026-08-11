@@ -23,10 +23,16 @@ class IdentifierRegistry < ApplicationRecord
   private
 
   def ownership_rules
-    owners = [ product_id, product_variant_id ].compact
     if active?
-      errors.add(:base, "active registry rows require exactly one owner") unless owners.size == 1
-    elsif owners.empty? && retired_at.blank?
+      case identifier_kind
+      when "product_primary"
+        errors.add(:product_id, "is required for active product_primary rows") if product_id.blank?
+        errors.add(:product_variant_id, "must be blank for product_primary rows") if product_variant_id.present?
+      when "variant_sku", "variant_industry"
+        errors.add(:product_variant_id, "is required for active #{identifier_kind} rows") if product_variant_id.blank?
+        errors.add(:product_id, "must be blank for #{identifier_kind} rows") if product_id.present?
+      end
+    elsif product_id.blank? && product_variant_id.blank? && retired_at.blank?
       errors.add(:retired_at, "must be set when unowned")
     end
   end

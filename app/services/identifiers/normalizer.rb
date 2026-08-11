@@ -27,9 +27,20 @@ module Identifiers
     def isbn10_to_isbn13(isbn10)
       body = isbn10.to_s.upcase
       raise NormalizationError, "invalid ISBN-10" unless body.match?(/\A\d{9}[\dX]\z/)
+      raise NormalizationError, "invalid ISBN-10 check digit" unless isbn10_valid?(body)
 
       core = "978#{body[0, 9]}"
       "#{core}#{Ean13.check_digit(core)}"
+    end
+
+    def isbn10_valid?(isbn10)
+      body = isbn10.to_s.upcase
+      return false unless body.match?(/\A\d{9}[\dX]\z/)
+
+      digits = body[0, 9].chars.map(&:to_i)
+      check = body[9] == "X" ? 10 : body[9].to_i
+      sum = digits.each_with_index.sum { |digit, index| digit * (10 - index) } + check
+      (sum % 11).zero?
     end
   end
 end

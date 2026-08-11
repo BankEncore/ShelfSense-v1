@@ -14,6 +14,17 @@ class Identifiers::NormalizerTest < ActiveSupport::TestCase
     assert_equal "9780306406157", Identifiers::Normalizer.normalize("0306406152")
   end
 
+  test "rejects ISBN-10 with invalid check digit before conversion" do
+    error = assert_raises(Identifiers::NormalizationError) do
+      Identifiers::Normalizer.normalize("0306406153")
+    end
+    assert_match(/invalid ISBN-10 check digit/i, error.message)
+  end
+
+  test "accepts ISBN-10 terminating in X" do
+    assert_equal "9780804429573", Identifiers::Normalizer.normalize("080442957X")
+  end
+
   test "converts UPC-A to GTIN-13" do
     ean13 = Identifiers::Ean13.complete("012", "345678901")
     upc_a = ean13[1, 12]

@@ -19,7 +19,7 @@ class ProductVariant < ApplicationRecord
   validate :condition_matches_variant_type
   validate :validate_changed_references
   validate :sku_immutable, on: :update
-  validate :activation_requirements, if: -> { status_changed? && status == "active" }
+  validate :activation_requirements, if: -> { status == "active" }
 
   scope :active, -> { where(status: "active") }
   scope :draft, -> { where(status: "draft") }

@@ -21,16 +21,11 @@ module Admin
 
     def create
       @merchandise_category = MerchandiseCategory.new(merchandise_category_params.except(:lock_version))
-      if @merchandise_category.save
-        Audit::Recorder.record!(
-          action: "merchandise_categories.create",
-          outcome: "succeeded",
-          actor_user: current_user,
-          actor_label: current_user.display_name,
-          store: current_store,
-          subject: @merchandise_category,
-          after_values: { code: @merchandise_category.code, name: @merchandise_category.name }
-        )
+      if create_and_audit!(
+        @merchandise_category,
+        action: "merchandise_categories.create",
+        after_values: { code: @merchandise_category.code, name: @merchandise_category.name }
+      )
         redirect_to admin_merchandise_category_path(@merchandise_category), notice: "Merchandise category created."
       else
         load_form_options
@@ -44,20 +39,12 @@ module Admin
 
     def update
       rescue_stale do
-        before = @merchandise_category.attributes.slice(
-          "code", "name", "description", "parent_id", "default_merchandise_class_id", "display_order"
+        if save_and_audit!(
+          @merchandise_category,
+          attrs: merchandise_category_params,
+          action: "merchandise_categories.update",
+          before_keys: %w[code name description parent_id default_merchandise_class_id display_order]
         )
-        if @merchandise_category.update(merchandise_category_params)
-          Audit::Recorder.record!(
-            action: "merchandise_categories.update",
-            outcome: "succeeded",
-            actor_user: current_user,
-            actor_label: current_user.display_name,
-            store: current_store,
-            subject: @merchandise_category,
-            before_values: before,
-            after_values: @merchandise_category.attributes.slice(*before.keys)
-          )
           redirect_to admin_merchandise_category_path(@merchandise_category), notice: "Merchandise category updated."
         else
           load_form_options
@@ -67,15 +54,9 @@ module Admin
     end
 
     def destroy
-      @merchandise_category.update!(active: false)
-      Audit::Recorder.record!(
-        action: "merchandise_categories.deactivate",
-        outcome: "succeeded",
-        actor_user: current_user,
-        actor_label: current_user.display_name,
-        store: current_store,
-        subject: @merchandise_category
-      )
+      mutate_and_audit!(@merchandise_category, action: "merchandise_categories.deactivate") do
+        @merchandise_category.update!(active: false)
+      end
       redirect_to admin_merchandise_categories_path, notice: "Merchandise category deactivated."
     end
 

@@ -21,20 +21,15 @@ module Admin
 
     def create
       @gl_account = GlAccount.new(gl_account_params.except(:lock_version))
-      if @gl_account.save
-        Audit::Recorder.record!(
-          action: "gl_accounts.create",
-          outcome: "succeeded",
-          actor_user: current_user,
-          actor_label: current_user.display_name,
-          store: current_store,
-          subject: @gl_account,
-          after_values: {
-            account_number: @gl_account.account_number,
-            name: @gl_account.name,
-            account_type: @gl_account.account_type
-          }
-        )
+      if create_and_audit!(
+        @gl_account,
+        action: "gl_accounts.create",
+        after_values: {
+          account_number: @gl_account.account_number,
+          name: @gl_account.name,
+          account_type: @gl_account.account_type
+        }
+      )
         redirect_to admin_gl_account_path(@gl_account), notice: "GL account created."
       else
         load_parent_options
@@ -48,21 +43,15 @@ module Admin
 
     def update
       rescue_stale do
-        before = @gl_account.attributes.slice(
-          "account_number", "name", "description", "account_type", "account_category",
-          "parent_id", "posting_allowed", "display_order"
+        if save_and_audit!(
+          @gl_account,
+          attrs: gl_account_params,
+          action: "gl_accounts.update",
+          before_keys: %w[
+            account_number name description account_type account_category
+            parent_id posting_allowed display_order
+          ]
         )
-        if @gl_account.update(gl_account_params)
-          Audit::Recorder.record!(
-            action: "gl_accounts.update",
-            outcome: "succeeded",
-            actor_user: current_user,
-            actor_label: current_user.display_name,
-            store: current_store,
-            subject: @gl_account,
-            before_values: before,
-            after_values: @gl_account.attributes.slice(*before.keys)
-          )
           redirect_to admin_gl_account_path(@gl_account), notice: "GL account updated."
         else
           load_parent_options
@@ -72,15 +61,7 @@ module Admin
     end
 
     def destroy
-      @gl_account.update!(active: false)
-      Audit::Recorder.record!(
-        action: "gl_accounts.deactivate",
-        outcome: "succeeded",
-        actor_user: current_user,
-        actor_label: current_user.display_name,
-        store: current_store,
-        subject: @gl_account
-      )
+      mutate_and_audit!(@gl_account, action: "gl_accounts.deactivate") { @gl_account.update!(active: false) }
       redirect_to admin_gl_accounts_path, notice: "GL account deactivated."
     end
 

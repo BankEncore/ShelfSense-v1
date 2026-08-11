@@ -49,14 +49,52 @@ class Identifiers::GeneratorAndRegistryTest < ActiveSupport::TestCase
     assert_nil Identifiers::Registry.find_active(value)
   end
 
-  test "active ownership requires exactly one owner" do
+  test "active product_primary requires a product owner only" do
     row = IdentifierRegistry.new(
       value: Identifiers::Ean13.complete("978", "111111111"),
       identifier_kind: "product_primary",
       retired_at: nil
     )
     assert_not row.valid?
-    assert_includes row.errors[:base], "active registry rows require exactly one owner"
+    assert_includes row.errors[:product_id], "is required for active product_primary rows"
+  end
+
+  test "active variant_sku rejects product ownership" do
+    product = Products::Create.call(
+      attributes: { name: "Owner mismatch", status: "draft" },
+      actor: @actor,
+      identifier_mode: "generate"
+    )
+    row = IdentifierRegistry.new(
+      value: Identifiers::Ean13.complete("221", "333333333"),
+      identifier_kind: "variant_sku",
+      product: product,
+      retired_at: nil
+    )
+    assert_not row.valid?
+    assert_includes row.errors[:product_variant_id], "is required for active variant_sku rows"
+    assert_includes row.errors[:product_id], "must be blank for variant_sku rows"
+  end
+
+  test "database enforces kind-specific registry ownership" do
+    product = Products::Create.call(
+      attributes: { name: "DB owner", status: "draft" },
+      actor: @actor,
+      identifier_mode: "generate"
+    )
+
+    assert_raises(ActiveRecord::StatementInvalid) do
+      IdentifierRegistry.insert!({
+        id: SecureRandom.uuid_v7,
+        value: Identifiers::Ean13.complete("221", "444444444"),
+        identifier_kind: "variant_sku",
+        product_id: product.id,
+        product_variant_id: nil,
+        retired_at: nil,
+        created_at: Time.current,
+        updated_at: Time.current
+      })
+    end
   end
 
   test "failed product create rolls back reservation" do

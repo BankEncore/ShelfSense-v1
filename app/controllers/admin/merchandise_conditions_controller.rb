@@ -23,16 +23,11 @@ module Admin
 
     def create
       @merchandise_condition = MerchandiseCondition.new(merchandise_condition_params.except(:lock_version))
-      if @merchandise_condition.save
-        Audit::Recorder.record!(
-          action: "merchandise_conditions.create",
-          outcome: "succeeded",
-          actor_user: current_user,
-          actor_label: current_user.display_name,
-          store: current_store,
-          subject: @merchandise_condition,
-          after_values: { code: @merchandise_condition.code, name: @merchandise_condition.name }
-        )
+      if create_and_audit!(
+        @merchandise_condition,
+        action: "merchandise_conditions.create",
+        after_values: { code: @merchandise_condition.code, name: @merchandise_condition.name }
+      )
         redirect_to admin_merchandise_condition_path(@merchandise_condition), notice: "Merchandise condition created."
       else
         render :new, status: :unprocessable_entity
@@ -43,20 +38,12 @@ module Admin
 
     def update
       rescue_stale do
-        before = @merchandise_condition.attributes.slice(
-          "code", "name", "description", "price_adjustment_bps", "display_order"
+        if save_and_audit!(
+          @merchandise_condition,
+          attrs: merchandise_condition_params,
+          action: "merchandise_conditions.update",
+          before_keys: %w[code name description price_adjustment_bps display_order]
         )
-        if @merchandise_condition.update(merchandise_condition_params)
-          Audit::Recorder.record!(
-            action: "merchandise_conditions.update",
-            outcome: "succeeded",
-            actor_user: current_user,
-            actor_label: current_user.display_name,
-            store: current_store,
-            subject: @merchandise_condition,
-            before_values: before,
-            after_values: @merchandise_condition.attributes.slice(*before.keys)
-          )
           redirect_to admin_merchandise_condition_path(@merchandise_condition), notice: "Merchandise condition updated."
         else
           render :edit, status: :unprocessable_entity
@@ -65,15 +52,9 @@ module Admin
     end
 
     def destroy
-      @merchandise_condition.update!(active: false)
-      Audit::Recorder.record!(
-        action: "merchandise_conditions.deactivate",
-        outcome: "succeeded",
-        actor_user: current_user,
-        actor_label: current_user.display_name,
-        store: current_store,
-        subject: @merchandise_condition
-      )
+      mutate_and_audit!(@merchandise_condition, action: "merchandise_conditions.deactivate") do
+        @merchandise_condition.update!(active: false)
+      end
       redirect_to admin_merchandise_conditions_path, notice: "Merchandise condition deactivated."
     end
 

@@ -445,7 +445,9 @@ Reserves operational identifiers across product and variant namespaces so that a
 
 Registry ownership invariants:
 
-- An **active** registry row (`retired_at` null) has exactly one owner.
+- An **active** registry row (`retired_at` null) has exactly one owner, and that owner must match `identifier_kind`:
+  - `product_primary` → `product_id` only
+  - `variant_sku` / `variant_industry` → `product_variant_id` only
 - A **retired** registry row may have zero or one owner.
 - An unowned registry row must have `retired_at` populated.
 - `value` remains globally unique for both active and retired rows.
@@ -537,11 +539,15 @@ It should:
 
 - accept products and variants;
 - normalize identifiers before matching;
+- group rows by normalized product primary identifier and persist each group atomically;
 - match products by normalized primary identifier;
 - match variants by SKU or variant industry identifier where appropriate;
 - apply ordinary creation defaults without overwriting explicit imported assignments;
-- remain idempotent when the same file is imported again;
-- report row-level errors;
+- treat blank codes as defaults, but reject explicitly supplied unknown reference codes;
+- remain idempotent when the same file is imported again for rows that include a durable product identifier;
+- treat `generate_primary_identifier=true` with a blank primary identifier as create-only (not idempotent across reimports);
+- reuse ordinary audited create/update services for product and variant writes;
+- report row-level (or group-level) errors;
 - avoid partially importing an invalid product-and-variant group.
 
 No separate staging table is required for the minimal Phase 2 importer. If later import volume, resumability, or review requirements justify persisted import jobs, those tables can be added without changing the merchandise contract.

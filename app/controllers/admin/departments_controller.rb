@@ -21,16 +21,11 @@ module Admin
 
     def create
       @department = Department.new(department_params.except(:lock_version))
-      if @department.save
-        Audit::Recorder.record!(
-          action: "departments.create",
-          outcome: "succeeded",
-          actor_user: current_user,
-          actor_label: current_user.display_name,
-          store: current_store,
-          subject: @department,
-          after_values: { code: @department.code, name: @department.name }
-        )
+      if create_and_audit!(
+        @department,
+        action: "departments.create",
+        after_values: { code: @department.code, name: @department.name }
+      )
         redirect_to admin_department_path(@department), notice: "Department created."
       else
         load_form_options
@@ -44,18 +39,12 @@ module Admin
 
     def update
       rescue_stale do
-        before = @department.attributes.slice(*audit_attribute_keys)
-        if @department.update(department_params)
-          Audit::Recorder.record!(
-            action: "departments.update",
-            outcome: "succeeded",
-            actor_user: current_user,
-            actor_label: current_user.display_name,
-            store: current_store,
-            subject: @department,
-            before_values: before,
-            after_values: @department.attributes.slice(*before.keys)
-          )
+        if save_and_audit!(
+          @department,
+          attrs: department_params,
+          action: "departments.update",
+          before_keys: audit_attribute_keys
+        )
           redirect_to admin_department_path(@department), notice: "Department updated."
         else
           load_form_options
@@ -65,15 +54,7 @@ module Admin
     end
 
     def destroy
-      @department.update!(active: false)
-      Audit::Recorder.record!(
-        action: "departments.deactivate",
-        outcome: "succeeded",
-        actor_user: current_user,
-        actor_label: current_user.display_name,
-        store: current_store,
-        subject: @department
-      )
+      mutate_and_audit!(@department, action: "departments.deactivate") { @department.update!(active: false) }
       redirect_to admin_departments_path, notice: "Department deactivated."
     end
 

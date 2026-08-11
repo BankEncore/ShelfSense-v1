@@ -153,6 +153,74 @@ class Merchandise::CsvImporterTest < ActiveSupport::TestCase
     assert_equal @condition.id, used.merchandise_condition_id
   end
 
+  test "rolls back the product group when a later variant row fails" do
+    isbn = Identifiers::Ean13.complete("978", "333333333")
+    before_products = Product.count
+
+    result = import_csv(<<~CSV)
+      primary_identifier,name,generate_primary_identifier,variant_type,variant_condition_code,merchandise_class_code,regular_price_cents
+      #{isbn},Grouped,false,standard,,book,1500
+      #{isbn},Grouped,false,used,,book,900
+    CSV
+
+    assert_equal 1, result.errors.size
+    assert_match(/variant_condition_code is required/i, result.errors.first[:message])
+    assert_equal before_products, Product.count
+    assert_nil Product.find_by(primary_identifier: isbn)
+    assert_equal 0, result.created_products
+    assert_equal 0, result.created_variants
+  end
+
+  test "rejects unknown reference codes instead of defaulting" do
+    product = Products::Create.call(
+      attributes: { name: "Refs", status: "draft" },
+      actor: @actor,
+      identifier_mode: "generate"
+    )
+
+    result = import_csv(<<~CSV)
+      primary_identifier,name,generate_primary_identifier,variant_type,merchandise_class_code,regular_price_cents
+      #{product.primary_identifier},Refs,false,standard,missing_class,1500
+    CSV
+
+    assert_equal 1, result.errors.size
+    assert_match(/unknown merchandise_class_code/i, result.errors.first[:message])
+    assert_equal 0, product.product_variants.count
+  end
+
+  test "generate-only rows are create-only across reimports" do
+    first = import_csv(<<~CSV)
+      primary_identifier,name,generate_primary_identifier
+      ,Generated A,true
+    CSV
+    second = import_csv(<<~CSV)
+      primary_identifier,name,generate_primary_identifier
+      ,Generated A,true
+    CSV
+
+    assert_equal 1, first.created_products
+    assert_equal 1, second.created_products
+    assert_equal 2, Product.where(name: "Generated A").count
+  end
+
+  test "import updates create record-level audit events" do
+    product = Products::Create.call(
+      attributes: { name: "Audit Me", status: "draft" },
+      actor: @actor,
+      identifier_mode: "enter",
+      external_identifier: external_isbn13
+    )
+
+    result = import_csv(<<~CSV)
+      primary_identifier,name,generate_primary_identifier
+      #{product.primary_identifier},Audited Name,false
+    CSV
+
+    assert_empty result.errors
+    assert AuditEvent.where(action: "products.update", subject_type: "Product", subject_id: product.id).exists?
+    assert_equal "Audited Name", product.reload.name
+  end
+
   private
 
   def import_csv(text)

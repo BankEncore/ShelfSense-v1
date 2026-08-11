@@ -51,20 +51,16 @@ module Admin
           return
         end
 
-        before = @product.attributes.slice(*audit_attribute_keys)
-        if @product.update(attrs)
-          Audit::Recorder.record!(
-            action: "products.update",
-            outcome: "succeeded",
-            actor_user: current_user,
-            actor_label: current_user.display_name,
-            store: current_store,
-            subject: @product,
-            before_values: before,
-            after_values: @product.attributes.slice(*before.keys)
+        begin
+          Products::Update.call(
+            product: @product,
+            attributes: attrs.to_h.symbolize_keys,
+            actor: current_user,
+            store: current_store
           )
           redirect_to admin_product_path(@product), notice: "Product updated."
-        else
+        rescue Products::Update::Error => e
+          @product.errors.add(:base, e.message)
           load_form_options
           render :edit, status: :unprocessable_entity
         end
@@ -74,17 +70,12 @@ module Admin
     def discontinue
       rescue_stale do
         before_status = @product.status
-        @product.update!(status: "discontinued")
-        Audit::Recorder.record!(
+        mutate_and_audit!(
+          @product,
           action: "products.discontinue",
-          outcome: "succeeded",
-          actor_user: current_user,
-          actor_label: current_user.display_name,
-          store: current_store,
-          subject: @product,
           before_values: { status: before_status },
-          after_values: { status: @product.status }
-        )
+          after_values: { status: "discontinued" }
+        ) { @product.update!(status: "discontinued") }
         redirect_to admin_product_path(@product), notice: "Product discontinued."
       end
     end

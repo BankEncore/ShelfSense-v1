@@ -251,4 +251,42 @@ class ProductVariants::CreateAndActivationTest < ActiveSupport::TestCase
       })
     end
   end
+
+  test "active variants cannot be saved incomplete" do
+    @product.update!(status: "active")
+    variant = ProductVariants::Create.call(
+      product: @product,
+      actor: @actor,
+      attributes: {
+        variant_type: "standard",
+        merchandise_class_id: @klass.id,
+        department_id: @standard_dept.id,
+        tax_class_id: @tax.id,
+        regular_price_cents: 1_999,
+        status: "active"
+      }
+    )
+
+    error = assert_raises(ProductVariants::Update::Error) do
+      ProductVariants::Update.call(
+        variant: variant,
+        actor: @actor,
+        attributes: { merchandise_class_id: nil }
+      )
+    end
+    assert_match(/merchandise class/i, error.message)
+    assert_equal @klass.id, variant.reload.merchandise_class_id
+  end
+
+  test "used price suggestion uses integer half-up rounding" do
+    @product.update!(list_price_cents: 1_005)
+    @like_new.update!(price_adjustment_bps: 3_333)
+    result = ProductVariants::DefaultResolver.resolve(
+      product: @product,
+      variant_type: "used",
+      condition: @like_new
+    )
+    # (1005 * 3333 + 5000) / 10000 = 335
+    assert_equal 335, result.suggested_price_cents
+  end
 end

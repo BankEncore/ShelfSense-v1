@@ -26,7 +26,8 @@ module ProductVariants
       if price.nil? && @product.list_price_cents.present?
         price =
           if @variant_type == "used" && @condition
-            (@product.list_price_cents * @condition.price_adjustment_bps / 10_000.0).round
+            # Half-up integer rounding: (cents * bps + 5000) / 10000
+            (@product.list_price_cents * @condition.price_adjustment_bps + 5_000) / 10_000
           else
             @product.list_price_cents
           end

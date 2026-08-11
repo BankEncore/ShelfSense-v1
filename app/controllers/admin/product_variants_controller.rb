@@ -51,41 +51,30 @@ module Admin
           return
         end
 
-        before = @product_variant.attributes.slice(*audit_attribute_keys)
-        if @product_variant.update(attrs.except(:sku))
-          Audit::Recorder.record!(
-            action: "product_variants.update",
-            outcome: "succeeded",
-            actor_user: current_user,
-            actor_label: current_user.display_name,
-            store: current_store,
-            subject: @product_variant,
-            before_values: before,
-            after_values: @product_variant.attributes.slice(*before.keys)
-          )
-          redirect_to admin_product_variant_path(@product_variant), notice: "Product variant updated."
-        else
-          @product = @product_variant.product
-          load_form_options
-          render :edit, status: :unprocessable_entity
-        end
+        ProductVariants::Update.call(
+          variant: @product_variant,
+          attributes: attrs.except(:sku).to_h.symbolize_keys,
+          actor: current_user,
+          store: current_store
+        )
+        redirect_to admin_product_variant_path(@product_variant), notice: "Product variant updated."
+      rescue ProductVariants::Update::Error => e
+        @product_variant.errors.add(:base, e.message)
+        @product = @product_variant.product
+        load_form_options
+        render :edit, status: :unprocessable_entity
       end
     end
 
     def discontinue
       rescue_stale do
         before_status = @product_variant.status
-        @product_variant.update!(status: "discontinued")
-        Audit::Recorder.record!(
+        mutate_and_audit!(
+          @product_variant,
           action: "product_variants.discontinue",
-          outcome: "succeeded",
-          actor_user: current_user,
-          actor_label: current_user.display_name,
-          store: current_store,
-          subject: @product_variant,
           before_values: { status: before_status },
-          after_values: { status: @product_variant.status }
-        )
+          after_values: { status: "discontinued" }
+        ) { @product_variant.update!(status: "discontinued") }
         redirect_to admin_product_variant_path(@product_variant), notice: "Product variant discontinued."
       end
     end

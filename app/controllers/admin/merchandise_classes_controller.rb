@@ -25,16 +25,11 @@ module Admin
 
     def create
       @merchandise_class = MerchandiseClass.new(merchandise_class_params.except(:lock_version))
-      if @merchandise_class.save
-        Audit::Recorder.record!(
-          action: "merchandise_classes.create",
-          outcome: "succeeded",
-          actor_user: current_user,
-          actor_label: current_user.display_name,
-          store: current_store,
-          subject: @merchandise_class,
-          after_values: { code: @merchandise_class.code, name: @merchandise_class.name }
-        )
+      if create_and_audit!(
+        @merchandise_class,
+        action: "merchandise_classes.create",
+        after_values: { code: @merchandise_class.code, name: @merchandise_class.name }
+      )
         redirect_to admin_merchandise_class_path(@merchandise_class), notice: "Merchandise class created."
       else
         load_form_options
@@ -48,22 +43,16 @@ module Admin
 
     def update
       rescue_stale do
-        before = @merchandise_class.attributes.slice(
-          "code", "name", "description", "inventory_mode", "pricing_method",
-          "default_standard_department_id", "default_used_department_id",
-          "used_merchandise_allowed", "buyback_allowed", "default_returnable", "display_order"
+        if save_and_audit!(
+          @merchandise_class,
+          attrs: merchandise_class_params,
+          action: "merchandise_classes.update",
+          before_keys: %w[
+            code name description inventory_mode pricing_method
+            default_standard_department_id default_used_department_id
+            used_merchandise_allowed buyback_allowed default_returnable display_order
+          ]
         )
-        if @merchandise_class.update(merchandise_class_params)
-          Audit::Recorder.record!(
-            action: "merchandise_classes.update",
-            outcome: "succeeded",
-            actor_user: current_user,
-            actor_label: current_user.display_name,
-            store: current_store,
-            subject: @merchandise_class,
-            before_values: before,
-            after_values: @merchandise_class.attributes.slice(*before.keys)
-          )
           redirect_to admin_merchandise_class_path(@merchandise_class), notice: "Merchandise class updated."
         else
           load_form_options
@@ -73,15 +62,9 @@ module Admin
     end
 
     def destroy
-      @merchandise_class.update!(active: false)
-      Audit::Recorder.record!(
-        action: "merchandise_classes.deactivate",
-        outcome: "succeeded",
-        actor_user: current_user,
-        actor_label: current_user.display_name,
-        store: current_store,
-        subject: @merchandise_class
-      )
+      mutate_and_audit!(@merchandise_class, action: "merchandise_classes.deactivate") do
+        @merchandise_class.update!(active: false)
+      end
       redirect_to admin_merchandise_classes_path, notice: "Merchandise class deactivated."
     end
 
