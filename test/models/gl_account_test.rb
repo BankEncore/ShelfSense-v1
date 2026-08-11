@@ -43,4 +43,33 @@ class GlAccountTest < ActiveSupport::TestCase
     assert_not account.valid?
     assert_includes account.errors[:parent_id], "cannot reference itself"
   end
+
+  test "category derives account type" do
+    account = GlAccount.new(
+      account_number: "5000",
+      name: "COGS",
+      account_category: "cost_of_goods_sold",
+      account_type: "asset"
+    )
+    assert account.valid?
+    assert_equal "expense", account.account_type
+  end
+
+  test "database rejects inconsistent category type pairs" do
+    assert_raises(ActiveRecord::StatementInvalid) do
+      GlAccount.insert!({
+        id: SecureRandom.uuid_v7,
+        account_number: "9999",
+        name: "Bad",
+        account_category: "sales",
+        account_type: "asset",
+        posting_allowed: true,
+        active: true,
+        display_order: 0,
+        lock_version: 0,
+        created_at: Time.current,
+        updated_at: Time.current
+      })
+    end
+  end
 end

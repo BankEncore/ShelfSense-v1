@@ -5,8 +5,8 @@ module Admin
     before_action -> { require_permission!("merchandise_categories.view") }, only: %i[index show]
     before_action -> { require_permission!("merchandise_categories.create") }, only: %i[new create]
     before_action -> { require_permission!("merchandise_categories.update") }, only: %i[edit update]
-    before_action -> { require_permission!("merchandise_categories.deactivate") }, only: :destroy
-    before_action :set_merchandise_category, only: %i[show edit update destroy]
+    before_action -> { require_permission!("merchandise_categories.deactivate") }, only: %i[destroy reactivate]
+    before_action :set_merchandise_category, only: %i[show edit update destroy reactivate]
 
     def index
       @merchandise_categories = MerchandiseCategory.order(:display_order, :name)
@@ -41,9 +41,9 @@ module Admin
       rescue_stale do
         if save_and_audit!(
           @merchandise_category,
-          attrs: merchandise_category_params,
+          attrs: merchandise_category_params.except(:code),
           action: "merchandise_categories.update",
-          before_keys: %w[code name description parent_id default_merchandise_class_id display_order]
+          before_keys: %w[name description parent_id default_merchandise_class_id display_order]
         )
           redirect_to admin_merchandise_category_path(@merchandise_category), notice: "Merchandise category updated."
         else
@@ -58,6 +58,15 @@ module Admin
         @merchandise_category.update!(active: false)
       end
       redirect_to admin_merchandise_categories_path, notice: "Merchandise category deactivated."
+    end
+
+    def reactivate
+      reactivate_configuration!(
+        @merchandise_category,
+        permission_key: "merchandise_categories.deactivate",
+        audit_action: "merchandise_categories.reactivate",
+        redirect_path: admin_merchandise_category_path(@merchandise_category)
+      )
     end
 
     private

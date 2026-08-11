@@ -2,17 +2,33 @@
 
 class GlAccount < ApplicationRecord
   ACCOUNT_TYPES = %w[asset liability equity revenue expense].freeze
-  ACCOUNT_CATEGORIES = %w[
-    cash accounts_receivable inventory other_current_asset fixed_asset
-    accounts_payable other_current_liability long_term_liability equity
-    sales sales_returns cost_of_goods_sold freight_in inventory_shrinkage
-    inventory_adjustment inventory_write_down other_revenue other_expense
-  ].freeze
+  CATEGORY_TO_TYPE = {
+    "cash" => "asset",
+    "accounts_receivable" => "asset",
+    "inventory" => "asset",
+    "other_current_asset" => "asset",
+    "fixed_asset" => "asset",
+    "accounts_payable" => "liability",
+    "other_current_liability" => "liability",
+    "long_term_liability" => "liability",
+    "equity" => "equity",
+    "sales" => "revenue",
+    "sales_returns" => "revenue",
+    "other_revenue" => "revenue",
+    "cost_of_goods_sold" => "expense",
+    "freight_in" => "expense",
+    "inventory_shrinkage" => "expense",
+    "inventory_adjustment" => "expense",
+    "inventory_write_down" => "expense",
+    "other_expense" => "expense"
+  }.freeze
+  ACCOUNT_CATEGORIES = CATEGORY_TO_TYPE.keys.freeze
 
   belongs_to :parent, class_name: "GlAccount", optional: true
   has_many :children, class_name: "GlAccount", foreign_key: :parent_id, inverse_of: :parent, dependent: :restrict_with_exception
 
   before_validation :normalize_account_number
+  before_validation :derive_account_type_from_category
 
   validates :account_number, :name, :account_type, :account_category, presence: true
   validates :account_number, uniqueness: true
@@ -21,6 +37,7 @@ class GlAccount < ApplicationRecord
   validate :parent_not_self
   validate :parent_same_account_type
   validate :no_parent_cycle
+  validate :category_matches_type
 
   scope :active, -> { where(active: true) }
   scope :posting, -> { where(posting_allowed: true) }
@@ -30,19 +47,45 @@ class GlAccount < ApplicationRecord
     active? && posting_allowed?
   end
 
+  def reactivation_blockers
+    blockers = []
+    if parent.present? && !parent.active?
+      blockers << "parent GL account must be active"
+    end
+    blockers
+  end
+
   private
 
   def normalize_account_number
     self.account_number = account_number.to_s.strip
   end
 
+  def derive_account_type_from_category
+    return if account_category.blank?
+
+    derived = CATEGORY_TO_TYPE[account_category]
+    self.account_type = derived if derived.present?
+  end
+
+  def category_matches_type
+    return if account_category.blank? || account_type.blank?
+
+    expected = CATEGORY_TO_TYPE[account_category]
+    return if expected.blank?
+
+    errors.add(:account_type, "must be #{expected} for category #{account_category}") if account_type != expected
+  end
+
   def parent_not_self
     return if parent_id.blank? || id.blank?
+
     errors.add(:parent_id, "cannot reference itself") if parent_id == id
   end
 
   def parent_same_account_type
     return if parent.blank?
+
     errors.add(:parent_id, "must have the same account type") if parent.account_type != account_type
   end
 

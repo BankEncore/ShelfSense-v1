@@ -11,7 +11,7 @@ Phase 2 merchandise and financial reference data are organization-wide master da
 | `view` | Read and list |
 | `create` | Create new records |
 | `update` | Non-lifecycle edits (does not include deactivate/discontinue) |
-| `deactivate` | Soft-deactivate reference/configuration records |
+| `deactivate` | Soft-deactivate or reactivate reference/configuration records (same permission family) |
 | `discontinue` | Move products/variants to discontinued (lifecycle) |
 
 `products.create` authorizes product creation whether the user enters an external primary identifier or chooses Generate ShelfSense identifier (`222`). There is no separate `products.generate_identifier` permission.

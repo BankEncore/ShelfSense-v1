@@ -9,12 +9,24 @@ Rails.application.routes.draw do
   namespace :admin do
     resource :system_settings, only: %i[show edit update]
     resources :stores
-    resources :gl_accounts
-    resources :tax_classes
-    resources :departments
-    resources :merchandise_classes
-    resources :merchandise_categories
-    resources :merchandise_conditions
+    resources :gl_accounts do
+      member { post :reactivate }
+    end
+    resources :tax_classes do
+      member { post :reactivate }
+    end
+    resources :departments do
+      member { post :reactivate }
+    end
+    resources :merchandise_classes do
+      member { post :reactivate }
+    end
+    resources :merchandise_categories do
+      member { post :reactivate }
+    end
+    resources :merchandise_conditions do
+      member { post :reactivate }
+    end
     resources :products do
       member do
         post :discontinue
@@ -26,7 +38,9 @@ Rails.application.routes.draw do
       end
     end
     resources :merchandise_lookups, only: %i[new create]
-    resources :merchandise_imports, only: %i[new create]
+    resources :merchandise_imports, only: %i[new create] do
+      collection { get :template }
+    end
     resources :users do
       member do
         post :deactivate

@@ -50,9 +50,12 @@ module ProductVariants
           end
         raise Error, "industry identifier cannot equal SKU" if normalized_industry.present? && normalized_industry == sku
 
+        resolved_name = @attributes[:name].presence || default_variant_name(variant_type, condition)
+
         variant = @product.product_variants.new(
           @attributes.except(:industry_identifier, :sku).merge(
             variant_type: variant_type,
+            name: resolved_name,
             sku: sku,
             industry_identifier: normalized_industry,
             merchandise_condition: condition,
@@ -126,6 +129,14 @@ module ProductVariants
       rescue Identifiers::Registry::ConflictError
         retry if attempts < 5
         raise
+      end
+    end
+
+    def default_variant_name(variant_type, condition)
+      if variant_type == "used"
+        condition.name
+      else
+        "Standard"
       end
     end
   end

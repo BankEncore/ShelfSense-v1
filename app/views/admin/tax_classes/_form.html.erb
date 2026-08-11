@@ -1,7 +1,15 @@
 <%= form_with model: [:admin, tax_class] do |form| %>
   <% if tax_class.errors.any? %><ul><% tax_class.errors.full_messages.each do |m| %><li><%= m %></li><% end %></ul><% end %>
   <%= form.hidden_field :lock_version %>
-  <p><%= form.label :code %><%= form.text_field :code %></p>
+  <% if tax_class.persisted? %>
+    <p>Code: <code><%= tax_class.code %></code> (immutable)</p>
+  <% else %>
+    <p>
+      <%= form.label :code %>
+      <%= form.text_field :code %>
+      <span>Leave blank to generate from the name. Later changes are not allowed.</span>
+    </p>
+  <% end %>
   <p><%= form.label :name %><%= form.text_field :name %></p>
   <p><%= form.label :description %><%= form.text_area :description %></p>
   <p><%= form.label :display_order %><%= form.number_field :display_order %></p>

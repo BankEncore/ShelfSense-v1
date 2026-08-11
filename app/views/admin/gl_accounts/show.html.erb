@@ -14,6 +14,8 @@
   <%= link_to "Edit", edit_admin_gl_account_path(@gl_account) if effective_permissions.include?("gl_accounts.update") %>
   <% if effective_permissions.include?("gl_accounts.deactivate") && @gl_account.active? %>
     <%= button_to "Deactivate", admin_gl_account_path(@gl_account), method: :delete, form: { data: { turbo_confirm: "Deactivate this GL account?" } } %>
+  <% elsif effective_permissions.include?("gl_accounts.deactivate") && !@gl_account.active? %>
+    <%= button_to "Reactivate", reactivate_admin_gl_account_path(@gl_account), method: :post, params: { lock_version: @gl_account.lock_version } %>
   <% end %>
 </p>
 <p><%= link_to "Back to GL accounts", admin_gl_accounts_path %></p>

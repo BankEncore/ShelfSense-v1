@@ -12,6 +12,8 @@
   <%= link_to "Edit", edit_admin_department_path(@department) if effective_permissions.include?("departments.update") %>
   <% if effective_permissions.include?("departments.deactivate") && @department.active? %>
     <%= button_to "Deactivate", admin_department_path(@department), method: :delete, form: { data: { turbo_confirm: "Deactivate this department?" } } %>
+  <% elsif effective_permissions.include?("departments.deactivate") && !@department.active? %>
+    <%= button_to "Reactivate", reactivate_admin_department_path(@department), method: :post, params: { lock_version: @department.lock_version } %>
   <% end %>
 </p>
 <p><%= link_to "Back to departments", admin_departments_path %></p>

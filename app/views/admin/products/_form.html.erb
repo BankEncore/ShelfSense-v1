@@ -21,8 +21,15 @@
   <p>
     <%= form.label :merchandise_category_id, "Category" %>
     <%= form.select :merchandise_category_id, @merchandise_categories.map { |c| [c.name, c.id] }, include_blank: "None" %>
+    <span>Supplies the default merchandise class for newly created variants. Changing it does not rewrite existing variants.</span>
   </p>
-  <p><%= form.label :list_price_cents %><%= form.number_field :list_price_cents %></p>
+  <p>
+    <%= label_tag :list_price, "List price" %>
+    <%= text_field_tag "product[list_price]",
+          params.dig(:product, :list_price).presence || (product.list_price_cents.present? ? format("%.2f", product.list_price_cents / 100.0) : nil),
+          inputmode: "decimal" %>
+    <span>Product-level reference price. Changing it does not rewrite existing variant prices.</span>
+  </p>
   <p><%= form.label :release_date %><%= form.date_field :release_date %></p>
   <p>
     <%= form.label :status %>

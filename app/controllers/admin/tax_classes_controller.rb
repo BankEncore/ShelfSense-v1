@@ -5,8 +5,8 @@ module Admin
     before_action -> { require_permission!("tax_classes.view") }, only: %i[index show]
     before_action -> { require_permission!("tax_classes.create") }, only: %i[new create]
     before_action -> { require_permission!("tax_classes.update") }, only: %i[edit update]
-    before_action -> { require_permission!("tax_classes.deactivate") }, only: :destroy
-    before_action :set_tax_class, only: %i[show edit update destroy]
+    before_action -> { require_permission!("tax_classes.deactivate") }, only: %i[destroy reactivate]
+    before_action :set_tax_class, only: %i[show edit update destroy reactivate]
 
     def index
       @tax_classes = TaxClass.order(:display_order, :code)
@@ -37,9 +37,9 @@ module Admin
       rescue_stale do
         if save_and_audit!(
           @tax_class,
-          attrs: tax_class_params,
+          attrs: tax_class_params.except(:code),
           action: "tax_classes.update",
-          before_keys: %w[code name description display_order]
+          before_keys: %w[name description display_order]
         )
           redirect_to admin_tax_class_path(@tax_class), notice: "Tax class updated."
         else
@@ -51,6 +51,15 @@ module Admin
     def destroy
       mutate_and_audit!(@tax_class, action: "tax_classes.deactivate") { @tax_class.update!(active: false) }
       redirect_to admin_tax_classes_path, notice: "Tax class deactivated."
+    end
+
+    def reactivate
+      reactivate_configuration!(
+        @tax_class,
+        permission_key: "tax_classes.deactivate",
+        audit_action: "tax_classes.reactivate",
+        redirect_path: admin_tax_class_path(@tax_class)
+      )
     end
 
     private

@@ -23,14 +23,8 @@ module ProductVariants
       department = @department || department_from(klass)
       tax = @tax_class || department&.default_tax_class
       price = @regular_price_cents
-      if price.nil? && @product.list_price_cents.present?
-        price =
-          if @variant_type == "used" && @condition
-            # Half-up integer rounding: (cents * bps + 5000) / 10000
-            (@product.list_price_cents * @condition.price_adjustment_bps + 5_000) / 10_000
-          else
-            @product.list_price_cents
-          end
+      if price.nil?
+        price = suggested_price_for(klass)
       end
 
       Result.new(
@@ -50,6 +44,18 @@ module ProductVariants
         klass.default_used_department
       else
         klass.default_standard_department
+      end
+    end
+
+    def suggested_price_for(klass)
+      return if klass.blank?
+      return unless klass.pricing_method == "list_price"
+      return if @product.list_price_cents.blank?
+
+      if @variant_type == "used" && @condition
+        (@product.list_price_cents * @condition.price_adjustment_bps + 5_000) / 10_000
+      else
+        @product.list_price_cents
       end
     end
   end

@@ -1,10 +1,10 @@
 # frozen_string_literal: true
 
 class TaxClass < ApplicationRecord
-  before_validation :normalize_code
+  include HasMachineCode
 
   validates :code, :name, presence: true
-  validates :code, uniqueness: true
+  validates :code, uniqueness: true, format: { with: Codes::Normalizer::FORMAT }
 
   scope :active, -> { where(active: true) }
   scope :assignable, -> { active }
@@ -13,9 +13,7 @@ class TaxClass < ApplicationRecord
     active?
   end
 
-  private
-
-  def normalize_code
-    self.code = code.to_s.strip.downcase.tr(" ", "_")
+  def reactivation_blockers
+    []
   end
 end
