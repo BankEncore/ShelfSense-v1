@@ -1,7 +1,6 @@
 <% content_for :title, @merchandise_condition.name %>
 <h1><%= @merchandise_condition.code %> — <%= @merchandise_condition.name %></h1>
 <p>
-  Basis: <%= @merchandise_condition.department_basis %> ·
   Price adjustment bps: <%= @merchandise_condition.price_adjustment_bps %> ·
   Order: <%= @merchandise_condition.display_order %> ·
   <%= @merchandise_condition.active? ? "active" : "inactive" %>

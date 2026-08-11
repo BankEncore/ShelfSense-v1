@@ -5,8 +5,8 @@
   <p><%= form.label :name %><%= form.text_field :name %></p>
   <p><%= form.label :description %><%= form.text_area :description %></p>
   <p>
-    <%= form.label :inventory_tracking_mode %>
-    <%= form.select :inventory_tracking_mode, MerchandiseClass::TRACKING_MODES.map { |m| [m.humanize, m] } %>
+    <%= form.label :inventory_mode %>
+    <%= form.select :inventory_mode, MerchandiseClass::INVENTORY_MODES.map { |m| [m.humanize, m] } %>
   </p>
   <p>
     <%= form.label :pricing_method %>

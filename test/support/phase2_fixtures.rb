@@ -78,7 +78,7 @@ module Phase2Fixtures
     code:,
     pricing_method: "fixed",
     used_merchandise_allowed: false,
-    inventory_tracking_mode: "quantity",
+    inventory_mode: "inventory",
     default_standard_department: nil,
     default_used_department: nil,
     name: nil,
@@ -90,7 +90,7 @@ module Phase2Fixtures
         code: code,
         name: name || code.to_s.tr("_", " ").capitalize,
         pricing_method: pricing_method,
-        inventory_tracking_mode: inventory_tracking_mode,
+        inventory_mode: inventory_mode,
         used_merchandise_allowed: used_merchandise_allowed,
         default_standard_department: default_standard_department,
         default_used_department: default_used_department,
@@ -115,7 +115,6 @@ module Phase2Fixtures
 
   def merchandise_condition(
     code:,
-    department_basis: "standard",
     price_adjustment_bps: 10_000,
     name: nil,
     active: true,
@@ -125,7 +124,6 @@ module Phase2Fixtures
       {
         code: code,
         name: name || code.to_s.tr("_", " ").capitalize,
-        department_basis: department_basis,
         price_adjustment_bps: price_adjustment_bps,
         active: active,
         display_order: 0

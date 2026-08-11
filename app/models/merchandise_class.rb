@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class MerchandiseClass < ApplicationRecord
-  TRACKING_MODES = %w[quantity individual non_inventory].freeze
+  INVENTORY_MODES = %w[inventory non_inventory].freeze
   PRICING_METHODS = %w[fixed list_price cost_based open_price].freeze
 
   belongs_to :default_standard_department, class_name: "Department", optional: true
@@ -9,9 +9,9 @@ class MerchandiseClass < ApplicationRecord
 
   before_validation :normalize_code
 
-  validates :code, :name, :inventory_tracking_mode, :pricing_method, presence: true
+  validates :code, :name, :inventory_mode, :pricing_method, presence: true
   validates :code, uniqueness: true
-  validates :inventory_tracking_mode, inclusion: { in: TRACKING_MODES }
+  validates :inventory_mode, inclusion: { in: INVENTORY_MODES }
   validates :pricing_method, inclusion: { in: PRICING_METHODS }
   validate :validate_changed_departments
 
@@ -20,6 +20,14 @@ class MerchandiseClass < ApplicationRecord
 
   def assignable?
     active?
+  end
+
+  def inventory?
+    inventory_mode == "inventory"
+  end
+
+  def non_inventory?
+    inventory_mode == "non_inventory"
   end
 
   private

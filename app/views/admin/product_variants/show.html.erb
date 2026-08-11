@@ -2,8 +2,9 @@
 <h1><%= @product_variant.sku %></h1>
 <p>
   Product: <%= link_to @product_variant.product.name, admin_product_path(@product_variant.product) %> ·
+  Type: <%= @product_variant.variant_type %> ·
   Status: <%= @product_variant.status %> ·
-  Condition: <%= @product_variant.merchandise_condition.code %> ·
+  Condition: <%= @product_variant.merchandise_condition&.code || "—" %> ·
   Price cents: <%= @product_variant.regular_price_cents.presence || "—" %>
 </p>
 <p>

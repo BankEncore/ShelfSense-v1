@@ -16,7 +16,6 @@ module Admin
 
     def new
       @merchandise_condition = MerchandiseCondition.new(
-        department_basis: "standard",
         price_adjustment_bps: 10_000,
         display_order: 0
       )
@@ -45,7 +44,7 @@ module Admin
     def update
       rescue_stale do
         before = @merchandise_condition.attributes.slice(
-          "code", "name", "description", "department_basis", "price_adjustment_bps", "display_order"
+          "code", "name", "description", "price_adjustment_bps", "display_order"
         )
         if @merchandise_condition.update(merchandise_condition_params)
           Audit::Recorder.record!(
@@ -86,7 +85,7 @@ module Admin
 
     def merchandise_condition_params
       params.require(:merchandise_condition).permit(
-        :code, :name, :description, :department_basis, :price_adjustment_bps,
+        :code, :name, :description, :price_adjustment_bps,
         :display_order, :lock_version
       )
     end

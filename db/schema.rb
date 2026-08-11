@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_10_145000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_10_200000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -154,14 +154,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_10_145000) do
     t.uuid "default_used_department_id"
     t.text "description"
     t.integer "display_order", default: 0, null: false
-    t.string "inventory_tracking_mode", null: false
+    t.string "inventory_mode", null: false
     t.integer "lock_version", default: 0, null: false
     t.string "name", null: false
     t.string "pricing_method", null: false
     t.timestamptz "updated_at", null: false
     t.boolean "used_merchandise_allowed", default: false, null: false
     t.index ["code"], name: "index_merchandise_classes_on_code", unique: true
-    t.check_constraint "inventory_tracking_mode::text = ANY (ARRAY['quantity'::character varying, 'individual'::character varying, 'non_inventory'::character varying]::text[])", name: "merchandise_classes_tracking_mode_valid"
+    t.check_constraint "inventory_mode::text = ANY (ARRAY['inventory'::character varying, 'non_inventory'::character varying]::text[])", name: "merchandise_classes_inventory_mode_valid"
     t.check_constraint "pricing_method::text = ANY (ARRAY['fixed'::character varying, 'list_price'::character varying, 'cost_based'::character varying, 'open_price'::character varying]::text[])", name: "merchandise_classes_pricing_method_valid"
   end
 
@@ -169,7 +169,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_10_145000) do
     t.boolean "active", default: true, null: false
     t.string "code", null: false
     t.timestamptz "created_at", null: false
-    t.string "department_basis", null: false
     t.text "description"
     t.integer "display_order", default: 0, null: false
     t.integer "lock_version", default: 0, null: false
@@ -177,7 +176,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_10_145000) do
     t.integer "price_adjustment_bps", default: 10000, null: false
     t.timestamptz "updated_at", null: false
     t.index ["code"], name: "index_merchandise_conditions_on_code", unique: true
-    t.check_constraint "department_basis::text = ANY (ARRAY['standard'::character varying, 'used'::character varying]::text[])", name: "merchandise_conditions_department_basis_valid"
     t.check_constraint "price_adjustment_bps >= 0", name: "merchandise_conditions_price_adjustment_nonnegative"
   end
 
@@ -200,7 +198,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_10_145000) do
     t.string "industry_identifier", limit: 13
     t.integer "lock_version", default: 0, null: false
     t.uuid "merchandise_class_id"
-    t.uuid "merchandise_condition_id", null: false
+    t.uuid "merchandise_condition_id"
     t.string "name"
     t.string "option_value_1"
     t.string "option_value_2"
@@ -210,17 +208,21 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_10_145000) do
     t.string "status", default: "draft", null: false
     t.uuid "tax_class_id"
     t.timestamptz "updated_at", null: false
+    t.string "variant_type", null: false
     t.index ["department_id"], name: "index_product_variants_on_department_id"
     t.index ["industry_identifier"], name: "index_product_variants_on_industry_identifier", unique: true, where: "(industry_identifier IS NOT NULL)"
     t.index ["merchandise_class_id"], name: "index_product_variants_on_merchandise_class_id"
     t.index ["merchandise_condition_id"], name: "index_product_variants_on_merchandise_condition_id"
     t.index ["product_id", "status"], name: "index_product_variants_on_product_id_and_status"
+    t.index ["product_id", "variant_type"], name: "index_product_variants_on_product_id_and_variant_type"
     t.index ["sku"], name: "index_product_variants_on_sku", unique: true
     t.index ["tax_class_id"], name: "index_product_variants_on_tax_class_id"
     t.check_constraint "industry_identifier IS NULL OR industry_identifier::text ~ '^[0-9]{13}$'::text", name: "product_variants_industry_identifier_shape"
     t.check_constraint "regular_price_cents IS NULL OR regular_price_cents >= 0", name: "product_variants_regular_price_nonnegative"
     t.check_constraint "sku::text ~ '^[0-9]{13}$'::text", name: "product_variants_sku_shape"
     t.check_constraint "status::text = ANY (ARRAY['draft'::character varying, 'active'::character varying, 'discontinued'::character varying]::text[])", name: "product_variants_status_valid"
+    t.check_constraint "variant_type::text = 'standard'::text AND merchandise_condition_id IS NULL OR variant_type::text = 'used'::text AND merchandise_condition_id IS NOT NULL", name: "product_variants_condition_matches_type"
+    t.check_constraint "variant_type::text = ANY (ARRAY['standard'::character varying, 'used'::character varying]::text[])", name: "product_variants_variant_type_valid"
   end
 
   create_table "products", id: :uuid, default: nil, force: :cascade do |t|

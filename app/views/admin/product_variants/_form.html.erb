@@ -3,12 +3,18 @@
   <%= form.hidden_field :lock_version %>
   <% if product_variant.persisted? %>
     <p>SKU: <%= product_variant.sku %></p>
+    <p>Type: <%= product_variant.variant_type %></p>
+  <% else %>
+    <p>
+      <%= form.label :variant_type %>
+      <%= form.select :variant_type, ProductVariant::VARIANT_TYPES.map { |t| [t.humanize, t] } %>
+    </p>
   <% end %>
   <p><%= form.label :name %><%= form.text_field :name %></p>
   <p><%= form.label :option_value_1 %><%= form.text_field :option_value_1 %></p>
   <p><%= form.label :option_value_2 %><%= form.text_field :option_value_2 %></p>
   <p>
-    <%= form.label :merchandise_condition_id, "Condition" %>
+    <%= form.label :merchandise_condition_id, "Condition (used variants only)" %>
     <%= form.select :merchandise_condition_id, @merchandise_conditions.map { |c| ["#{c.code} — #{c.name}", c.id] }, include_blank: true %>
   </p>
   <p>

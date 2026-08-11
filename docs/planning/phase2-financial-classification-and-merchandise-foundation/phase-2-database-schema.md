@@ -186,11 +186,11 @@ Examples include `book`, `recorded_music`, `video`, `greeting_card`, `apparel`, 
 | code | varchar | null: false; unique | Stable machine-readable code |
 | name | varchar | null: false | |
 | description | text | | |
-| inventory_tracking_mode | varchar | null: false; check enum | `quantity`, `individual`, `non_inventory` |
+| inventory_mode | varchar | null: false; check enum | `inventory` or `non_inventory` |
 | pricing_method | varchar | null: false; check enum | `fixed`, `list_price`, `cost_based`, `open_price` |
-| default_standard_department_id | uuid | FK: `departments`; nullable | Default for standard-basis conditions |
-| default_used_department_id | uuid | FK: `departments`; nullable | Default for used-basis conditions |
-| used_merchandise_allowed | boolean | null: false; default `false` | Whether used conditions may be assigned |
+| default_standard_department_id | uuid | FK: `departments`; nullable | Default for standard variants |
+| default_used_department_id | uuid | FK: `departments`; nullable | Default for used variants |
+| used_merchandise_allowed | boolean | null: false; default `false` | Whether used variants may use this class |
 | buyback_allowed | boolean | null: false; default `false` | Future behavior; buyback is deferred |
 | default_returnable | boolean | null: false; default `true` | Default used by later purchasing and return workflows |
 | active | boolean | null: false; default `true` | |
@@ -199,13 +199,21 @@ Examples include `book`, `recorded_music`, `video`, `greeting_card`, `apparel`, 
 | created_at | timestamptz | null: false | |
 | updated_at | timestamptz | null: false | |
 
-### Inventory tracking modes
+### Inventory mode and derived tracking
+
+Quantity versus individual tracking is not chosen independently on the merchandise class. It is derived from `inventory_mode` and the variant’s `variant_type`:
+
+| Class `inventory_mode` | Variant type | Derived tracking |
+|---|---|---|
+| `inventory` | `standard` | Quantity-tracked |
+| `inventory` | `used` | Individually unit-tracked |
+| `non_inventory` | `standard` | Not inventory-tracked (for example services) |
+| `non_inventory` | `used` | Invalid |
 
 | Value | Meaning |
 |---|---|
-| `quantity` | Interchangeable units tracked by quantity |
-| `individual` | Each physical unit will require a future inventory-unit record |
-| `non_inventory` | Sellable, but does not create or relieve merchandise inventory |
+| `inventory` | Participates in merchandise inventory |
+| `non_inventory` | Sellable without creating or relieving merchandise inventory |
 
 ### Pricing methods
 
@@ -251,29 +259,28 @@ Application logic must prevent hierarchy cycles. Changing a category's default c
 
 ## 6. `merchandise_conditions`
 
-Describes the commercial condition of a variant and indicates whether department resolution should use a merchandise class's standard or used default.
+Describes the condition and pricing tier of a **used variant** (for example `like_new`, `good`, `acceptable`). Conditions belong only to used variants; standard variants must not reference a condition. A future `inventory_unit` represents each physical used copy assigned to that variant.
 
 | **Field** | **Type** | **Constraints** | **Notes** |
 |---|---|---|---|
 | id | uuid | PK; UUIDv7 | |
-| code | varchar | null: false; unique | Examples: `new`, `used_good`, `used_acceptable`, `collectible`, `remainder` |
+| code | varchar | null: false; unique | Examples: `like_new`, `good`, `acceptable`, `collectible` |
 | name | varchar | null: false | |
 | description | text | | |
-| department_basis | varchar | null: false; check enum | `standard` or `used` |
-| price_adjustment_bps | integer | null: false; default `10000`; check `>= 0` | Price multiplier; `10000` means 100% |
+| price_adjustment_bps | integer | null: false; default `10000`; check `>= 0` | Price multiplier for used-variant suggestions; `10000` means 100% |
 | active | boolean | null: false; default `true` | |
 | display_order | integer | null: false; default `0` | |
 | lock_version | integer | null: false; default `0` | Optimistic concurrency |
 | created_at | timestamptz | null: false | |
 | updated_at | timestamptz | null: false | |
 
-The condition adjustment produces only a suggested price:
+The condition adjustment produces only a suggested price for used variants:
 
 \[
 \text{suggested price} = \text{base price} \times \frac{\text{price adjustment bps}}{10000}
 \]
 
-The approved result is stored as `product_variants.regular_price_cents`. Using `department_basis` allows several used or collectible conditions to share the used-department resolution path without treating “used” as a separate variant type.
+The approved result is stored as `product_variants.regular_price_cents`. Department defaults are selected from the variant’s `variant_type`, not from the condition.
 
 ---
 
@@ -327,18 +334,19 @@ index (status, name)
 
 ## 8. `product_variants`
 
-Represents the actual sellable SKU used by later inventory, purchasing, customer-request, and POS workflows.
+Represents the actual sellable SKU used by later inventory, purchasing, customer-request, and POS workflows. A product is condition-neutral and may own both **standard variants** and **used variants**.
 
 | **Field** | **Type** | **Constraints** | **Notes** |
 |---|---|---|---|
 | id | uuid | PK; UUIDv7 | |
 | product_id | uuid | FK: `products`; null: false | |
+| variant_type | varchar | null: false; check enum | `standard` or `used` |
 | sku | char(13) | null: false; unique; immutable | System-generated `221` EAN-13-compatible SKU |
 | industry_identifier | char(13) | unique when present; nullable | Trade identifier belonging specifically to this variant |
 | name | varchar | | Optional distinguishing display name |
 | option_value_1 | varchar | | Corresponds to `products.variant_option_name_1` |
 | option_value_2 | varchar | | Corresponds to `products.variant_option_name_2` |
-| merchandise_condition_id | uuid | FK: `merchandise_conditions`; null: false | Approved condition; required for drafts and active variants |
+| merchandise_condition_id | uuid | FK: `merchandise_conditions`; nullable | Required for used variants; must be null for standard variants |
 | merchandise_class_id | uuid | FK: `merchandise_classes`; nullable in draft; required when active | Approved operational behavior |
 | department_id | uuid | FK: `departments`; nullable in draft; required when active | Stored financial and reporting classification |
 | tax_class_id | uuid | FK: `tax_classes`; nullable in draft; required when active | Stored tax classification |
@@ -347,6 +355,16 @@ Represents the actual sellable SKU used by later inventory, purchasing, customer
 | lock_version | integer | null: false; default `0` | Optimistic concurrency |
 | created_at | timestamptz | null: false | |
 | updated_at | timestamptz | null: false | |
+
+Database invariant:
+
+```sql
+CHECK (
+  (variant_type = 'standard' AND merchandise_condition_id IS NULL)
+  OR
+  (variant_type = 'used' AND merchandise_condition_id IS NOT NULL)
+)
+```
 
 ### SKU rules
 
@@ -371,9 +389,9 @@ When creating or explicitly reclassifying a variant, resolve values in this orde
 | Assignment | Resolution order |
 |---|---|
 | Merchandise class | Explicit selection; product category's default class; unresolved |
-| Department | Explicit selection; class used department when condition basis is `used`; class standard department otherwise; unresolved |
+| Department | Explicit selection; class used department when `variant_type` is `used`; class standard department when `variant_type` is `standard`; unresolved |
 | Tax class | Explicit selection; resolved department's default tax class; unresolved |
-| Price | Explicit price; applicable product-list-price or condition suggestion; later cost-based suggestion |
+| Price | Explicit price; for used variants, list price × condition adjustment; for standard variants, list price as-is; later cost-based suggestion |
 
 The user approves the resolved values before activation. ShelfSense stores those values on the variant. Changing a category, class, condition, or department default later does not silently modify existing variants.
 
@@ -384,8 +402,10 @@ Sellability should be a model or domain-service predicate, not a duplicated stor
 - its status is `active`;
 - its product is active;
 - its SKU is valid;
-- its merchandise class, condition, department, and tax class are active;
-- its condition is permitted by its merchandise class;
+- its merchandise class, department, and tax class are active;
+- for used variants, its merchandise condition is active and the class allows used merchandise (`used_merchandise_allowed`);
+- for used variants, the merchandise class `inventory_mode` is `inventory` (non-inventory used variants are invalid);
+- for standard variants, `merchandise_condition_id` is null;
 - its regular price satisfies the merchandise class's pricing method;
 - required option values and any class-specific attributes are present.
 
@@ -397,13 +417,14 @@ Recommended indexes:
 unique (sku)
 unique (industry_identifier) where industry_identifier is not null
 index (product_id, status)
+index (product_id, variant_type)
 index (merchandise_class_id)
 index (merchandise_condition_id)
 index (department_id)
 index (tax_class_id)
 ```
 
-Do not impose a general uniqueness constraint on `(product_id, option values, condition)` until the option model is proven sufficient for every merchandise class. Individually distinguishable physical copies belong in future `inventory_units`, not duplicate variant records.
+Do not impose a general uniqueness constraint on `(product_id, option values, condition)` until the option model is proven sufficient for every merchandise class. Individually distinguishable physical copies belong in future `inventory_units` under a used variant, not as duplicate variant records.
 
 ---
 

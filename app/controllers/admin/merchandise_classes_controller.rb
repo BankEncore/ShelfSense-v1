@@ -16,7 +16,7 @@ module Admin
 
     def new
       @merchandise_class = MerchandiseClass.new(
-        inventory_tracking_mode: "quantity",
+        inventory_mode: "inventory",
         pricing_method: "fixed",
         display_order: 0
       )
@@ -49,7 +49,7 @@ module Admin
     def update
       rescue_stale do
         before = @merchandise_class.attributes.slice(
-          "code", "name", "description", "inventory_tracking_mode", "pricing_method",
+          "code", "name", "description", "inventory_mode", "pricing_method",
           "default_standard_department_id", "default_used_department_id",
           "used_merchandise_allowed", "buyback_allowed", "default_returnable", "display_order"
         )
@@ -97,7 +97,7 @@ module Admin
 
     def merchandise_class_params
       permitted = params.require(:merchandise_class).permit(
-        :code, :name, :description, :inventory_tracking_mode, :pricing_method,
+        :code, :name, :description, :inventory_mode, :pricing_method,
         :default_standard_department_id, :default_used_department_id,
         :used_merchandise_allowed, :buyback_allowed, :default_returnable,
         :display_order, :lock_version

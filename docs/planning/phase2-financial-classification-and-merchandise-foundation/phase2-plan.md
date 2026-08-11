@@ -98,20 +98,16 @@ Phase 2 fields should include:
 * code and name;  
 * description;  
 * active status;  
-* default standard department;  
-* default used department;  
-* inventory tracking mode;  
+* default standard department (for standard variants);  
+* default used department (for used variants);  
+* inventory mode (`inventory` or `non_inventory`);  
 * pricing method;  
 * used-merchandise eligibility;  
 * buyback eligibility;  
 * returnability default;  
 * display order.
 
-Recommended inventory tracking modes:
-
-* `quantity`  
-* `individual`  
-* `non_inventory`
+Quantity versus individual tracking is derived from inventory mode and variant type: inventory + standard ⇒ quantity-tracked; inventory + used ⇒ individually tracked; non-inventory + standard ⇒ not inventory-tracked; non-inventory + used ⇒ invalid.
 
 Later workflows will use these settings, but Phase 2 only needs to capture and validate them.
 
@@ -133,13 +129,14 @@ A category’s default merchandise class is a creation-time suggestion. It shoul
 
 ### Merchandise conditions
 
-Conditions distinguish merchandise states such as:
+Conditions describe the condition and pricing tier of a **used variant**, such as:
 
-* new;  
-* used;  
-* collectible;  
-* damaged;  
-* remainder.
+* like new;  
+* good;  
+* acceptable;  
+* collectible.
+
+They do not apply to standard variants. The product itself is neither standard nor used.
 
 Phase 2 includes:
 
@@ -150,7 +147,7 @@ Phase 2 includes:
 
 If the field represents a price multiplier, `10000` means 100%, while `6000` means 60%.
 
-A condition may suggest a price, but the approved regular price remains stored on the variant.
+A condition may suggest a price for a used variant, but the approved regular price remains stored on the variant.
 
 ---
 
@@ -200,14 +197,15 @@ Rules:
 
 ## 2.4 Product variants
 
-A product variant is the actual sellable record used by later inventory, purchasing, customer-request, and POS workflows.
+A product variant is the actual sellable record used by later inventory, purchasing, customer-request, and POS workflows. Each variant is either a **standard variant** or a **used variant**.
 
 Phase 2 should support:
 
-* one or more variants per product;  
+* one or more variants per product, including both types on the same product;  
+* required `variant_type` (`standard` or `used`);  
 * a required generated SKU;  
 * an optional variant-specific industry identifier;  
-* condition;  
+* merchandise condition only for used variants (prohibited for standard);  
 * merchandise class;  
 * department;  
 * tax class;  
@@ -245,10 +243,11 @@ The product’s primary identifier should not be copied to its variants merely t
 
 The variant should store its approved:
 
+* `variant_type`;  
 * `merchandise_class_id`;  
 * `department_id`;  
 * `tax_class_id`;  
-* `condition_id`;  
+* `merchandise_condition_id` when used (null when standard);  
 * `regular_price_cents`.
 
 These should not remain purely dynamic inherited values. Defaults assist creation, while stored assignments prevent later configuration changes from silently reclassifying existing merchandise.
@@ -270,8 +269,8 @@ A merchandise class is required before the variant can become sellable.
 ### Department
 
 1. Explicit variant department.  
-2. Merchandise class’s used department for a used variant.  
-3. Merchandise class’s standard department otherwise.  
+2. Merchandise class’s used department when `variant_type` is `used`.  
+3. Merchandise class’s standard department when `variant_type` is `standard`.  
 4. Otherwise unresolved.
 
 The resolved department is saved on the variant.
@@ -288,8 +287,8 @@ The resolved tax class is saved on the variant.
 
 Possible price suggestions include:
 
-* product list price;  
-* list price multiplied by the condition adjustment;  
+* product list price (standard variants);  
+* list price multiplied by the used variant’s condition adjustment;  
 * later, cost-based pricing using the department’s target margin.
 
 Phase 2 should store the user-approved `regular_price_cents`. It should not continuously recalculate prices when defaults change.
@@ -305,9 +304,10 @@ A variant should be considered sellable only when it:
 * has an active merchandise class;  
 * has an active department;  
 * has an active tax class;  
-* has an active condition;  
+* for used variants, has an active condition and a class that allows used merchandise and is inventory-mode;  
+* for standard variants, has no condition;  
 * has a valid SKU;  
-* has a valid nonnegative regular price;  
+* satisfies the merchandise class pricing-method price rules;  
 * satisfies any class-specific required attributes.
 
 A product may exist in an incomplete state without having a sellable variant.

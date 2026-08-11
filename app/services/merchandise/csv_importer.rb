@@ -32,7 +32,7 @@ module Merchandise
             created_products += 1 if product_status == :created
             updated_products += 1 if product_status == :updated
 
-            if row["variant_condition_code"].present? || row["sku"].present? || row["industry_identifier"].present?
+            if row["variant_type"].present? || row["variant_condition_code"].present? || row["sku"].present? || row["industry_identifier"].present?
               _, variant_status = upsert_variant!(product, row)
               created_variants += 1 if variant_status == :created
               updated_variants += 1 if variant_status == :updated
@@ -108,24 +108,33 @@ module Merchandise
         end
       end
 
-      if row["variant_condition_code"].blank?
-        raise Error, "insufficient identity to create or update variant"
+      variant_type = row["variant_type"].to_s.presence
+      raise Error, "insufficient identity to create or update variant" if variant_type.blank?
+
+      attributes = {
+        variant_type: variant_type,
+        name: row["variant_name"],
+        industry_identifier: row["industry_identifier"],
+        regular_price_cents: row["regular_price_cents"].presence&.to_i,
+        merchandise_class_id: MerchandiseClass.find_by(code: row["merchandise_class_code"])&.id,
+        department_id: Department.find_by(code: row["department_code"])&.id,
+        tax_class_id: TaxClass.find_by(code: row["tax_class_code"])&.id
+      }
+
+      if variant_type == "used"
+        raise Error, "variant_condition_code is required for used variants" if row["variant_condition_code"].blank?
+
+        condition = MerchandiseCondition.find_by!(code: row["variant_condition_code"])
+        attributes[:merchandise_condition_id] = condition.id
+      elsif row["variant_condition_code"].present?
+        raise Error, "variant_condition_code must be blank for standard variants"
       end
 
-      condition = MerchandiseCondition.find_by!(code: row["variant_condition_code"])
       variant = ProductVariants::Create.call(
         product: product,
         actor: @actor,
         source: @source,
-        attributes: {
-          merchandise_condition_id: condition.id,
-          name: row["variant_name"],
-          industry_identifier: row["industry_identifier"],
-          regular_price_cents: row["regular_price_cents"].presence&.to_i,
-          merchandise_class_id: MerchandiseClass.find_by(code: row["merchandise_class_code"])&.id,
-          department_id: Department.find_by(code: row["department_code"])&.id,
-          tax_class_id: TaxClass.find_by(code: row["tax_class_code"])&.id
-        }.compact
+        attributes: attributes.compact
       )
       [ variant, :created ]
     end

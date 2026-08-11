@@ -4,10 +4,6 @@
   <p><%= form.label :code %><%= form.text_field :code %></p>
   <p><%= form.label :name %><%= form.text_field :name %></p>
   <p><%= form.label :description %><%= form.text_area :description %></p>
-  <p>
-    <%= form.label :department_basis %>
-    <%= form.select :department_basis, MerchandiseCondition::DEPARTMENT_BASES.map { |b| [b.humanize, b] } %>
-  </p>
   <p><%= form.label :price_adjustment_bps %><%= form.number_field :price_adjustment_bps %></p>
   <p><%= form.label :display_order %><%= form.number_field :display_order %></p>
   <p><%= form.submit %></p>

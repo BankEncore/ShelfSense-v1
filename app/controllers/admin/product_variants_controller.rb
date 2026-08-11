@@ -17,7 +17,7 @@ module Admin
     def show; end
 
     def new
-      @product_variant = @product.product_variants.build(status: "draft")
+      @product_variant = @product.product_variants.build(status: "draft", variant_type: "standard")
       load_form_options
     end
 
@@ -137,7 +137,7 @@ module Admin
 
     def audit_attribute_keys
       %w[
-        name option_value_1 option_value_2 merchandise_condition_id merchandise_class_id
+        variant_type name option_value_1 option_value_2 merchandise_condition_id merchandise_class_id
         department_id tax_class_id regular_price_cents status industry_identifier
       ]
     end
@@ -148,11 +148,11 @@ module Admin
 
     def product_variant_params
       permitted = params.require(:product_variant).permit(
-        :name, :option_value_1, :option_value_2, :merchandise_condition_id,
+        :variant_type, :name, :option_value_1, :option_value_2, :merchandise_condition_id,
         :merchandise_class_id, :department_id, :tax_class_id, :regular_price_cents,
         :industry_identifier, :status, :lock_version
       )
-      %i[name option_value_1 option_value_2 merchandise_class_id department_id tax_class_id
+      %i[name option_value_1 option_value_2 merchandise_condition_id merchandise_class_id department_id tax_class_id
          regular_price_cents industry_identifier].each do |key|
         permitted[key] = nil if permitted[key].blank?
       end

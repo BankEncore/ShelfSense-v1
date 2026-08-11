@@ -8,8 +8,9 @@ module ProductVariants
       new(**attrs).resolve
     end
 
-    def initialize(product:, condition:, merchandise_class: nil, department: nil, tax_class: nil, regular_price_cents: nil)
+    def initialize(product:, variant_type:, condition: nil, merchandise_class: nil, department: nil, tax_class: nil, regular_price_cents: nil)
       @product = product
+      @variant_type = variant_type.to_s
       @condition = condition
       @merchandise_class = merchandise_class
       @department = department
@@ -22,8 +23,13 @@ module ProductVariants
       department = @department || department_from(klass)
       tax = @tax_class || department&.default_tax_class
       price = @regular_price_cents
-      if price.nil? && @product.list_price_cents.present? && @condition
-        price = (@product.list_price_cents * @condition.price_adjustment_bps / 10_000.0).round
+      if price.nil? && @product.list_price_cents.present?
+        price =
+          if @variant_type == "used" && @condition
+            (@product.list_price_cents * @condition.price_adjustment_bps / 10_000.0).round
+          else
+            @product.list_price_cents
+          end
       end
 
       Result.new(
@@ -39,7 +45,7 @@ module ProductVariants
     def department_from(klass)
       return if klass.blank?
 
-      if @condition&.used_basis?
+      if @variant_type == "used"
         klass.default_used_department
       else
         klass.default_standard_department

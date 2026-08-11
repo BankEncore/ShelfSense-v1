@@ -9,7 +9,14 @@ class Merchandise::CsvImporterTest < ActiveSupport::TestCase
     @tax = tax_class(code: "books")
     @dept = department(code: "new_books", default_tax_class: @tax)
     @klass = merchandise_class(code: "book", pricing_method: "fixed", default_standard_department: @dept)
-    @condition = merchandise_condition(code: "new")
+    @used_klass = merchandise_class(
+      code: "used_book",
+      pricing_method: "fixed",
+      used_merchandise_allowed: true,
+      default_standard_department: @dept,
+      default_used_department: @dept
+    )
+    @condition = merchandise_condition(code: "like_new")
   end
 
   test "matches product by normalized primary_identifier" do
@@ -72,7 +79,7 @@ class Merchandise::CsvImporterTest < ActiveSupport::TestCase
       product: product,
       actor: @actor,
       attributes: {
-        merchandise_condition_id: @condition.id,
+        variant_type: "standard",
         name: "First",
         industry_identifier: industry
       }
@@ -93,7 +100,7 @@ class Merchandise::CsvImporterTest < ActiveSupport::TestCase
     assert_equal "By Industry", variant.reload.name
   end
 
-  test "insufficient identity error when variant fields lack condition and match keys" do
+  test "insufficient identity error when variant fields lack type and match keys" do
     product = Products::Create.call(
       attributes: { name: "Identity", status: "draft" },
       actor: @actor,
@@ -119,13 +126,31 @@ class Merchandise::CsvImporterTest < ActiveSupport::TestCase
     fake_sku = Identifiers::Ean13.complete("221", "888888888")
 
     result = import_csv(<<~CSV)
-      primary_identifier,name,generate_primary_identifier,sku,variant_condition_code,variant_name
-      #{product.primary_identifier},Caller SKU,false,#{fake_sku},new,Should Fail
+      primary_identifier,name,generate_primary_identifier,sku,variant_type,variant_name
+      #{product.primary_identifier},Caller SKU,false,#{fake_sku},standard,Should Fail
     CSV
 
     assert_equal 1, result.errors.size
     assert_match(/caller-assigned SKU|not accepted/i, result.errors.first[:message])
     assert_nil ProductVariant.find_by(sku: fake_sku)
+  end
+
+  test "creates used variant with condition and standard without" do
+    product = Products::Create.call(
+      attributes: { name: "Typed", status: "draft" },
+      actor: @actor,
+      identifier_mode: "generate"
+    )
+
+    result = import_csv(<<~CSV)
+      primary_identifier,name,generate_primary_identifier,variant_type,variant_condition_code,merchandise_class_code,regular_price_cents
+      #{product.primary_identifier},Typed,false,used,like_new,used_book,1200
+    CSV
+    assert_empty result.errors
+    assert_equal 1, result.created_variants
+    used = product.product_variants.used.first
+    assert used.present?
+    assert_equal @condition.id, used.merchandise_condition_id
   end
 
   private

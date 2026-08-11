@@ -12,9 +12,14 @@ class Identifiers::LookupTest < ActiveSupport::TestCase
       pricing_method: "fixed",
       default_standard_department: @dept
     )
-    @condition = merchandise_condition(code: "new")
-    @condition_used = merchandise_condition(code: "used", department_basis: "used", price_adjustment_bps: 6_000)
-    @klass.update!(used_merchandise_allowed: true, default_used_department: @dept)
+    @used_klass = merchandise_class(
+      code: "used_book",
+      pricing_method: "fixed",
+      used_merchandise_allowed: true,
+      default_standard_department: @dept,
+      default_used_department: @dept
+    )
+    @like_new = merchandise_condition(code: "like_new", price_adjustment_bps: 6_000)
     @product = Products::Create.call(
       attributes: { name: "Lookup Product", status: "active" },
       actor: @actor,
@@ -24,7 +29,7 @@ class Identifiers::LookupTest < ActiveSupport::TestCase
   end
 
   test "resolves variant by sku" do
-    variant = create_sellable_variant!(name: "SKU variant")
+    variant = create_sellable_standard!(name: "SKU variant")
     result = Identifiers::Lookup.call(variant.sku)
 
     assert_equal :variant, result.status
@@ -41,8 +46,8 @@ class Identifiers::LookupTest < ActiveSupport::TestCase
   end
 
   test "resolves multi_variant when multiple sellable variants exist" do
-    first = create_sellable_variant!(name: "First", condition: @condition)
-    second = create_sellable_variant!(name: "Second", condition: @condition_used)
+    first = create_sellable_standard!(name: "First")
+    second = create_sellable_used!(name: "Second")
     result = Identifiers::Lookup.call(@product.primary_identifier)
 
     assert_equal :multi_variant, result.status
@@ -73,17 +78,34 @@ class Identifiers::LookupTest < ActiveSupport::TestCase
 
   private
 
-  def create_sellable_variant!(name:, condition: @condition)
+  def create_sellable_standard!(name:)
     ProductVariants::Create.call(
       product: @product,
       actor: @actor,
       attributes: {
+        variant_type: "standard",
         name: name,
-        merchandise_condition_id: condition.id,
         merchandise_class_id: @klass.id,
         department_id: @dept.id,
         tax_class_id: @tax.id,
         regular_price_cents: 1_500,
+        status: "active"
+      }
+    )
+  end
+
+  def create_sellable_used!(name:)
+    ProductVariants::Create.call(
+      product: @product,
+      actor: @actor,
+      attributes: {
+        variant_type: "used",
+        name: name,
+        merchandise_condition_id: @like_new.id,
+        merchandise_class_id: @used_klass.id,
+        department_id: @dept.id,
+        tax_class_id: @tax.id,
+        regular_price_cents: 1_200,
         status: "active"
       }
     )

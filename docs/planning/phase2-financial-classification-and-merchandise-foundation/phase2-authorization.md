@@ -71,4 +71,4 @@ Phase 2 merchandise and financial reference data are organization-wide master da
 | Bootstrap / demo | Example GL accounts, tax classes, departments, merchandise classes/categories (organization-specific; not universal production records) |
 | Test fixtures | Records required only by automated tests |
 
-Merchandise conditions are production-seeded only if application code hard-depends on particular codes. Prefer data-driven behavior via `department_basis` and related fields, with conditions created during organization setup.
+Merchandise conditions are production-seeded only if application code hard-depends on particular codes. Prefer organization setup to create used-variant condition tiers (`like_new`, `good`, and so on) as ordinary reference data.

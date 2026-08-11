@@ -13,7 +13,7 @@ class MerchandiseReferenceTest < ActiveSupport::TestCase
     duplicate = MerchandiseClass.new(
       code: " Book ",
       name: "Other",
-      inventory_tracking_mode: "quantity",
+      inventory_mode: "inventory",
       pricing_method: "fixed"
     )
     assert_not duplicate.valid?
@@ -22,11 +22,10 @@ class MerchandiseReferenceTest < ActiveSupport::TestCase
   end
 
   test "merchandise condition code is unique" do
-    merchandise_condition(code: "new")
+    merchandise_condition(code: "like_new")
     duplicate = MerchandiseCondition.new(
-      code: "NEW",
-      name: "Brand new",
-      department_basis: "standard",
+      code: "LIKE_NEW",
+      name: "Like new",
       price_adjustment_bps: 10_000
     )
     assert_not duplicate.valid?
@@ -49,11 +48,19 @@ class MerchandiseReferenceTest < ActiveSupport::TestCase
     assert_includes parent.errors[:parent_id], "would create a hierarchy cycle"
   end
 
-  test "used_basis? reflects department_basis" do
-    standard = merchandise_condition(code: "new", department_basis: "standard")
-    used = merchandise_condition(code: "used", department_basis: "used", price_adjustment_bps: 6_000)
+  test "inventory_mode accepts inventory and non_inventory" do
+    inventory = merchandise_class(code: "book", inventory_mode: "inventory", default_standard_department: @department)
+    service = merchandise_class(code: "service", inventory_mode: "non_inventory", default_standard_department: @department)
 
-    assert_not standard.used_basis?
-    assert used.used_basis?
+    assert inventory.inventory?
+    assert service.non_inventory?
+    invalid = MerchandiseClass.new(
+      code: "bad",
+      name: "Bad",
+      inventory_mode: "quantity",
+      pricing_method: "fixed"
+    )
+    assert_not invalid.valid?
+    assert_includes invalid.errors[:inventory_mode], "is not included in the list"
   end
 end

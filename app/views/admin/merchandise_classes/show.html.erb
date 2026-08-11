@@ -1,7 +1,7 @@
 <% content_for :title, @merchandise_class.name %>
 <h1><%= @merchandise_class.code %> — <%= @merchandise_class.name %></h1>
 <p>
-  Tracking: <%= @merchandise_class.inventory_tracking_mode %> ·
+  Inventory: <%= @merchandise_class.inventory_mode %> ·
   Pricing: <%= @merchandise_class.pricing_method %> ·
   Order: <%= @merchandise_class.display_order %> ·
   <%= @merchandise_class.active? ? "active" : "inactive" %>

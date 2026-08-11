@@ -125,7 +125,7 @@ Implement:
 * `products` (mandatory primary identifier), `product_variants`, `identifier_registry`  
 * unified identifier lookup and minimal CSV import  
 
-Deliverable: an authorized user can configure financial classifications, create a product with one or more sellable variants (each with an immutable `221` SKU), assign department/tax/class/condition/price, and retrieve by product identifier, variant SKU, or variant industry identifier.
+Deliverable: an authorized user can configure financial classifications, create a product with one or more sellable standard or used variants (each with an immutable `221` SKU), assign department/tax/class/price (and condition for used variants), and retrieve by product identifier, variant SKU, or variant industry identifier.
 
 Avoid inventory, tax calculation, journal posting, and bibliographic enrichment in this phase.
 

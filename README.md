@@ -150,7 +150,7 @@ Phase 2 extends Phase 1 patterns for organization-wide catalog master data:
 
 The Phase 2 deliverable is:
 
-> An authorized user can configure financial classifications, create a product with one or more sellable variants (each with an immutable `221` SKU), assign department/tax/class/condition/price, and retrieve by product identifier, variant SKU, or variant industry identifier.
+> An authorized user can configure financial classifications, create a product with one or more sellable standard or used variants (each with an immutable `221` SKU), assign department/tax/class/price (and condition for used variants), and retrieve by product identifier, variant SKU, or variant industry identifier.
 
 Phase 2 does not include inventory, journal posting, tax calculation, suppliers/purchasing, POS, buyback, promotions, or bibliographic enrichment.
 
