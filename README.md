@@ -166,6 +166,18 @@ The Phase 2.1 deliverable is:
 
 Authoritative plan: [phase-2.1-platform-and-merchandise-refinements.md](docs/planning/phase2.1-platform-merchandise-refinement/phase-2.1-platform-and-merchandise-refinements.md).
 
+### Phase 2.2: Administrative UX foundation
+
+Status: implemented (Propshaft design tokens and shell, shared admin partials/helpers, product reference flow with search/filter/pagination, currency form UX via `Money::ParseCents`, Stores and Merchandise Classes adoption).
+
+Phase 2.2 is an HTML/CSS-first presentation pass between merchandise foundation work and Phase 3 inventory. It does not install Hotwire and does not add inventory behavior.
+
+The Phase 2.2 deliverable is:
+
+> An authorized administrator can navigate a consistent administrative shell, manage products with searchable/filterable indexes and dollar-oriented price fields, and use the same presentation patterns on Stores and Merchandise Classes.
+
+Authoritative plan: [phase-2.2-ux-foundation.md](docs/planning/phase2.2-ux-foundation/phase-2.2-ux-foundation.md). Conventions: [UX conventions](docs/ux-conventions.md).
+
 ## Phase 1 authorization model
 
 Permissions are additive and supplied by roles:
@@ -200,6 +212,7 @@ Start with the [documentation index](docs/README.md). Key references include:
 - [Architecture Decision Records](docs/adr/README.md)
 - [Phase 1 plan](docs/planning/phase1-operational-foundation/phase1-plan.md), [schema](docs/planning/phase1-operational-foundation/phase1-schema.md), and [authorization contract](docs/planning/phase1-operational-foundation/phase1-authorization.md)
 - [Phase 2 plan](docs/planning/phase2-financial-classification-and-merchandise-foundation/phase2-plan.md), [schema](docs/planning/phase2-financial-classification-and-merchandise-foundation/phase-2-database-schema.md), and [authorization contract](docs/planning/phase2-financial-classification-and-merchandise-foundation/phase2-authorization.md)
+- [Phase 2.2 UX foundation](docs/planning/phase2.2-ux-foundation/phase-2.2-ux-foundation.md) and [UX conventions](docs/ux-conventions.md)
 - [Development guide](docs/development.md)
 - [Testing and CI](docs/testing.md)
 - [GitHub work management](docs/github-workflow.md)

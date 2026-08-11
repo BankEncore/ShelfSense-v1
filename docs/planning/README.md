@@ -146,6 +146,23 @@ Phase 2.1 hardens merchandise and financial reference-data contracts before inve
 
 Deliverable: an authorized administrator can reactivate core reference data, create products and variants with complete fields and pricing-method-aware defaults, and use a documented CSV import template, with database-enforced merchandise and GL-account invariants.
 
+### Phase 2.2 — Administrative UX foundation
+
+Status: implemented.
+
+Authoritative Phase 2.2 documents:
+
+* [phase-2.2-ux-foundation.md](phase2.2-ux-foundation/phase-2.2-ux-foundation.md) — scope and acceptance criteria  
+* [UX conventions](../ux-conventions.md) — reusable admin presentation patterns  
+
+Phase 2.2 establishes an HTML/CSS-first administrative UX foundation:
+
+* Propshaft design tokens, application shell, and shared partials/helpers  
+* Product reference flow with deterministic search/filters/pagination and dollar currency UX  
+* Stores and Merchandise Classes adoption of shared patterns  
+
+Deliverable: an authorized administrator can navigate a consistent administrative shell, manage products with searchable indexes and dollar-oriented price fields, and use the same presentation patterns on Stores and Merchandise Classes—without Hotwire.
+
 ### Phase 3 — Inventory foundation
 
 Implement:

@@ -1,11 +1,83 @@
 <% content_for :title, "Products" %>
-<h1>Products</h1>
-<% if effective_permissions.include?("products.create") %><p><%= link_to "New product", new_admin_product_path %></p><% end %>
-<ul>
-  <% @products.each do |product| %>
-    <li>
-      <%= link_to "#{product.primary_identifier} — #{product.name}", admin_product_path(product) %>
-      (<%= product.status %>)
-    </li>
-  <% end %>
-</ul>
+
+<%= render "shared/breadcrumbs", crumbs: [
+  { name: "Home", path: root_path },
+  { name: "Products" }
+] %>
+
+<%= render "shared/page_header",
+      title: "Products",
+      subtitle: "Catalog products and their sellable variants",
+      actions: (
+        if effective_permissions.include?("products.create")
+          link_to("New product", new_admin_product_path, class: "btn")
+        end
+      ) %>
+
+<%= form_with url: admin_products_path, method: :get, local: true, class: "filters" do %>
+  <div class="form-field form-field--grow">
+    <%= label_tag :q, "Search" %>
+    <%= text_field_tag :q, @index.q, placeholder: "Name or identifier" %>
+  </div>
+  <div class="form-field">
+    <%= label_tag :status, "Status" %>
+    <%= select_tag :status,
+          options_for_select([["Any status", ""]] + Product::STATUSES.map { |s| [s.humanize, s] }, @index.status) %>
+  </div>
+  <div class="form-field">
+    <%= label_tag :merchandise_category_id, "Category" %>
+    <%= select_tag :merchandise_category_id,
+          options_for_select([["Any category", ""]] + MerchandiseCategory.options_for_select(@merchandise_categories), @index.merchandise_category_id) %>
+  </div>
+  <div class="form-field">
+    <%= submit_tag "Apply", class: "btn" %>
+  </div>
+<% end %>
+
+<% if @products.empty? && !@index.filtered %>
+  <%= render "shared/empty_state",
+        title: "No products yet",
+        body: "Create a product to start the merchandise catalog.",
+        action: (link_to("New product", new_admin_product_path, class: "btn") if effective_permissions.include?("products.create")) %>
+<% elsif @products.empty? %>
+  <%= render "shared/empty_state",
+        title: "No matching products",
+        body: "Try a different search or clear the filters." %>
+<% else %>
+  <% rows = @products.map { |product|
+       [
+         link_to(product.name, admin_product_path(product)),
+         product.primary_identifier,
+         product.merchandise_category&.path_label || missing_value,
+         (@variant_counts[product.id] || 0),
+         format_money_cents(product.list_price_cents),
+         status_badge(product.status, scheme: :product_variant)
+       ]
+     } %>
+  <%= render "shared/data_table",
+        headers: [
+          "Name",
+          "Primary identifier",
+          "Category",
+          { text: "Variants", class: "numeric" },
+          { text: "List price", class: "numeric" },
+          "Status"
+        ],
+        rows: rows %>
+
+  <div class="pagination">
+    <span class="muted">
+      Page <%= @index.page %> of <%= @index.total_pages %> · <%= @index.total_count %> total
+    </span>
+    <% if @index.page > 1 %>
+      <%= link_to "Previous",
+            admin_products_path(q: @index.q, status: @index.status, merchandise_category_id: @index.merchandise_category_id, page: @index.page - 1),
+            class: "btn btn--ghost" %>
+    <% end %>
+    <% if @index.page < @index.total_pages %>
+      <%= link_to "Next",
+            admin_products_path(q: @index.q, status: @index.status, merchandise_category_id: @index.merchandise_category_id, page: @index.page + 1),
+            class: "btn btn--ghost" %>
+    <% end %>
+  </div>
+<% end %>

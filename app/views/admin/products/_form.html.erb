@@ -1,41 +1,89 @@
-<%= form_with model: [:admin, product] do |form| %>
-  <% if product.errors.any? %><ul><% product.errors.full_messages.each do |m| %><li><%= m %></li><% end %></ul><% end %>
+<%= form_with model: [:admin, product], class: "form" do |form| %>
+  <%= render "shared/form_errors", record: product, attribute_ids: { list_price: "product_list_price" } %>
   <%= form.hidden_field :lock_version %>
-  <% if creating %>
-    <p>
-      <%= form.label :identifier_mode, "Identifier mode" %>
-      <%= select_tag "product[identifier_mode]", options_for_select([["Enter external", "enter"], ["Generate ShelfSense (222)", "generate"]], params.dig(:product, :identifier_mode) || "enter") %>
-    </p>
-    <p>
-      <%= form.label :external_identifier, "External identifier" %>
-      <%= text_field_tag "product[external_identifier]", params.dig(:product, :external_identifier) %>
-    </p>
-  <% else %>
-    <p>Primary identifier: <%= product.primary_identifier %></p>
+
+  <%= render layout: "shared/form_section", locals: { title: "Identity", help: "Enter a manufacturer-assigned identifier or ask ShelfSense to generate a reserved 222 identifier." } do %>
+    <% if creating %>
+      <div class="form-field">
+        <%= label_tag "product_identifier_mode", "Identifier mode" %>
+        <%= select_tag "product[identifier_mode]",
+              options_for_select([["Enter external", "enter"], ["Generate ShelfSense (222)", "generate"]], params.dig(:product, :identifier_mode) || "enter"),
+              id: "product_identifier_mode" %>
+      </div>
+      <div class="form-field">
+        <%= label_tag "product_external_identifier", "External identifier" %>
+        <%= text_field_tag "product[external_identifier]", params.dig(:product, :external_identifier), id: "product_external_identifier" %>
+        <span class="field-help" id="product_external_identifier_help">Required when entering an external identifier. Spaces and hyphens are removed during normalization.</span>
+      </div>
+    <% else %>
+      <div class="form-field">
+        <span class="muted">Primary identifier</span>
+        <div><code><%= product.primary_identifier %></code> (immutable)</div>
+      </div>
+    <% end %>
+
+    <div class="form-field">
+      <%= form.label :name %>
+      <%= form.text_field :name, id: "product_name", required: true, "aria-describedby": product.errors[:name].any? ? "product_name_error" : nil %>
+      <% if product.errors[:name].any? %><span class="field-error" id="product_name_error"><%= product.errors[:name].to_sentence %></span><% end %>
+    </div>
+    <div class="form-field">
+      <%= form.label :subtitle %>
+      <%= form.text_field :subtitle %>
+    </div>
+    <div class="form-field">
+      <%= form.label :description %>
+      <%= form.text_area :description, rows: 4 %>
+    </div>
+    <div class="form-field">
+      <%= form.label :brand_name, "Brand name" %>
+      <%= form.text_field :brand_name %>
+    </div>
+    <div class="form-field">
+      <%= form.label :product_model, "Model" %>
+      <%= form.text_field :product_model %>
+    </div>
+    <div class="form-field">
+      <%= form.label :release_date %>
+      <%= form.date_field :release_date %>
+    </div>
+    <div class="form-field">
+      <%= form.label :variant_option_name_1, "Variant option name 1" %>
+      <%= form.text_field :variant_option_name_1 %>
+    </div>
+    <div class="form-field">
+      <%= form.label :variant_option_name_2, "Variant option name 2" %>
+      <%= form.text_field :variant_option_name_2 %>
+    </div>
   <% end %>
-  <p><%= form.label :name %><%= form.text_field :name %></p>
-  <p><%= form.label :subtitle %><%= form.text_field :subtitle %></p>
-  <p><%= form.label :description %><%= form.text_area :description %></p>
-  <p><%= form.label :brand_name %><%= form.text_field :brand_name %></p>
-  <p><%= form.label :product_model, "Model" %><%= form.text_field :product_model %></p>
-  <p>
-    <%= form.label :merchandise_category_id, "Merchandise category" %>
-    <%= form.select :merchandise_category_id, MerchandiseCategory.options_for_select(@merchandise_categories), include_blank: "None" %>
-    <span>Supplies the default merchandise class for newly created variants. Changing it does not rewrite existing variants. Merchandise class itself is set on each variant.</span>
-  </p>
-  <p>
-    <%= label_tag :list_price, "List price" %>
-    <%= text_field_tag "product[list_price]",
-          params.dig(:product, :list_price).presence || (product.list_price_cents.present? ? format("%.2f", product.list_price_cents / 100.0) : nil),
-          inputmode: "decimal" %>
-    <span>Product-level reference price (currency amount, not cents). Changing it does not rewrite existing variant prices.</span>
-  </p>
-  <p><%= form.label :release_date %><%= form.date_field :release_date %></p>
-  <p>
-    <%= form.label :status %>
-    <%= form.select :status, Product::STATUSES.reject { |s| s == "discontinued" }.map { |s| [s.humanize, s] } %>
-  </p>
-  <p><%= form.label :variant_option_name_1 %><%= form.text_field :variant_option_name_1 %></p>
-  <p><%= form.label :variant_option_name_2 %><%= form.text_field :variant_option_name_2 %></p>
-  <p><%= form.submit %></p>
+
+  <%= render layout: "shared/form_section", locals: { title: "Classification", help: "Merchandise category supplies the default merchandise class for newly created variants. Changing it does not rewrite existing variants." } do %>
+    <div class="form-field">
+      <%= form.label :merchandise_category_id, "Merchandise category" %>
+      <%= form.select :merchandise_category_id, MerchandiseCategory.options_for_select(@merchandise_categories), include_blank: "None" %>
+    </div>
+  <% end %>
+
+  <%= render layout: "shared/form_section", locals: { title: "Pricing", help: "Product-level reference price. Changing it does not rewrite existing variant prices." } do %>
+    <%= render "shared/currency_field",
+          name: "product[list_price]",
+          id: "product_list_price",
+          label: "List price",
+          value: params.dig(:product, :list_price).presence || money_field_value(product.list_price_cents),
+          help: "Enter a currency amount such as 12.50. Stored as integer cents.",
+          error: product.errors[:list_price].presence&.to_sentence %>
+  <% end %>
+
+  <%= render layout: "shared/form_section", locals: { title: "Lifecycle" } do %>
+    <div class="form-field">
+      <%= form.label :status %>
+      <%= form.select :status, Product::STATUSES.reject { |s| s == "discontinued" }.map { |s| [s.humanize, s] } %>
+      <span class="field-help">Use Discontinue on the product page to mark a product discontinued.</span>
+    </div>
+  <% end %>
+
+  <div class="actions">
+    <%= form.submit class: "btn" %>
+    <%= link_to "Cancel", creating ? admin_products_path : admin_product_path(product), class: "btn btn--ghost" %>
+  </div>
 <% end %>

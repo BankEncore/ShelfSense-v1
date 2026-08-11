@@ -1,0 +1,9 @@
+<%#
+  locals: rows: [[label, value], ...] — value may be HTML-safe
+%>
+<dl class="definition-list">
+  <% rows.each do |label, value| %>
+    <dt><%= label %></dt>
+    <dd><%= value.nil? || value == "" ? missing_value : value %></dd>
+  <% end %>
+</dl>

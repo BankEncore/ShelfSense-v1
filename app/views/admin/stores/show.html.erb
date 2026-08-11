@@ -1,9 +1,46 @@
 <% content_for :title, @store.name %>
-<h1><%= @store.name %></h1>
-<p>Code: <%= @store.code %> · Number: <%= @store.store_number %> · <%= @store.timezone %></p>
-<p>
-  <%= link_to "Edit", edit_admin_store_path(@store) if effective_permissions.include?("stores.manage") %>
-  <% if effective_permissions.include?("stores.deactivate") && @store.active? %>
-    <%= button_to "Deactivate", admin_store_path(@store), method: :delete, form: { data: { turbo_confirm: "Deactivate this store?" } } %>
-  <% end %>
-</p>
+
+<%= render "shared/breadcrumbs", crumbs: [
+  { name: "Home", path: root_path },
+  { name: "Stores", path: admin_stores_path },
+  { name: @store.name }
+] %>
+
+<% actions = [configuration_status_badge(@store.active?)] %>
+<% if effective_permissions.include?("stores.manage") %>
+  <% actions << link_to("Edit", edit_admin_store_path(@store), class: "btn btn--secondary") %>
+<% end %>
+<% if effective_permissions.include?("stores.deactivate") && @store.active? %>
+  <% actions << button_to("Deactivate", admin_store_path(@store), method: :delete, class: "btn btn--danger") %>
+<% end %>
+
+<%= render "shared/page_header",
+      title: @store.name,
+      subtitle: "Store #{@store.store_number} · #{@store.code}",
+      actions: safe_join(actions, " ") %>
+
+<section class="section surface">
+  <%= render "shared/definition_list", rows: [
+        ["Store number", @store.store_number],
+        ["Code", @store.code],
+        ["Legal name", @store.legal_name],
+        ["Phone", @store.phone],
+        ["SAN", @store.san],
+        ["Street address 1", @store.street_address_1],
+        ["Street address 2", @store.street_address_2],
+        ["City", @store.city],
+        ["Region", @store.region_code],
+        ["Postal code", @store.postal_code],
+        ["Country", @store.country_code],
+        ["Timezone", @store.timezone],
+        ["Receipt header", @store.receipt_header],
+        ["Receipt footer", @store.receipt_footer]
+      ] %>
+</section>
+
+<%= render "shared/technical_details", rows: [
+      ["ID", @store.id],
+      ["Created", format_timestamp(@store.created_at)],
+      ["Updated", format_timestamp(@store.updated_at)],
+      ["Lock version", @store.lock_version]
+    ] %>

@@ -1,3 +1,11 @@
 <% content_for :title, "Edit merchandise class" %>
-<h1>Edit merchandise class</h1>
+
+<%= render "shared/breadcrumbs", crumbs: [
+  { name: "Home", path: root_path },
+  { name: "Merchandise classes", path: admin_merchandise_classes_path },
+  { name: @merchandise_class.name, path: admin_merchandise_class_path(@merchandise_class) },
+  { name: "Edit" }
+] %>
+
+<%= render "shared/page_header", title: "Edit merchandise class", subtitle: @merchandise_class.code %>
 <%= render "form", merchandise_class: @merchandise_class %>

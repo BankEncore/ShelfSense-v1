@@ -1,33 +1,108 @@
 <% content_for :title, @product.name %>
-<h1><%= @product.name %></h1>
-<p>
-  Identifier: <%= @product.primary_identifier %> ·
-  Status: <%= @product.status %> ·
-  Merchandise category: <%= @product.merchandise_category&.path_label || "—" %> ·
-  List price: <%= @product.list_price_cents.present? ? format("%.2f", @product.list_price_cents / 100.0) : "—" %>
-</p>
-<% if @product.description.present? %><p><%= @product.description %></p><% end %>
 
-<h2>Variants</h2>
-<% if effective_permissions.include?("product_variants.create") %>
-  <p><%= link_to "New variant", new_admin_product_product_variant_path(@product) %></p>
+<%= render "shared/breadcrumbs", crumbs: [
+  { name: "Home", path: root_path },
+  { name: "Products", path: admin_products_path },
+  { name: @product.name }
+] %>
+
+<% actions = [] %>
+<% actions << status_badge(@product.status, scheme: :product_variant) %>
+<% if effective_permissions.include?("products.update") %>
+  <% actions << link_to("Edit", edit_admin_product_path(@product), class: "btn btn--secondary") %>
 <% end %>
-<ul>
-  <% @product_variants.each do |variant| %>
-    <li>
-      <%= link_to "#{variant.sku} — #{variant.name.presence || "unnamed"}", admin_product_variant_path(variant) %>
-      (<%= variant.status %>)
-    </li>
-  <% end %>
-</ul>
+<% if effective_permissions.include?("products.discontinue") && @product.status != "discontinued" %>
+  <% actions << button_to("Discontinue", discontinue_admin_product_path(@product), method: :post, class: "btn btn--danger") %>
+<% end %>
+<% if effective_permissions.include?("products.update") && @product.draft? %>
+  <% actions << button_to("Delete draft", admin_product_path(@product), method: :delete, class: "btn btn--danger") %>
+<% end %>
 
-<p>
-  <%= link_to "Edit", edit_admin_product_path(@product) if effective_permissions.include?("products.update") %>
-  <% if effective_permissions.include?("products.discontinue") && @product.status != "discontinued" %>
-    <%= button_to "Discontinue", discontinue_admin_product_path(@product), method: :post, form: { data: { turbo_confirm: "Discontinue this product?" } } %>
+<%= render "shared/page_header",
+      title: @product.name,
+      subtitle: "Primary identifier #{@product.primary_identifier}",
+      actions: safe_join(actions, " ") %>
+
+<section class="section surface">
+  <%= render "shared/definition_list", rows: [
+        ["Primary identifier", @product.primary_identifier],
+        ["Status", status_badge(@product.status, scheme: :product_variant)],
+        ["List price", format_money_cents(@product.list_price_cents)],
+        ["Merchandise category", (
+          if @product.merchandise_category
+            link_to(@product.merchandise_category.path_label, admin_merchandise_category_path(@product.merchandise_category))
+          end
+        )],
+        ["Subtitle", @product.subtitle],
+        ["Brand", @product.brand_name],
+        ["Model", @product.product_model],
+        ["Release date", format_date(@product.release_date)],
+        ["Variant option 1", @product.variant_option_name_1],
+        ["Variant option 2", @product.variant_option_name_2]
+      ] %>
+  <% if @product.description.present? %>
+    <div class="section">
+      <h2 class="section__title">Description</h2>
+      <p><%= simple_format(@product.description) %></p>
+    </div>
   <% end %>
-  <% if effective_permissions.include?("products.update") && @product.draft? %>
-    <%= button_to "Delete draft", admin_product_path(@product), method: :delete, form: { data: { turbo_confirm: "Delete this draft product and retire its identifier?" } } %>
+</section>
+
+<section class="section">
+  <h2 class="section__title">Variants</h2>
+  <% if effective_permissions.include?("product_variants.create") %>
+    <div class="actions"><%= link_to "New variant", new_admin_product_product_variant_path(@product), class: "btn" %></div>
   <% end %>
-</p>
-<p><%= link_to "Back to products", admin_products_path %></p>
+
+  <% if @product_variants.empty? %>
+    <%= render "shared/empty_state",
+          title: "No variants yet",
+          body: "Add a standard or used variant to make this product sellable." %>
+  <% else %>
+    <% rows = @product_variants.map { |variant|
+         [
+           link_to(variant.name.presence || "Unnamed", admin_product_variant_path(variant)),
+           variant.sku,
+           variant.variant_type.humanize,
+           status_badge(variant.status, scheme: :product_variant),
+           variant.merchandise_class ? "#{variant.merchandise_class.code} — #{variant.merchandise_class.name}" : missing_value,
+           variant.department ? "#{variant.department.code} — #{variant.department.name}" : missing_value,
+           variant.tax_class ? "#{variant.tax_class.code} — #{variant.tax_class.name}" : missing_value,
+           variant.used? ? (variant.merchandise_condition&.name || missing_value) : "—",
+           format_money_cents(variant.regular_price_cents)
+         ]
+       } %>
+    <%= render "shared/data_table",
+          headers: [
+            "Name", "SKU", "Type", "Status", "Class", "Department", "Tax", "Condition",
+            { text: "Regular price", class: "numeric" }
+          ],
+          rows: rows %>
+  <% end %>
+</section>
+
+<% if @recent_audit_events.present? %>
+  <section class="section">
+    <h2 class="section__title">Recent activity</h2>
+    <ul>
+      <% @recent_audit_events.each do |event| %>
+        <li>
+          <%= format_timestamp(event.occurred_at) %> ·
+          <%= event.action %> ·
+          <%= event.outcome %> ·
+          <%= event.actor_label %>
+        </li>
+      <% end %>
+    </ul>
+    <% if effective_permissions.include?("audit_events.view") %>
+      <p><%= link_to "View audit events", admin_audit_events_path(subject_type: "Product") %></p>
+    <% end %>
+  </section>
+<% end %>
+
+<%= render "shared/technical_details", rows: [
+      ["ID", @product.id],
+      ["Created", format_timestamp(@product.created_at)],
+      ["Updated", format_timestamp(@product.updated_at)],
+      ["Lock version", @product.lock_version]
+    ] %>

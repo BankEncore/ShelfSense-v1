@@ -1,25 +1,58 @@
-<% content_for :title, @product_variant.sku %>
-<h1><%= @product_variant.sku %></h1>
-<p>
-  Product: <%= link_to @product_variant.product.name, admin_product_path(@product_variant.product) %> ·
-  Type: <%= @product_variant.variant_type %> ·
-  Status: <%= @product_variant.status %> ·
-  Condition: <%= @product_variant.merchandise_condition&.code || "—" %> ·
-  Price cents: <%= @product_variant.regular_price_cents.presence || "—" %>
-</p>
-<p>
-  Class: <%= @product_variant.merchandise_class&.code || "—" %> ·
-  Department: <%= @product_variant.department&.code || "—" %> ·
-  Tax class: <%= @product_variant.tax_class&.code || "—" %> ·
-  Industry ID: <%= @product_variant.industry_identifier.presence || "—" %>
-</p>
-<p>
-  <%= link_to "Edit", edit_admin_product_variant_path(@product_variant) if effective_permissions.include?("product_variants.update") %>
-  <% if effective_permissions.include?("product_variants.discontinue") && @product_variant.status != "discontinued" %>
-    <%= button_to "Discontinue", discontinue_admin_product_variant_path(@product_variant), method: :post, form: { data: { turbo_confirm: "Discontinue this variant?" } } %>
-  <% end %>
-  <% if effective_permissions.include?("product_variants.update") && @product_variant.draft? %>
-    <%= button_to "Delete draft", admin_product_variant_path(@product_variant), method: :delete, form: { data: { turbo_confirm: "Delete this draft variant and retire its identifiers?" } } %>
-  <% end %>
-</p>
-<p><%= link_to "Back to product", admin_product_path(@product_variant.product) %></p>
+<% content_for :title, @product_variant.name.presence || @product_variant.sku %>
+
+<%= render "shared/breadcrumbs", crumbs: [
+  { name: "Home", path: root_path },
+  { name: "Products", path: admin_products_path },
+  { name: @product_variant.product.name, path: admin_product_path(@product_variant.product) },
+  { name: @product_variant.name.presence || @product_variant.sku }
+] %>
+
+<% actions = [status_badge(@product_variant.status, scheme: :product_variant)] %>
+<% if effective_permissions.include?("product_variants.update") %>
+  <% actions << link_to("Edit", edit_admin_product_variant_path(@product_variant), class: "btn btn--secondary") %>
+<% end %>
+<% if effective_permissions.include?("product_variants.discontinue") && @product_variant.status != "discontinued" %>
+  <% actions << button_to("Discontinue", discontinue_admin_product_variant_path(@product_variant), method: :post, class: "btn btn--danger") %>
+<% end %>
+<% if effective_permissions.include?("product_variants.update") && @product_variant.draft? %>
+  <% actions << button_to("Delete draft", admin_product_variant_path(@product_variant), method: :delete, class: "btn btn--danger") %>
+<% end %>
+
+<%= render "shared/page_header",
+      title: @product_variant.name.presence || "Variant",
+      subtitle: "SKU #{@product_variant.sku}",
+      actions: safe_join(actions, " ") %>
+
+<section class="section surface">
+  <%= render "shared/definition_list", rows: [
+        ["Product", link_to(@product_variant.product.name, admin_product_path(@product_variant.product))],
+        ["SKU", @product_variant.sku],
+        ["Type", @product_variant.variant_type.humanize],
+        ["Status", status_badge(@product_variant.status, scheme: :product_variant)],
+        ["Regular price", format_money_cents(@product_variant.regular_price_cents)],
+        ["Merchandise class", (
+          if @product_variant.merchandise_class
+            link_to("#{@product_variant.merchandise_class.code} — #{@product_variant.merchandise_class.name}", admin_merchandise_class_path(@product_variant.merchandise_class))
+          end
+        )],
+        ["Department", (
+          if @product_variant.department
+            link_to("#{@product_variant.department.code} — #{@product_variant.department.name}", admin_department_path(@product_variant.department))
+          end
+        )],
+        ["Tax class", (
+          if @product_variant.tax_class
+            link_to("#{@product_variant.tax_class.code} — #{@product_variant.tax_class.name}", admin_tax_class_path(@product_variant.tax_class))
+          end
+        )],
+        ["Condition", @product_variant.merchandise_condition&.name],
+        ["Industry identifier", @product_variant.industry_identifier]
+      ] %>
+</section>
+
+<%= render "shared/technical_details", rows: [
+      ["ID", @product_variant.id],
+      ["Created", format_timestamp(@product_variant.created_at)],
+      ["Updated", format_timestamp(@product_variant.updated_at)],
+      ["Lock version", @product_variant.lock_version]
+    ] %>

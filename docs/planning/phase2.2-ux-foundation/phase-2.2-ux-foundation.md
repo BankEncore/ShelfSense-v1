@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed
+Implemented
 
 ## Purpose
 
@@ -23,11 +23,12 @@ Phase 2.2 sits after Phase 2.1 (merchandise correctness and operability) and bef
 
 It does not reopen Phase 2 or Phase 2.1 domain decisions, and it does not add Phase 3 inventory behavior. Instead, it establishes the presentation patterns needed to display merchandise, configuration, authorization, audit, and future inventory information clearly.
 
-When this specification is accepted, update:
+Roadmap and documentation indexes updated with this implementation:
 
 - [README.md](../../../README.md) roadmap
 - [docs/README.md](../../README.md) documentation index
 - [docs/planning/README.md](../README.md) planning index
+- [UX conventions](../../ux-conventions.md)
 
 ## Goals
 
@@ -467,7 +468,7 @@ Phase 2.2 should produce concise internal documentation covering:
 
 The documentation should describe intended usage rather than duplicating implementation details that are obvious from helper and partial APIs.
 
-On acceptance of this specification, also update the three roadmap/index documents listed under [Position in the roadmap](#position-in-the-roadmap).
+Roadmap and index documents listed under [Position in the roadmap](#position-in-the-roadmap) are updated with this Implemented status.
 
 ## Acceptance criteria
 

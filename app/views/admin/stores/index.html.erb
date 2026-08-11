@@ -1,8 +1,28 @@
 <% content_for :title, "Stores" %>
-<h1>Stores</h1>
-<% if effective_permissions.include?("stores.create") %><p><%= link_to "New store", new_admin_store_path %></p><% end %>
-<ul>
-  <% @stores.each do |store| %>
-    <li><%= link_to "#{store.name} (#{store.code})", admin_store_path(store) %> <%= "inactive" unless store.active? %></li>
-  <% end %>
-</ul>
+
+<%= render "shared/breadcrumbs", crumbs: [
+  { name: "Home", path: root_path },
+  { name: "Stores" }
+] %>
+
+<%= render "shared/page_header",
+      title: "Stores",
+      subtitle: "Organization store locations",
+      actions: (link_to("New store", new_admin_store_path, class: "btn") if effective_permissions.include?("stores.create")) %>
+
+<% if @stores.empty? %>
+  <%= render "shared/empty_state", title: "No stores", body: "Create a store to continue setup." %>
+<% else %>
+  <% rows = @stores.map { |store|
+       [
+         link_to(store.name, admin_store_path(store)),
+         store.code,
+         store.store_number,
+         store.timezone,
+         configuration_status_badge(store.active?)
+       ]
+     } %>
+  <%= render "shared/data_table",
+        headers: ["Name", "Code", "Number", "Timezone", "Status"],
+        rows: rows %>
+<% end %>

@@ -1,0 +1,7 @@
+<%#
+  locals:
+    items: optional HTML already built; or yield block content via content
+%>
+<div class="actions">
+  <%= local_assigns[:items] || yield %>
+</div>

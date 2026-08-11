@@ -1,3 +1,15 @@
 <% content_for :title, "Edit product variant" %>
-<h1>Edit variant <%= @product_variant.sku %></h1>
+
+<%= render "shared/breadcrumbs", crumbs: [
+  { name: "Home", path: root_path },
+  { name: "Products", path: admin_products_path },
+  { name: @product.name, path: admin_product_path(@product) },
+  { name: @product_variant.name.presence || @product_variant.sku, path: admin_product_variant_path(@product_variant) },
+  { name: "Edit" }
+] %>
+
+<%= render "shared/page_header",
+      title: "Edit variant",
+      subtitle: @product_variant.sku %>
+
 <%= render "form", product_variant: @product_variant, product: @product %>

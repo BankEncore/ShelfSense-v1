@@ -1,3 +1,14 @@
 <% content_for :title, "Edit product" %>
-<h1>Edit product</h1>
+
+<%= render "shared/breadcrumbs", crumbs: [
+  { name: "Home", path: root_path },
+  { name: "Products", path: admin_products_path },
+  { name: @product.name, path: admin_product_path(@product) },
+  { name: "Edit" }
+] %>
+
+<%= render "shared/page_header",
+      title: "Edit product",
+      subtitle: @product.primary_identifier %>
+
 <%= render "form", product: @product, creating: false %>
