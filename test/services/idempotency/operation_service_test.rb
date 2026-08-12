@@ -110,4 +110,32 @@ class Idempotency::OperationServiceTest < ActiveSupport::TestCase
       )
     end
   end
+
+  test "stale worker complete! after lease takeover raises StaleObjectError" do
+    first = Idempotency::OperationService.begin!(
+      source_id: @source_id,
+      operation_type: "post_inventory_adjustment",
+      idempotency_key: @key,
+      payload: @payload
+    )
+    stale = first.operation
+    stale.update_columns(lease_expires_at: 3.minutes.ago)
+
+    takeover = Idempotency::OperationService.begin!(
+      source_id: @source_id,
+      operation_type: "post_inventory_adjustment",
+      idempotency_key: @key,
+      payload: @payload
+    )
+    assert_not takeover.replayed
+    assert_operator takeover.operation.lock_version, :>, stale.lock_version
+
+    assert_raises(ActiveRecord::StaleObjectError) do
+      Idempotency::OperationService.complete!(
+        stale,
+        result_type: "InventoryAdjustment",
+        result_id: SecureRandom.uuid_v7
+      )
+    end
+  end
 end

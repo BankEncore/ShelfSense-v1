@@ -324,7 +324,7 @@ Unique index:
 | `store_id` | uuid | Required FK |
 | `product_variant_id` | uuid | Required FK |
 | `on_hand_quantity` | integer | Required; default `0`; `CHECK (on_hand_quantity >= 0)` |
-| `inventory_value_cents` | integer | Required; default `0`; `CHECK (inventory_value_cents >= 0)` |
+| `inventory_value_cents` | integer | Required; default `0`; `CHECK (inventory_value_cents >= 0)`; `CHECK (on_hand_quantity <> 0 OR inventory_value_cents = 0)` |
 | `lock_version` | integer | Required; default `0` |
 | timestamps | timestamptz | Required |
 
@@ -334,7 +334,7 @@ Unique index:
 (store_id, product_variant_id)
 ```
 
-Do not store average, reserved, unavailable, or available quantity. When on-hand is zero, value must be zero. Phase 3 posting rejects any policy other than `reject_below_zero`; the database checks enforce the nonnegative projection.
+Do not store average, reserved, unavailable, or available quantity. When on-hand is zero, value must be zero; the database enforces that with a check constraint. Phase 3 posting rejects any policy other than `reject_below_zero`; the database checks also enforce the nonnegative projection.
 
 ### 7.6 `inventory_units`
 
@@ -515,9 +515,9 @@ expected on hand = count(on-hand inventory_units)
 expected value   = sum(on-hand inventory_units.carrying_value_cents)
 ```
 
-It reports missing balances; quantity/value drift; zero-quantity residual value; missing physical/valuation pairs; unit aggregate mismatch; and unit store/variant/lifecycle inconsistency.
+It reports missing balances (including valuation-only history); quantity/value drift; zero-quantity residual value; missing physical/valuation pairs in both directions; paired rows that disagree on store, variant, unit, quantity, or effective date; unit aggregate mismatch; and unit store/variant/lifecycle inconsistency.
 
-Projection rebuilding is separately authorized and confirmed. It locks the selected scope, reconstructs projections from authoritative entries, verifies unit aggregates, replaces projections in one transaction, records audit/outbox effects, and never changes adjustments, ledgers, or unit history.
+Projection rebuilding is separately authorized and confirmed. It locks the selected scope, refuses to run while any pair-integrity drift exists for that store/variant, reconstructs projections from authoritative entries, verifies unit aggregates, replaces projections in one transaction, records audit/outbox effects, and never changes adjustments, ledgers, or unit history. Unpaired or mismatched authority must be repaired before a rebuild can legitimize the projection.
 
 ## 13. Authorization and audit
 

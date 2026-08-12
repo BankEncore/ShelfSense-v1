@@ -364,6 +364,77 @@ class InventoryPostAdjustmentTest < ActiveSupport::TestCase
     assert_equal "boom", operation.error_message
   end
 
+  test "supplied unit identifier is normalized before reserve" do
+    used = create_used_variant("inv_used_norm")
+    identifier = Identifiers::Ean13.complete("220", "999999001")
+    formatted = "#{identifier[0, 3]}-#{identifier[3, 4]}-#{identifier[7, 5]}-#{identifier[12]}"
+
+    acquisition = Inventory::PostAdjustment.call(
+      store: @store,
+      product_variant: used,
+      adjustment_reason: @opening,
+      quantity_delta: 1,
+      actor: @actor,
+      source_id: SecureRandom.uuid_v7,
+      idempotency_key: SecureRandom.uuid_v7,
+      acquisition_unit_cost_cents: 500,
+      unit_identifier: formatted
+    )
+    assert_equal identifier, acquisition.inventory_unit.unit_identifier
+    assert Identifiers::Registry.find_active(identifier)
+  end
+
+  test "invalid unit identifier check digit is rejected" do
+    used = create_used_variant("inv_used_bad_cd")
+    error = assert_raises(Inventory::PostAdjustment::Error) do
+      Inventory::PostAdjustment.call(
+        store: @store,
+        product_variant: used,
+        adjustment_reason: @opening,
+        quantity_delta: 1,
+        actor: @actor,
+        source_id: SecureRandom.uuid_v7,
+        idempotency_key: SecureRandom.uuid_v7,
+        acquisition_unit_cost_cents: 500,
+        unit_identifier: "2200000000001"
+      )
+    end
+    assert_match(/check digit/i, error.message)
+  end
+
+  test "non-220 unit identifier is rejected" do
+    used = create_used_variant("inv_used_isbn")
+    error = assert_raises(Inventory::PostAdjustment::Error) do
+      Inventory::PostAdjustment.call(
+        store: @store,
+        product_variant: used,
+        adjustment_reason: @opening,
+        quantity_delta: 1,
+        actor: @actor,
+        source_id: SecureRandom.uuid_v7,
+        idempotency_key: SecureRandom.uuid_v7,
+        acquisition_unit_cost_cents: 500,
+        unit_identifier: external_isbn13
+      )
+    end
+    assert_match(/220 namespace/i, error.message)
+  end
+
+  test "database check rejects zero quantity with residual value" do
+    post_qty(1, 100)
+    balance = InventoryBalance.find_by!(store: @store, product_variant: @variant)
+    assert_raises(ActiveRecord::StatementInvalid) do
+      InventoryBalance.transaction(requires_new: true) do
+        balance.update_columns(on_hand_quantity: 0, inventory_value_cents: 500)
+      end
+    end
+    balance.reload
+    balance.on_hand_quantity = 0
+    balance.inventory_value_cents = 500
+    assert_not balance.valid?
+    assert_includes balance.errors[:inventory_value_cents], "must be zero when on-hand quantity is zero"
+  end
+
   private
 
   def post_qty(delta, cost_cents, reason: @opening, key: SecureRandom.uuid_v7, source: SecureRandom.uuid_v7)
@@ -376,6 +447,30 @@ class InventoryPostAdjustmentTest < ActiveSupport::TestCase
       source_id: source,
       idempotency_key: key,
       acquisition_unit_cost_cents: cost_cents
+    )
+  end
+
+  def create_used_variant(class_code)
+    used_klass = merchandise_class(
+      code: class_code,
+      used_merchandise_allowed: true,
+      default_standard_department: @department,
+      default_used_department: @department,
+      pricing_method: "fixed"
+    )
+    condition = MerchandiseCondition.find_by(code: "good") || merchandise_condition(code: "good")
+    ProductVariants::Create.call(
+      product: @product,
+      attributes: {
+        variant_type: "used",
+        status: "active",
+        merchandise_class_id: used_klass.id,
+        merchandise_condition_id: condition.id,
+        department_id: @department.id,
+        tax_class_id: @tax.id,
+        regular_price_cents: 1200
+      },
+      actor: @actor
     )
   end
 end

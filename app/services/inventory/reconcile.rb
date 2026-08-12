@@ -24,9 +24,19 @@ module Inventory
         drifts.concat(check_balance(balance))
       end
 
+      pair_scope = { store_id: @store&.id }
+      drifts.concat(LedgerPairIntegrity.drifts(**pair_scope.compact))
+
+      history_pairs = []
       ledgers = InventoryLedgerEntry.all
       ledgers = ledgers.where(store_id: @store.id) if @store
-      ledgers.distinct.pluck(:store_id, :product_variant_id).each do |store_id, product_variant_id|
+      history_pairs.concat(ledgers.distinct.pluck(:store_id, :product_variant_id))
+
+      valuations = InventoryValuationEntry.all
+      valuations = valuations.where(store_id: @store.id) if @store
+      history_pairs.concat(valuations.distinct.pluck(:store_id, :product_variant_id))
+
+      history_pairs.uniq.each do |store_id, product_variant_id|
         next if InventoryBalance.exists?(store_id: store_id, product_variant_id: product_variant_id)
 
         drifts << Drift.new(

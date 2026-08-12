@@ -247,12 +247,7 @@ module Inventory
 
     def resolve_removal_unit!
       if @inventory_unit_id.blank? && @unit_identifier.present?
-        normalized =
-          begin
-            Identifiers::Normalizer.normalize(@unit_identifier, allow_shelfsense_222: true)
-          rescue Identifiers::NormalizationError => e
-            raise Error, e.message
-          end
+        normalized = normalize_supplied_unit_identifier!
         unit = InventoryUnit.find_by(unit_identifier: normalized)
         raise Error, "inventory unit not found for identifier #{normalized}" if unit.nil?
 
@@ -260,6 +255,18 @@ module Inventory
       end
 
       raise Error, "unit identifier is required for individual removals" if @inventory_unit_id.blank?
+    end
+
+    def normalize_supplied_unit_identifier!
+      normalized =
+        begin
+          Identifiers::Normalizer.normalize(@unit_identifier, allow_shelfsense_222: false)
+        rescue Identifiers::NormalizationError => e
+          raise Error, e.message
+        end
+      raise Error, "unit identifier must use the 220 namespace" unless normalized.start_with?("220")
+
+      normalized
     end
 
     def fail_operation!(op, message)
@@ -399,11 +406,13 @@ module Inventory
       raise Error, "posting would reduce on-hand or value below zero"
     end
 
-    def create_unit!(effects)
+    def create_unit!(_effects)
+      supplied = @unit_identifier.present?
+      identifier = supplied ? normalize_supplied_unit_identifier! : nil
       attempts = 0
       begin
         attempts += 1
-        identifier = @unit_identifier.presence || Identifiers::Generator.next_ean13!("220")
+        identifier = Identifiers::Generator.next_ean13!("220") unless supplied
         price = @regular_price_cents
         price = @product_variant.regular_price_cents if price.nil?
 
@@ -419,7 +428,7 @@ module Inventory
         Identifiers::Registry.reserve!(value: identifier, kind: "inventory_unit", inventory_unit: unit)
         unit
       rescue Identifiers::Registry::ConflictError, ActiveRecord::RecordNotUnique
-        raise Error, "unit identifier is already reserved" if @unit_identifier.present?
+        raise Error, "unit identifier is already reserved" if supplied
         retry if attempts < 5
         raise Error, "unable to allocate unit identifier"
       end

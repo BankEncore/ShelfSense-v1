@@ -35,6 +35,14 @@ module Inventory
         balance = InventoryBalance.lock.find_by(store_id: @store.id, product_variant_id: @product_variant.id)
         before = balance&.attributes&.slice("on_hand_quantity", "inventory_value_cents")
 
+        pair_drifts = LedgerPairIntegrity.drifts(
+          store_id: @store.id,
+          product_variant_id: @product_variant.id
+        )
+        if pair_drifts.any?
+          raise Error, "ledger pair integrity drift; resolve before rebuild"
+        end
+
         expected_qty = InventoryLedgerEntry.where(
           store_id: @store.id, product_variant_id: @product_variant.id
         ).sum(:quantity_delta)
