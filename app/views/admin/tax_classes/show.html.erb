@@ -1,6 +1,10 @@
-<% content_for :title, @tax_class.name %>
-<h1><%= @tax_class.code %> — <%= @tax_class.name %></h1>
-<p>Order: <%= @tax_class.display_order %> · <%= @tax_class.active? ? "active" : "inactive" %></p>
+<% content_for :title, @tax_class.admin_label %>
+<h1><%= @tax_class.admin_label %></h1>
+<p>
+  Code: <%= @tax_class.code %> ·
+  Order: <%= @tax_class.display_order %> ·
+  <%= @tax_class.active? ? "active" : "inactive" %>
+</p>
 <% if @tax_class.description.present? %><p><%= @tax_class.description %></p><% end %>
 <p>
   <%= link_to "Edit", edit_admin_tax_class_path(@tax_class) if effective_permissions.include?("tax_classes.update") %>

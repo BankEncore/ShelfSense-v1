@@ -1,8 +1,8 @@
-<% content_for :title, @department.name %>
-<h1><%= @department.code %> — <%= @department.name %></h1>
+<% content_for :title, @department.admin_label %>
+<h1><%= @department.admin_label %></h1>
 <p>
-  Number: <%= @department.department_number.presence || "—" %> ·
-  Tax class: <%= @department.default_tax_class.code %> ·
+  Code: <%= @department.code %> ·
+  Tax class: <%= @department.default_tax_class.admin_label %> ·
   Margin bps: <%= @department.default_target_margin_bps.presence || "—" %> ·
   Order: <%= @department.display_order %> ·
   <%= @department.active? ? "active" : "inactive" %>

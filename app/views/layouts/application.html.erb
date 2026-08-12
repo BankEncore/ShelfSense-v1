@@ -17,7 +17,7 @@
           <div>
             <%= link_to "ShelfSense", root_path, class: "app-brand" %>
             <% if current_store.present? %>
-              <div class="app-header-meta">Current store: <%= current_store.name %> (<%= current_store.code %>)</div>
+              <div class="app-header-meta">Current store: <%= current_store.admin_label %></div>
             <% end %>
           </div>
           <nav class="app-nav" aria-label="Primary">

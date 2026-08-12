@@ -30,6 +30,7 @@ Rails.application.routes.draw do
     resources :products do
       member do
         post :discontinue
+        post :reactivate
       end
       resources :product_variants, shallow: true do
         member do

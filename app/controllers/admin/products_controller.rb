@@ -5,9 +5,9 @@ module Admin
     before_action -> { require_permission!("products.view") }, only: %i[index show]
     before_action -> { require_permission!("products.create") }, only: %i[new create]
     before_action -> { require_permission!("products.update") }, only: %i[edit update]
-    before_action -> { require_permission!("products.discontinue") }, only: :discontinue
+    before_action -> { require_permission!("products.discontinue") }, only: %i[discontinue reactivate]
     before_action -> { require_permission!("products.update") }, only: :destroy
-    before_action :set_product, only: %i[show edit update destroy discontinue]
+    before_action :set_product, only: %i[show edit update destroy discontinue reactivate]
 
     def index
       @index = Products::AdminIndexQuery.call(
@@ -18,7 +18,7 @@ module Admin
       )
       @products = @index.records.includes(:merchandise_category)
       @variant_counts = ProductVariant.where(product_id: @products.map(&:id)).group(:product_id).count
-      @merchandise_categories = MerchandiseCategory.assignable.order(:display_order, :name)
+      @merchandise_categories = MerchandiseCategory.assignable.admin_ordered
       @show_inventory = inventory_display_enabled?
       @on_hand_by_product_id = load_product_on_hand_totals(@products.map(&:id)) if @show_inventory
     end
@@ -80,6 +80,13 @@ module Admin
           return
         end
 
+        if @product.status == "discontinued" && attrs[:status].present? && attrs[:status] != "discontinued"
+          @product.errors.add(:status, "use Reactivate instead")
+          load_form_options
+          render :edit, status: :unprocessable_entity
+          return
+        end
+
         begin
           Products::Update.call(
             product: @product,
@@ -106,6 +113,30 @@ module Admin
           after_values: { status: "discontinued" }
         ) { @product.update!(status: "discontinued") }
         redirect_to admin_product_path(@product), notice: "Product discontinued."
+      end
+    end
+
+    def reactivate
+      rescue_stale do
+        unless @product.status == "discontinued"
+          redirect_to admin_product_path(@product), alert: "Only discontinued products can be reactivated."
+          return
+        end
+
+        if @product.merchandise_category.present? && !@product.merchandise_category.assignable?
+          redirect_to admin_product_path(@product),
+                      alert: "Cannot reactivate: merchandise category must be active."
+          return
+        end
+
+        before_status = @product.status
+        mutate_and_audit!(
+          @product,
+          action: "products.reactivate",
+          before_values: { status: before_status },
+          after_values: { status: "active" }
+        ) { @product.update!(status: "active") }
+        redirect_to admin_product_path(@product), notice: "Product reactivated."
       end
     end
 
@@ -141,7 +172,7 @@ module Admin
     end
 
     def load_form_options
-      @merchandise_categories = MerchandiseCategory.assignable.order(:display_order, :name)
+      @merchandise_categories = MerchandiseCategory.assignable.admin_ordered
     end
 
     def recent_product_audit_events

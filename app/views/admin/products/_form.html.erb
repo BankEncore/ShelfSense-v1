@@ -77,8 +77,13 @@
   <%= render layout: "shared/form_section", locals: { title: "Lifecycle" } do %>
     <div class="form-field">
       <%= form.label :status %>
-      <%= form.select :status, Product::STATUSES.reject { |s| s == "discontinued" }.map { |s| [s.humanize, s] } %>
-      <span class="field-help">Use Discontinue on the product page to mark a product discontinued.</span>
+      <% if product.status == "discontinued" %>
+        <div><%= status_badge(product.status, scheme: :product_variant) %></div>
+        <span class="field-help">Use Reactivate on the product page to restore an active status.</span>
+      <% else %>
+        <%= form.select :status, Product::STATUSES.reject { |s| s == "discontinued" }.map { |s| [s.humanize, s] } %>
+        <span class="field-help">Use Discontinue on the product page to mark a product discontinued.</span>
+      <% end %>
     </div>
   <% end %>
 

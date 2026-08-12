@@ -4,7 +4,7 @@
 <ul>
   <% @tax_classes.each do |tax_class| %>
     <li>
-      <%= link_to "#{tax_class.code} — #{tax_class.name}", admin_tax_class_path(tax_class) %>
+      <%= link_to tax_class.admin_label, admin_tax_class_path(tax_class) %>
       <%= "inactive" unless tax_class.active? %>
     </li>
   <% end %>

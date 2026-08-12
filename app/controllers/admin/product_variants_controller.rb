@@ -148,10 +148,10 @@ module Admin
     end
 
     def load_form_options
-      @merchandise_conditions = MerchandiseCondition.assignable.order(:display_order, :code)
-      @merchandise_classes = MerchandiseClass.assignable.order(:display_order, :code)
-      @departments = Department.assignable.order(:display_order, :code)
-      @tax_classes = TaxClass.assignable.order(:display_order, :code)
+      @merchandise_conditions = MerchandiseCondition.assignable.admin_ordered
+      @merchandise_classes = MerchandiseClass.assignable.admin_ordered
+      @departments = Department.assignable.admin_ordered
+      @tax_classes = TaxClass.assignable.admin_ordered
     end
 
     def variant_attributes

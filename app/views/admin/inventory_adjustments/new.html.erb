@@ -14,7 +14,7 @@
 
   <div class="form-field">
     <%= label_tag :store_id, "Store" %>
-    <%= select_tag :store_id, options_from_collection_for_select(accessible_stores.order(:name), :id, :name, @store&.id), include_blank: "Select store" %>
+    <%= select_tag :store_id, options_from_collection_for_select(accessible_stores.admin_ordered, :id, :admin_label, @store&.id), include_blank: "Select store" %>
   </div>
   <div class="form-field">
     <%= label_tag :product_variant_id, "Variant identifier" %>

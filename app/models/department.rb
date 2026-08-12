@@ -43,9 +43,22 @@ class Department < ApplicationRecord
 
   scope :active, -> { where(active: true) }
   scope :assignable, -> { active }
+  scope :admin_ordered, -> { order(:display_order, :department_number, :name) }
 
   def assignable?
     active?
+  end
+
+  def admin_label
+    if department_number.present?
+      "#{department_number} - #{name}"
+    else
+      name
+    end
+  end
+
+  def self.options_for_select(records = admin_ordered)
+    Array(records).map { |department| [ department.admin_label, department.id ] }
   end
 
   def reactivation_blockers

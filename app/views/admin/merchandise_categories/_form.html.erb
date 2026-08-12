@@ -18,7 +18,7 @@
   </p>
   <p>
     <%= form.label :default_merchandise_class_id, "Default merchandise class" %>
-    <%= form.select :default_merchandise_class_id, @merchandise_classes.map { |c| ["#{c.code} — #{c.name}", c.id] }, include_blank: "None" %>
+      <%= form.select :default_merchandise_class_id, MerchandiseClass.options_for_select(@merchandise_classes), include_blank: "None" %>
   </p>
   <p><%= form.label :display_order %><%= form.number_field :display_order %></p>
   <p><%= form.submit %></p>

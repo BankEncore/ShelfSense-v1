@@ -14,6 +14,9 @@
 <% if effective_permissions.include?("products.discontinue") && @product.status != "discontinued" %>
   <% actions << button_to("Discontinue", discontinue_admin_product_path(@product), method: :post, class: "btn btn--danger") %>
 <% end %>
+<% if effective_permissions.include?("products.discontinue") && @product.status == "discontinued" %>
+  <% actions << button_to("Reactivate", reactivate_admin_product_path(@product), method: :post, class: "btn") %>
+<% end %>
 <% if effective_permissions.include?("products.update") && @product.draft? %>
   <% actions << button_to("Delete draft", admin_product_path(@product), method: :delete, class: "btn btn--danger") %>
 <% end %>
@@ -30,7 +33,7 @@
         ["List price", format_money_cents(@product.list_price_cents)],
         ["Merchandise category", (
           if @product.merchandise_category
-            link_to(@product.merchandise_category.path_label, admin_merchandise_category_path(@product.merchandise_category))
+            link_to(@product.merchandise_category.admin_label, admin_merchandise_category_path(@product.merchandise_category))
           end
         )],
         ["Subtitle", @product.subtitle],
@@ -80,9 +83,9 @@
            variant.sku,
            variant.variant_type.humanize,
            status_badge(variant.status, scheme: :product_variant),
-           variant.merchandise_class ? "#{variant.merchandise_class.code} — #{variant.merchandise_class.name}" : missing_value,
-           variant.department ? "#{variant.department.code} — #{variant.department.name}" : missing_value,
-           variant.tax_class ? "#{variant.tax_class.code} — #{variant.tax_class.name}" : missing_value,
+           variant.merchandise_class ? variant.merchandise_class.admin_label : missing_value,
+           variant.department ? variant.department.admin_label : missing_value,
+           variant.tax_class ? variant.tax_class.admin_label : missing_value,
            variant.used? ? (variant.merchandise_condition&.name || missing_value) : "—",
            format_money_cents(variant.regular_price_cents)
          ]

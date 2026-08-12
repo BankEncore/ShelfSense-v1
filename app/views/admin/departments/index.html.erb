@@ -4,7 +4,7 @@
 <ul>
   <% @departments.each do |department| %>
     <li>
-      <%= link_to "#{department.code} — #{department.name}", admin_department_path(department) %>
+      <%= link_to department.admin_label, admin_department_path(department) %>
       <%= "inactive" unless department.active? %>
     </li>
   <% end %>

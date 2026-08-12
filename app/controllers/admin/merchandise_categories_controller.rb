@@ -9,7 +9,7 @@ module Admin
     before_action :set_merchandise_category, only: %i[show edit update destroy reactivate]
 
     def index
-      @merchandise_categories = MerchandiseCategory.order(:display_order, :name)
+      @merchandise_categories = MerchandiseCategory.admin_ordered
     end
 
     def show; end
@@ -76,10 +76,10 @@ module Admin
     end
 
     def load_form_options
-      scope = MerchandiseCategory.order(:display_order, :name)
+      scope = MerchandiseCategory.admin_ordered
       scope = scope.where.not(id: @merchandise_category.id) if @merchandise_category&.persisted?
       @parent_options = scope
-      @merchandise_classes = MerchandiseClass.assignable.order(:display_order, :code)
+      @merchandise_classes = MerchandiseClass.assignable.admin_ordered
     end
 
     def merchandise_category_params

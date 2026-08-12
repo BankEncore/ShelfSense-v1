@@ -18,9 +18,18 @@ class MerchandiseClass < ApplicationRecord
 
   scope :active, -> { where(active: true) }
   scope :assignable, -> { active }
+  scope :admin_ordered, -> { order(:display_order, :name) }
 
   def assignable?
     active?
+  end
+
+  def admin_label
+    name
+  end
+
+  def self.options_for_select(records = admin_ordered)
+    Array(records).map { |klass| [ klass.admin_label, klass.id ] }
   end
 
   def inventory?

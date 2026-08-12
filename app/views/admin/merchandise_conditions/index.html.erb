@@ -4,7 +4,7 @@
 <ul>
   <% @merchandise_conditions.each do |condition| %>
     <li>
-      <%= link_to "#{condition.code} — #{condition.name}", admin_merchandise_condition_path(condition) %>
+      <%= link_to condition.admin_label, admin_merchandise_condition_path(condition) %>
       <%= "inactive" unless condition.active? %>
     </li>
   <% end %>

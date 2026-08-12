@@ -29,7 +29,7 @@
        variant = balance.product_variant
        avg = balance.derived_average_unit_cost
        [
-         balance.store.code,
+         balance.store.admin_label,
          link_to("#{variant.product.name} / #{variant.sku}", admin_inventory_balance_path(balance)),
          variant.derived_inventory_tracking.to_s.humanize,
          balance.on_hand_quantity,

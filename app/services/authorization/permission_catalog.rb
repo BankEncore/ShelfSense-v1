@@ -60,7 +60,7 @@ module Authorization
       { key: "products.view", group_key: "products", name: "View products", scope_type: "either" },
       { key: "products.create", group_key: "products", name: "Create products", scope_type: "global" },
       { key: "products.update", group_key: "products", name: "Update products", scope_type: "global" },
-      { key: "products.discontinue", group_key: "products", name: "Discontinue products", scope_type: "global" },
+      { key: "products.discontinue", group_key: "products", name: "Discontinue or reactivate products", scope_type: "global" },
       { key: "product_variants.view", group_key: "product_variants", name: "View product variants", scope_type: "either" },
       { key: "product_variants.create", group_key: "product_variants", name: "Create product variants", scope_type: "global" },
       { key: "product_variants.update", group_key: "product_variants", name: "Update product variants", scope_type: "global" },

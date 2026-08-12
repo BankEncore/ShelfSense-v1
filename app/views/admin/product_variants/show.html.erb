@@ -40,20 +40,20 @@
         ["Regular price", format_money_cents(@product_variant.regular_price_cents)],
         ["Merchandise class", (
           if @product_variant.merchandise_class
-            link_to("#{@product_variant.merchandise_class.code} — #{@product_variant.merchandise_class.name}", admin_merchandise_class_path(@product_variant.merchandise_class))
+            link_to(@product_variant.merchandise_class.admin_label, admin_merchandise_class_path(@product_variant.merchandise_class))
           end
         )],
         ["Department", (
           if @product_variant.department
-            link_to("#{@product_variant.department.code} — #{@product_variant.department.name}", admin_department_path(@product_variant.department))
+            link_to(@product_variant.department.admin_label, admin_department_path(@product_variant.department))
           end
         )],
         ["Tax class", (
           if @product_variant.tax_class
-            link_to("#{@product_variant.tax_class.code} — #{@product_variant.tax_class.name}", admin_tax_class_path(@product_variant.tax_class))
+            link_to(@product_variant.tax_class.admin_label, admin_tax_class_path(@product_variant.tax_class))
           end
         )],
-        ["Condition", @product_variant.merchandise_condition&.name],
+        ["Condition", @product_variant.merchandise_condition&.admin_label],
         ["Industry identifier", @product_variant.industry_identifier]
       ] %>
 </section>

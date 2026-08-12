@@ -5,7 +5,7 @@
   <% @role_assignments.each do |assignment| %>
     <li>
       <%= assignment.user.username %> → <%= assignment.role.key %>
-      <%= assignment.store ? " @ #{assignment.store.code}" : " (global)" %>
+      <%= assignment.store ? " @ #{assignment.store.admin_label}" : " (global)" %>
       <%= "revoked" if assignment.revoked? %>
       <% unless assignment.revoked? %>
         <%= button_to "Revoke", admin_role_assignment_path(assignment), method: :delete %>

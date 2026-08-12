@@ -9,9 +9,18 @@ class MerchandiseCondition < ApplicationRecord
 
   scope :active, -> { where(active: true) }
   scope :assignable, -> { active }
+  scope :admin_ordered, -> { order(:display_order, :name) }
 
   def assignable?
     active?
+  end
+
+  def admin_label
+    name
+  end
+
+  def self.options_for_select(records = admin_ordered)
+    Array(records).map { |condition| [ condition.admin_label, condition.id ] }
   end
 
   def reactivation_blockers
