@@ -13,6 +13,15 @@ class Store < ApplicationRecord
   validates :code, uniqueness: { case_sensitive: false }
 
   scope :active, -> { where(active: true) }
+  scope :admin_ordered, -> { order(:name) }
+
+  def admin_label
+    name
+  end
+
+  def self.options_for_select(records = admin_ordered)
+    Array(records).map { |store| [ store.admin_label, store.id ] }
+  end
 
   private
 

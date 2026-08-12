@@ -31,12 +31,12 @@
         ["Default supplier returnable", @merchandise_class.default_supplier_returnable? ? "Yes" : "No"],
         ["Default standard department", (
           if @merchandise_class.default_standard_department
-            link_to("#{@merchandise_class.default_standard_department.code} — #{@merchandise_class.default_standard_department.name}", admin_department_path(@merchandise_class.default_standard_department))
+            link_to(@merchandise_class.default_standard_department.admin_label, admin_department_path(@merchandise_class.default_standard_department))
           end
         )],
         ["Default used department", (
           if @merchandise_class.default_used_department
-            link_to("#{@merchandise_class.default_used_department.code} — #{@merchandise_class.default_used_department.name}", admin_department_path(@merchandise_class.default_used_department))
+            link_to(@merchandise_class.default_used_department.admin_label, admin_department_path(@merchandise_class.default_used_department))
           end
         )],
         ["Display order", @merchandise_class.display_order],

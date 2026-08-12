@@ -1,0 +1,38 @@
+<% content_for :title, "Inventory adjustment" %>
+
+<%= render "shared/breadcrumbs", crumbs: [
+  { name: "Home", path: root_path },
+  { name: "Inventory", path: admin_inventory_balances_path },
+  { name: "Adjustment" }
+] %>
+
+<% actions = [] %>
+<% if !@adjustment.reversed? && !@adjustment.reversal? && effective_permissions.include?("inventory.reverse_adjustment") %>
+  <% actions << link_to("Reverse", reverse_admin_inventory_adjustment_path(@adjustment), class: "btn btn--danger") %>
+<% end %>
+<% balance = InventoryBalance.find_by(store_id: @adjustment.store_id, product_variant_id: @adjustment.product_variant_id) %>
+<% if balance %>
+  <% actions << link_to("Balance", admin_inventory_balance_path(balance), class: "btn btn--secondary") %>
+<% end %>
+
+<%= render "shared/page_header",
+      title: "Posted adjustment",
+      subtitle: @adjustment.adjustment_reason.name,
+      actions: safe_join(actions, " ") %>
+
+<section class="section surface">
+  <%= render "shared/definition_list", rows: [
+        ["Store", @adjustment.store.name],
+        ["Variant", @adjustment.product_variant.sku],
+        ["Quantity delta", @adjustment.quantity_delta],
+        ["Acquisition unit cost", @adjustment.acquisition_unit_cost_cents ? format_money_cents(@adjustment.acquisition_unit_cost_cents) : nil],
+        ["Value delta", @valuation ? format_money_cents(@valuation.value_delta_cents) : nil],
+        ["Business date", @adjustment.business_date],
+        ["Occurred", format_timestamp(@adjustment.occurred_at)],
+        ["Posted", format_timestamp(@adjustment.posted_at)],
+        ["Notes", @adjustment.notes],
+        ["Reversed at", @adjustment.reversed_at ? format_timestamp(@adjustment.reversed_at) : nil],
+        ["Reversal of", (@adjustment.reversal_of_id ? link_to(@adjustment.reversal_of_id, admin_inventory_adjustment_path(@adjustment.reversal_of_id)) : nil)],
+        ["Unit", @adjustment.inventory_unit&.unit_identifier]
+      ] %>
+</section>

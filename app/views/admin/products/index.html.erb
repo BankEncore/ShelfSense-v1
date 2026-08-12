@@ -45,24 +45,28 @@
         body: "Try a different search or clear the filters." %>
 <% else %>
   <% rows = @products.map { |product|
-       [
+       row = [
          link_to(product.name, admin_product_path(product)),
          product.primary_identifier,
-         product.merchandise_category&.path_label || missing_value,
+         product.merchandise_category&.admin_label || missing_value,
          (@variant_counts[product.id] || 0),
          format_money_cents(product.list_price_cents),
          status_badge(product.status, scheme: :product_variant)
        ]
+       row << (@on_hand_by_product_id[product.id] || 0) if @show_inventory
+       row
      } %>
+  <% headers = [
+       "Name",
+       "Primary identifier",
+       "Category",
+       { text: "Variants", class: "numeric" },
+       { text: "List price", class: "numeric" },
+       "Status"
+     ] %>
+  <% headers << { text: "On hand", class: "numeric" } if @show_inventory %>
   <%= render "shared/data_table",
-        headers: [
-          "Name",
-          "Primary identifier",
-          "Category",
-          { text: "Variants", class: "numeric" },
-          { text: "List price", class: "numeric" },
-          "Status"
-        ],
+        headers: headers,
         rows: rows %>
 
   <div class="pagination">

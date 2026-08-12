@@ -1,0 +1,25 @@
+<%= form_with model: [:admin, adjustment_reason], class: "form" do |form| %>
+  <%= render "shared/form_errors", record: adjustment_reason %>
+  <%= form.hidden_field :lock_version %>
+  <% unless adjustment_reason.persisted? %>
+    <div class="form-field"><%= form.label :code %><%= form.text_field :code %></div>
+  <% end %>
+  <div class="form-field"><%= form.label :name %><%= form.text_field :name %></div>
+  <div class="form-field"><%= form.label :description %><%= form.text_area :description, rows: 3 %></div>
+  <div class="form-field">
+    <%= form.label :direction %>
+    <%= form.select :direction, AdjustmentReason::DIRECTIONS.map { |d| [d.humanize, d] } %>
+  </div>
+  <div class="form-field">
+    <%= form.check_box :cost_required_for_increase %>
+    <%= form.label :cost_required_for_increase, "Cost required for increase" %>
+  </div>
+  <div class="form-field">
+    <%= form.check_box :notes_required %>
+    <%= form.label :notes_required, "Notes required" %>
+  </div>
+  <div class="actions">
+    <%= form.submit class: "btn" %>
+    <%= link_to "Cancel", adjustment_reason.persisted? ? admin_adjustment_reason_path(adjustment_reason) : admin_adjustment_reasons_path, class: "btn btn--ghost" %>
+  </div>
+<% end %>

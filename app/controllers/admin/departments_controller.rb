@@ -9,7 +9,7 @@ module Admin
     before_action :set_department, only: %i[show edit update destroy reactivate]
 
     def index
-      @departments = Department.order(:display_order, :code)
+      @departments = Department.admin_ordered
     end
 
     def show; end
@@ -74,7 +74,7 @@ module Admin
     end
 
     def load_form_options
-      @tax_classes = TaxClass.assignable.order(:display_order, :code)
+      @tax_classes = TaxClass.assignable.admin_ordered
       @gl_accounts = GlAccount.assignable.order(:account_number)
     end
 

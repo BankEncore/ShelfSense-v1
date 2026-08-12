@@ -10,7 +10,7 @@ module Admin
 
     def index
       @stores = if Authorization::PermissionEvaluator.allowed?(user: current_user, permission_key: "stores.view", store: nil)
-        Store.order(:name)
+        Store.admin_ordered
       else
         accessible_stores
       end

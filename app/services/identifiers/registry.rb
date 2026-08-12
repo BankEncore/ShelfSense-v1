@@ -4,8 +4,14 @@ module Identifiers
   class Registry
     class ConflictError < StandardError; end
 
-    def self.reserve!(value:, kind:, product: nil, product_variant: nil)
-      new.reserve!(value: value, kind: kind, product: product, product_variant: product_variant)
+    def self.reserve!(value:, kind:, product: nil, product_variant: nil, inventory_unit: nil)
+      new.reserve!(
+        value: value,
+        kind: kind,
+        product: product,
+        product_variant: product_variant,
+        inventory_unit: inventory_unit
+      )
     end
 
     def self.retire!(value:)
@@ -20,7 +26,7 @@ module Identifiers
       IdentifierRegistry.find_by(value: value)
     end
 
-    def reserve!(value:, kind:, product: nil, product_variant: nil)
+    def reserve!(value:, kind:, product: nil, product_variant: nil, inventory_unit: nil)
       if IdentifierRegistry.exists?(value: value)
         raise ConflictError, "identifier #{value} is already reserved"
       end
@@ -30,6 +36,7 @@ module Identifiers
         identifier_kind: kind,
         product: product,
         product_variant: product_variant,
+        inventory_unit: inventory_unit,
         retired_at: nil
       )
     rescue ActiveRecord::RecordNotUnique

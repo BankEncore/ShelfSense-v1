@@ -9,7 +9,7 @@ module Admin
     before_action :set_merchandise_class, only: %i[show edit update destroy reactivate]
 
     def index
-      @merchandise_classes = MerchandiseClass.order(:display_order, :code)
+      @merchandise_classes = MerchandiseClass.admin_ordered
     end
 
     def show; end
@@ -84,7 +84,7 @@ module Admin
     end
 
     def load_form_options
-      @departments = Department.assignable.order(:display_order, :code)
+      @departments = Department.assignable.admin_ordered
     end
 
     def merchandise_class_params

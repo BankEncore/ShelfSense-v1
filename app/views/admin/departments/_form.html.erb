@@ -15,7 +15,7 @@
   <p><%= form.label :description %><%= form.text_area :description %></p>
   <p>
     <%= form.label :default_tax_class_id, "Default tax class" %>
-    <%= form.select :default_tax_class_id, @tax_classes.map { |t| ["#{t.code} — #{t.name}", t.id] }, include_blank: true %>
+    <%= form.select :default_tax_class_id, TaxClass.options_for_select(@tax_classes), include_blank: true %>
   </p>
   <p><%= form.label :default_target_margin_bps %><%= form.number_field :default_target_margin_bps %></p>
   <% [

@@ -1,8 +1,8 @@
-<% content_for :title, @merchandise_category.path_label %>
-<h1><%= @merchandise_category.code.presence || "—" %> — <%= @merchandise_category.path_label %></h1>
+<% content_for :title, @merchandise_category.admin_label %>
+<h1><%= @merchandise_category.admin_label %></h1>
 <p>
-  Parent: <%= @merchandise_category.parent&.path_label || "—" %> ·
-  Default class: <%= @merchandise_category.default_merchandise_class&.code || "—" %> ·
+  Parent: <%= @merchandise_category.parent&.admin_label || "—" %> ·
+  Default class: <%= @merchandise_category.default_merchandise_class&.admin_label || "—" %> ·
   Order: <%= @merchandise_category.display_order %> ·
   <%= @merchandise_category.active? ? "active" : "inactive" %>
 </p>

@@ -15,7 +15,7 @@
 <% else %>
   <% rows = @merchandise_classes.map { |klass|
        [
-         link_to("#{klass.code} — #{klass.name}", admin_merchandise_class_path(klass)),
+         link_to(klass.admin_label, admin_merchandise_class_path(klass)),
          klass.inventory_mode.humanize,
          klass.pricing_method.humanize,
          configuration_status_badge(klass.active?)

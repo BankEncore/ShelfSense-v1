@@ -12,7 +12,7 @@ module Admin
       @role_assignment = RoleAssignment.new
       @users = User.human.active.order(:username)
       @roles = Role.active.order(:name)
-      @stores = Store.active.order(:name)
+      @stores = Store.active.admin_ordered
     end
 
     def create
@@ -38,7 +38,7 @@ module Admin
       rescue ActiveRecord::RecordInvalid
         @users = User.human.active.order(:username)
         @roles = Role.active.order(:name)
-        @stores = Store.active.order(:name)
+        @stores = Store.active.admin_ordered
         render :new, status: :unprocessable_entity
       rescue Authorization::LastGlobalAdministrator::WouldRemoveLastAdministrator => e
         redirect_to admin_role_assignments_path, alert: e.message

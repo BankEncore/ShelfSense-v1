@@ -5,6 +5,7 @@ module Identifiers
     class ExhaustedError < StandardError; end
 
     SEQUENCE_BY_PREFIX = {
+      "220" => "shelfsense_unit_220_seq",
       "221" => "shelfsense_sku_221_seq",
       "222" => "shelfsense_product_222_seq"
     }.freeze

@@ -9,7 +9,7 @@ module Admin
     before_action :set_tax_class, only: %i[show edit update destroy reactivate]
 
     def index
-      @tax_classes = TaxClass.order(:display_order, :code)
+      @tax_classes = TaxClass.admin_ordered
     end
 
     def show; end

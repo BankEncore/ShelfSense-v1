@@ -17,7 +17,7 @@
           <div>
             <%= link_to "ShelfSense", root_path, class: "app-brand" %>
             <% if current_store.present? %>
-              <div class="app-header-meta">Current store: <%= current_store.name %> (<%= current_store.code %>)</div>
+              <div class="app-header-meta">Current store: <%= current_store.admin_label %></div>
             <% end %>
           </div>
           <nav class="app-nav" aria-label="Primary">
@@ -54,6 +54,15 @@
             <% end %>
             <% if effective_permissions.include?("merchandise.import") %>
               <%= link_to "Import", new_admin_merchandise_import_path %>
+            <% end %>
+            <% if effective_permissions.include?("inventory.view") %>
+              <%= link_to "Inventory", admin_inventory_balances_path %>
+            <% end %>
+            <% if effective_permissions.include?("inventory.manage_adjustment_reasons") %>
+              <%= link_to "Adjustment reasons", admin_adjustment_reasons_path %>
+            <% end %>
+            <% if effective_permissions.include?("inventory.reconcile") %>
+              <%= link_to "Inventory reconcile", admin_inventory_reconciliation_path %>
             <% end %>
             <% if effective_permissions.include?("users.view") %>
               <%= link_to "Users", admin_users_path %>

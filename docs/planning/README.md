@@ -165,24 +165,32 @@ Deliverable: an authorized administrator can navigate a consistent administrativ
 
 ### Phase 3 — Inventory foundation
 
+Status: implemented.
+
+Authoritative Phase 3 documents:
+
+* [phase-3-inventory-foundation.md](phase3-inventory-foundation/phase-3-inventory-foundation.md) — physical and valuation ledgers, single-effect adjustments, units, reconciliation  
+* [inventory-posting-contract.md](phase3-inventory-foundation/inventory-posting-contract.md) — posting boundary for later phases  
+
 Implement:
 
-* `inventory_ledger_entries`  
-* `inventory_balances`  
-* inventory adjustments and adjustment lines  
-* adjustment reasons  
-* individually tracked `inventory_units`  
-* stock availability calculations
+* `adjustment_reasons`  
+* posted-only single-effect `inventory_adjustments` (no headers/lines)  
+* immutable `inventory_ledger_entries` and `inventory_valuation_entries`  
+* rebuildable `inventory_balances`  
+* individually tracked `inventory_units` (condition on variant; Phase 3 unit `regular_price_cents`)  
+* exact reversal, reconciliation, and explicit projection rebuilding  
+* ADR-009 idempotency and ADR-010 outbox infrastructure as first consumers when absent  
 
-Deliverable: establish opening inventory, adjust it, and view an auditable balance.
+Deliverable: establish opening inventory, adjust it, view auditable quantity and carrying-value history, and reverse eligible errors without rewriting history.
 
-I would retain the earlier invariant:
+Long-term availability invariant:
 
 ```
 available = on_hand - reserved - unavailable
 ```
 
-The ledger is authoritative; the balance is a maintained projection.
+In Phase 3, reserved and unavailable are deferred and zero (`available = on_hand`). No speculative reservation or unavailability balance columns are created. Physical and valuation ledgers are authoritative; balances are rebuildable projections.
 
 ### Phase 4 — First POS vertical slice
 

@@ -40,11 +40,11 @@
     </div>
     <div class="form-field">
       <%= form.label :default_standard_department_id, "Default standard department" %>
-      <%= form.select :default_standard_department_id, @departments.map { |d| ["#{d.code} — #{d.name}", d.id] }, include_blank: "None" %>
+      <%= form.select :default_standard_department_id, Department.options_for_select(@departments), include_blank: "None" %>
     </div>
     <div class="form-field">
       <%= form.label :default_used_department_id, "Default used department" %>
-      <%= form.select :default_used_department_id, @departments.map { |d| ["#{d.code} — #{d.name}", d.id] }, include_blank: "None" %>
+      <%= form.select :default_used_department_id, Department.options_for_select(@departments), include_blank: "None" %>
     </div>
     <div class="form-field">
       <%= form.check_box :used_merchandise_allowed %>

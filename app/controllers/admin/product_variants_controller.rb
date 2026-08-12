@@ -14,7 +14,20 @@ module Admin
       @product_variants = @product.product_variants.order(:sku)
     end
 
-    def show; end
+    def show
+      @show_inventory = current_store.present? && effective_permissions.include?("inventory.view")
+      return unless @show_inventory
+
+      @inventory_balance = InventoryBalance.find_by(
+        store_id: current_store.id,
+        product_variant_id: @product_variant.id
+      )
+      if @product_variant.derived_inventory_tracking == "individual"
+        @on_hand_units = InventoryUnit.on_hand
+          .where(store_id: current_store.id, product_variant_id: @product_variant.id)
+          .order(:unit_identifier)
+      end
+    end
 
     def new
       @product_variant = @product.product_variants.build(status: "draft", variant_type: "standard")
@@ -135,10 +148,10 @@ module Admin
     end
 
     def load_form_options
-      @merchandise_conditions = MerchandiseCondition.assignable.order(:display_order, :code)
-      @merchandise_classes = MerchandiseClass.assignable.order(:display_order, :code)
-      @departments = Department.assignable.order(:display_order, :code)
-      @tax_classes = TaxClass.assignable.order(:display_order, :code)
+      @merchandise_conditions = MerchandiseCondition.assignable.admin_ordered
+      @merchandise_classes = MerchandiseClass.assignable.admin_ordered
+      @departments = Department.assignable.admin_ordered
+      @tax_classes = TaxClass.assignable.admin_ordered
     end
 
     def variant_attributes

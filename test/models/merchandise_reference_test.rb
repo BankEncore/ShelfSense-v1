@@ -65,7 +65,31 @@ class MerchandiseReferenceTest < ActiveSupport::TestCase
     assert_equal "Books", root.path_label
     assert_equal "Books > Fiction", parent.path_label
     assert_equal "Books > Fiction > Mystery", child.path_label
-    assert_equal [ [ "Books > Fiction > Mystery", child.id ] ], MerchandiseCategory.options_for_select([ child ])
+  end
+
+  test "admin labels and hierarchical category options" do
+    dept = department(code: "trade", name: "General Trade Books", department_number: "110", default_tax_class: @tax)
+    assert_equal "110 - General Trade Books", dept.admin_label
+
+    klass = merchandise_class(code: "book", name: "Physical book", default_standard_department: @department)
+    assert_equal "Physical book", klass.admin_label
+
+    condition = merchandise_condition(code: "good", name: "Good")
+    assert_equal "Good", condition.admin_label
+
+    root = merchandise_category(name: "Books", code: "books_root", display_order: 1)
+    parent = merchandise_category(name: "Fiction", code: "fiction", parent: root, display_order: 2)
+    sibling = merchandise_category(name: "Anthologies", code: "anthologies", parent: root, display_order: 1)
+    child = merchandise_category(name: "Mystery", code: "mystery", parent: parent, display_order: 0)
+
+    options = MerchandiseCategory.options_for_select([ root, parent, sibling, child ])
+    assert_equal [ root.id, sibling.id, parent.id, child.id ], options.map(&:last)
+    assert_equal "Books", options[0].first
+    assert_equal "Anthologies", options[1].first.delete("\u00A0")
+    assert_equal "Fiction", options[2].first.delete("\u00A0")
+    assert_equal "Mystery", options[3].first.delete("\u00A0")
+    assert_operator options[1].first.count("\u00A0"), :>, 0
+    assert_operator options[3].first.count("\u00A0"), :>, options[1].first.count("\u00A0")
   end
 
   test "inventory_mode accepts inventory and non_inventory" do

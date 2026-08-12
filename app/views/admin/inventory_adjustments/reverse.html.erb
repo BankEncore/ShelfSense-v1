@@ -1,0 +1,25 @@
+<% content_for :title, "Reverse adjustment" %>
+
+<%= render "shared/breadcrumbs", crumbs: [
+  { name: "Home", path: root_path },
+  { name: "Inventory", path: admin_inventory_balances_path },
+  { name: "Adjustment", path: admin_inventory_adjustment_path(@adjustment) },
+  { name: "Reverse" }
+] %>
+
+<%= render "shared/page_header", title: "Confirm reversal" %>
+
+<p>This posts an exact negation of the original quantity and value effects.</p>
+
+<%= form_with url: reverse_admin_inventory_adjustment_path(@adjustment), method: :post, local: true, class: "form" do %>
+  <%= hidden_field_tag :command_token, @command_token %>
+  <%= hidden_field_tag :idempotency_key, @idempotency_key %>
+  <div class="form-field">
+    <%= label_tag :notes, "Explanation" %>
+    <%= text_area_tag :notes, nil, rows: 3, required: true %>
+  </div>
+  <div class="actions">
+    <%= submit_tag "Reverse adjustment", class: "btn btn--danger" %>
+    <%= link_to "Cancel", admin_inventory_adjustment_path(@adjustment), class: "btn btn--ghost" %>
+  </div>
+<% end %>

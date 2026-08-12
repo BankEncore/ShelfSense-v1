@@ -1,0 +1,54 @@
+<% content_for :title, "Inventory" %>
+
+<%= render "shared/breadcrumbs", crumbs: [
+  { name: "Home", path: root_path },
+  { name: "Inventory" }
+] %>
+
+<%= render "shared/page_header",
+      title: "Inventory",
+      subtitle: "On-hand quantity and carrying value by store and variant",
+      actions: (link_to("New adjustment", new_admin_inventory_adjustment_path, class: "btn") if effective_permissions.include?("inventory.adjust")) %>
+
+<%= form_with url: admin_inventory_balances_path, method: :get, local: true, class: "form form--inline" do %>
+  <div class="form-field">
+    <%= label_tag :q, "Identifier" %>
+    <%= text_field_tag :q, params[:q] %>
+  </div>
+  <div class="form-field">
+    <%= label_tag :tracking, "Tracking" %>
+    <%= select_tag :tracking, options_for_select([["Any", ""], ["Quantity", "quantity"], ["Individual", "individual"]], params[:tracking]) %>
+  </div>
+  <%= submit_tag "Filter", class: "btn btn--secondary" %>
+<% end %>
+
+<% if @balances.empty? %>
+  <%= render "shared/empty_state", title: "No inventory balances", body: "Post an opening adjustment to establish inventory." %>
+<% else %>
+  <% rows = @balances.map { |balance|
+       variant = balance.product_variant
+       avg = balance.derived_average_unit_cost
+       [
+         balance.store.admin_label,
+         link_to("#{variant.product.name} / #{variant.sku}", admin_inventory_balance_path(balance)),
+         variant.derived_inventory_tracking.to_s.humanize,
+         balance.on_hand_quantity,
+         format_money_cents(balance.inventory_value_cents),
+         avg ? avg.round(4).to_s("F") : missing_value
+       ]
+     } %>
+  <%= render "shared/data_table",
+        headers: ["Store", "Variant", "Tracking", "On hand", "Value", "Avg cost"],
+        rows: rows %>
+  <% if @index.total_pages > 1 %>
+    <nav class="pager" aria-label="Pagination">
+      <% if @index.page > 1 %>
+        <%= link_to "Previous", admin_inventory_balances_path(q: params[:q], tracking: params[:tracking], page: @index.page - 1) %>
+      <% end %>
+      <span>Page <%= @index.page %> of <%= @index.total_pages %></span>
+      <% if @index.page < @index.total_pages %>
+        <%= link_to "Next", admin_inventory_balances_path(q: params[:q], tracking: params[:tracking], page: @index.page + 1) %>
+      <% end %>
+    </nav>
+  <% end %>
+<% end %>

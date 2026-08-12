@@ -15,6 +15,7 @@ class MerchandiseCategory < ApplicationRecord
 
   scope :active, -> { where(active: true) }
   scope :assignable, -> { active }
+  scope :admin_ordered, -> { order(:display_order, :name) }
 
   def self.machine_code_optional?
     true
@@ -22,6 +23,10 @@ class MerchandiseCategory < ApplicationRecord
 
   def assignable?
     active?
+  end
+
+  def admin_label
+    name
   end
 
   # Root categories return their name; nested categories return "Parent > Child > …".
@@ -41,8 +46,33 @@ class MerchandiseCategory < ApplicationRecord
     names.join(separator)
   end
 
+  # Depth-first walk for selects/indexes: children appear under their parent,
+  # each level sorted by display_order then name.
+  def self.hierarchical_entries(records)
+    list = Array(records)
+    by_parent = list.group_by(&:parent_id)
+    ids = list.map(&:id).to_set
+
+    sort_level = lambda do |items|
+      items.sort_by { |item| [ item.display_order.to_i, item.name.to_s.downcase ] }
+    end
+
+    walk = lambda do |parent_id, depth|
+      children = Array(by_parent[parent_id])
+      sort_level.call(children).flat_map do |category|
+        [ [ category, depth ] ] + walk.call(category.id, depth + 1)
+      end
+    end
+
+    roots = list.select { |category| category.parent_id.nil? || !ids.include?(category.parent_id) }
+    sort_level.call(roots).flat_map { |category| [ [ category, 0 ] ] + walk.call(category.id, 1) }
+  end
+
   def self.options_for_select(records)
-    Array(records).map { |category| [ category.path_label, category.id ] }
+    hierarchical_entries(records).map do |category, depth|
+      label = depth.positive? ? "#{"\u00A0\u00A0" * depth}#{category.admin_label}" : category.admin_label
+      [ label, category.id ]
+    end
   end
 
   def reactivation_blockers

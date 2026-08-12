@@ -9,7 +9,7 @@ module Admin
     before_action :set_merchandise_condition, only: %i[show edit update destroy reactivate]
 
     def index
-      @merchandise_conditions = MerchandiseCondition.order(:display_order, :code)
+      @merchandise_conditions = MerchandiseCondition.admin_ordered
     end
 
     def show; end

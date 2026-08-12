@@ -40,19 +40,19 @@
   <%= render layout: "shared/form_section", locals: { title: "Sellability", help: "Blank class, department, or tax class resolve at create time. Clearing them later does not re-inherit defaults." } do %>
     <div class="form-field">
       <%= form.label :merchandise_condition_id, "Condition (used variants only)" %>
-      <%= form.select :merchandise_condition_id, @merchandise_conditions.map { |c| ["#{c.code} — #{c.name}", c.id] }, include_blank: true %>
+      <%= form.select :merchandise_condition_id, MerchandiseCondition.options_for_select(@merchandise_conditions), include_blank: true %>
     </div>
     <div class="form-field">
       <%= form.label :merchandise_class_id, "Merchandise class" %>
-      <%= form.select :merchandise_class_id, @merchandise_classes.map { |c| ["#{c.code} — #{c.name}", c.id] }, include_blank: "Resolve default" %>
+      <%= form.select :merchandise_class_id, MerchandiseClass.options_for_select(@merchandise_classes), include_blank: "Resolve default" %>
     </div>
     <div class="form-field">
       <%= form.label :department_id, "Department" %>
-      <%= form.select :department_id, @departments.map { |d| ["#{d.code} — #{d.name}", d.id] }, include_blank: "Resolve default" %>
+      <%= form.select :department_id, Department.options_for_select(@departments), include_blank: "Resolve default" %>
     </div>
     <div class="form-field">
       <%= form.label :tax_class_id, "Tax class" %>
-      <%= form.select :tax_class_id, @tax_classes.map { |t| ["#{t.code} — #{t.name}", t.id] }, include_blank: "Resolve default" %>
+      <%= form.select :tax_class_id, TaxClass.options_for_select(@tax_classes), include_blank: "Resolve default" %>
     </div>
   <% end %>
 
