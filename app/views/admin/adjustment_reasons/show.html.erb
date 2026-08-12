@@ -1,0 +1,29 @@
+<% content_for :title, @adjustment_reason.name %>
+
+<%= render "shared/breadcrumbs", crumbs: [
+  { name: "Home", path: root_path },
+  { name: "Adjustment reasons", path: admin_adjustment_reasons_path },
+  { name: @adjustment_reason.code }
+] %>
+
+<% actions = [configuration_status_badge(@adjustment_reason.active?)] %>
+<% unless @adjustment_reason.system_protected? %>
+  <% actions << link_to("Edit", edit_admin_adjustment_reason_path(@adjustment_reason), class: "btn btn--secondary") %>
+  <% if @adjustment_reason.active? %>
+    <% actions << button_to("Deactivate", admin_adjustment_reason_path(@adjustment_reason), method: :delete, class: "btn btn--danger") %>
+  <% else %>
+    <% actions << button_to("Reactivate", reactivate_admin_adjustment_reason_path(@adjustment_reason), method: :post, params: { lock_version: @adjustment_reason.lock_version }, class: "btn") %>
+  <% end %>
+<% end %>
+
+<%= render "shared/page_header", title: @adjustment_reason.name, subtitle: @adjustment_reason.code, actions: safe_join(actions, " ") %>
+
+<section class="section surface">
+  <%= render "shared/definition_list", rows: [
+        ["Direction", @adjustment_reason.direction.humanize],
+        ["Cost required for increase", @adjustment_reason.cost_required_for_increase? ? "Yes" : "No"],
+        ["Notes required", @adjustment_reason.notes_required? ? "Yes" : "No"],
+        ["System protected", @adjustment_reason.system_protected? ? "Yes" : "No"],
+        ["Description", @adjustment_reason.description]
+      ] %>
+</section>

@@ -1,7 +1,7 @@
 # ADR-002: Use UUIDv7 Primary Keys
 
 * **Status:** Accepted
-* **Amended:** 2026-08-09
+* **Amended:** 2026-08-09; 2026-08-11 (scannable inventory-unit namespace `220`)
 * **Decision scope:** Central Rails application, offline POS nodes, synchronization, and domain data
 * **Supersedes:** Any earlier assumption that identifiers must be generated exclusively by PostgreSQL
 
@@ -185,8 +185,21 @@ The implementation must test that:
 * Multiple implementations require conformance and round-trip testing.
 * UUID ordering cannot replace explicit business timestamps or synchronization metadata.
 
+## Scannable merchandise identifiers (EAN-13 namespaces)
+
+ShelfSense-generated scannable identifiers are EAN-13 values with a valid check digit, issued through the identifier registry with tombstones on retirement. Prefixes are reserved as follows:
+
+| Prefix | Kind | Owner |
+|---|---|---|
+| `222` | `product_primary` (generated) | `products` |
+| `221` | `variant_sku` | `product_variants` |
+| `220` | `inventory_unit` | `inventory_units` |
+
+Generated values are stored as thirteen digits, are globally unique within the registry, and are not reused after retirement. Manufacturer-assigned product primary identifiers remain subject to the implemented Phase 2 normalization and validation path; they do not use the `220`/`221`/`222` generator namespaces.
+
 ## Implementation follow-up
 
 1. Keep Rails `SecureRandom.uuid_v7` conformance tests green in development, test, and CI.
 2. When adopting PostgreSQL 18, evaluate switching central defaults to native `uuidv7()` without changing origin-assigned ID semantics.
 3. Document the future POS language-specific UUIDv7 library when the workstation client stack is selected.
+4. Keep `220` / `221` / `222` sequences and registry kinds aligned with the table above.

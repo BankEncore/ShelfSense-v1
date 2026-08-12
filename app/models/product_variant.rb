@@ -21,6 +21,7 @@ class ProductVariant < ApplicationRecord
   validate :condition_matches_variant_type
   validate :validate_changed_references
   validate :identifier_write_rules
+  validate :tracking_immutability_after_history
   validate :activation_requirements, if: -> { status == "active" }
   after_save { self.identifier_writes_enabled = false }
 
@@ -51,6 +52,13 @@ class ProductVariant < ApplicationRecord
     else
       nil
     end
+  end
+
+  def inventory_history?
+    InventoryBalance.exists?(product_variant_id: id) ||
+      InventoryLedgerEntry.exists?(product_variant_id: id) ||
+      InventoryValuationEntry.exists?(product_variant_id: id) ||
+      InventoryUnit.exists?(product_variant_id: id)
   end
 
   def sellable?
@@ -112,6 +120,25 @@ class ProductVariant < ApplicationRecord
     if industry_identifier_changed? && !identifier_writes_enabled
       errors.add(:industry_identifier, "must be changed through Identifiers::AssignIndustry")
     end
+  end
+
+  def tracking_immutability_after_history
+    return if new_record?
+    return unless inventory_history?
+    return unless merchandise_class_id_changed? || variant_type_changed?
+
+    prior_class =
+      if merchandise_class_id_changed?
+        MerchandiseClass.find_by(id: merchandise_class_id_was)
+      else
+        merchandise_class
+      end
+    prior_type = variant_type_changed? ? variant_type_was : variant_type
+    prior = self.class.new(merchandise_class: prior_class, variant_type: prior_type).derived_inventory_tracking
+    current = derived_inventory_tracking
+    return if prior == current
+
+    errors.add(:base, "cannot change inventory tracking method after inventory history exists")
   end
 
   def condition_matches_variant_type

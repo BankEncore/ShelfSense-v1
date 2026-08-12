@@ -1,0 +1,26 @@
+<% content_for :title, "Inventory reconciliation" %>
+
+<%= render "shared/breadcrumbs", crumbs: [
+  { name: "Home", path: root_path },
+  { name: "Inventory reconciliation" }
+] %>
+
+<%= render "shared/page_header", title: "Inventory reconciliation", subtitle: "Read-only drift report" %>
+
+<% if @drifts.empty? %>
+  <%= render "shared/empty_state", title: "No drift detected", body: "Projections match authoritative ledger entries." %>
+<% else %>
+  <% rows = @drifts.map { |drift|
+       [
+         drift.kind,
+         drift.store_id,
+         drift.product_variant_id,
+         drift.expected,
+         drift.actual,
+         drift.message
+       ]
+     } %>
+  <%= render "shared/data_table",
+        headers: ["Kind", "Store", "Variant", "Expected", "Actual", "Message"],
+        rows: rows %>
+<% end %>

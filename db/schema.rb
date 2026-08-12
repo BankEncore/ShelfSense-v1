@@ -10,13 +10,32 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_11_154000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_11_202000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
   # ShelfSense identifier allocation sequences (not owned by a table column).
+  execute "CREATE SEQUENCE IF NOT EXISTS shelfsense_unit_220_seq AS bigint MINVALUE 0 MAXVALUE 999999999 START WITH 0 INCREMENT BY 1 NO CYCLE"
   execute "CREATE SEQUENCE IF NOT EXISTS shelfsense_sku_221_seq AS bigint MINVALUE 0 MAXVALUE 999999999 START WITH 0 INCREMENT BY 1 NO CYCLE"
   execute "CREATE SEQUENCE IF NOT EXISTS shelfsense_product_222_seq AS bigint MINVALUE 0 MAXVALUE 999999999 START WITH 0 INCREMENT BY 1 NO CYCLE"
+
+  create_table "adjustment_reasons", id: :uuid, default: nil, force: :cascade do |t|
+    t.boolean "active", default: true, null: false
+    t.boolean "allows_individual_tracking", default: true, null: false
+    t.boolean "allows_quantity_tracking", default: true, null: false
+    t.string "code", null: false
+    t.boolean "cost_required_for_increase", default: true, null: false
+    t.timestamptz "created_at", null: false
+    t.text "description"
+    t.string "direction", null: false
+    t.integer "lock_version", default: 0, null: false
+    t.string "name", null: false
+    t.boolean "notes_required", default: false, null: false
+    t.boolean "system_protected", default: false, null: false
+    t.timestamptz "updated_at", null: false
+    t.index ["code"], name: "index_adjustment_reasons_on_code", unique: true
+    t.check_constraint "direction::text = ANY (ARRAY['increase'::character varying, 'decrease'::character varying, 'either'::character varying]::text[])", name: "adjustment_reasons_direction_valid"
+  end
 
   create_table "audit_events", id: :uuid, default: nil, force: :cascade do |t|
     t.string "action", null: false
@@ -49,7 +68,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_11_154000) do
     t.index ["outcome", "occurred_at"], name: "index_audit_events_on_outcome_and_occurred_at"
     t.index ["store_id", "occurred_at"], name: "index_audit_events_on_store_id_and_occurred_at"
     t.index ["subject_type", "subject_id"], name: "index_audit_events_on_subject_type_and_subject_id"
-    t.check_constraint "outcome::text = ANY (ARRAY['succeeded'::character varying, 'failed'::character varying, 'denied'::character varying]::text[])", name: "audit_events_outcome_valid"
+    t.check_constraint "outcome::text = ANY (ARRAY['succeeded'::character varying::text, 'failed'::character varying::text, 'denied'::character varying::text])", name: "audit_events_outcome_valid"
   end
 
   create_table "departments", id: :uuid, default: nil, force: :cascade do |t|
@@ -107,25 +126,144 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_11_154000) do
     t.index ["active", "account_number"], name: "index_gl_accounts_on_active_and_account_number"
     t.index ["parent_id"], name: "index_gl_accounts_on_parent_id"
     t.check_constraint "account_category::text = 'cash'::text AND account_type::text = 'asset'::text OR account_category::text = 'accounts_receivable'::text AND account_type::text = 'asset'::text OR account_category::text = 'inventory'::text AND account_type::text = 'asset'::text OR account_category::text = 'other_current_asset'::text AND account_type::text = 'asset'::text OR account_category::text = 'fixed_asset'::text AND account_type::text = 'asset'::text OR account_category::text = 'accounts_payable'::text AND account_type::text = 'liability'::text OR account_category::text = 'other_current_liability'::text AND account_type::text = 'liability'::text OR account_category::text = 'long_term_liability'::text AND account_type::text = 'liability'::text OR account_category::text = 'equity'::text AND account_type::text = 'equity'::text OR account_category::text = 'sales'::text AND account_type::text = 'revenue'::text OR account_category::text = 'sales_returns'::text AND account_type::text = 'revenue'::text OR account_category::text = 'other_revenue'::text AND account_type::text = 'revenue'::text OR account_category::text = 'cost_of_goods_sold'::text AND account_type::text = 'expense'::text OR account_category::text = 'freight_in'::text AND account_type::text = 'expense'::text OR account_category::text = 'inventory_shrinkage'::text AND account_type::text = 'expense'::text OR account_category::text = 'inventory_adjustment'::text AND account_type::text = 'expense'::text OR account_category::text = 'inventory_write_down'::text AND account_type::text = 'expense'::text OR account_category::text = 'other_expense'::text AND account_type::text = 'expense'::text", name: "gl_accounts_category_matches_type"
-    t.check_constraint "account_type::text = ANY (ARRAY['asset'::character varying, 'liability'::character varying, 'equity'::character varying, 'revenue'::character varying, 'expense'::character varying]::text[])", name: "gl_accounts_account_type_valid"
+    t.check_constraint "account_type::text = ANY (ARRAY['asset'::character varying::text, 'liability'::character varying::text, 'equity'::character varying::text, 'revenue'::character varying::text, 'expense'::character varying::text])", name: "gl_accounts_account_type_valid"
     t.check_constraint "parent_id IS NULL OR parent_id <> id", name: "gl_accounts_parent_not_self"
+  end
+
+  create_table "idempotency_operations", id: :uuid, default: nil, force: :cascade do |t|
+    t.timestamptz "completed_at"
+    t.timestamptz "created_at", null: false
+    t.text "error_message"
+    t.uuid "idempotency_key", null: false
+    t.string "operation_type", null: false
+    t.string "payload_hash", null: false
+    t.uuid "result_id"
+    t.jsonb "result_payload", default: {}, null: false
+    t.string "result_type"
+    t.uuid "source_id", null: false
+    t.string "status", default: "in_flight", null: false
+    t.timestamptz "updated_at", null: false
+    t.index ["source_id", "operation_type", "idempotency_key"], name: "index_idempotency_operations_on_scope_key", unique: true
+    t.check_constraint "status::text = ANY (ARRAY['in_flight'::character varying, 'completed'::character varying, 'failed'::character varying]::text[])", name: "idempotency_operations_status_valid"
   end
 
   create_table "identifier_registry", id: :uuid, default: nil, force: :cascade do |t|
     t.timestamptz "created_at", null: false
     t.string "identifier_kind", null: false
+    t.uuid "inventory_unit_id"
     t.uuid "product_id"
     t.uuid "product_variant_id"
     t.timestamptz "retired_at"
     t.timestamptz "updated_at", null: false
     t.string "value", limit: 13, null: false
+    t.index ["inventory_unit_id"], name: "index_identifier_registry_inventory_unit", unique: true, where: "((identifier_kind)::text = 'inventory_unit'::text)"
     t.index ["product_id"], name: "index_identifier_registry_active_product_primary", unique: true, where: "(((identifier_kind)::text = 'product_primary'::text) AND (retired_at IS NULL))"
     t.index ["product_variant_id"], name: "index_identifier_registry_active_variant_industry", unique: true, where: "(((identifier_kind)::text = 'variant_industry'::text) AND (retired_at IS NULL))"
     t.index ["product_variant_id"], name: "index_identifier_registry_variant_sku", unique: true, where: "((identifier_kind)::text = 'variant_sku'::text)"
     t.index ["value"], name: "index_identifier_registry_on_value", unique: true
-    t.check_constraint "((product_id IS NOT NULL)::integer + (product_variant_id IS NOT NULL)::integer) <= 1 AND (retired_at IS NOT NULL OR identifier_kind::text = 'product_primary'::text AND product_id IS NOT NULL AND product_variant_id IS NULL OR (identifier_kind::text = ANY (ARRAY['variant_sku'::character varying, 'variant_industry'::character varying]::text[])) AND product_variant_id IS NOT NULL AND product_id IS NULL)", name: "identifier_registry_owner_matches_kind"
-    t.check_constraint "identifier_kind::text = ANY (ARRAY['product_primary'::character varying, 'variant_sku'::character varying, 'variant_industry'::character varying]::text[])", name: "identifier_registry_kind_valid"
+    t.check_constraint "((product_id IS NOT NULL)::integer + (product_variant_id IS NOT NULL)::integer + (inventory_unit_id IS NOT NULL)::integer) <= 1 AND (retired_at IS NOT NULL OR identifier_kind::text = 'product_primary'::text AND product_id IS NOT NULL AND product_variant_id IS NULL AND inventory_unit_id IS NULL OR (identifier_kind::text = ANY (ARRAY['variant_sku'::character varying, 'variant_industry'::character varying]::text[])) AND product_variant_id IS NOT NULL AND product_id IS NULL AND inventory_unit_id IS NULL OR identifier_kind::text = 'inventory_unit'::text AND inventory_unit_id IS NOT NULL AND product_id IS NULL AND product_variant_id IS NULL)", name: "identifier_registry_owner_matches_kind"
+    t.check_constraint "identifier_kind::text = ANY (ARRAY['product_primary'::character varying, 'variant_sku'::character varying, 'variant_industry'::character varying, 'inventory_unit'::character varying]::text[])", name: "identifier_registry_kind_valid"
     t.check_constraint "value::text ~ '^[0-9]{13}$'::text", name: "identifier_registry_value_shape"
+  end
+
+  create_table "inventory_adjustments", id: :uuid, default: nil, force: :cascade do |t|
+    t.bigint "acquisition_unit_cost_cents"
+    t.uuid "adjustment_reason_id", null: false
+    t.date "business_date", null: false
+    t.timestamptz "created_at", null: false
+    t.uuid "created_by_id", null: false
+    t.uuid "inventory_unit_id"
+    t.text "notes"
+    t.timestamptz "occurred_at", null: false
+    t.timestamptz "posted_at", null: false
+    t.uuid "product_variant_id", null: false
+    t.integer "quantity_delta", null: false
+    t.uuid "reversal_of_id"
+    t.timestamptz "reversed_at"
+    t.uuid "store_id", null: false
+    t.timestamptz "updated_at", null: false
+    t.index ["reversal_of_id"], name: "index_inventory_adjustments_on_reversal_of_id", unique: true, where: "(reversal_of_id IS NOT NULL)"
+    t.index ["store_id", "product_variant_id", "occurred_at"], name: "idx_on_store_id_product_variant_id_occurred_at_1be029f922"
+    t.check_constraint "acquisition_unit_cost_cents IS NULL OR acquisition_unit_cost_cents >= 0", name: "inventory_adjustments_cost_nonnegative"
+    t.check_constraint "quantity_delta <> 0", name: "inventory_adjustments_quantity_nonzero"
+  end
+
+  create_table "inventory_balances", id: :uuid, default: nil, force: :cascade do |t|
+    t.timestamptz "created_at", null: false
+    t.bigint "inventory_value_cents", default: 0, null: false
+    t.integer "lock_version", default: 0, null: false
+    t.integer "on_hand_quantity", default: 0, null: false
+    t.uuid "product_variant_id", null: false
+    t.uuid "store_id", null: false
+    t.timestamptz "updated_at", null: false
+    t.index ["store_id", "product_variant_id"], name: "index_inventory_balances_on_store_id_and_product_variant_id", unique: true
+  end
+
+  create_table "inventory_ledger_entries", id: :uuid, default: nil, force: :cascade do |t|
+    t.uuid "actor_id", null: false
+    t.string "actor_type", null: false
+    t.date "business_date", null: false
+    t.timestamptz "created_at", null: false
+    t.integer "effect_sequence", default: 0, null: false
+    t.string "entry_type", null: false
+    t.uuid "inventory_unit_id"
+    t.timestamptz "occurred_at", null: false
+    t.uuid "product_variant_id", null: false
+    t.integer "quantity_delta", null: false
+    t.uuid "reversal_of_id"
+    t.uuid "source_id", null: false
+    t.string "source_type", null: false
+    t.uuid "store_id", null: false
+    t.index ["reversal_of_id"], name: "index_inventory_ledger_entries_on_reversal_of_id", unique: true, where: "(reversal_of_id IS NOT NULL)"
+    t.index ["source_type", "source_id", "effect_sequence"], name: "index_inventory_ledger_entries_on_source_effect", unique: true
+    t.index ["store_id", "product_variant_id", "occurred_at"], name: "idx_on_store_id_product_variant_id_occurred_at_f610a1cd86"
+    t.check_constraint "effect_sequence >= 0", name: "inventory_ledger_entries_effect_sequence_nonnegative"
+    t.check_constraint "quantity_delta <> 0", name: "inventory_ledger_entries_quantity_nonzero"
+  end
+
+  create_table "inventory_units", id: :uuid, default: nil, force: :cascade do |t|
+    t.bigint "acquisition_cost_cents", null: false
+    t.bigint "carrying_value_cents", null: false
+    t.timestamptz "created_at", null: false
+    t.string "lifecycle_state", default: "on_hand", null: false
+    t.integer "lock_version", default: 0, null: false
+    t.text "notes"
+    t.uuid "product_variant_id", null: false
+    t.bigint "regular_price_cents"
+    t.timestamptz "removed_at"
+    t.uuid "store_id", null: false
+    t.string "unit_identifier", limit: 13, null: false
+    t.timestamptz "updated_at", null: false
+    t.index ["store_id", "product_variant_id", "lifecycle_state"], name: "idx_on_store_id_product_variant_id_lifecycle_state_7edf9fc8ce"
+    t.index ["unit_identifier"], name: "index_inventory_units_on_unit_identifier", unique: true
+    t.check_constraint "acquisition_cost_cents >= 0 AND carrying_value_cents >= 0", name: "inventory_units_costs_nonnegative"
+    t.check_constraint "lifecycle_state::text = 'on_hand'::text AND removed_at IS NULL OR lifecycle_state::text = 'removed'::text AND removed_at IS NOT NULL", name: "inventory_units_removal_consistency"
+    t.check_constraint "lifecycle_state::text = ANY (ARRAY['on_hand'::character varying, 'removed'::character varying]::text[])", name: "inventory_units_lifecycle_valid"
+    t.check_constraint "regular_price_cents IS NULL OR regular_price_cents >= 0", name: "inventory_units_regular_price_nonnegative"
+    t.check_constraint "unit_identifier::text ~ '^[0-9]{13}$'::text", name: "inventory_units_identifier_shape"
+  end
+
+  create_table "inventory_valuation_entries", id: :uuid, default: nil, force: :cascade do |t|
+    t.bigint "acquisition_unit_cost_cents"
+    t.date "business_date", null: false
+    t.jsonb "calculation_metadata", default: {}, null: false
+    t.timestamptz "created_at", null: false
+    t.integer "effect_sequence", default: 0, null: false
+    t.string "entry_type", null: false
+    t.uuid "inventory_unit_id"
+    t.timestamptz "occurred_at", null: false
+    t.uuid "product_variant_id", null: false
+    t.integer "quantity_delta", null: false
+    t.uuid "reversal_of_id"
+    t.uuid "source_id", null: false
+    t.string "source_type", null: false
+    t.uuid "store_id", null: false
+    t.string "valuation_method", null: false
+    t.bigint "value_delta_cents", null: false
+    t.index ["reversal_of_id"], name: "index_inventory_valuation_entries_on_reversal_of_id", unique: true, where: "(reversal_of_id IS NOT NULL)"
+    t.index ["source_type", "source_id", "effect_sequence"], name: "index_inventory_valuation_entries_on_source_effect", unique: true
+    t.check_constraint "effect_sequence >= 0", name: "inventory_valuation_entries_effect_sequence_nonnegative"
+    t.check_constraint "valuation_method::text = ANY (ARRAY['moving_average'::character varying, 'specific_identification'::character varying]::text[])", name: "inventory_valuation_entries_method_valid"
   end
 
   create_table "merchandise_categories", id: :uuid, default: nil, force: :cascade do |t|
@@ -165,8 +303,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_11_154000) do
     t.index ["code"], name: "index_merchandise_classes_on_code", unique: true
     t.check_constraint "NOT buyback_allowed OR used_merchandise_allowed AND inventory_mode::text = 'inventory'::text", name: "merchandise_classes_buyback_implies_used_inventory"
     t.check_constraint "code::text ~ '^[a-z0-9]+(_[a-z0-9]+)*$'::text", name: "merchandise_classes_code_format"
-    t.check_constraint "inventory_mode::text = ANY (ARRAY['inventory'::character varying, 'non_inventory'::character varying]::text[])", name: "merchandise_classes_inventory_mode_valid"
-    t.check_constraint "pricing_method::text = ANY (ARRAY['fixed'::character varying, 'list_price'::character varying, 'cost_based'::character varying, 'open_price'::character varying]::text[])", name: "merchandise_classes_pricing_method_valid"
+    t.check_constraint "inventory_mode::text = ANY (ARRAY['inventory'::character varying::text, 'non_inventory'::character varying::text])", name: "merchandise_classes_inventory_mode_valid"
+    t.check_constraint "pricing_method::text = ANY (ARRAY['fixed'::character varying::text, 'list_price'::character varying::text, 'cost_based'::character varying::text, 'open_price'::character varying::text])", name: "merchandise_classes_pricing_method_valid"
   end
 
   create_table "merchandise_conditions", id: :uuid, default: nil, force: :cascade do |t|
@@ -184,6 +322,27 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_11_154000) do
     t.check_constraint "price_adjustment_bps >= 0", name: "merchandise_conditions_price_adjustment_nonnegative"
   end
 
+  create_table "outbox_messages", id: :uuid, default: nil, force: :cascade do |t|
+    t.uuid "aggregate_id", null: false
+    t.string "aggregate_type", null: false
+    t.integer "aggregate_version"
+    t.integer "attempt_count", default: 0, null: false
+    t.uuid "causation_id"
+    t.uuid "correlation_id", null: false
+    t.timestamptz "created_at", null: false
+    t.timestamptz "delivered_at"
+    t.string "delivery_status", default: "pending", null: false
+    t.string "event_type", null: false
+    t.timestamptz "last_attempted_at"
+    t.timestamptz "occurred_at", null: false
+    t.string "origin", default: "server", null: false
+    t.jsonb "payload", default: {}, null: false
+    t.integer "schema_version", default: 1, null: false
+    t.index ["delivery_status", "created_at"], name: "index_outbox_messages_on_delivery_status_and_created_at"
+    t.index ["event_type"], name: "index_outbox_messages_on_event_type"
+    t.check_constraint "delivery_status::text = ANY (ARRAY['pending'::character varying, 'delivered'::character varying, 'failed'::character varying]::text[])", name: "outbox_messages_delivery_status_valid"
+  end
+
   create_table "permissions", id: :uuid, default: nil, force: :cascade do |t|
     t.boolean "active", default: true, null: false
     t.timestamptz "created_at", null: false
@@ -194,7 +353,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_11_154000) do
     t.string "scope_type", null: false
     t.timestamptz "updated_at", null: false
     t.index ["key"], name: "index_permissions_on_key", unique: true
-    t.check_constraint "scope_type::text = ANY (ARRAY['global'::character varying, 'store'::character varying, 'either'::character varying]::text[])", name: "permissions_scope_type_valid"
+    t.check_constraint "scope_type::text = ANY (ARRAY['global'::character varying::text, 'store'::character varying::text, 'either'::character varying::text])", name: "permissions_scope_type_valid"
   end
 
   create_table "product_variants", id: :uuid, default: nil, force: :cascade do |t|
@@ -225,9 +384,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_11_154000) do
     t.check_constraint "industry_identifier IS NULL OR industry_identifier::text ~ '^[0-9]{13}$'::text", name: "product_variants_industry_identifier_shape"
     t.check_constraint "regular_price_cents IS NULL OR regular_price_cents >= 0", name: "product_variants_regular_price_nonnegative"
     t.check_constraint "sku::text ~ '^[0-9]{13}$'::text", name: "product_variants_sku_shape"
-    t.check_constraint "status::text = ANY (ARRAY['draft'::character varying, 'active'::character varying, 'discontinued'::character varying]::text[])", name: "product_variants_status_valid"
+    t.check_constraint "status::text = ANY (ARRAY['draft'::character varying::text, 'active'::character varying::text, 'discontinued'::character varying::text])", name: "product_variants_status_valid"
     t.check_constraint "variant_type::text = 'standard'::text AND merchandise_condition_id IS NULL OR variant_type::text = 'used'::text AND merchandise_condition_id IS NOT NULL", name: "product_variants_condition_matches_type"
-    t.check_constraint "variant_type::text = ANY (ARRAY['standard'::character varying, 'used'::character varying]::text[])", name: "product_variants_variant_type_valid"
+    t.check_constraint "variant_type::text = ANY (ARRAY['standard'::character varying::text, 'used'::character varying::text])", name: "product_variants_variant_type_valid"
   end
 
   create_table "products", id: :uuid, default: nil, force: :cascade do |t|
@@ -251,7 +410,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_11_154000) do
     t.index ["status", "name"], name: "index_products_on_status_and_name"
     t.check_constraint "list_price_cents IS NULL OR list_price_cents >= 0", name: "products_list_price_nonnegative"
     t.check_constraint "primary_identifier::text ~ '^[0-9]{13}$'::text", name: "products_primary_identifier_shape"
-    t.check_constraint "status::text = ANY (ARRAY['draft'::character varying, 'active'::character varying, 'discontinued'::character varying]::text[])", name: "products_status_valid"
+    t.check_constraint "status::text = ANY (ARRAY['draft'::character varying::text, 'active'::character varying::text, 'discontinued'::character varying::text])", name: "products_status_valid"
   end
 
   create_table "role_assignments", id: :uuid, default: nil, force: :cascade do |t|
@@ -292,7 +451,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_11_154000) do
     t.timestamptz "updated_at", null: false
     t.index "lower((name)::text)", name: "index_roles_on_lower_name", unique: true
     t.index ["key"], name: "index_roles_on_key", unique: true
-    t.check_constraint "assignment_scope::text = ANY (ARRAY['global'::character varying, 'store'::character varying, 'either'::character varying]::text[])", name: "roles_assignment_scope_valid"
+    t.check_constraint "assignment_scope::text = ANY (ARRAY['global'::character varying::text, 'store'::character varying::text, 'either'::character varying::text])", name: "roles_assignment_scope_valid"
   end
 
   create_table "stores", id: :uuid, default: nil, force: :cascade do |t|
@@ -392,7 +551,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_11_154000) do
     t.string "username", null: false
     t.index "lower((email)::text)", name: "index_users_on_lower_email", unique: true, where: "(email IS NOT NULL)"
     t.index "lower((username)::text)", name: "index_users_on_lower_username", unique: true
-    t.check_constraint "actor_type::text = ANY (ARRAY['human'::character varying, 'system'::character varying, 'integration'::character varying, 'scheduled_job'::character varying]::text[])", name: "users_actor_type_valid"
+    t.check_constraint "actor_type::text = ANY (ARRAY['human'::character varying::text, 'system'::character varying::text, 'integration'::character varying::text, 'scheduled_job'::character varying::text])", name: "users_actor_type_valid"
     t.check_constraint "failed_sign_in_count >= 0", name: "users_failed_sign_in_count_nonnegative"
   end
 
@@ -431,8 +590,27 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_11_154000) do
   add_foreign_key "departments", "gl_accounts", column: "sales_revenue_gl_account_id"
   add_foreign_key "departments", "tax_classes", column: "default_tax_class_id"
   add_foreign_key "gl_accounts", "gl_accounts", column: "parent_id"
+  add_foreign_key "identifier_registry", "inventory_units", on_delete: :nullify
   add_foreign_key "identifier_registry", "product_variants", on_delete: :nullify
   add_foreign_key "identifier_registry", "products", on_delete: :nullify
+  add_foreign_key "inventory_adjustments", "adjustment_reasons"
+  add_foreign_key "inventory_adjustments", "inventory_adjustments", column: "reversal_of_id"
+  add_foreign_key "inventory_adjustments", "inventory_units"
+  add_foreign_key "inventory_adjustments", "product_variants"
+  add_foreign_key "inventory_adjustments", "stores"
+  add_foreign_key "inventory_adjustments", "users", column: "created_by_id"
+  add_foreign_key "inventory_balances", "product_variants"
+  add_foreign_key "inventory_balances", "stores"
+  add_foreign_key "inventory_ledger_entries", "inventory_ledger_entries", column: "reversal_of_id"
+  add_foreign_key "inventory_ledger_entries", "inventory_units"
+  add_foreign_key "inventory_ledger_entries", "product_variants"
+  add_foreign_key "inventory_ledger_entries", "stores"
+  add_foreign_key "inventory_units", "product_variants"
+  add_foreign_key "inventory_units", "stores"
+  add_foreign_key "inventory_valuation_entries", "inventory_units"
+  add_foreign_key "inventory_valuation_entries", "inventory_valuation_entries", column: "reversal_of_id"
+  add_foreign_key "inventory_valuation_entries", "product_variants"
+  add_foreign_key "inventory_valuation_entries", "stores"
   add_foreign_key "merchandise_categories", "merchandise_categories", column: "parent_id"
   add_foreign_key "merchandise_categories", "merchandise_classes", column: "default_merchandise_class_id"
   add_foreign_key "merchandise_classes", "departments", column: "default_standard_department_id"

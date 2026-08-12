@@ -69,7 +69,16 @@ module Authorization
       { key: "merchandise.import", group_key: "merchandise", name: "Import merchandise", scope_type: "global" }
     ].freeze
 
-    PERMISSIONS = (PHASE1_PERMISSIONS + PHASE2_PERMISSIONS).freeze
+    PHASE3_PERMISSIONS = [
+      { key: "inventory.view", group_key: "inventory", name: "View inventory", scope_type: "either" },
+      { key: "inventory.adjust", group_key: "inventory", name: "Post inventory adjustments", scope_type: "either" },
+      { key: "inventory.reverse_adjustment", group_key: "inventory", name: "Reverse inventory adjustments", scope_type: "either" },
+      { key: "inventory.manage_adjustment_reasons", group_key: "inventory", name: "Manage adjustment reasons", scope_type: "global" },
+      { key: "inventory.reconcile", group_key: "inventory", name: "Reconcile and rebuild inventory projections", scope_type: "global" },
+      { key: "inventory.backdate", group_key: "inventory", name: "Backdate inventory events", scope_type: "either" }
+    ].freeze
+
+    PERMISSIONS = (PHASE1_PERMISSIONS + PHASE2_PERMISSIONS + PHASE3_PERMISSIONS).freeze
 
     STORE_MANAGER_PHASE2_VIEWS = %w[
       gl_accounts.view
@@ -81,6 +90,12 @@ module Authorization
       products.view
       product_variants.view
       merchandise.lookup
+    ].freeze
+
+    STORE_MANAGER_PHASE3 = %w[
+      inventory.view
+      inventory.adjust
+      inventory.reverse_adjustment
     ].freeze
 
     ROLES = [
@@ -103,7 +118,7 @@ module Authorization
           workstations.deactivate
           workstations.revoke
           audit_events.view
-        ] + STORE_MANAGER_PHASE2_VIEWS
+        ] + STORE_MANAGER_PHASE2_VIEWS + STORE_MANAGER_PHASE3
       },
       {
         key: "associate",
@@ -114,6 +129,7 @@ module Authorization
           merchandise.lookup
           products.view
           product_variants.view
+          inventory.view
         ]
       }
     ].freeze

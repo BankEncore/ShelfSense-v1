@@ -178,6 +178,18 @@ The Phase 2.2 deliverable is:
 
 Authoritative plan: [phase-2.2-ux-foundation.md](docs/planning/phase2.2-ux-foundation/phase-2.2-ux-foundation.md). Conventions: [UX conventions](docs/ux-conventions.md).
 
+### Phase 3: Inventory foundation
+
+Status: implemented (physical and valuation ledgers, single-effect adjustments, moving-average and specific-identification costing, inventory units with `220` identifiers, exact reversal, reconciliation/rebuild, ADR-009/010 platform tables).
+
+Phase 3 establishes authoritative on-hand quantity and carrying value without purchasing, POS, reservations, or transfers. Later workflows must post through the inventory posting boundary.
+
+The Phase 3 deliverable is:
+
+> An authorized user can establish and adjust store/variant inventory, track individually identified units, reverse eligible errors without rewriting history, and reconcile rebuildable balance projections against immutable ledgers.
+
+Authoritative plan: [phase-3-inventory-foundation.md](docs/planning/phase3-inventory-foundation/phase-3-inventory-foundation.md). Contract: [inventory-posting-contract.md](docs/planning/phase3-inventory-foundation/inventory-posting-contract.md).
+
 ## Phase 1 authorization model
 
 Permissions are additive and supplied by roles:

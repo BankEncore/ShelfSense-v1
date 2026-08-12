@@ -51,6 +51,26 @@ Rails.application.routes.draw do
     resources :role_assignments, only: %i[index new create destroy]
     resources :workstations
     resources :audit_events, only: %i[index show]
+    resources :inventory_balances, only: %i[index show], path: "inventory" do
+      member do
+        get :history
+        get :rebuild
+        post :rebuild, action: :confirm_rebuild
+      end
+    end
+    resources :inventory_adjustments, only: %i[show new create] do
+      collection do
+        post :preview
+      end
+      member do
+        get :reverse
+        post :reverse, action: :confirm_reverse
+      end
+    end
+    resources :adjustment_reasons do
+      member { post :reactivate }
+    end
+    resource :inventory_reconciliation, only: %i[show], controller: "inventory_reconciliations"
   end
 
   root "home#show"

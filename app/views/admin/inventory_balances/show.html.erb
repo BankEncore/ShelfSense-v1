@@ -1,0 +1,32 @@
+<% content_for :title, "Inventory balance" %>
+<% variant = @balance.product_variant %>
+
+<%= render "shared/breadcrumbs", crumbs: [
+  { name: "Home", path: root_path },
+  { name: "Inventory", path: admin_inventory_balances_path },
+  { name: variant.sku }
+] %>
+
+<% actions = [] %>
+<% if effective_permissions.include?("inventory.adjust") %>
+  <% actions << link_to("New adjustment", new_admin_inventory_adjustment_path(store_id: @balance.store_id, product_variant_id: variant.id), class: "btn") %>
+<% end %>
+<% actions << link_to("History", history_admin_inventory_balance_path(@balance), class: "btn btn--secondary") %>
+<% if effective_permissions.include?("inventory.reconcile") %>
+  <% actions << link_to("Rebuild", rebuild_admin_inventory_balance_path(@balance), class: "btn btn--secondary") %>
+<% end %>
+
+<%= render "shared/page_header",
+      title: "#{variant.product.name}",
+      subtitle: "#{@balance.store.name} · #{variant.sku}",
+      actions: safe_join(actions, " ") %>
+
+<section class="section surface">
+  <%= render "shared/definition_list", rows: [
+        ["Tracking", variant.derived_inventory_tracking.to_s.humanize],
+        ["On hand", @balance.on_hand_quantity],
+        ["Carrying value", format_money_cents(@balance.inventory_value_cents)],
+        ["Average unit cost", (@balance.derived_average_unit_cost ? @balance.derived_average_unit_cost.round(4).to_s("F") : nil)],
+        ["On-hand units", @unit_count]
+      ] %>
+</section>

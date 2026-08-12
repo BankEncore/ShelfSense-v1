@@ -19,6 +19,8 @@ module Admin
       @products = @index.records.includes(:merchandise_category)
       @variant_counts = ProductVariant.where(product_id: @products.map(&:id)).group(:product_id).count
       @merchandise_categories = MerchandiseCategory.assignable.order(:display_order, :name)
+      @show_inventory = inventory_display_enabled?
+      @on_hand_by_product_id = load_product_on_hand_totals(@products.map(&:id)) if @show_inventory
     end
 
     def show
@@ -26,6 +28,8 @@ module Admin
         .includes(:merchandise_class, :department, :tax_class, :merchandise_condition)
         .order(:sku)
       @recent_audit_events = recent_product_audit_events
+      @show_inventory = inventory_display_enabled?
+      @balances_by_variant_id = load_variant_balances(@product_variants.map(&:id)) if @show_inventory
     end
 
     def new
@@ -202,6 +206,25 @@ module Admin
       @product.errors.add(:list_price, @money_error)
       load_form_options
       render template, status: :unprocessable_entity
+    end
+
+    def inventory_display_enabled?
+      current_store.present? && effective_permissions.include?("inventory.view")
+    end
+
+    def load_product_on_hand_totals(product_ids)
+      return {} if product_ids.empty?
+
+      InventoryBalance.joins(:product_variant)
+        .where(store_id: current_store.id, product_variants: { product_id: product_ids })
+        .group("product_variants.product_id")
+        .sum(:on_hand_quantity)
+    end
+
+    def load_variant_balances(variant_ids)
+      return {} if variant_ids.empty?
+
+      InventoryBalance.where(store_id: current_store.id, product_variant_id: variant_ids).index_by(&:product_variant_id)
     end
   end
 end

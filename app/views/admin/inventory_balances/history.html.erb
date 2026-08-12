@@ -1,0 +1,37 @@
+<% content_for :title, "Inventory history" %>
+<% variant = @balance.product_variant %>
+
+<%= render "shared/breadcrumbs", crumbs: [
+  { name: "Home", path: root_path },
+  { name: "Inventory", path: admin_inventory_balances_path },
+  { name: variant.sku, path: admin_inventory_balance_path(@balance) },
+  { name: "History" }
+] %>
+
+<%= render "shared/page_header", title: "History", subtitle: variant.sku %>
+
+<% if @ledger_entries.empty? %>
+  <%= render "shared/empty_state", title: "No ledger entries" %>
+<% else %>
+  <% rows = @ledger_entries.map { |entry|
+       valuation = @valuation_entries[[entry.source_type, entry.source_id, entry.effect_sequence]]
+       source_link =
+         if entry.source_type == "InventoryAdjustment"
+           link_to("Adjustment", admin_inventory_adjustment_path(entry.source_id))
+         else
+           "#{entry.source_type} #{entry.source_id}"
+         end
+       [
+         format_timestamp(entry.occurred_at),
+         entry.business_date,
+         entry.entry_type.humanize,
+         entry.quantity_delta,
+         valuation ? format_money_cents(valuation.value_delta_cents) : missing_value,
+         source_link,
+         entry.inventory_unit_id
+       ]
+     } %>
+  <%= render "shared/data_table",
+        headers: ["Occurred", "Business date", "Type", "Qty", "Value", "Source", "Unit"],
+        rows: rows %>
+<% end %>

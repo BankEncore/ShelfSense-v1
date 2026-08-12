@@ -17,6 +17,14 @@
 <% if effective_permissions.include?("product_variants.update") && @product_variant.draft? %>
   <% actions << button_to("Delete draft", admin_product_variant_path(@product_variant), method: :delete, class: "btn btn--danger") %>
 <% end %>
+<% if @show_inventory %>
+  <% if @inventory_balance %>
+    <% actions << link_to("View inventory", admin_inventory_balance_path(@inventory_balance), class: "btn btn--secondary") %>
+  <% end %>
+  <% if effective_permissions.include?("inventory.adjust") && current_store %>
+    <% actions << link_to("Adjust inventory", new_admin_inventory_adjustment_path(store_id: current_store.id, product_variant_id: @product_variant.id), class: "btn btn--secondary") %>
+  <% end %>
+<% end %>
 
 <%= render "shared/page_header",
       title: @product_variant.name.presence || "Variant",
@@ -49,6 +57,59 @@
         ["Industry identifier", @product_variant.industry_identifier]
       ] %>
 </section>
+
+<% if @show_inventory %>
+  <% tracking = @product_variant.derived_inventory_tracking %>
+  <% balance = @inventory_balance %>
+  <section class="section surface">
+    <h2>Inventory</h2>
+    <% if tracking.blank? || tracking == "non_inventory" %>
+      <%= render "shared/definition_list", rows: [
+            ["Tracking", tracking.present? ? tracking.humanize : "—"],
+            ["On hand", "—"]
+          ] %>
+    <% else %>
+      <% avg = balance&.derived_average_unit_cost %>
+      <%= render "shared/definition_list", rows: [
+            ["Store", current_store.name],
+            ["Tracking", tracking.humanize],
+            ["On hand", balance ? balance.on_hand_quantity : 0],
+            ["Carrying value", format_money_cents(balance&.inventory_value_cents || 0)],
+            (tracking == "quantity" ? ["Average unit cost", (avg ? format_money_cents(avg.round) : "—")] : nil)
+          ].compact %>
+    <% end %>
+  </section>
+
+  <% if tracking == "individual" %>
+    <section class="section surface">
+      <h2>On-hand units</h2>
+      <% if @on_hand_units.blank? %>
+        <%= render "shared/empty_state",
+              title: "No on-hand units",
+              body: "No on-hand units at this store." %>
+      <% else %>
+        <% unit_rows = @on_hand_units.map { |unit|
+             [
+               balance ? link_to(unit.unit_identifier, admin_inventory_balance_path(balance)) : unit.unit_identifier,
+               format_money_cents(unit.acquisition_cost_cents),
+               format_money_cents(unit.carrying_value_cents),
+               format_money_cents(unit.effective_regular_price_cents),
+               unit.notes.presence || missing_value
+             ]
+           } %>
+        <%= render "shared/data_table",
+              headers: [
+                "Identifier",
+                { text: "Acquisition cost", class: "numeric" },
+                { text: "Carrying cost", class: "numeric" },
+                { text: "Regular price", class: "numeric" },
+                "Notes"
+              ],
+              rows: unit_rows %>
+      <% end %>
+    </section>
+  <% end %>
+<% end %>
 
 <%= render "shared/technical_details", rows: [
       ["ID", @product_variant.id],

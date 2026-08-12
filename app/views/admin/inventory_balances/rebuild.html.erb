@@ -1,0 +1,21 @@
+<% content_for :title, "Rebuild projection" %>
+
+<%= render "shared/breadcrumbs", crumbs: [
+  { name: "Home", path: root_path },
+  { name: "Inventory", path: admin_inventory_balances_path },
+  { name: @balance.product_variant.sku, path: admin_inventory_balance_path(@balance) },
+  { name: "Rebuild" }
+] %>
+
+<%= render "shared/page_header", title: "Confirm projection rebuild" %>
+
+<p>This recomputes the balance from authoritative ledger entries. Ledgers and units are not changed.</p>
+
+<%= form_with url: rebuild_admin_inventory_balance_path(@balance), method: :post, local: true, class: "form" do %>
+  <%= hidden_field_tag :command_token, @command_token %>
+  <%= hidden_field_tag :idempotency_key, @idempotency_key %>
+  <div class="actions">
+    <%= submit_tag "Rebuild projection", class: "btn btn--danger" %>
+    <%= link_to "Cancel", admin_inventory_balance_path(@balance), class: "btn btn--ghost" %>
+  </div>
+<% end %>

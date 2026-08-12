@@ -1,0 +1,71 @@
+<% content_for :title, "New inventory adjustment" %>
+
+<%= render "shared/breadcrumbs", crumbs: [
+  { name: "Home", path: root_path },
+  { name: "Inventory", path: admin_inventory_balances_path },
+  { name: "New adjustment" }
+] %>
+
+<%= render "shared/page_header", title: "New inventory adjustment" %>
+
+<%= form_with url: preview_admin_inventory_adjustments_path, method: :post, local: true, class: "form" do %>
+  <%= hidden_field_tag :command_token, @command_token %>
+  <%= hidden_field_tag :idempotency_key, @idempotency_key %>
+
+  <div class="form-field">
+    <%= label_tag :store_id, "Store" %>
+    <%= select_tag :store_id, options_from_collection_for_select(accessible_stores.order(:name), :id, :name, @store&.id), include_blank: "Select store" %>
+  </div>
+  <div class="form-field">
+    <%= label_tag :product_variant_id, "Variant identifier" %>
+    <%= text_field_tag :product_variant_id, params[:product_variant_id].presence || @product_variant&.sku %>
+    <span class="field-help">SKU, industry identifier, or UUID.</span>
+    <% if @product_variant %>
+      <span class="field-help"><%= @product_variant.product.name %> · <%= @product_variant.sku %> · <%= @product_variant.derived_inventory_tracking %></span>
+    <% end %>
+  </div>
+  <div class="form-field">
+    <%= label_tag :adjustment_reason_id, "Reason" %>
+    <%= select_tag :adjustment_reason_id, options_from_collection_for_select(@reasons, :id, :name) %>
+  </div>
+  <div class="form-field">
+    <%= label_tag :quantity_delta, "Quantity delta" %>
+    <%= number_field_tag :quantity_delta, params[:quantity_delta], required: true %>
+  </div>
+  <%= render "shared/currency_field",
+        name: "acquisition_unit_cost",
+        id: "acquisition_unit_cost",
+        label: "Acquisition unit cost",
+        value: params[:acquisition_unit_cost],
+        help: "Required for increases when the reason requires cost." %>
+  <div class="form-field">
+    <%= label_tag :unit_identifier, "Unit identifier" %>
+    <%= text_field_tag :unit_identifier, params[:unit_identifier] %>
+    <span class="field-help">
+      Individual tracking only. For removals, enter the on-hand unit identifier. For acquisitions, leave blank to generate or enter a desired 220 identifier.
+    </span>
+    <% if @on_hand_units&.any? %>
+      <span class="field-help">On hand at this store: <%= @on_hand_units.map(&:unit_identifier).join(", ") %></span>
+    <% end %>
+  </div>
+  <%= render "shared/currency_field",
+        name: "regular_price",
+        id: "regular_price",
+        label: "Unit regular price",
+        value: params[:regular_price],
+        help: "Individual acquisitions only. Defaults from the variant when blank." %>
+  <div class="form-field">
+    <%= label_tag :notes, "Notes" %>
+    <%= text_area_tag :notes, params[:notes], rows: 3 %>
+  </div>
+  <% if effective_permissions.include?("inventory.backdate") %>
+    <div class="form-field">
+      <%= label_tag :occurred_at, "Occurred at" %>
+      <%= datetime_local_field_tag :occurred_at, params[:occurred_at] %>
+    </div>
+  <% end %>
+  <div class="actions">
+    <%= submit_tag "Preview", class: "btn" %>
+    <%= link_to "Cancel", admin_inventory_balances_path, class: "btn btn--ghost" %>
+  </div>
+<% end %>
