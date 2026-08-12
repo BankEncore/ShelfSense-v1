@@ -9,8 +9,8 @@ Later purchasing, POS, transfer, reservation, and disposition workflows must pos
 - `store`, `product_variant`, `adjustment_reason`, signed `quantity_delta`
 - ADR-009 `source_id` + `idempotency_key` + canonical payload
 - `actor` (Phase 3 UI: user)
-- `negative_stock_policy`: `reject_below_zero` (admin) or future `allow_below_zero` (ADR-014 quantity only; negative value undefined here)
-- optional: unit fields for individual tracking, notes, `occurred_at` with `allow_backdate`
+- `negative_stock_policy`: `reject_below_zero` only in Phase 3. `allow_below_zero` is an ADR-014 future extension and is rejected if supplied.
+- optional: unit fields for individual tracking, notes, `occurred_at` with `allow_backdate` (`inventory.backdate`). Without that permission the server ignores a supplied `occurred_at` and uses current time. Future timestamps are rejected.
 
 ## Atomic effects
 

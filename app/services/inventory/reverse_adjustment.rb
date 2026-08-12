@@ -32,7 +32,7 @@ module Inventory
       payload = {
         adjustment_id: @original.id,
         notes: @notes,
-        occurred_at: @occurred_at&.iso8601(6)
+        occurred_at: (@allow_backdate ? parsed_occurred_at&.iso8601(6) : nil)
       }
       op = Idempotency::OperationService.begin!(
         source_id: @source_id,
@@ -71,7 +71,8 @@ module Inventory
           raise Error, "reversal would reduce on-hand or value below zero"
         end
 
-        occurred_at = @occurred_at.presence || Time.current
+        occurred_at = effective_occurred_at
+        raise Error, "effective time cannot be in the future" if occurred_at > Time.current + 1.second
         business_date = BusinessDate.for_store(original.store, at: occurred_at)
 
         unit = original.inventory_unit
@@ -171,11 +172,39 @@ module Inventory
         reversal
       end
     rescue Error, ActiveRecord::RecordInvalid => e
-      Idempotency::OperationService.fail!(op.operation, message: e.message) if defined?(op) && op && !op.replayed
+      fail_operation!(op, e.message)
       raise Error, e.message
+    rescue StandardError => e
+      fail_operation!(op, e.message)
+      raise
     end
 
     private
+
+    def fail_operation!(op, message)
+      return unless defined?(op) && op && !op.replayed
+
+      Idempotency::OperationService.fail!(op.operation, message: message)
+    end
+
+    def effective_occurred_at
+      @effective_occurred_at ||= begin
+        if @allow_backdate
+          parsed_occurred_at || Time.current
+        else
+          Time.current
+        end
+      end
+    end
+
+    def parsed_occurred_at
+      return if @occurred_at.blank?
+      return @occurred_at if @occurred_at.acts_like?(:time)
+
+      Time.zone.parse(@occurred_at.to_s) || (raise Error, "occurred_at is invalid")
+    rescue ArgumentError
+      raise Error, "occurred_at is invalid"
+    end
 
     def validate_unit_eligibility!(original)
       return if original.inventory_unit_id.blank?

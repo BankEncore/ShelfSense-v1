@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_11_202000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_12_181000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -135,6 +135,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_11_202000) do
     t.timestamptz "created_at", null: false
     t.text "error_message"
     t.uuid "idempotency_key", null: false
+    t.timestamptz "lease_expires_at"
+    t.integer "lock_version", default: 0, null: false
     t.string "operation_type", null: false
     t.string "payload_hash", null: false
     t.uuid "result_id"
@@ -144,6 +146,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_11_202000) do
     t.string "status", default: "in_flight", null: false
     t.timestamptz "updated_at", null: false
     t.index ["source_id", "operation_type", "idempotency_key"], name: "index_idempotency_operations_on_scope_key", unique: true
+    t.check_constraint "status::text <> 'in_flight'::text OR lease_expires_at IS NOT NULL", name: "idempotency_operations_in_flight_has_lease"
     t.check_constraint "status::text = ANY (ARRAY['in_flight'::character varying, 'completed'::character varying, 'failed'::character varying]::text[])", name: "idempotency_operations_status_valid"
   end
 
@@ -197,6 +200,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_11_202000) do
     t.uuid "store_id", null: false
     t.timestamptz "updated_at", null: false
     t.index ["store_id", "product_variant_id"], name: "index_inventory_balances_on_store_id_and_product_variant_id", unique: true
+    t.check_constraint "inventory_value_cents >= 0", name: "inventory_balances_value_nonnegative"
+    t.check_constraint "on_hand_quantity >= 0", name: "inventory_balances_on_hand_nonnegative"
   end
 
   create_table "inventory_ledger_entries", id: :uuid, default: nil, force: :cascade do |t|

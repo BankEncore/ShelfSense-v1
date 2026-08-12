@@ -2,6 +2,7 @@
 
 module Admin
   class InventoryReconciliationsController < BaseController
+    before_action :require_store_context
     before_action -> { require_permission!("inventory.reconcile") }
 
     def show

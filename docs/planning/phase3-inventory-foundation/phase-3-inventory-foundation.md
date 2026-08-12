@@ -32,15 +32,15 @@ Phase 3 models physical on-hand inventory and valuation only. Purchasing, POS, r
 | Quantity costing | Moving weighted average over authoritative integer-cent total value and quantity. |
 | Individual costing | Specific identification using the unit's integer-cent carrying value. |
 | Money | All committed monetary amounts use integer `_cents` fields. Fractional average cost is a derived ratio, not stored authority. |
-| Negative stock | Phase 3 administrative operations reject negative on-hand. The posting boundary supports a separately authorized future policy required by ADR-014. Negative carrying-value semantics under that future policy are deferred to the POS/ADR-014 workflow. |
+| Negative stock | Phase 3 posting implements only `reject_below_zero`. `inventory_balances` require nonnegative quantity and value. ADR-014 `allow_below_zero` is a documented future extension and is not callable in Phase 3. |
 | Availability | Reservations and unavailable allocations are deferred; in Phase 3, `available = on_hand`. |
 | Conditions | Condition belongs to the product variant. An inventory unit cannot override it. |
-| Unit sell price | Phase 3 adds `inventory_units.regular_price_cents`, defaulted from `product_variants.regular_price_cents` at acquisition. Phase 2 has no unit price field. |
+| Unit sell price | Phase 3 adds `inventory_units.regular_price_cents`, defaulted from `product_variants.regular_price_cents` at acquisition and overridable for that copy. Valuation uses acquisition/carrying value, not this field. Later unit price correction is an audited pricing workflow outside Phase 3. **Changed from an earlier revision that deferred this column.** |
 | Immutability | Posted adjustments and ledger entries are not edited or deleted normally. Corrections use reversal or a new adjustment. |
 | Concurrency | Posting uses a pessimistic balance-row lock; `lock_version` serves stale-form detection where applicable. |
-| Idempotency | Commands use the scoped ADR-009 operation record and payload hash. Phase 3 introduces that shared infrastructure if absent. |
+| Idempotency | Commands use the scoped ADR-009 operation record and payload hash, including lease-based recovery of stale `in_flight` operations and same-payload retry of `failed` operations. |
 | Identifiers | UUIDv7 applies to domain PKs/FKs. Scannable identifiers follow the **implemented** Phase 2 contract and the identifier registry. |
-| Operational dates | Inventory facts carry `business_date`; event and posting timestamps use PostgreSQL `timestamptz`. |
+| Operational dates | Inventory facts persist `business_date` with `occurred_at` and `posted_at`. `business_date` is the store-local operational date derived from the accepted `occurred_at`. **Changed from an earlier revision that deferred stored `business_date`.** |
 | Currency | Inventory valuation uses the system base currency; mixed-currency inventory is deferred. |
 | Platform events | Phase 3 introduces ADR-010 transactional outbox recording for inventory domain events if absent. |
 
@@ -323,8 +323,8 @@ Unique index:
 | `id` | uuid | PK; UUIDv7 |
 | `store_id` | uuid | Required FK |
 | `product_variant_id` | uuid | Required FK |
-| `on_hand_quantity` | integer | Required; default `0`; Phase 3 admin operations do not make it negative |
-| `inventory_value_cents` | integer | Required; default `0`; nonnegative under Phase 3 admin policy |
+| `on_hand_quantity` | integer | Required; default `0`; `CHECK (on_hand_quantity >= 0)` |
+| `inventory_value_cents` | integer | Required; default `0`; `CHECK (inventory_value_cents >= 0)` |
 | `lock_version` | integer | Required; default `0` |
 | timestamps | timestamptz | Required |
 
@@ -334,7 +334,7 @@ Unique index:
 (store_id, product_variant_id)
 ```
 
-Do not store average, reserved, unavailable, or available quantity. When on-hand is zero, value must be zero.
+Do not store average, reserved, unavailable, or available quantity. When on-hand is zero, value must be zero. Phase 3 posting rejects any policy other than `reject_below_zero`; the database checks enforce the nonnegative projection.
 
 ### 7.6 `inventory_units`
 
@@ -365,7 +365,7 @@ The repository does not yet ship a general idempotency-operation table. Phase 3 
 (source_id, operation_type, idempotency_key)
 ```
 
-with canonical payload hash, operation status, stored result/reference, and retention long enough for retries. Required operation types include:
+with canonical payload hash, operation status, stored result/reference, a 2-minute `lease_expires_at` on `in_flight` rows, `lock_version`, and retention long enough for retries. Stale `in_flight` leases may be reclaimed; `failed` operations with the same payload may retry. Required operation types include:
 
 ```text
 post_inventory_adjustment
@@ -397,31 +397,21 @@ No controller, callback, import, or future workflow may update balances directly
 
 ### 8.3 Negative-stock policy
 
-The posting boundary accepts an internal operation policy such as:
+Phase 3 posting implements only:
 
 ```text
 reject_below_zero
-allow_below_zero
 ```
 
-Rules:
+Any other policy, including `allow_below_zero`, is rejected. Resulting on-hand quantity and carrying value must be nonnegative. `inventory_balances` enforce both with database checks.
 
-- every Phase 3 administrative adjustment and reversal uses `reject_below_zero`;
-- no general UI caller may select the policy;
-- individual tracking can never be negative;
-- the future POS/offline consolidation workflow may use `allow_below_zero` only under ADR-014 and explicit authorization;
-- allowed negative **quantity** outcomes must be auditable and operationally visible; and
-- Phase 3 does **not** define negative `inventory_value_cents` semantics under `allow_below_zero`; that policy belongs to the future POS/ADR-014 workflow.
-
-Phase 3 does not implement the future exception's UI, quarantine, or reconciliation workflow. This extension point prevents the administrative rule from becoming an unconditional low-level invariant.
+ADR-014 remains a documented future extension for POS/offline consolidation. Phase 3 does not make `allow_below_zero` callable, and does not define negative carrying-value semantics.
 
 ### 8.4 Business date and backdating
 
-`posted_at` records commit time. `occurred_at` records effective event time. `business_date` records the store-local operational date under ADR-007.
+`posted_at` records commit time. `occurred_at` records effective event time. `business_date` records the store-local operational date under ADR-007, derived from the **accepted** `occurred_at` in the store's timezone. Ledger and valuation rows copy the adjustment's business date.
 
-The server derives business date from the store and effective timestamp unless the actor has `inventory.backdate`. Ledger and valuation rows copy the adjustment's business date.
-
-Quantity-tracked valuation follows posting order. Ordinary users cannot post an effective time earlier than the latest inventory event for the same store/variant. Actors with `inventory.backdate` may supply an earlier effective time within documented limits; materially backdated valuation replay remains deferred.
+Without `inventory.backdate`, a supplied `occurred_at` is ignored and the server uses `Time.current`. With `inventory.backdate`, an earlier effective timestamp may be accepted within documented limits. Future timestamps are always rejected. Ordinary posting still cannot precede the latest inventory event for the same store/variant unless `inventory.backdate` is granted. Materially backdated valuation replay remains deferred.
 
 ### 8.5 Outbox
 

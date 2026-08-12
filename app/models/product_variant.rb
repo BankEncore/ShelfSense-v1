@@ -43,14 +43,19 @@ class ProductVariant < ApplicationRecord
   end
 
   def derived_inventory_tracking
-    return nil if merchandise_class.blank?
+    self.class.derived_inventory_tracking_for(
+      inventory_mode: merchandise_class&.inventory_mode,
+      variant_type: variant_type
+    )
+  end
 
-    case [ merchandise_class.inventory_mode, variant_type ]
+  def self.derived_inventory_tracking_for(inventory_mode:, variant_type:)
+    return nil if inventory_mode.blank? || variant_type.blank?
+
+    case [ inventory_mode, variant_type ]
     when %w[inventory standard] then "quantity"
     when %w[inventory used] then "individual"
     when %w[non_inventory standard] then "non_inventory"
-    else
-      nil
     end
   end
 

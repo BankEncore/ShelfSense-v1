@@ -26,12 +26,12 @@ module Inventory
 
       ledgers = InventoryLedgerEntry.all
       ledgers = ledgers.where(store_id: @store.id) if @store
-      ledgers.select(:store_id, :product_variant_id).distinct.find_each do |row|
-        next if InventoryBalance.exists?(store_id: row.store_id, product_variant_id: row.product_variant_id)
+      ledgers.distinct.pluck(:store_id, :product_variant_id).each do |store_id, product_variant_id|
+        next if InventoryBalance.exists?(store_id: store_id, product_variant_id: product_variant_id)
 
         drifts << Drift.new(
-          store_id: row.store_id,
-          product_variant_id: row.product_variant_id,
+          store_id: store_id,
+          product_variant_id: product_variant_id,
           kind: "missing_balance",
           expected: nil,
           actual: nil,

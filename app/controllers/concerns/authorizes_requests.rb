@@ -31,7 +31,7 @@ module AuthorizesRequests
   end
 
   def authorize!(permission_key, store: current_store)
-    return if Authorization::PermissionEvaluator.allowed?(
+    return true if Authorization::PermissionEvaluator.allowed?(
       user: current_user,
       permission_key: permission_key,
       store: store
@@ -48,13 +48,18 @@ module AuthorizesRequests
       metadata: { path: request.fullpath }
     )
     redirect_to root_path, alert: "You are not authorized to perform that action."
+    false
   end
 
   def require_store_context
     return if current_store.present?
-    return redirect_to new_store_selection_path if accessible_stores.exists?
 
-    redirect_to root_path, alert: "No accessible store is available for your account."
+    if accessible_stores.exists?
+      redirect_to new_store_selection_path
+    else
+      redirect_to root_path, alert: "No accessible store is available for your account."
+    end
+    throw :abort
   end
 
   def resolve_current_store

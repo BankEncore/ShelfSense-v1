@@ -39,11 +39,15 @@ module Admin
     end
 
     def rebuild
+      return unless authorize!("inventory.reconcile", store: @balance.store)
+
       @command_token = SecureRandom.uuid_v7
       @idempotency_key = SecureRandom.uuid_v7
     end
 
     def confirm_rebuild
+      return unless authorize!("inventory.reconcile", store: @balance.store)
+
       Inventory::RebuildProjection.call(
         store: @balance.store,
         product_variant: @balance.product_variant,
@@ -60,7 +64,7 @@ module Admin
 
     def set_balance
       @balance = InventoryBalance.find(params[:id])
-      authorize!("inventory.view", store: @balance.store)
+      throw :abort unless authorize!("inventory.view", store: @balance.store)
     end
   end
 end

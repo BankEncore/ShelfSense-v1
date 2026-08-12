@@ -5,6 +5,17 @@ module Inventory
     PER_PAGE = 50
     Result = Struct.new(:records, :page, :total_count, :total_pages, keyword_init: true)
 
+    DERIVED_TRACKING_SQL = <<~SQL.squish
+      CASE
+        WHEN merchandise_classes.inventory_mode = 'inventory'
+             AND product_variants.variant_type = 'standard' THEN 'quantity'
+        WHEN merchandise_classes.inventory_mode = 'inventory'
+             AND product_variants.variant_type = 'used' THEN 'individual'
+        WHEN merchandise_classes.inventory_mode = 'non_inventory'
+             AND product_variants.variant_type = 'standard' THEN 'non_inventory'
+      END
+    SQL
+
     def self.call(**attrs)
       new(**attrs).call
     end
@@ -18,21 +29,24 @@ module Inventory
 
     def call
       scope = InventoryBalance.where(store_id: @store_ids).includes(product_variant: [ :product, :merchandise_class ])
+      if @q.present? || @tracking.present?
+        scope = scope.joins(product_variant: [ :product, :merchandise_class ])
+      end
+
       if @q.present?
         normalized = @q.gsub(/[\s\-]/, "").upcase
         like = sanitize_like(normalized)
-        scope = scope.joins(product_variant: :product).where(
+        scope = scope.where(
           "products.primary_identifier LIKE :q OR product_variants.sku LIKE :q OR product_variants.industry_identifier LIKE :q",
           q: "#{like}%"
         )
       end
 
       if @tracking.present?
-        ids = scope.select { |b| b.product_variant.derived_inventory_tracking == @tracking }.map(&:id)
-        scope = InventoryBalance.where(id: ids).includes(product_variant: [ :product, :merchandise_class ])
+        scope = scope.where("#{DERIVED_TRACKING_SQL} = ?", @tracking)
       end
 
-      total = scope.count
+      total = scope.unscope(:includes).count
       total_pages = [ (total.to_f / PER_PAGE).ceil, 1 ].max
       page = @page.to_i
       page = 1 if page < 1

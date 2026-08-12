@@ -91,8 +91,19 @@ module Inventory
         balance
       end
     rescue Error, ActiveRecord::RecordInvalid => e
-      Idempotency::OperationService.fail!(op.operation, message: e.message) if defined?(op) && op && !op.replayed
+      fail_operation!(op, e.message)
       raise Error, e.message
+    rescue StandardError => e
+      fail_operation!(op, e.message)
+      raise
+    end
+
+    private
+
+    def fail_operation!(op, message)
+      return unless defined?(op) && op && !op.replayed
+
+      Idempotency::OperationService.fail!(op.operation, message: message)
     end
   end
 end

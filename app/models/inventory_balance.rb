@@ -7,6 +7,8 @@ class InventoryBalance < ApplicationRecord
   belongs_to :product_variant
 
   validates :on_hand_quantity, :inventory_value_cents, presence: true
+  validates :on_hand_quantity, :inventory_value_cents,
+            numericality: { only_integer: true, greater_than_or_equal_to: 0 }
 
   def derived_average_unit_cost
     return if on_hand_quantity.to_i <= 0

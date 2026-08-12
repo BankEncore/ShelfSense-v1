@@ -8,12 +8,16 @@ module Admin
     before_action :set_adjustment, only: %i[show reverse confirm_reverse]
 
     def show
+      return unless authorize!("inventory.view", store: @adjustment.store)
+
       @ledger = InventoryLedgerEntry.find_by(source_type: "InventoryAdjustment", source_id: @adjustment.id)
       @valuation = InventoryValuationEntry.find_by(source_type: "InventoryAdjustment", source_id: @adjustment.id)
     end
 
     def new
       @store = resolve_store
+      return unless @store.nil? || authorize!("inventory.adjust", store: @store)
+
       @product_variant = resolve_product_variant(params[:product_variant_id]) if params[:product_variant_id].present?
       @reasons = AdjustmentReason.active.where.not(code: "reversal").order(:code)
       @command_token = SecureRandom.uuid_v7
@@ -26,6 +30,8 @@ module Admin
 
     def preview
       @store = Store.find(params.require(:store_id))
+      return unless authorize!("inventory.adjust", store: @store)
+
       @product_variant = resolve_product_variant!(params.require(:product_variant_id))
       reason = AdjustmentReason.find(params.require(:adjustment_reason_id))
       cost = parse_money(params[:acquisition_unit_cost])
@@ -41,7 +47,7 @@ module Admin
         unit_identifier: params[:unit_identifier].presence,
         notes: params[:notes],
         allow_backdate: effective_permissions.include?("inventory.backdate"),
-        occurred_at: params[:occurred_at].presence,
+        occurred_at: occurred_at_param,
         regular_price_cents: parse_money(params[:regular_price])
       )
       @command_token = params[:command_token]
@@ -58,6 +64,8 @@ module Admin
 
     def create
       store = Store.find(params.require(:store_id))
+      return unless authorize!("inventory.adjust", store: store)
+
       variant = resolve_product_variant!(params.require(:product_variant_id))
       reason = AdjustmentReason.find(params.require(:adjustment_reason_id))
       cost = parse_money(params[:acquisition_unit_cost])
@@ -74,7 +82,7 @@ module Admin
         regular_price_cents: parse_money(params[:regular_price]),
         notes: params[:notes],
         allow_backdate: effective_permissions.include?("inventory.backdate"),
-        occurred_at: params[:occurred_at].presence,
+        occurred_at: occurred_at_param,
         negative_stock_policy: "reject_below_zero"
       )
       redirect_to admin_inventory_adjustment_path(adjustment), notice: "Adjustment posted."
@@ -84,11 +92,15 @@ module Admin
     end
 
     def reverse
+      return unless authorize!("inventory.reverse_adjustment", store: @adjustment.store)
+
       @command_token = SecureRandom.uuid_v7
       @idempotency_key = SecureRandom.uuid_v7
     end
 
     def confirm_reverse
+      return unless authorize!("inventory.reverse_adjustment", store: @adjustment.store)
+
       reversal = Inventory::ReverseAdjustment.call(
         adjustment: @adjustment,
         actor: current_user,
@@ -141,6 +153,12 @@ module Admin
       else
         raise ArgumentError, result.message.presence || "Variant not found"
       end
+    end
+
+    def occurred_at_param
+      return unless effective_permissions.include?("inventory.backdate")
+
+      params[:occurred_at].presence
     end
 
     def parse_money(raw)

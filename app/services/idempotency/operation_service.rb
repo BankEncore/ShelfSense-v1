@@ -6,6 +6,7 @@ module Idempotency
     class Error < StandardError; end
 
     STATUSES = %w[in_flight completed failed].freeze
+    LEASE_DURATION = 2.minutes
 
     Result = Struct.new(:operation, :replayed, keyword_init: true)
 
@@ -29,8 +30,18 @@ module Idempotency
       if existing
         raise PayloadMismatchError, "idempotency key reused with a different payload" if existing.payload_hash != hash
         return Result.new(operation: existing, replayed: true) if existing.status == "completed"
-        raise Error, "idempotency operation is still in flight" if existing.status == "in_flight"
-        raise Error, "idempotency operation previously failed: #{existing.error_message}" if existing.status == "failed"
+
+        if existing.status == "in_flight"
+          reclaimed = reclaim_stale_in_flight!(existing)
+          return Result.new(operation: reclaimed, replayed: false) if reclaimed
+
+          raise Error, "idempotency operation is still in flight"
+        end
+
+        if existing.status == "failed"
+          retried = retry_failed!(existing)
+          return Result.new(operation: retried, replayed: false)
+        end
       end
 
       operation = IdempotencyOperation.create!(
@@ -38,7 +49,8 @@ module Idempotency
         operation_type: operation_type,
         idempotency_key: idempotency_key,
         payload_hash: hash,
-        status: "in_flight"
+        status: "in_flight",
+        lease_expires_at: Time.current + LEASE_DURATION
       )
       Result.new(operation: operation, replayed: false)
     rescue ActiveRecord::RecordNotUnique
@@ -52,7 +64,8 @@ module Idempotency
         result_id: result_id,
         result_payload: result_payload,
         completed_at: Time.current,
-        error_message: nil
+        error_message: nil,
+        lease_expires_at: nil
       )
       operation
     end
@@ -61,13 +74,54 @@ module Idempotency
       operation.update!(
         status: "failed",
         error_message: message,
-        completed_at: Time.current
+        completed_at: Time.current,
+        lease_expires_at: nil
       )
       operation
     end
 
     def canonical_hash(payload)
       Digest::SHA256.hexdigest(CanonicalJson.dump(payload))
+    end
+
+    private
+
+    def reclaim_stale_in_flight!(operation)
+      now = Time.current
+      return if operation.lease_expires_at.blank? || operation.lease_expires_at >= now
+
+      updated = IdempotencyOperation.where(
+        id: operation.id,
+        status: "in_flight",
+        lock_version: operation.lock_version
+      ).where("lease_expires_at < ?", now).update_all(
+        lease_expires_at: now + LEASE_DURATION,
+        lock_version: operation.lock_version + 1,
+        error_message: nil,
+        updated_at: now
+      )
+      return unless updated == 1
+
+      operation.reload
+    end
+
+    def retry_failed!(operation)
+      now = Time.current
+      updated = IdempotencyOperation.where(
+        id: operation.id,
+        status: "failed",
+        lock_version: operation.lock_version
+      ).update_all(
+        status: "in_flight",
+        lease_expires_at: now + LEASE_DURATION,
+        lock_version: operation.lock_version + 1,
+        error_message: nil,
+        completed_at: nil,
+        updated_at: now
+      )
+      raise Error, "idempotency operation previously failed: #{operation.error_message}" unless updated == 1
+
+      operation.reload
     end
   end
 

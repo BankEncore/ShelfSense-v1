@@ -4,7 +4,7 @@ module Inventory
   class PostAdjustment
     class Error < StandardError; end
 
-    POLICIES = %w[reject_below_zero allow_below_zero].freeze
+    POLICIES = %w[reject_below_zero].freeze
 
     def self.call(**attrs)
       new(**attrs).call
@@ -179,8 +179,11 @@ module Inventory
         adjustment
       end
     rescue Error, ActiveRecord::RecordInvalid => e
-      Idempotency::OperationService.fail!(op.operation, message: e.message) if defined?(op) && op && !op.replayed
+      fail_operation!(op, e.message)
       raise Error, e.message
+    rescue StandardError => e
+      fail_operation!(op, e.message)
+      raise
     end
 
     private
@@ -200,7 +203,7 @@ module Inventory
         unit_identifier: @unit_identifier,
         regular_price_cents: @regular_price_cents,
         notes: @notes,
-        occurred_at: @occurred_at&.iso8601(6),
+        occurred_at: (@allow_backdate ? parsed_occurred_at&.iso8601(6) : nil),
         negative_stock_policy: @negative_stock_policy
       }
     end
@@ -259,8 +262,16 @@ module Inventory
       raise Error, "unit identifier is required for individual removals" if @inventory_unit_id.blank?
     end
 
+    def fail_operation!(op, message)
+      return unless defined?(op) && op && !op.replayed
+
+      Idempotency::OperationService.fail!(op.operation, message: message)
+    end
+
     def validate_occurred_at!
       at = effective_occurred_at
+      raise Error, "effective time cannot be in the future" if at > Time.current + 1.second
+
       latest = InventoryLedgerEntry.where(store_id: @store.id, product_variant_id: @product_variant.id)
         .maximum(:occurred_at)
       return if latest.blank?
@@ -271,7 +282,22 @@ module Inventory
     end
 
     def effective_occurred_at
-      @effective_occurred_at ||= (@occurred_at.presence || Time.current)
+      @effective_occurred_at ||= begin
+        if @allow_backdate
+          parsed_occurred_at || Time.current
+        else
+          Time.current
+        end
+      end
+    end
+
+    def parsed_occurred_at
+      return if @occurred_at.blank?
+      return @occurred_at if @occurred_at.acts_like?(:time)
+
+      Time.zone.parse(@occurred_at.to_s) || (raise Error, "occurred_at is invalid")
+    rescue ArgumentError
+      raise Error, "occurred_at is invalid"
     end
 
     def business_date
@@ -288,12 +314,14 @@ module Inventory
       return balance if balance
 
       begin
-        InventoryBalance.create!(
-          store: @store,
-          product_variant: @product_variant,
-          on_hand_quantity: 0,
-          inventory_value_cents: 0
-        )
+        InventoryBalance.transaction(requires_new: true) do
+          InventoryBalance.create!(
+            store: @store,
+            product_variant: @product_variant,
+            on_hand_quantity: 0,
+            inventory_value_cents: 0
+          )
+        end
       rescue ActiveRecord::RecordNotUnique
         InventoryBalance.lock.find_by!(store_id: @store.id, product_variant_id: @product_variant.id)
       else
@@ -339,7 +367,7 @@ module Inventory
         }
       else
         removal = -@quantity_delta
-        raise Error, "insufficient on-hand quantity" if @negative_stock_policy == "reject_below_zero" && removal > qty
+        raise Error, "insufficient on-hand quantity" if removal > qty
 
         removed_value =
           if qty <= 0
@@ -366,7 +394,6 @@ module Inventory
     end
 
     def apply_negative_stock_policy!(effects)
-      return if @negative_stock_policy == "allow_below_zero"
       return if effects[:resulting_on_hand] >= 0 && effects[:resulting_value_cents] >= 0
 
       raise Error, "posting would reduce on-hand or value below zero"

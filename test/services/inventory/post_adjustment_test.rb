@@ -105,6 +105,27 @@ class InventoryPostAdjustmentTest < ActiveSupport::TestCase
     assert_equal(-original.quantity_delta, reversal.quantity_delta)
   end
 
+  test "second reversal is rejected" do
+    original = post_qty(5, 200)
+    Inventory::ReverseAdjustment.call(
+      adjustment: original,
+      actor: @actor,
+      source_id: SecureRandom.uuid_v7,
+      idempotency_key: SecureRandom.uuid_v7,
+      notes: "mistake"
+    )
+    error = assert_raises(Inventory::ReverseAdjustment::Error) do
+      Inventory::ReverseAdjustment.call(
+        adjustment: original.reload,
+        actor: @actor,
+        source_id: SecureRandom.uuid_v7,
+        idempotency_key: SecureRandom.uuid_v7,
+        notes: "again"
+      )
+    end
+    assert_match(/already reversed/i, error.message)
+  end
+
   test "individual acquisition and removal" do
     used_klass = merchandise_class(
       code: "inv_used",
@@ -205,6 +226,142 @@ class InventoryPostAdjustmentTest < ActiveSupport::TestCase
       )
     end
     assert_match(/unit identifier is required/i, error.message)
+  end
+
+  test "allow_below_zero and unknown policies are rejected" do
+    error = assert_raises(Inventory::PostAdjustment::Error) do
+      Inventory::PostAdjustment.call(
+        store: @store,
+        product_variant: @variant,
+        adjustment_reason: @opening,
+        quantity_delta: 1,
+        actor: @actor,
+        source_id: SecureRandom.uuid_v7,
+        idempotency_key: SecureRandom.uuid_v7,
+        acquisition_unit_cost_cents: 100,
+        negative_stock_policy: "allow_below_zero"
+      )
+    end
+    assert_match(/unsupported negative stock policy/i, error.message)
+
+    error = assert_raises(Inventory::PostAdjustment::Error) do
+      Inventory::PostAdjustment.call(
+        store: @store,
+        product_variant: @variant,
+        adjustment_reason: @opening,
+        quantity_delta: 1,
+        actor: @actor,
+        source_id: SecureRandom.uuid_v7,
+        idempotency_key: SecureRandom.uuid_v7,
+        acquisition_unit_cost_cents: 100,
+        negative_stock_policy: "unknown_policy"
+      )
+    end
+    assert_match(/unsupported negative stock policy/i, error.message)
+  end
+
+  test "database check rejects negative balances" do
+    post_qty(1, 100)
+    balance = InventoryBalance.find_by!(store: @store, product_variant: @variant)
+    assert_raises(ActiveRecord::StatementInvalid) do
+      InventoryBalance.transaction(requires_new: true) do
+        balance.update_columns(on_hand_quantity: -1)
+      end
+    end
+    assert_raises(ActiveRecord::StatementInvalid) do
+      InventoryBalance.transaction(requires_new: true) do
+        balance.update_columns(inventory_value_cents: -1)
+      end
+    end
+    balance.reload
+    balance.on_hand_quantity = -1
+    assert_not balance.valid?
+  end
+
+  test "unauthorized occurred_at is ignored and posts as now" do
+    supplied = Time.zone.parse("2026-01-15 12:00:00")
+    freeze_time = Time.zone.parse("2026-08-12 15:30:00")
+    travel_to freeze_time do
+      adjustment = Inventory::PostAdjustment.call(
+        store: @store,
+        product_variant: @variant,
+        adjustment_reason: @opening,
+        quantity_delta: 1,
+        actor: @actor,
+        source_id: SecureRandom.uuid_v7,
+        idempotency_key: SecureRandom.uuid_v7,
+        acquisition_unit_cost_cents: 100,
+        occurred_at: supplied,
+        allow_backdate: false
+      )
+      assert_in_delta freeze_time, adjustment.occurred_at, 1
+      assert_equal BusinessDate.for_store(@store, at: freeze_time), adjustment.business_date
+    end
+  end
+
+  test "authorized past occurred_at is accepted and derives business_date" do
+    past = Time.zone.parse("2026-08-01 10:00:00")
+    adjustment = Inventory::PostAdjustment.call(
+      store: @store,
+      product_variant: @variant,
+      adjustment_reason: @opening,
+      quantity_delta: 1,
+      actor: @actor,
+      source_id: SecureRandom.uuid_v7,
+      idempotency_key: SecureRandom.uuid_v7,
+      acquisition_unit_cost_cents: 100,
+      occurred_at: past,
+      allow_backdate: true
+    )
+    assert_in_delta past, adjustment.occurred_at, 1
+    assert_equal BusinessDate.for_store(@store, at: past), adjustment.business_date
+  end
+
+  test "future occurred_at is rejected when backdating is allowed" do
+    error = assert_raises(Inventory::PostAdjustment::Error) do
+      Inventory::PostAdjustment.call(
+        store: @store,
+        product_variant: @variant,
+        adjustment_reason: @opening,
+        quantity_delta: 1,
+        actor: @actor,
+        source_id: SecureRandom.uuid_v7,
+        idempotency_key: SecureRandom.uuid_v7,
+        acquisition_unit_cost_cents: 100,
+        occurred_at: 1.hour.from_now,
+        allow_backdate: true
+      )
+    end
+    assert_match(/future/i, error.message)
+  end
+
+  test "unexpected error marks idempotency operation failed" do
+    boom = Class.new(Inventory::PostAdjustment) do
+      def lock_or_create_balance!
+        raise "boom"
+      end
+    end
+    key = SecureRandom.uuid_v7
+    source = SecureRandom.uuid_v7
+    assert_raises(RuntimeError) do
+      boom.call(
+        store: @store,
+        product_variant: @variant,
+        adjustment_reason: @opening,
+        quantity_delta: 1,
+        actor: @actor,
+        source_id: source,
+        idempotency_key: key,
+        acquisition_unit_cost_cents: 100
+      )
+    end
+    operation = IdempotencyOperation.find_by!(
+      source_id: source,
+      operation_type: "post_inventory_adjustment",
+      idempotency_key: key
+    )
+    assert_equal "failed", operation.status
+    assert_equal "boom", operation.error_message
   end
 
   private
