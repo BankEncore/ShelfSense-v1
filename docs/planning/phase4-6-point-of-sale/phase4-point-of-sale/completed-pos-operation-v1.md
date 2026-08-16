@@ -2,17 +2,19 @@
 
 **Status:** Planning contract (Phase 4)
 
-**Authority:** Canonical shape of a completed POS originating fact for Phase 4 Cash sales. Used by Rails completion today and by a future standalone Register after local completion.
+**Authority:** Canonical shape of a completed POS originating fact for Phase 4 Cash sales. Used by Rails completion today and by a future standalone Register after local completion. Dual authority with normalized Core: [operation-and-core-facts.md](operation-and-core-facts.md) / [ADR-020](../../../adr/ADR-020-pos-operation-envelope-and-core-facts.md).
 
-Companions: [Phase 4 plan](phase4-plan.md), [Phase 4 schema](phase4-schema.md).
+Companions: [Phase 4 plan](phase4-plan.md), [Phase 4 schema](phase4-schema.md), [operation-and-core-facts.md](operation-and-core-facts.md).
 
 ---
 
 ## 1. Purpose
 
-`CompletedPosOperation` is the **interoperability and provenance boundary** for completed POS work.
+`CompletedPosOperation` is the **immutable canonical representation** of a commercial transaction as established by the originating Register (or Rails completion path). It is a complete commercial payload plus operation provenance — not mere metadata.
 
-It always describes an **already-completed** originating fact. Therefore it **always includes permanent receipt identity**.
+It always describes an **already-completed** originating fact and therefore **always includes permanent receipt identity**.
+
+Normalized Core tables materialize the same commercial facts for ordinary business use. No required commercial behavior may depend on parsing the stored envelope. The envelope must remain sufficient to rematerialize Core; Core must remain sufficient to run the business without the envelope.
 
 It is not the Rails UI form payload. It is not a draft. It is not “almost complete pending receipt.”
 
@@ -33,7 +35,7 @@ This payload **does not** claim to be a completed operation and **does not** con
 
 ### 2.2 `CompletedPosOperation` (canonical fact)
 
-Constructed **inside** the authoritative completion transaction after receipt allocation and commercial freeze.
+For Rails, constructed **inside** the authoritative completion transaction after receipt allocation and commercial freeze (not submitted as a pre-built external envelope).
 
 ```text
 CompleteTransactionCommand
@@ -41,10 +43,13 @@ CompleteTransactionCommand
 authoritative completion
    ├── allocate receipt
    ├── freeze commercial facts
-   └── construct CompletedPosOperation v1
-        ↓
-persist facts + Inventory + operation result
+   ├── construct CompletedPosOperation v1
+   ├── persist normalized Core facts
+   ├── persist pos_operations.envelope + payload_hash
+   └── post Inventory / reporting effects
 ```
+
+Envelope and Core must match; written atomically.
 
 ### 2.3 Future standalone
 
@@ -78,7 +83,7 @@ Additive keys may appear in later versions. Material semantic changes (sign rule
 |---|---|
 | `operation.operation_id` | Identity of the **completion operation** |
 | `transaction.transaction_id` | Identity of the **commercial transaction** |
-| `receipt.sequence` / `receipt.number` | Permanent receipt identity assigned at completion |
+| `receipt.sequence` / number snapshots / optional `reference` | Permanent human-facing receipt identity (`S…-R…-T…`) assigned at completion |
 
 Never overload `transaction_id` as the completion idempotency key.
 
@@ -112,36 +117,37 @@ Phase 4 examples use sale + payment only. The sign rule is locked now for Phase 
 
 ## 6. Tax semantics
 
-### Line
+Authority: [pos-tax-contract.md](pos-tax-contract.md) and [ADR-019](../../../adr/ADR-019-pos-sales-tax-model.md).
 
-Preserves merchandise tax **classification**:
+### Line
 
 ```text
 tax_class_id
-tax_class_code   # e.g. physical_book — never a treatment synonym
+tax_class_code   # merchandise classification, e.g. physical_book
 ```
 
-No line-level `tax_treatment`.
+Phase 4: applied Tax Class always equals merchandise Tax Class. No line-level treatment enum.
 
-### Each tax component
+### Each Store Tax determination (`tax_components[]`)
+
+Snapshot **every active** Store Tax for the store, including non-applicable:
 
 ```text
-tax_component_id
-tax_rule_id                 # if useful/available
-component_code_snapshot
-component_name_snapshot
-treatment                   # taxable | exempt | zero_rated | …
-rate_value                  # fixed-precision per Tax contract — not rate_basis_points
-taxable_basis_cents
-tax_cents
+store_tax_id
+store_tax_code
+store_tax_name
+rate_percent              # decimal string, e.g. "5.000" (numeric(6,3))
+applies                   # boolean; non-null on completed facts
+taxable_basis_cents       # basis when applies; else 0
+tax_cents                 # rounded tax when applies; else 0
 calculation_order
 ```
 
-One tax class may yield different treatments under different components.
+Do not omit `applies = false` rows. Do not use abstract `tax_component_id` or `treatment` enums.
 
 ### Rate precision
 
-Do not assume basis points. Rates such as `8.875%` require a Tax-contract-defined fixed scale. Until that contract locks, fixtures may express decimal percentages in test helpers, but persisted/canonical fields use `rate_value` as specified by Tax.
+Sales-tax rates use `numeric(6,3)` / exact decimal strings. Not basis points. Not binary float.
 
 ---
 
@@ -180,8 +186,10 @@ CompletedPosOperation
 │   └── performed_by_user_id
 │
 ├── receipt
-│   ├── sequence
-│   └── number
+│   ├── sequence                  # receipt_sequence
+│   ├── store_number              # snapshot
+│   ├── workstation_number        # snapshot (“Reg”)
+│   └── reference                 # optional derived S003-R02-T0018427
 │
 ├── transaction
 │   ├── transaction_id
@@ -207,12 +215,11 @@ CompletedPosOperation
 │   ├── tax_class_code
 │   ├── merchandise_snapshot
 │   └── tax_components[]
-│         ├── tax_component_id
-│         ├── tax_rule_id
-│         ├── component_code_snapshot
-│         ├── component_name_snapshot
-│         ├── treatment
-│         ├── rate_value
+│         ├── store_tax_id
+│         ├── store_tax_code
+│         ├── store_tax_name
+│         ├── rate_percent            # "5.000"
+│         ├── applies
 │         ├── taxable_basis_cents
 │         ├── tax_cents
 │         └── calculation_order
@@ -230,7 +237,7 @@ CompletedPosOperation
 
 ## 9. Example (Phase 4 Cash sale)
 
-Illustrative only; IDs and rates are placeholders. `rate_value` encoding must match the Tax contract when locked.
+Illustrative only. Includes both applicable and non-applicable Store Tax determinations.
 
 ```json
 {
@@ -247,8 +254,10 @@ Illustrative only; IDs and rates are placeholders. `rate_value` encoding must ma
     "performed_by_user_id": "01920000-0000-7000-8000-000000000050"
   },
   "receipt": {
-    "sequence": 1042,
-    "number": "1-01-0001042"
+    "sequence": 18427,
+    "store_number": "003",
+    "workstation_number": "02",
+    "reference": "S003-R02-T0018427"
   },
   "transaction": {
     "transaction_id": "01920000-0000-7000-8000-000000000100",
@@ -256,8 +265,8 @@ Illustrative only; IDs and rates are placeholders. `rate_value` encoding must ma
     "occurred_at": "2026-08-16T18:04:22Z",
     "business_date": "2026-08-16",
     "subtotal_cents": 1999,
-    "tax_cents": 177,
-    "total_cents": 2176
+    "tax_cents": 105,
+    "total_cents": 2104
   },
   "lines": [
     {
@@ -269,8 +278,8 @@ Illustrative only; IDs and rates are placeholders. `rate_value` encoding must ma
       "reference_unit_price_cents": 1999,
       "selling_unit_price_cents": 1999,
       "extended_selling_amount_cents": 1999,
-      "line_tax_cents": 177,
-      "line_total_cents": 2176,
+      "line_tax_cents": 105,
+      "line_total_cents": 2104,
       "tax_class_id": "01920000-0000-7000-8000-000000000400",
       "tax_class_code": "physical_book",
       "merchandise_snapshot": {
@@ -280,15 +289,34 @@ Illustrative only; IDs and rates are placeholders. `rate_value` encoding must ma
       },
       "tax_components": [
         {
-          "tax_component_id": "01920000-0000-7000-8000-000000000500",
-          "tax_rule_id": "01920000-0000-7000-8000-000000000510",
-          "component_code_snapshot": "state_sales",
-          "component_name_snapshot": "State sales tax",
-          "treatment": "taxable",
-          "rate_value": "TAX_CONTRACT_SCALE_FOR_8.875_PERCENT",
+          "store_tax_id": "01920000-0000-7000-8000-000000000500",
+          "store_tax_code": "state_illinois",
+          "store_tax_name": "Illinois State",
+          "rate_percent": "5.000",
+          "applies": true,
           "taxable_basis_cents": 1999,
-          "tax_cents": 177,
+          "tax_cents": 100,
           "calculation_order": 1
+        },
+        {
+          "store_tax_id": "01920000-0000-7000-8000-000000000510",
+          "store_tax_code": "county_cook",
+          "store_tax_name": "Cook County",
+          "rate_percent": "0.250",
+          "applies": true,
+          "taxable_basis_cents": 1999,
+          "tax_cents": 5,
+          "calculation_order": 2
+        },
+        {
+          "store_tax_id": "01920000-0000-7000-8000-000000000520",
+          "store_tax_code": "local_schaumburg_prepared_food",
+          "store_tax_name": "Schaumburg Prepared Food",
+          "rate_percent": "2.000",
+          "applies": false,
+          "taxable_basis_cents": 0,
+          "tax_cents": 0,
+          "calculation_order": 3
         }
       ]
     }
@@ -298,34 +326,26 @@ Illustrative only; IDs and rates are placeholders. `rate_value` encoding must ma
       "tender_id": "01920000-0000-7000-8000-000000000600",
       "tender_type": "cash",
       "direction": "payment",
-      "amount_cents": 2176,
+      "amount_cents": 2104,
       "amount_presented_cents": 2500,
-      "change_cents": 324
+      "change_cents": 396
     }
   ]
 }
 ```
 
-Replace `rate_value` placeholder with the locked Tax encoding before calling fixtures implementation-ready.
+Component taxes above assume half-up on `1999 × rate / 100` (`5.000%` → 100, `0.250%` → 5). Golden fixtures must compute with the same decimal rules.
 
 ---
 
 ## 10. Golden fixture set (minimum)
 
-Portable fixtures (JSON preferred) covering:
+Portable fixtures (JSON preferred) covering tax cases in [pos-tax-contract.md](pos-tax-contract.md) §14, plus:
 
 | # | Case |
 |---|---|
-| 1 | No-tax / exempt or empty components as designed |
-| 2 | One taxable component |
-| 3 | Multiple non-compounded components |
-| 4 | Fractional-cent rounding (half-up to cents) |
-| 5 | Quantity > 1 |
-| 6 | Exempt treatment on a component |
-| 7 | Zero-rated treatment on a component |
-| 8 | Rate needing finer precision than 0.01% (depends on Tax scale) |
-| 9 | Full envelope including receipt after successful completion |
-| 10 | Idempotent replay: same `operation_id` + payload → identical envelope / result |
+| … | Full envelope including receipt after successful completion |
+| … | Idempotent replay: same `operation_id` + payload → identical envelope / result |
 
 These become the eventual Ruby / .NET parity suite.
 
@@ -337,15 +357,15 @@ Inside one PostgreSQL transaction:
 
 1. Validate working transaction and Cash settlement.  
 2. Begin or reclaim `pos_operations` lease (ADR-009 semantics).  
-3. Allocate `receipt.sequence` / `receipt.number`.  
+3. Allocate `receipt_sequence`; snapshot store/workstation numbers; derive optional compact `reference`.  
 4. Freeze `occurred_at`, `business_date`, line snapshots, tax components, tender.  
-5. Build `CompletedPosOperation` v1 (must include receipt).  
+5. Build `CompletedPosOperation` v1 (must include receipt sequence and number snapshots).  
 6. Persist completed POS rows.  
 7. Post Inventory effects for each sale line.  
-8. Store operation result / envelope reference.  
+8. Store `pos_operations` with full envelope, payload hash, and idempotency completion (`received_at` / `posted_at` as Core processing times).  
 9. Commit.  
 
-On validation or commit failure: no completed transaction, no receipt consumption that escapes the failed transaction, no Inventory effect.
+On validation or commit failure: no completed transaction, no receipt consumption that escapes the failed transaction, no Inventory effect. Envelope and Core must not partially diverge.
 
 ---
 
@@ -354,7 +374,8 @@ On validation or commit failure: no completed transaction, no receipt consumptio
 - Return lines, discounts, approvals, suspend/recall, post-void  
 - Card / Stored Value tenders  
 - Customer identity  
-- Receipt print layout  
-- Offline sync transport framing (envelope remains the business payload later)  
+- Receipt print layout (header presentation is specified in [receipt-identity.md](receipt-identity.md); rendering is Phase 5)  
+- Offline sync transport framing (envelope remains the business payload; transport metadata must not enter the envelope — see [operation-and-core-facts.md](operation-and-core-facts.md))  
+- Required `installation_id` / producer fields (optional until installations exist)  
 
-Extensibility is preserved by versioning and by locking sign, tax-component, and receipt rules now—not by stuffing unused Phase 6 columns into v1.
+Extensibility is preserved by versioning and by locking sign, tax-component, receipt, and envelope/Core dual-authority rules now—not by stuffing unused Phase 6 columns into v1.

@@ -20,6 +20,9 @@ This directory contains the project’s technical authority, development guidanc
 | [Phase 4 POS plan](planning/phase4-6-point-of-sale/phase4-point-of-sale/phase4-plan.md) | Phase 4 scope, locked decisions, build order, and acceptance |
 | [Phase 4 POS schema](planning/phase4-6-point-of-sale/phase4-point-of-sale/phase4-schema.md) | Phase 4 table outline (minimal sessions; tax/receipt/operation locks) |
 | [CompletedPosOperation v1](planning/phase4-6-point-of-sale/phase4-point-of-sale/completed-pos-operation-v1.md) | Canonical completed POS operation contract and completion boundary |
+| [POS tax contract](planning/phase4-6-point-of-sale/phase4-point-of-sale/pos-tax-contract.md) | Store taxes, rules, calculation, and completed tax snapshots (ADR-019) |
+| [Receipt identity](planning/phase4-6-point-of-sale/phase4-point-of-sale/receipt-identity.md) | Compact `S…-R…-T…` transaction reference and receipt header forms (ADR-006) |
+| [POS operation and Core facts](planning/phase4-6-point-of-sale/phase4-point-of-sale/operation-and-core-facts.md) | Canonical envelope vs normalized Core dual authority (ADR-020) |
 | [POS Phases 4–6 plan](planning/phase4-6-point-of-sale/spec.md) | Multi-phase POS sequencing (foundation → cash register → breadth) |
 | [UX conventions](ux-conventions.md) | Shared admin page anatomy, partials, currency boundaries, palette, and Hotwire deferral |
 | [Development guide](development.md) | Docker-only local setup, PostgreSQL configuration, application commands, and troubleshooting |

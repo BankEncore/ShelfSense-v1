@@ -21,3 +21,4 @@ Use database `date` values for calendar concepts such as `business_date`, effect
 - Currency scale and rounding behavior must be known by every calculating component.
 - Credits and reversals use signed amounts where meaningful; constraints follow business meaning rather than blanket non-negativity.
 - A business date is assigned explicitly and is not later inferred from `created_at`.
+- U.S. retail sales-tax rates for POS use `numeric(6,3)` percentage storage per [ADR-019](ADR-019-pos-sales-tax-model.md) rather than basis points.

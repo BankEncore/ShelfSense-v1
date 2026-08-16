@@ -72,7 +72,7 @@ Defines an operational store and reporting boundary.
 Recommended rules:
 
 * Normalize `code` and `store_number` before enforcing uniqueness.  
-* Do not allow `code` to change after it appears in a receipt identity.  
+* Do not allow `store_number` to change after it appears in a completed receipt identity (ADR-006); treat `code` as similarly sticky once operationally relied upon.  
 * Do not allow the final active store to be deactivated normally.  
 * Do not hard-delete a store after another record references it.
 
@@ -291,8 +291,9 @@ A durable configured workstation identity belonging to a store.
 | :---- | :---- | :---- | :---- |
 | `id` | uuid | PK; UUIDv7 |  |
 | `store_id` | uuid | FK: `stores`; null: false |  |
-| `code` | varchar | null: false | Stable component of receipt identity |
-| `name` | varchar | null: false | Human-facing name |
+| `code` | varchar | null: false | Short operational identifier; unique per store |
+| `workstation_number` | varchar | planned for POS receipt identity | Durable numeric-style number parallel to `stores.store_number`; required before completed receipts under ADR-006 (amended 2026-08-16). Not yet in Phase 1 schema as implemented. |
+| `name` | varchar | null: false | Human-facing name (editable; not used in receipt reference) |
 | `description` | text |  |  |
 | `active` | boolean | null: false; default `true` |  |
 | `receipt_sequence` | bigint | null: false; default `0`; check `>= 0` | Last sequence permanently consumed |
@@ -311,18 +312,22 @@ Constraint:
 unique(store_id, code)
 ```
 
+When `workstation_number` is added: `unique(store_id, workstation_number)` (normalized like `store_number`).
+
 Important distinctions:
 
 * A workstation is not a cash drawer.  
 * A workstation is not an employee session.  
 * Future workstation/register sessions represent operational use of a workstation.  
 * Hardware may be replaced while preserving the workstation identity.  
-* `code` should become immutable once a receipt has been issued.  
-* Receipt numbers will eventually use:
+* `workstation_number` (and historically `code` if used as the number) should become immutable once a receipt has been issued.  
+* Human-facing receipt / transaction reference (ADR-006 amended):
 
 ```
-{store_code}-{workstation_code}-{receipt_sequence}
+S{store_number}-R{workstation_number}-T{receipt_sequence}
 ```
+
+For example: `S003-R02-T0018427`. See [receipt-identity.md](../phase4-6-point-of-sale/phase4-point-of-sale/receipt-identity.md).
 
 Although Phase 1 does not issue receipts, retaining `receipt_sequence` now formally establishes the durable workstation-scoped numbering model.
 

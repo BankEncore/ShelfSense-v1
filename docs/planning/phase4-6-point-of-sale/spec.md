@@ -1,12 +1,15 @@
 Below is a repository-ready **detailed implementation plan** translating the POS operating model and the implementation map into concrete Phase 4–6 work. It preserves the broader “initial complete POS” as the destination while deliberately sequencing the work from architectural foundation → first operational cash register → core POS breadth.
 
-**Phase 4 implementation authority:** For Phase 4 scope, schema outline, completion boundary, and `CompletedPosOperation` v1 semantics, prefer:
+**Phase 4 implementation authority:** For Phase 4 scope, schema outline, completion boundary, tax, receipt identity, operation/Core dual authority, and `CompletedPosOperation` v1 semantics, prefer:
 
 - [phase4-plan.md](phase4-point-of-sale/phase4-plan.md)
 - [phase4-schema.md](phase4-point-of-sale/phase4-schema.md)
 - [completed-pos-operation-v1.md](phase4-point-of-sale/completed-pos-operation-v1.md)
+- [pos-tax-contract.md](phase4-point-of-sale/pos-tax-contract.md) ([ADR-019](../../adr/ADR-019-pos-sales-tax-model.md))
+- [receipt-identity.md](phase4-point-of-sale/receipt-identity.md) ([ADR-006](../../adr/ADR-006-receipt-numbering.md))
+- [operation-and-core-facts.md](phase4-point-of-sale/operation-and-core-facts.md) ([ADR-020](../../adr/ADR-020-pos-operation-envelope-and-core-facts.md))
 
-Those companions supersede conflicting Phase 4 detail in §4 of this document (especially command vs completed-operation naming, receipt-inside-operation, tax rate/treatment identity, session column minimality, `pos_operations`, and build order).
+Those companions supersede conflicting Phase 4 detail in §4 of this document (especially command vs completed-operation naming, receipt-inside-operation, sales-tax model, receipt reference format, envelope vs Core, session column minimality, `pos_operations`, and build order).
 
 # POS Phases 4–6 Detailed Implementation Plan
 
@@ -159,17 +162,22 @@ as shortcuts around the posting boundary.
 Permanent receipt identity is assigned during authoritative completion.
 
 ```text
-open transaction      → no final receipt number
-suspended transaction → no final receipt number
-cancelled transaction → no final receipt number
-completed transaction → permanent receipt number
+open transaction      → no final receipt sequence / reference
+suspended transaction → no final receipt sequence / reference
+cancelled transaction → no final receipt sequence / reference
+completed transaction → permanent receipt sequence + human reference
 ```
 
-Receipt numbering is scoped to:
+Receipt sequencing is scoped to store + workstation (`UNIQUE(store_id, workstation_id, receipt_sequence)`).
+
+Human-facing forms (same identity):
 
 ```text
-Store + Register
+S{store_number}-R{workstation_number}-T{receipt_sequence}
+Store: 003   Reg: 02   Trans: 0018427
 ```
+
+See [receipt-identity.md](phase4-point-of-sale/receipt-identity.md) and amended ADR-006. Domain term remains `workstation`; cashier copy may say Register / `Reg`.
 
 ---
 
@@ -363,67 +371,18 @@ extended_selling_amount_cents
 
 # 4.5 Ordinary tax calculation
 
-Implement the initial deterministic POS tax calculation.
-
-Resolution inputs:
+Implement the initial deterministic POS tax calculation per [pos-tax-contract.md](phase4-point-of-sale/pos-tax-contract.md) and [ADR-019](../../adr/ADR-019-pos-sales-tax-model.md).
 
 ```text
-Store
-+
-tax class
-+
-occurred_at
-+
-effective tax rules
+Tax Class + Store Tax Rules + active Store Taxes
+→ independent component determinations
+→ half-up cents per Store Tax
+→ sum rounded components
 ```
 
-### Initial behavior
+Phase 4: taxable basis = extended selling amount; applied Tax Class = merchandise Tax Class; snapshot every active Store Tax (including `applies = false`); reject unresolved (`applies IS NULL`) rules. No Tax Class override, exemption, or combined-rate authority.
 
-Support:
-
-* taxable;
-* exempt;
-* zero-rated;
-* multiple independent tax components;
-* non-compounded components.
-
-Calculation order:
-
-```text
-selling amount
-→ taxable basis
-→ tax component calculation
-→ cent rounding
-→ total tax
-```
-
-### Rounding
-
-Use deterministic decimal calculation.
-
-Do not use binary floating point.
-
-Unless a specific jurisdiction rule supersedes it:
-
-```text
-component tax
-→ decimal half-up
-→ whole cents
-```
-
-### Fixtures
-
-Create portable golden fixtures covering at least:
-
-1. no-tax line;
-2. one taxable component;
-3. multiple non-compounded components;
-4. fractional-cent rounding;
-5. quantity > 1;
-6. exempt treatment;
-7. zero-rated treatment.
-
-These fixtures become the eventual Ruby/.NET parity suite.
+Golden fixtures: tax contract §14.
 
 ---
 
@@ -485,14 +444,16 @@ The contract must be versioned, serializable, independent of Rails controller st
 
 Every completion receives a globally unique `operation_id`, distinct from `transaction_id`.
 
-Prefer durable `pos_operations` with ADR-009 lease/hash/status semantics (see Phase 4 schema). Do not use `transaction_id` as the idempotency substitute.
+Durable `pos_operations` holds the full canonical envelope, payload hash, and ADR-009 lease/status semantics (see [operation-and-core-facts.md](phase4-point-of-sale/operation-and-core-facts.md) / ADR-020). Do not use `transaction_id` as the idempotency substitute. Do not treat the envelope as optional or reconstruct-only.
 
 ```text
 same operation_id + same material payload → same authoritative result
 same operation_id + materially different payload → integrity failure
 ```
 
-Retry must never duplicate completed transaction, receipt number, tender, Inventory movement, or reporting effect.
+Retry must never duplicate completed transaction, receipt sequence, tender, Inventory movement, or reporting effect.
+
+Normalized Core is used for all ordinary commercial workflows; the envelope answers origin/provenance questions.
 
 ---
 
@@ -513,15 +474,15 @@ allocate receipt identity
 freeze occurred_at / business_date
 freeze commercial facts
 construct canonical CompletedPosOperation v1
-persist completed POS facts
+persist normalized completed POS facts
+persist pos_operations (envelope + hash + idempotency)
 post Inventory effects
 associate Session / reporting context
-store operation result
         ↓
 COMMIT
 ```
 
-Only after this commits successfully is the transaction complete. Receipt assignment is part of constructing the completed operation, not a later side effect.
+Only after this commits successfully is the transaction complete. Receipt assignment is part of constructing the completed operation. Envelope and Core must not diverge.
 
 ---
 
@@ -552,17 +513,15 @@ Retrying the same POS operation must produce no second Inventory ledger effect.
 
 # 4.11 Receipt identity
 
-Implement:
+Implement workstation-scoped receipt sequence allocation and the human-facing reference per [receipt-identity.md](phase4-point-of-sale/receipt-identity.md):
 
 ```text
-Store + Register + sequence
+S{store_number}-R{workstation_number}-T{receipt_sequence}
 ```
 
-receipt identity.
+Requires durable `workstations.workstation_number`. Snapshot store/workstation numbers on the completed transaction. Assignment must occur atomically with completion.
 
-Assignment must occur atomically with completion.
-
-Receipt rendering/printing is not required yet.
+Receipt rendering/printing (header layout) is not required yet (Phase 5).
 
 ---
 

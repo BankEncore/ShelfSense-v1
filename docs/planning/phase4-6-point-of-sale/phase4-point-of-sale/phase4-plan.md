@@ -7,9 +7,12 @@
 | Document | Role |
 |---|---|
 | [CompletedPosOperation v1](completed-pos-operation-v1.md) | Canonical completed-operation contract, command/completion boundary, fixtures |
+| [POS tax contract](pos-tax-contract.md) | Store Tax / rules / calculator; completed tax facts ([ADR-019](../../../adr/ADR-019-pos-sales-tax-model.md)) |
+| [Receipt identity](receipt-identity.md) | Transaction reference and receipt display forms ([ADR-006](../../../adr/ADR-006-receipt-numbering.md)) |
+| [Operation and Core facts](operation-and-core-facts.md) | Envelope vs normalized Core ([ADR-020](../../../adr/ADR-020-pos-operation-envelope-and-core-facts.md)) |
 | [Phase 4 schema](phase4-schema.md) | Tables, columns, constraints for Phase 4 migrations |
 | [Phases 4–6 implementation plan](../spec.md) | Broader Phase 4–6 sequencing; Phase 5–6 detail |
-| Accepted ADRs | Cross-cutting policy (`AGENTS.md`, ADR-007, ADR-009, ADR-011, inventory posting contract) |
+| Accepted ADRs | Cross-cutting policy (`AGENTS.md`, ADR-006, ADR-007, ADR-009, ADR-011, ADR-019, ADR-020, inventory posting contract) |
 
 Where this plan and `../spec.md` §4 disagree on completion semantics, tax representation, session columns, or operation identity, **prefer this document and its companions**. Update `../spec.md` when convenient so the multi-phase plan stays aligned.
 
@@ -41,16 +44,17 @@ Rails is the first POS client. A future standalone Register must be able to prod
 | Line directions (Phase 4) | Sale lines only; return lines deferred to Phase 6, but **sign convention is locked now** |
 | Monetary signs | Store positive magnitudes; `direction` supplies economic sign (lines and tenders) |
 | Completion vs operation | `CompleteTransactionCommand` is the pre-completion Rails command; `CompletedPosOperation` is built **inside** authoritative completion and always includes receipt identity |
-| Receipt | Allocated atomically during completion; sequence scoped to store + logical workstation; no print/render required in Phase 4 |
-| Tax rate storage | Do **not** freeze `rate_basis_points`; use fixed-precision `rate_value` defined by the Tax contract |
-| Tax treatment | On each tax **component**, not on the merchandise line |
-| Tax class | Line preserves `tax_class_id` + code snapshot; class codes are merchandise classifications (e.g. `physical_book`), not treatments (`taxable`) |
-| Tax component identity | Persist `tax_component_id`, optional `tax_rule_id`, code/name snapshots, treatment, rate, basis, tax, `calculation_order` |
+| Receipt | Allocated at completion; scoped to store + workstation; human reference `S{store_number}-R{workstation_number}-T{receipt_sequence}` per [receipt-identity.md](receipt-identity.md) / ADR-006; print layout deferred to Phase 5 |
+| Tax model | [ADR-019](../../../adr/ADR-019-pos-sales-tax-model.md) / [pos-tax-contract.md](pos-tax-contract.md): Tax Class → Store Tax Rule → Store Tax; Store Tax is the POS component |
+| Tax rate storage | `rate_percent` as `numeric(6,3)`; contract strings like `"1.250"`; not basis points |
+| Tax applicability | Rule `applies` is `true` / `false` / `NULL` (unresolved); no treatment enum; auto-create rule rows |
+| Tax class | Consumes merchandise-domain Tax Classes; line stores `tax_class_id` + code snapshot; no Phase 4 override; no synthetic `nontaxable` result class |
+| Completed tax facts | Snapshot **every active** Store Tax determination per line (`applies` true or false); not only applicable taxes |
 | Merchandise snapshot | Required JSON at completion (sku, description, tax_class_code minimum) |
 | Inventory | Post only through existing Inventory services; no direct balance mutation; no `reserved` effect from open/working transactions |
 | Unit tracking | No `inventory_unit_id` in Phase 4; individually tracked merchandise rejected |
 | Session shape | Minimal open/close timestamps and FKs; **no** float / closing count / expected cash / variance columns until Phase 5 |
-| Operation durability | Durable `pos_operations` with ADR-009 idempotency semantics (lease, payload hash, status); do not treat generic `idempotency_operations` as commercial provenance unless retention is proven permanent |
+| Operation durability | Durable `pos_operations` with full canonical envelope **and** ADR-009 idempotency; normalized Core is operational authority; see [operation-and-core-facts.md](operation-and-core-facts.md) / ADR-020 |
 | Identity separation | `operation_id` ≠ `transaction_id`; never use `transaction_id` as the completion idempotency key |
 | Inventory causal `source_type` | Stay consistent with Phase 3 Rails class-name convention (`PosTransactionLine`) unless a later ADR changes inventory source kinds globally |
 | Money / IDs / time | Integer cents; UUIDv7; `occurred_at` (UTC) + explicit `business_date`; store IANA timezone retained on store |
@@ -68,7 +72,7 @@ Rails is the first POS client. A future standalone Register must be able to prod
 - Workstation-scoped receipt sequence allocation at completion
 - Merchandise resolution for Standard quantity-tracked sellable variants
 - Pricing: reference unit price → selling unit price → extended amount (no overrides/discounts)
-- Ordinary tax calculation with component-level treatment and portable golden fixtures
+- Ordinary tax calculation per [pos-tax-contract.md](pos-tax-contract.md) (Store Taxes, nullable rules, full determination snapshots)
 - Cash settlement (presented / applied / change) for a single payment tender
 - `Pos::CompleteTransaction` authoritative completion path (see §5)
 - Inventory posting for each completed sale line through `Inventory::PostAdjustment` (or equivalent Phase 3 boundary)
@@ -85,6 +89,7 @@ Rails is the first POS client. A future standalone Register must be able to prod
 - Offline credential replication, installation enrollment, standalone Register runtime
 - Customer display, customer reservation pickup
 - Inventory `reserved` from open or suspended transactions
+- Tax Class override, purchaser exemption, tax profiles domain, effective-dated Store Tax versions, cashier rate edits
 
 ---
 
@@ -105,17 +110,15 @@ BEGIN authoritative completion (PostgreSQL)
    ├── freeze occurred_at / business_date
    ├── freeze commercial facts
    ├── construct canonical CompletedPosOperation v1
-   │         (includes receipt.sequence / receipt.number)
-   └── Pos::PostCompletion / authoritative effects
-             ├── persist completed POS facts
-             ├── Inventory ledger effects
-             ├── reporting / session context association
-             └── store operation result on pos_operations
+   │         (includes receipt.sequence, number snapshots, optional reference)
+   ├── persist normalized Core POS facts
+   ├── persist pos_operations (full envelope + payload_hash + idempotency)
+   └── post Inventory / reporting effects
         ↓
 COMMIT
 ```
 
-**Invariant:** `CompletedPosOperation` always represents an already-completed originating fact and therefore contains its permanent receipt identity. Rails constructs it inside the same PostgreSQL transaction in which completion occurs.
+**Invariant:** `CompletedPosOperation` always represents an already-completed originating fact and therefore contains its permanent receipt identity. Rails constructs it inside the same PostgreSQL transaction in which normalized Core facts are written (ADR-020).
 
 Do **not** name the pre-receipt Rails payload `CompletedPosOperation`. Call that internal input `CompleteTransactionCommand` (or equivalent).
 
@@ -209,24 +212,18 @@ Missing required price blocks the line/completion; it must never become zero imp
 
 ### 5.5 Tax
 
-Resolution inputs: store + tax class + `occurred_at` + effective tax rules.
+Authority: [pos-tax-contract.md](pos-tax-contract.md) and [ADR-019](../../../adr/ADR-019-pos-sales-tax-model.md).
 
-Support taxable, exempt, zero-rated, multiple independent non-compounded components.
+```text
+tax_class = merchandise tax class on the line
+for each active Store Tax (calculation_order):
+  require store_tax_rule.applies IS NOT NULL
+  snapshot determination (applies true → half_up tax; false → basis 0, tax 0)
+```
 
-Line preserves tax **class**. Each component preserves treatment, rate snapshot (`rate_value`), taxable basis, tax cents, and calculation order.
+Phase 4 taxable basis = `extended_selling_amount_cents`. Independent component rounding; sum of rounded components. No combined-rate authority. No Tax Class override or exemption.
 
-Rounding: deterministic decimal half-up to whole cents unless a jurisdiction rule supersedes. No binary floating point for authoritative calculation.
-
-Golden fixtures (portable; eventual Ruby/.NET parity):
-
-1. no-tax line  
-2. one taxable component  
-3. multiple non-compounded components  
-4. fractional-cent rounding  
-5. quantity > 1  
-6. exempt treatment  
-7. zero-rated treatment  
-8. rate requiring finer precision than basis points (e.g. 8.875%) once Tax contract defines scale  
+Golden fixtures: see tax contract §14.
 
 ### 5.6 Cash settlement
 
@@ -277,11 +274,20 @@ source_id   = line.id
 
 ### 5.10 Receipt identity
 
+Authority: [receipt-identity.md](receipt-identity.md) and amended [ADR-006](../../../adr/ADR-006-receipt-numbering.md).
+
 ```text
-store + workstation + sequence → receipt number
+UNIQUE(store_id, workstation_id, receipt_sequence)
+
+Compact reference:
+S{store_number}-R{workstation_number}-T{receipt_sequence}
+  min pad 3 / 2 / 7
+
+Header form (same identity):
+Store: 003   Reg: 02   Trans: 0018427
 ```
 
-Allocated only inside authoritative completion. Rendering/printing deferred to Phase 5.
+Persist `receipt_sequence` plus `store_number_snapshot` and `workstation_number_snapshot`. Derive the compact reference; do not treat a formatted string alone as authority. Requires durable `workstations.workstation_number` (see schema). Rendering/printing deferred to Phase 5.
 
 ### 5.11 Audit
 
@@ -300,14 +306,14 @@ Schema is subordinate to the contract. Do **not** discover the contract from col
 ```text
 1. Lock v1 semantic decisions (this document + companions)
    - magnitude / sign convention
-   - tax rate representation (Tax contract)
-   - tax component identity
+   - tax model (ADR-019 / pos-tax-contract)
    - receipt semantics
    - operation / idempotency ownership (pos_operations)
 
-2. Write CompletedPosOperation v1 examples + golden fixtures
+2. Write CompletedPosOperation v1 examples + golden fixtures (including tax)
 
 3. Design / migrate
+   - store_taxes / store_tax_rules (if not already present)
    - reporting_periods
    - sessions (minimal)
    - transactions
@@ -371,7 +377,7 @@ Plus: companions remain consistent with migrated schema; golden tax/pricing fixt
 |---|---|
 | Phase 5 Cash close | Session table stays minimal; Phase 5 adds `closing_*` snapshot columns, not live cash counters |
 | Phase 6 return lines | Same line table + `direction`; magnitudes stay positive |
-| Standalone Register | Same `CompletedPosOperation` contract; sync posts equivalent central facts |
+| Standalone Register | Same `CompletedPosOperation` contract; sync posts equivalent central facts; envelope + Core dual authority (ADR-020) |
 | Discounts / approvals | Contract may reserve extensibility; no Phase 4 columns or algorithms required |
 
 ---
@@ -380,9 +386,10 @@ Plus: companions remain consistent with migrated schema; golden tax/pricing fixt
 
 | Item | Status |
 |---|---|
-| Exact Tax contract fixed-scale for `rate_value` | **Block migrations of tax rate columns** until Tax contract picks scale |
-| Tax component / rule model IDs available from Phase 2 tax tables | Confirm against implemented tax schema when coding calculators |
-| Receipt number display format | Sequence authority locked; printable format may finalize in Phase 5 |
-| Whether `pos_operations` embeds full envelope JSON vs normalized tables + envelope | Prefer normalized tables as authority; envelope may be stored or reconstructed—decide in schema companion when implementing |
+| Tax rate / applicability model | **Locked** — ADR-019 + [pos-tax-contract.md](pos-tax-contract.md) |
+| Receipt / transaction reference format | **Locked** — ADR-006 (amended) + [receipt-identity.md](receipt-identity.md); print layout still Phase 5 |
+| Envelope vs normalized Core | **Locked** — ADR-020 + [operation-and-core-facts.md](operation-and-core-facts.md); full envelope required; Core for all commercial workflows |
+| Durable `workstations.workstation_number` | **Required** before issuing completed receipts under the new reference form |
+| Tax component / rule model IDs from new `store_taxes` / `store_tax_rules` | Implement with Phase 4 (or immediately preceding) migrations |
 
-Unresolved items must not silently default to `rate_basis_points` or optional merchandise snapshots.
+Unresolved items must not silently default sales-tax rates to basis points or make merchandise snapshots optional at completion.

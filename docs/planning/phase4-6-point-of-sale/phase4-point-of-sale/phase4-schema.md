@@ -2,9 +2,9 @@
 
 **Status:** Planning (do not migrate until [phase4-plan.md](phase4-plan.md) semantic locks and [completed-pos-operation-v1.md](completed-pos-operation-v1.md) fixtures are stable)
 
-**Authority:** Field-level intent for Phase 4 POS tables. Prefer this document over conversational outlines in chat or preliminary-specs drafts. Cross-cutting rules remain in `AGENTS.md` and accepted ADRs.
+**Authority:** Field-level intent for Phase 4 POS tables. Prefer this document over conversational outlines in chat or preliminary-specs drafts. Cross-cutting rules remain in `AGENTS.md` and accepted ADRs. Tax configuration and completed tax rows follow [pos-tax-contract.md](pos-tax-contract.md) and [ADR-019](../../../adr/ADR-019-pos-sales-tax-model.md).
 
-Companion: [Phase 4 plan](phase4-plan.md).
+Companions: [Phase 4 plan](phase4-plan.md), [POS tax contract](pos-tax-contract.md).
 
 ---
 
@@ -12,9 +12,10 @@ Companion: [Phase 4 plan](phase4-plan.md).
 
 - PostgreSQL is authoritative; UUIDv7 for durable POS entities; generate IDs at origin.
 - Money as signed-capable integer `_cents` with explicit `currency_code` on the operation/transaction; **Phase 4 line and tender magnitudes are stored positive** (see plan §5.7).
+- Sales-tax rates use `numeric(6,3)` (`rate_percent`), not basis points.
 - `occurred_at` is the business event instant (UTC); `posted_at` / `created_at` are recording times; `business_date` is stored explicitly.
 - Draft/working state may be edited; completed commercial facts are immutable and corrected only by new facts later.
-- Optimistic locking via `lock_version` on mutable aggregate roots (`pos_sessions`, working `pos_transactions`).
+- Optimistic locking via `lock_version` on mutable aggregate roots (`pos_sessions`, working `pos_transactions`, store tax config).
 - No Phase 5 Cash-accountability columns on sessions in this phase.
 - No Phase 6 return/discount/approval columns required; leave room via `direction` and versioned operation envelopes rather than speculative null columns.
 
@@ -23,6 +24,10 @@ Companion: [Phase 4 plan](phase4-plan.md).
 ## 2. Table set
 
 ```text
+store_taxes                         # tax configuration (ADR-019)
+store_tax_rules
+tax_classes                         # existing merchandise domain
+
 pos_reporting_periods
 pos_sessions
 pos_transactions
@@ -30,12 +35,45 @@ pos_transaction_lines
 pos_line_tax_components
 pos_tenders
 pos_operations
-(+ receipt sequence support — see §10)
+(+ receipt sequence support — see §12)
 ```
 
 ---
 
-## 3. `pos_reporting_periods`
+## 3. `store_taxes`
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | uuid | PK, UUIDv7 |
+| `store_id` | uuid | FK, null: false |
+| `code` | string | stable; unique per store |
+| `name` | string | null: false |
+| `rate_percent` | numeric(6,3) | percentage; up to three decimal places |
+| `active` | boolean | null: false |
+| `calculation_order` | integer | null: false |
+| `lock_version` | integer | null: false, default 0 |
+| `created_at` / `updated_at` | timestamptz | |
+
+---
+
+## 4. `store_tax_rules`
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | uuid | PK, UUIDv7 |
+| `store_tax_id` | uuid | FK, null: false |
+| `tax_class_id` | uuid | FK → `tax_classes`, null: false |
+| `applies` | boolean | **nullable** — `NULL` means unresolved / incomplete |
+| `lock_version` | integer | null: false, default 0 |
+| `created_at` / `updated_at` | timestamptz | |
+
+Unique `(store_tax_id, tax_class_id)`.
+
+Auto-create rows when Store Taxes or Tax Classes appear (see tax contract). Sell/complete requires `applies IS NOT NULL` for every active Store Tax for the line’s Tax Class.
+
+---
+
+## 5. `pos_reporting_periods`
 
 Logical Z / reporting period for a store (and eventually workstation association rules as Phase 5 needs them).
 
@@ -54,7 +92,7 @@ Phase 4 needs enough structure that sessions and completions can attach to a per
 
 ---
 
-## 4. `pos_sessions`
+## 6. `pos_sessions`
 
 Cashier session on a workstation. **Phase 4 columns only:**
 
@@ -95,7 +133,7 @@ closing_variance_cents
 
 ---
 
-## 5. `pos_transactions`
+## 7. `pos_transactions`
 
 One row for working and completed (or cancelled) commercial state.
 
@@ -114,7 +152,9 @@ One row for working and completed (or cancelled) commercial state.
 | `completed_at` | timestamptz | null until completed |
 | `cancelled_at` | timestamptz | null until cancelled |
 | `receipt_sequence` | bigint | null until completed |
-| `receipt_number` | string | null until completed; permanent thereafter |
+| `store_number_snapshot` | string | null until completed; from `stores.store_number` |
+| `workstation_number_snapshot` | string | null until completed; from `workstations.workstation_number` |
+| `transaction_reference` | string | optional derived compact `S…-R…-T…`; regenerable from snapshots + sequence |
 | `subtotal_cents` | bigint | Phase 4: sum of sale line extended amounts (positive) |
 | `tax_cents` | bigint | Phase 4: sum of component tax (positive for sale-only) |
 | `total_cents` | bigint | Phase 4: amount due; revisit as `transaction_net_cents` when returns arrive |
@@ -130,7 +170,7 @@ One row for working and completed (or cancelled) commercial state.
 
 ---
 
-## 6. `pos_transaction_lines`
+## 8. `pos_transaction_lines`
 
 | Column | Type | Notes |
 |---|---|---|
@@ -145,20 +185,21 @@ One row for working and completed (or cancelled) commercial state.
 | `extended_selling_amount_cents` | bigint | positive magnitude |
 | `line_tax_cents` | bigint | sum of component tax_cents; positive magnitude |
 | `line_total_cents` | bigint | extended + tax for Phase 4 sale lines; positive magnitude |
-| `tax_class_id` | uuid | FK; classification used for determination |
-| `tax_class_code` | string | snapshot; **not** a treatment word (`physical_book`, not `taxable`) |
-| `merchandise_snapshot` | jsonb | **required when transaction is completed**; see §6.1 |
+| `tax_class_id` | uuid | FK; merchandise Tax Class used for determination |
+| `tax_class_code` | string | snapshot; classification code (`physical_book`), not a treatment |
+| `merchandise_snapshot` | jsonb | **required when transaction is completed**; fixed v1 keys (see §8.1); Phase 4 Core shape per ADR-020 — do not also require a competing column set |
 | `created_at` / `updated_at` | timestamptz | |
 
 ### Explicitly absent on the line
 
 ```text
-tax_treatment          # belongs on each tax component
-inventory_unit_id      # Phase 6+
-discount fields        # Phase 6
+tax_treatment                    # not used; applicability is per Store Tax
+default_tax_class_id / applied_  # deferred until Tax Class override
+inventory_unit_id                # Phase 6+
+discount fields                  # Phase 6
 ```
 
-### 6.1 Merchandise snapshot (required at completion)
+### 8.1 Merchandise snapshot (required at completion)
 
 Minimum v1 shape:
 
@@ -174,44 +215,31 @@ Optional keys may be added in later operation versions without expanding the rel
 
 ---
 
-## 7. `pos_line_tax_components`
+## 9. `pos_line_tax_components`
 
-One row per tax component determination on a line.
+One row per **active Store Tax determination** on a completed line (including `applies = false`). See [pos-tax-contract.md](pos-tax-contract.md).
 
 | Column | Type | Notes |
 |---|---|---|
 | `id` | uuid | PK, UUIDv7 |
 | `pos_transaction_line_id` | uuid | FK, null: false |
-| `tax_component_id` | uuid | identifies **what tax this was**; null: false when known |
-| `tax_rule_id` | uuid | optional; which effective configuration caused the result |
-| `component_code_snapshot` | string | null: false |
-| `component_name_snapshot` | string | null: false |
-| `treatment` | string | e.g. `taxable`, `exempt`, `zero_rated` |
-| `rate_value` | — | **fixed-precision representation defined by Tax contract**; do not migrate as `rate_basis_points` |
-| `taxable_basis_cents` | bigint | positive magnitude for Phase 4 sale lines |
-| `tax_cents` | bigint | positive magnitude for Phase 4 sale lines |
+| `store_tax_id` | uuid | FK → `store_taxes`; the component identity |
+| `store_tax_code_snapshot` | string | null: false |
+| `store_tax_name_snapshot` | string | null: false |
+| `rate_percent` | numeric(6,3) | snapshot of configured rate |
+| `applies` | boolean | null: false on completed rows |
+| `taxable_basis_cents` | bigint | basis when applies; else 0 |
+| `tax_cents` | bigint | rounded tax when applies; else 0 |
 | `calculation_order` | integer | null: false |
 | `created_at` / `updated_at` | timestamptz | |
 
-### Rate representation
+Optional provenance: `store_tax_rule_id` at calculation time.
 
-ADR-007 allows basis points where precision permits and finer fixed-scale integers when required (e.g. `8.875%`). Phase 4 **must not** freeze `rate_basis_points` in this schema.
-
-Until the Tax contract locks scale, document columns as:
-
-```text
-rate_value     # fixed-precision representation defined by tax contract
-```
-
-Block the tax-component migration (or leave rate untyped in planning only) until that contract chooses an exact integer scale or `numeric` policy.
-
-### Identity
-
-Do not leave “`tax_component_key` **or** `tax_rule_id`” as an implementation choice. Persist component identity; retain rule id when available; always snapshot code/name for receipt/history.
+Do **not** use abstract `tax_component_id`, treatment enums, or `rate_basis_points` / open `rate_value`.
 
 ---
 
-## 8. `pos_tenders`
+## 10. `pos_tenders`
 
 | Column | Type | Notes |
 |---|---|---|
@@ -228,39 +256,44 @@ Phase 4: one Cash payment tender per completed sale is sufficient.
 
 ---
 
-## 9. `pos_operations`
+## 11. `pos_operations`
 
-Durable POS completion provenance implementing ADR-009 idempotency semantics.
+Durable completion provenance **and** ADR-009 idempotency. Authority: [operation-and-core-facts.md](operation-and-core-facts.md) and [ADR-020](../../../adr/ADR-020-pos-operation-envelope-and-core-facts.md).
 
 | Column | Type | Notes |
 |---|---|---|
-| `id` | uuid | PK; may equal `operation_id` or hold it separately—prefer `id = operation_id` |
-| `operation_id` | uuid | globally unique completion identity if not identical to `id` |
+| `id` | uuid | PK; prefer `id = operation_id` |
+| `operation_id` | uuid | if not identical to `id` |
 | `operation_type` | string | e.g. `pos.complete_transaction` |
-| `source_id` | string/uuid | scoped source identity per ADR-009 |
+| `schema_version` | integer | envelope contract version |
+| `source_id` | string/uuid | ADR-009 scope |
 | `idempotency_key` | string | null: false |
-| `payload_hash` | string | canonical hash of material completion input |
+| `payload_hash` | string | hash of canonical commercial envelope (transport excluded) |
 | `status` | string | `in_flight`, `completed`, `failed` |
 | `lease_expires_at` | timestamptz | required while `in_flight` |
-| `pos_transaction_id` | uuid | FK; set when associated |
-| `result_reference` | jsonb/text | stored outcome / response reference |
-| `completed_envelope` | jsonb | optional storage of canonical `CompletedPosOperation` v1 |
-| `completed_at` | timestamptz | |
+| `pos_transaction_id` | uuid | FK when associated |
+| `store_id` | uuid | indexed origin |
+| `workstation_id` | uuid | indexed origin |
+| `installation_id` | uuid | optional until installations exist |
+| `producer_client` | string | optional |
+| `producer_version` | string | optional |
+| `envelope` | jsonb | **required when completed** — full `CompletedPosOperation` |
+| `originated_at` | timestamptz | commercial origin time |
+| `received_at` | timestamptz | central receipt (Core only; not in envelope) |
+| `posted_at` | timestamptz | central materialization (Core only; not in envelope) |
 | `lock_version` | integer | |
 | `created_at` / `updated_at` | timestamptz | |
 
 Unique index on `(source_id, operation_type, idempotency_key)`.
 
-### Why not only `idempotency_operations`?
-
-ADR-009 retention is “long enough to cover retries,” not necessarily permanent commercial provenance.
+### Role
 
 ```text
-generic idempotency  → protects an application request
-POS completed operation → durable business provenance
+generic idempotency  → may expire; protects a request
+pos_operations       → durable commercial provenance + idempotency for POS completion
 ```
 
-Reuse ADR-009 **mechanics** (status, lease, payload hash, uniqueness). Prefer a dedicated `pos_operations` table unless `idempotency_operations` is explicitly adopted as never-expiring archival storage for POS. That choice must be locked **before** migration—not “decide while coding.”
+Normalized Core tables are used for all ordinary business behavior. The envelope is not optional and is not reconstructed later from tables as a substitute for provenance. No commercial workflow may depend on parsing `envelope`.
 
 ### Identity separation
 
@@ -269,11 +302,13 @@ operation_id   → identity of the completion operation
 transaction_id → identity of the commercial transaction
 ```
 
-Do not use `transaction_id` as the completion idempotency substitute. Initial one-to-one relationship is incidental; later correction operations need the distinction.
+Do not use `transaction_id` as the completion idempotency substitute.
 
 ---
 
-## 10. Receipt sequence support
+## 12. Receipt sequence and reference support
+
+Authority: [receipt-identity.md](receipt-identity.md) and amended [ADR-006](../../../adr/ADR-006-receipt-numbering.md).
 
 Receipt identity is assigned only during authoritative completion.
 
@@ -283,25 +318,43 @@ Conceptual uniqueness:
 (store_id, workstation_id, receipt_sequence)
 ```
 
+### Prerequisite: durable workstation number
+
+`workstations` must include a per-store durable number for the `R` component:
+
+| Column | Type | Notes |
+|---|---|---|
+| `workstation_number` | string | null: false; unique per `store_id`; parallel to `stores.store_number` |
+
+Do not use editable `name` in the reference. Prefer explicit `workstation_number` over reusing free-form `code` unless `code` is constrained to be that number.
+
+Numbers become effectively immutable once a completed receipt has been issued for that workstation.
+
+### Allocation
+
 Implementation options (pick one in migration design):
 
-1. Counter table keyed by store + workstation; increment inside the completion transaction.  
+1. Counter on `workstations.receipt_sequence`; increment inside the completion transaction.  
 2. Sequence object per workstation with careful transactional semantics.
 
-Persist on the transaction:
+Persist on the completed transaction:
 
 ```text
 receipt_sequence
-receipt_number
+store_number_snapshot
+workstation_number_snapshot
+transaction_reference   # optional derived S003-R02-T0018427
 ```
 
-and include both in `CompletedPosOperation.receipt`.
+Include sequence, number snapshots, and optional `reference` in `CompletedPosOperation.receipt`.
 
-Printable formatting of `receipt_number` may be finalized in Phase 5; sequence authority is Phase 4.
+Minimum display padding: store 3, workstation 2, sequence 7 digits — minima only, not maxima.
+
+Print layout (header `Store` / `Reg` / `Trans`) is Phase 5; identity/reference rules are Phase 4.
 
 ---
 
-## 11. Inventory linkage (no new inventory tables)
+## 13. Inventory linkage (no new inventory tables)
 
 Post through existing Inventory services. Ledger / valuation entries reference:
 
@@ -320,28 +373,34 @@ Do not invent a POS-only domain `source_type` string unless a global inventory A
 
 ---
 
-## 12. Indexes and constraints (minimum intent)
+## 14. Indexes and constraints (minimum intent)
 
 - FKs for all store / workstation / session / period / user / variant / tax references.
+- Unique `(store_id, code)` on `store_taxes`.
+- Unique `(store_tax_id, tax_class_id)` on `store_tax_rules`.
 - Unique `(store_id, workstation_id, receipt_sequence)` where sequence is not null.
-- Unique completed receipt_number policy as designed (global or scoped—lock with number format).
+- Unique `(store_id, workstation_number)` on `workstations` (when column added).
+- Optional unique `transaction_reference` if stored; must match derived form from snapshots.
 - `pos_operations` uniqueness on `(source_id, operation_type, idempotency_key)`.
 - Check constraints for status enums; `in_flight` requires lease.
-- Reject completed transactions without receipt fields.
+- Reject completed transactions without receipt sequence and number snapshots.
 - Reject completed lines without required merchandise snapshot keys (DB CHECK and/or application validation).
+- Completed `pos_line_tax_components.applies` is non-null.
 
 Exact constraint names follow existing migration conventions.
 
 ---
 
-## 13. Phase 4 migration checklist
+## 15. Phase 4 migration checklist
 
 Before writing migrations:
 
-- [ ] Tax contract defines `rate_value` scale  
-- [ ] `pos_operations` vs generic idempotency retention locked  
-- [ ] CompletedPosOperation v1 example fixtures reviewed  
+- [x] Tax rate / applicability model locked (ADR-019 + pos-tax-contract)  
+- [x] Receipt / transaction reference format locked (ADR-006 amended + receipt-identity)  
+- [x] Envelope vs normalized Core locked (ADR-020 + operation-and-core-facts); full envelope required  
+- [ ] `workstations.workstation_number` added and backfilled before completed receipts  
+- [ ] CompletedPosOperation v1 example fixtures reviewed (including full Store Tax determinations)  
 - [ ] Sign/direction conventions documented in contract  
 - [ ] Session table confirmed **without** Cash close columns  
 
-Then migrate in dependency order: periods → sessions → transactions → lines → tax components → tenders → operations → receipt counter (as needed).
+Then migrate in dependency order: `workstation_number` (if needed) → `store_taxes` / `store_tax_rules` → periods → sessions → transactions → lines → tax components → tenders → operations → receipt counter (as needed).
