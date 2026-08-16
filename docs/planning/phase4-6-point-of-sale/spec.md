@@ -1,0 +1,1734 @@
+Below is a repository-ready **detailed implementation plan** translating the POS operating model and the implementation map into concrete Phase 4–6 work. It preserves the broader “initial complete POS” as the destination while deliberately sequencing the work from architectural foundation → first operational cash register → core POS breadth.
+
+**Phase 4 implementation authority:** For Phase 4 scope, schema outline, completion boundary, and `CompletedPosOperation` v1 semantics, prefer:
+
+- [phase4-plan.md](phase4-point-of-sale/phase4-plan.md)
+- [phase4-schema.md](phase4-point-of-sale/phase4-schema.md)
+- [completed-pos-operation-v1.md](phase4-point-of-sale/completed-pos-operation-v1.md)
+
+Those companions supersede conflicting Phase 4 detail in §4 of this document (especially command vs completed-operation naming, receipt-inside-operation, tax rate/treatment identity, session column minimality, `pos_operations`, and build order).
+
+# POS Phases 4–6 Detailed Implementation Plan
+
+## 1. Purpose
+
+This plan implements the initial ShelfSense POS defined by the POS Register Operating Model and Initial Implementation Scope.
+
+The implementation will begin as a **Rails-native POS**, but Rails is treated as the first POS client rather than as a privileged bypass around the POS architecture.
+
+The governing model is:
+
+```text
+Cashier interaction
+        ↓
+Working POS transaction
+        ↓
+CompleteTransactionCommand
+        ↓
+Authoritative completion
+   ├── allocate receipt
+   ├── freeze commercial facts
+   └── construct CompletedPosOperation (includes receipt)
+        ↓
+Authoritative POS posting effects
+        ↓
+┌─────────────┬─────────────┬─────────────┐
+│ Transaction │  Inventory  │  Reporting  │
+│    facts    │   ledger    │    facts    │
+└─────────────┴─────────────┴─────────────┘
+```
+
+The Rails POS performs completion and posting in one PostgreSQL transaction.
+
+A future standalone Register completes locally (including receipt), then synchronizes the same canonical `CompletedPosOperation`.
+
+The resulting central business facts must remain equivalent regardless of originating client.
+
+---
+
+# 2. Delivery model
+
+The POS work is divided into three major delivery stages:
+
+| Phase                                                | Purpose                                                                                                                                     |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Phase 4 — POS Transaction and Posting Foundation** | Establish contracts, transaction semantics, calculations, immutable completion, idempotency, and authoritative posting                      |
+| **Phase 5 — First Operational Cash Register**        | Turn the Phase 4 transaction path into a usable keyboard/scanner-oriented Cash register                                                     |
+| **Phase 6 — Core POS Breadth**                       | Add merchandise breadth, controlled actions, discounts, tenders, suspend/recall, returns, post-void, Cash operations, and broader reporting |
+
+Explicitly deferred beyond these phases:
+
+* Stored Value;
+* customer reservation pickup;
+* customer display;
+* integrated Card processor;
+* standalone/offline Register runtime.
+
+---
+
+# 3. Locked architectural constraints
+
+## 3.1 One transaction model
+
+ShelfSense does not persist separate transaction types for:
+
+```text
+sale
+refund
+exchange
+```
+
+A transaction contains independently directed:
+
+```text
+sale lines
+return lines
+```
+
+The resulting transaction net determines settlement:
+
+```text
+transaction net > 0
+→ payment required
+
+transaction net < 0
+→ refund required
+
+transaction net = 0
+→ no settlement required
+```
+
+“Sale,” “refund,” and “exchange” remain cashier/workflow descriptions only.
+
+---
+
+## 3.2 Completed transactions are immutable
+
+Before completion:
+
+```text
+transaction = mutable working state
+```
+
+After completion:
+
+```text
+transaction = immutable commercial history
+```
+
+Corrections create new facts.
+
+Examples:
+
+```text
+linked return
+post-void
+```
+
+must never rewrite the original completed transaction.
+
+---
+
+## 3.3 POS clients do not directly post downstream effects
+
+The POS client constructs the completed commercial operation.
+
+The authoritative core posting boundary owns:
+
+* completed transaction persistence;
+* Inventory effects;
+* reporting association;
+* receipt assignment;
+* operation idempotency;
+* resulting authoritative status.
+
+The Rails POS must not directly mutate:
+
+```text
+inventory_balances
+report totals
+Z totals
+```
+
+as shortcuts around the posting boundary.
+
+---
+
+## 3.4 Receipt identity
+
+Permanent receipt identity is assigned during authoritative completion.
+
+```text
+open transaction      → no final receipt number
+suspended transaction → no final receipt number
+cancelled transaction → no final receipt number
+completed transaction → permanent receipt number
+```
+
+Receipt numbering is scoped to:
+
+```text
+Store + Register
+```
+
+---
+
+## 3.5 Working transactions do not initially reserve inventory
+
+The initial Rails POS will not introduce inventory reservations for open transactions.
+
+```text
+working transaction
+→ no authoritative inventory effect
+
+completed sale
+→ authoritative Inventory ledger effect
+```
+
+The existing invariant remains:
+
+```text
+available = on_hand - reserved - unavailable
+```
+
+but POS working state does not initially contribute to `reserved`.
+
+Reservation behavior may be introduced later when there is a concrete need.
+
+---
+
+# 4. Phase 4 — POS Transaction and Posting Foundation
+
+> **Canonical Phase 4 packet:** [phase4-plan.md](phase4-point-of-sale/phase4-plan.md), [phase4-schema.md](phase4-point-of-sale/phase4-schema.md), [completed-pos-operation-v1.md](phase4-point-of-sale/completed-pos-operation-v1.md). Use those for implementation. Sections 4.1–4.14 below remain a narrative summary and may lag the companions.
+
+## Objective
+
+Prove that ShelfSense can construct, validate, complete, and authoritatively post one deterministic Cash sale without relying on UI-specific or Rails-specific hidden state.
+
+Phase 4 is primarily an architectural and domain foundation.
+
+It is **not yet a complete operational register**.
+
+---
+
+# 4.1 Register execution context
+
+Implement the minimum context required by every POS operation:
+
+```text
+store_id
+register_id
+session_id
+performed_by
+occurred_at
+business_date
+```
+
+### Requirements
+
+* Register remains a durable logical workstation identity.
+* Register is distinct from a future standalone installation.
+* Phase 4 does not require installation enrollment.
+* Actor identity comes from existing central authentication.
+* Business date must be explicitly resolved rather than inferred later from `created_at`.
+
+### Acceptance
+
+A completed operation can always answer:
+
+> Where did this occur?
+
+> On which Register?
+
+> During which Session?
+
+> Who performed it?
+
+> When did it occur?
+
+> To which business date does it belong?
+
+---
+
+# 4.2 Working transaction foundation
+
+Implement a mutable Rails working transaction.
+
+Initial scope:
+
+```text
+one Store
+one Register
+one active Session
+Standard quantity-tracked merchandise
+sale-directed lines only
+Cash settlement
+```
+
+### Initial commands
+
+Implement explicit application actions such as:
+
+```text
+StartTransaction
+AddMerchandise
+ChangeQuantity
+RemoveOrVoidWorkingLine
+CancelTransaction
+TenderCash
+CompleteTransaction
+```
+
+Exact class names are implementation details.
+
+The important requirement is that POS business actions are expressed explicitly rather than through arbitrary model mutation.
+
+---
+
+# 4.3 Merchandise lookup
+
+Implement POS merchandise resolution for Phase 4.
+
+Support:
+
+* primary product identifier;
+* variant SKU;
+* existing normalized identifier rules.
+
+Flow:
+
+```text
+scan/input identifier
+        ↓
+resolve product variant
+        ↓
+verify supported Phase 4 tracking mode
+        ↓
+add Standard quantity-tracked line
+```
+
+Reject:
+
+* unknown identifiers;
+* inactive/unsellable merchandise;
+* individually tracked merchandise;
+* non-inventory merchandise;
+* unsupported line types.
+
+These become Phase 6 capabilities.
+
+---
+
+# 4.4 Basic pricing calculation
+
+Implement the initial pricing sequence:
+
+```text
+regular reference price
+        ↓
+selling unit price
+        ↓
+quantity
+        ↓
+extended selling amount
+```
+
+For Phase 4:
+
+```text
+selling unit price = reference unit price
+```
+
+No override or discount is supported yet.
+
+### Required behavior
+
+* Missing required price blocks the line/completion.
+* Missing price must never become zero implicitly.
+* Money uses integer cents.
+* Quantity changes deterministically recalculate extended value.
+
+### Completed pricing facts
+
+Preserve:
+
+```text
+reference_unit_price_cents
+selling_unit_price_cents
+quantity
+extended_selling_amount_cents
+```
+
+---
+
+# 4.5 Ordinary tax calculation
+
+Implement the initial deterministic POS tax calculation.
+
+Resolution inputs:
+
+```text
+Store
++
+tax class
++
+occurred_at
++
+effective tax rules
+```
+
+### Initial behavior
+
+Support:
+
+* taxable;
+* exempt;
+* zero-rated;
+* multiple independent tax components;
+* non-compounded components.
+
+Calculation order:
+
+```text
+selling amount
+→ taxable basis
+→ tax component calculation
+→ cent rounding
+→ total tax
+```
+
+### Rounding
+
+Use deterministic decimal calculation.
+
+Do not use binary floating point.
+
+Unless a specific jurisdiction rule supersedes it:
+
+```text
+component tax
+→ decimal half-up
+→ whole cents
+```
+
+### Fixtures
+
+Create portable golden fixtures covering at least:
+
+1. no-tax line;
+2. one taxable component;
+3. multiple non-compounded components;
+4. fractional-cent rounding;
+5. quantity > 1;
+6. exempt treatment;
+7. zero-rated treatment.
+
+These fixtures become the eventual Ruby/.NET parity suite.
+
+---
+
+# 4.6 Cash settlement calculation
+
+Implement Cash settlement.
+
+Preserve:
+
+```text
+amount_due
+amount_presented
+amount_applied
+change
+```
+
+For ordinary Cash payment:
+
+```text
+presented = applied + change
+```
+
+and:
+
+```text
+applied = transaction amount due
+```
+
+for the simple one-tender Phase 4 path.
+
+### Validation
+
+Reject:
+
+```text
+presented < amount due
+```
+
+unless future mixed tender capability is in use.
+
+Change is not represented as a refund tender.
+
+---
+
+# 4.7 Completed POS operation contract
+
+Define version 1 of the canonical completed operation per [completed-pos-operation-v1.md](phase4-point-of-sale/completed-pos-operation-v1.md).
+
+Critical distinctions:
+
+* `CompleteTransactionCommand` — pre-completion request (no permanent receipt yet).
+* `CompletedPosOperation` — already-completed fact; **always includes** `receipt.sequence` / `receipt.number`.
+
+The contract must be versioned, serializable, independent of Rails controller state, and sufficient without hidden input. Lock sign conventions, tax-component identity, and required merchandise snapshots before migrations.
+
+---
+
+# 4.8 Operation identity and idempotency
+
+Every completion receives a globally unique `operation_id`, distinct from `transaction_id`.
+
+Prefer durable `pos_operations` with ADR-009 lease/hash/status semantics (see Phase 4 schema). Do not use `transaction_id` as the idempotency substitute.
+
+```text
+same operation_id + same material payload → same authoritative result
+same operation_id + materially different payload → integrity failure
+```
+
+Retry must never duplicate completed transaction, receipt number, tender, Inventory movement, or reporting effect.
+
+---
+
+# 4.9 Authoritative completion boundary
+
+Implement one central POS completion path.
+
+Conceptually:
+
+```text
+CompleteTransactionCommand
+        ↓
+validate working transaction
+        ↓
+BEGIN PostgreSQL
+        ↓
+allocate receipt identity
+freeze occurred_at / business_date
+freeze commercial facts
+construct canonical CompletedPosOperation v1
+persist completed POS facts
+post Inventory effects
+associate Session / reporting context
+store operation result
+        ↓
+COMMIT
+```
+
+Only after this commits successfully is the transaction complete. Receipt assignment is part of constructing the completed operation, not a later side effect.
+
+---
+
+# 4.10 Inventory posting
+
+For each completed quantity-tracked sale line:
+
+```text
+Inventory delta = -quantity
+```
+
+Post through the existing Inventory domain/service.
+
+Do not directly mutate `inventory_balances`.
+
+Required linkage should allow tracing:
+
+```text
+POS operation
+→ transaction
+→ transaction line
+→ Inventory ledger entry
+```
+
+Retrying the same POS operation must produce no second Inventory ledger effect.
+
+---
+
+# 4.11 Receipt identity
+
+Implement:
+
+```text
+Store + Register + sequence
+```
+
+receipt identity.
+
+Assignment must occur atomically with completion.
+
+Receipt rendering/printing is not required yet.
+
+---
+
+# 4.12 Minimum audit
+
+Record enough activity to explain:
+
+* operation completed;
+* operation rejected;
+* transaction cancelled;
+* actor;
+* Register;
+* Session.
+
+Do not build the full controlled-action audit model yet.
+
+---
+
+# 4.13 Phase 4 failure tests
+
+Explicitly test:
+
+### Completion validation failure
+
+```text
+invalid operation
+→ no completed transaction
+→ no receipt
+→ no Inventory effect
+```
+
+### Database failure
+
+```text
+commit fails
+→ transaction remains incomplete
+```
+
+### Duplicate operation
+
+```text
+submit O
+submit O again
+→ one transaction
+→ one receipt
+→ one Inventory effect
+```
+
+### Lost response simulation
+
+```text
+server commits O
+client does not observe response
+retry O
+→ same result returned
+```
+
+---
+
+# 4.14 Phase 4 acceptance
+
+Phase 4 is complete when a headless/application-level scenario can:
+
+```text
+1. Establish Store/Register/Session/actor context.
+2. Start a transaction.
+3. Resolve a Standard quantity-tracked variant.
+4. Add quantity.
+5. Resolve regular price.
+6. Calculate tax.
+7. Create Cash settlement.
+8. Complete through the versioned operation contract.
+9. Assign receipt identity.
+10. Post exactly one Inventory effect.
+11. Retry the same operation.
+12. Observe no duplicate business effect.
+```
+
+---
+
+# 5. Phase 5 — First Operational Cash Register
+
+## Objective
+
+Turn the Phase 4 completion path into a cashier-usable online Rails register.
+
+Phase 5 answers:
+
+> Can a cashier operate an ordinary Cash register through a minimum shift lifecycle using keyboard/scanner input?
+
+---
+
+# 5.1 Register/Z period lifecycle
+
+Implement the minimum Register reporting period.
+
+Flow:
+
+```text
+confirm business date
+        ↓
+open Register/Z period
+        ↓
+open cashier Session
+        ↓
+perform transactions
+        ↓
+close Session
+        ↓
+finalize Z when appropriate
+```
+
+### Rules
+
+* one active Z/reporting period per Register;
+* one immutable business date per active period;
+* multiple Sessions may eventually belong to one Z;
+* closing a Session does not inherently finalize the Z.
+
+Phase 5 UI may remain simple if only one Session is commonly used during testing.
+
+---
+
+# 5.2 Cashier Session
+
+Implement:
+
+```text
+open Session
+cashier identity
+opening time
+opening float
+closing Cash count
+expected Cash
+variance
+closing time
+```
+
+Closed Sessions are immutable.
+
+Do not reopen a closed Session; create a new Session.
+
+---
+
+# 5.3 Opening float
+
+Opening float establishes physical starting Cash.
+
+It is not:
+
+```text
+paid-in
+```
+
+and not:
+
+```text
+Cash tender
+```
+
+It belongs to Cash custody/accountability.
+
+---
+
+# 5.4 Keyboard/scanner Register workspace
+
+Build a dedicated Rails POS workspace.
+
+Ordinary path:
+
+```text
+scan
+→ line added
+→ scan
+→ quantity correction if needed
+→ tender
+→ complete
+→ next transaction
+```
+
+without requiring a mouse.
+
+### Required UX behavior
+
+* persistent transaction workspace;
+* primary scan/input control;
+* automatic focus;
+* Enter confirms;
+* Escape backs out where safe;
+* focus returns to scan target after ordinary operations;
+* completed transaction resets workspace;
+* errors preserve current transaction.
+
+---
+
+# 5.5 Minimum input modes
+
+Phase 5 needs at least:
+
+```text
+SALE_ENTRY
+QUANTITY
+TENDER
+```
+
+Additional modes are Phase 6.
+
+---
+
+# 5.6 Standard merchandise sale
+
+UI supports only:
+
+```text
+Standard quantity-tracked merchandise
+```
+
+No individually tracked, non-inventory, or open-ring lines yet.
+
+---
+
+# 5.7 Quantity correction
+
+Allow quantity change before completion.
+
+Recalculate:
+
+* extended price;
+* tax;
+* total.
+
+Phase 5 has no approval requirement because price/discount-controlled actions are not yet exposed.
+
+---
+
+# 5.8 Working-line removal
+
+Allow an accidental working line to be removed/voided according to the meaningful-line persistence rule.
+
+Do not introduce the full controlled line-void policy yet.
+
+---
+
+# 5.9 Transaction cancellation
+
+Allow an open transaction to be cancelled.
+
+Cancellation:
+
+* creates no completed commercial facts;
+* creates no receipt;
+* posts no Inventory movement.
+
+Preserve minimal cancellation activity where the transaction had meaningful working state.
+
+---
+
+# 5.10 Cash tender UI
+
+Provide a focused Cash dialog/interface.
+
+Example:
+
+```text
+Amount due:       $17.24
+Cash received:    [20.00]
+Change:            $2.76
+```
+
+Completion uses the same Phase 4 settlement/completion services.
+
+---
+
+# 5.11 Receipt rendering and printing
+
+Add the first operational receipt.
+
+Required:
+
+* render from immutable completed transaction facts;
+* permanent receipt number;
+* print prompt after completion;
+* one supported print path;
+* printer failure does not undo completion.
+
+Durable printer-success tracking remains out.
+
+---
+
+# 5.12 Minimum Session totals
+
+Display at least:
+
+```text
+completed transaction count
+gross sales
+tax
+Cash tender total
+expected Cash
+```
+
+Totals must be derived from authoritative facts.
+
+---
+
+# 5.13 Session close
+
+Closing Session calculates:
+
+```text
+opening float
++ Cash payments
+=
+expected Cash
+```
+
+for the narrow Phase 5 scope.
+
+Cashier enters:
+
+```text
+counted Cash
+```
+
+and ShelfSense calculates:
+
+```text
+counted
+-
+expected
+=
+variance
+```
+
+No paid-ins, paid-outs, or transfers exist yet.
+
+---
+
+# 5.14 Minimum Z
+
+Provide a basic finalized Register report containing at least:
+
+```text
+Register
+business date
+Session(s)
+completed transaction count
+gross sales
+tax
+Cash tender total
+expected Cash
+counted Cash
+variance
+```
+
+Finalized Z is immutable.
+
+---
+
+# 5.15 Browser/request failure behavior
+
+Test:
+
+* browser refresh during working transaction;
+* repeated Complete;
+* response loss;
+* Rails validation error;
+* printer failure.
+
+Meaningful working state expected to survive browser refresh should be persisted centrally.
+
+Phase 5 does **not** support offline sales.
+
+If Rails/core is unavailable:
+
+```text
+POS transaction completion unavailable
+```
+
+This is intentional.
+
+---
+
+# 5.16 Phase 5 acceptance
+
+A cashier can:
+
+```text
+1. Confirm business date.
+2. Open Register/Z period.
+3. Open Session.
+4. Establish opening float.
+5. Scan Standard merchandise.
+6. Change quantity.
+7. Remove mistaken working line.
+8. Cancel an open transaction.
+9. Tender completed transaction with Cash.
+10. Receive correct change.
+11. Complete transaction.
+12. Print receipt.
+13. Immediately begin next transaction.
+14. View current Session totals.
+15. Count Cash.
+16. See variance.
+17. Close Session.
+18. Finalize basic Z.
+```
+
+The normal transaction path is fully keyboard-operable.
+
+---
+
+# 6. Phase 6 — Core POS Breadth
+
+Phase 6 should be delivered as multiple vertical slices.
+
+Do not implement it as one large branch.
+
+---
+
+# 6.1 Merchandise Breadth
+
+## Goal
+
+Support the remaining initial POS line forms.
+
+### Build
+
+#### Individually tracked merchandise
+
+Support exact:
+
+```text
+inventory_unit_id
+```
+
+Requirements:
+
+* quantity effectively one per unit line;
+* exact unit validation;
+* unit condition/context;
+* unit-specific price behavior where applicable;
+* exact Inventory-unit posting.
+
+#### Non-inventory merchandise
+
+Support sale lines that:
+
+* participate in pricing/tax/tender;
+* create no Inventory movement.
+
+#### Open-ring lines
+
+Support explicit open-ring entry containing required:
+
+* description;
+* department/classification;
+* amount;
+* tax context;
+* reason where policy requires.
+
+Open ring is a line type, not merchandise.
+
+---
+
+# 6.2 Controlled-Action Foundation
+
+Implement the common policy/approval framework **before** implementing features that need manager approval.
+
+### Common concepts
+
+```text
+permission
+reason
+policy
+approval
+```
+
+### Policy result
+
+```text
+direct
+approval_required
+prohibited
+```
+
+### Performer versus approver
+
+Preserve:
+
+```text
+performed_by
+approved_by
+```
+
+Second-actor approval does not transfer cashier ownership of the Session.
+
+### Initial framework
+
+Support exact-action binding so approval applies only to the requested values.
+
+Material changes invalidate approval.
+
+---
+
+# 6.3 Transaction Controls
+
+Build controlled pre-completion actions.
+
+## Price override
+
+Support:
+
+```text
+reference price
+→ requested selling price
+```
+
+Preserve both.
+
+Apply reason/approval policy.
+
+---
+
+## Tax override
+
+Allow selection only among valid configured tax treatments.
+
+Do not permit arbitrary entered rates.
+
+---
+
+## Controlled line void
+
+Meaningful line voids preserve:
+
+* reason where required;
+* performer;
+* approval where required;
+* prior values/history.
+
+---
+
+## Controlled transaction cancellation
+
+Apply the same framework where policy requires additional authority for meaningful transactions.
+
+---
+
+# 6.4 Discounts
+
+Implement discounts only after the underlying policy framework exists.
+
+## Line discounts
+
+Support defined methods such as:
+
+```text
+percentage
+fixed amount
+fixed per unit
+```
+
+where explicitly configured.
+
+---
+
+## Transaction discounts
+
+Support:
+
+```text
+percentage
+fixed total
+```
+
+Allocate transaction discounts deterministically to eligible lines.
+
+### Golden fixtures
+
+Lock and test:
+
+* percentage rounding;
+* fixed discounts;
+* multiple quantities;
+* allocation basis;
+* residual-cent allocation;
+* discount floor;
+* price override + discount;
+* tax after discount.
+
+---
+
+# 6.5 Tender Breadth
+
+Expand beyond Cash.
+
+## Check
+
+Support configured Check tender and appropriate reference metadata.
+
+## Externally processed Card
+
+Workflow:
+
+```text
+ShelfSense calculates amount
+→ cashier processes externally
+→ cashier confirms success
+→ ShelfSense records Card tender
+```
+
+No processor integration yet.
+
+## Other
+
+Support configured genuine settlement methods.
+
+## Mixed tender
+
+Allow multiple tenders.
+
+Enforce:
+
+```text
+payments - refunds = transaction net
+```
+
+Store tender ordering where meaningful.
+
+---
+
+# 6.6 Suspend and Recall
+
+Implement persistent suspended transactions.
+
+## Suspend
+
+Preserve working state including:
+
+* lines;
+* quantities;
+* unit identities;
+* pricing;
+* discounts;
+* tax;
+* approvals/reasons where applicable;
+* originating Register;
+* cashier context.
+
+Suspension creates no completed financial facts.
+
+---
+
+## Recall
+
+Revalidate:
+
+```text
+merchandise sellability
+unit availability/state
+price/reference state
+tax state
+discount eligibility
+approval validity
+```
+
+Changes affecting the customer must be made visible.
+
+Support at least same-Store recall.
+
+Preserve:
+
+```text
+originating_register_id
+current_register_id
+```
+
+where they differ.
+
+---
+
+# 6.7 Returns and Refunds
+
+Implement after return policy decisions are locked.
+
+## Linked return
+
+Each return line references:
+
+```text
+original_sale_line_id
+```
+
+Eligibility:
+
+```text
+original quantity
+-
+previously returned quantity
+=
+remaining returnable quantity
+```
+
+Reverse historical:
+
+* selling price;
+* override;
+* discounts;
+* tax;
+* exact unit identity where applicable.
+
+---
+
+## Partial returns
+
+Implement deterministic consumption of historical discount/tax allocations.
+
+The final eligible return consumes any residual historical cents.
+
+---
+
+## Unlinked return
+
+Support as a controlled action.
+
+Default:
+
+```text
+current selling price
+current tax treatment
+```
+
+but require explicit confirmation.
+
+Allow controlled price/tax overrides.
+
+Require reason and configurable approval.
+
+---
+
+## Refund tender
+
+Refund method is independent of return value.
+
+Policy determines valid refund tenders.
+
+Original tender informs policy for linked returns.
+
+---
+
+## Mixed sale/return
+
+Support sale and return lines in one transaction.
+
+Test:
+
+```text
+net payment
+net refund
+zero net
+```
+
+Do not create an `exchange` transaction type.
+
+---
+
+# 6.8 Post-Void
+
+Implement PostVoid as a correction operation against an entire completed transaction.
+
+Original transaction remains immutable.
+
+Create new reversing facts for:
+
+* sale/return activity;
+* tax;
+* tender;
+* Inventory;
+* reporting.
+
+Require reason and configurable approval.
+
+External Card corrections must be confirmed as actually performed outside ShelfSense before corresponding Card reversal facts are recorded.
+
+---
+
+# 6.9 Full Cash Operations
+
+Expand Cash Handling.
+
+## Paid-in
+
+Require:
+
+* amount;
+* reason;
+* actor;
+* Session/Register;
+* approval where configured.
+
+## Paid-out
+
+Same pattern.
+
+## Drawer → Safe
+
+Internal transfer.
+
+Requires:
+
+```text
+source
+destination
+amount
+actor
+```
+
+## Safe → Drawer
+
+Same internal transfer model.
+
+Do not represent transfers as paid-in/out.
+
+---
+
+# 6.10 Cash Accountability Expansion
+
+Expected Cash becomes:
+
+```text
+opening float
++ Cash payments
+- Cash refunds
++ paid-ins
+- paid-outs
++ transfers in
+- transfers out
+=
+expected Cash
+```
+
+Then:
+
+```text
+counted Cash - expected Cash = variance
+```
+
+Variance policies may require:
+
+* reason;
+* acknowledgment;
+* approval.
+
+---
+
+# 6.11 Reporting Breadth
+
+Expand reporting beyond the Phase 5 minimum.
+
+## Current Session
+
+Include:
+
+* gross sale activity;
+* gross return activity;
+* discounts;
+* net commercial activity;
+* tax;
+* tenders by type;
+* expected Cash;
+* suspended transaction count.
+
+## Session Close
+
+Preserve immutable Session totals and Cash-accountability result.
+
+## Current Register/Z period
+
+Aggregate completed activity across Sessions.
+
+## Previous Sessions/Z
+
+Support historical lookup and drill-down.
+
+---
+
+# 6.12 Completed Transaction Retrieval
+
+Build practical transaction search.
+
+Support lookup by:
+
+```text
+receipt number
+transaction reference
+date/time
+Register
+Session
+```
+
+Display:
+
+* completed lines;
+* sale/return direction;
+* quantities;
+* returned-to-date quantities;
+* price;
+* discounts;
+* tax;
+* tenders;
+* inventory unit where applicable.
+
+Actions:
+
+```text
+reprint receipt
+begin linked return
+initiate post-void
+```
+
+where permitted.
+
+---
+
+# 6.13 Full Controlled-Action Audit
+
+Expand durable accountability for:
+
+```text
+price override
+tax override
+discount
+line void
+transaction cancellation
+unlinked return
+return exception
+post-void
+paid-in
+paid-out
+Cash transfer
+variance acceptance
+approval
+```
+
+Preserve as appropriate:
+
+```text
+action type
+subject
+performed_by
+approved_by
+reason
+before values
+requested/after values
+occurred_at
+Register
+Session
+transaction/line
+policy context
+```
+
+---
+
+# 7. Deferred capabilities
+
+The following remain explicitly outside Phases 4–6.
+
+## Stored Value
+
+Deferred until there is an authoritative shared-balance model.
+
+Includes:
+
+* gift cards;
+* Store Credit;
+* Stored Value issuance;
+* Stored Value tender.
+
+---
+
+## Customer reservation pickup
+
+Deferred to the customer/request domain.
+
+---
+
+## Customer display
+
+Deferred until the cashier transaction model is stable enough to expose a non-authoritative display projection.
+
+---
+
+## Integrated Card processor
+
+The first POS only records externally processed Card.
+
+Processor authorization, capture, reversal, crash recovery, and unknown-result handling are separate future work.
+
+---
+
+## Standalone/offline Register
+
+Deferred runtime work includes:
+
+```text
+.NET
+Terminal.Gui or selected dedicated UI
+SQLite
+installation identity
+installation credentials
+reference replication
+offline cashier authentication
+local deterministic calculation
+local transaction completion
+receipt/Z local sequence management
+transactional outbox
+operation synchronization
+local Inventory checkpoint/overlay
+reconciliation
+recovery
+clone detection
+backup/restore
+```
+
+The standalone client must use the completed-operation semantics established during Phases 4–6.
+
+---
+
+# 8. Cross-phase test strategy
+
+## Domain/application tests
+
+Prefer exhaustive tests for:
+
+* calculations;
+* state transitions;
+* controlled actions;
+* idempotency;
+* return eligibility;
+* Cash equations.
+
+---
+
+## Golden fixtures
+
+Maintain portable fixtures for calculations expected eventually to execute in both Ruby and .NET.
+
+Initially cover:
+
+```text
+basic pricing
+quantity extensions
+tax
+Cash settlement
+```
+
+Later add:
+
+```text
+price overrides
+discounts
+discount allocations
+mixed tender
+linked returns
+partial-return residuals
+mixed sale/return totals
+```
+
+---
+
+## Request/integration tests
+
+Test:
+
+* POS commands;
+* authoritative completion;
+* duplicate operation submission;
+* Inventory consequences;
+* Session/Z association;
+* receipt assignment.
+
+---
+
+## Cashier interaction tests
+
+Where practical, test:
+
+* focus target after scan;
+* modal focus;
+* Enter/Escape behavior;
+* repeated completion input;
+* workspace reset;
+* validation preserving context.
+
+The normal transaction path should remain keyboard-only.
+
+---
+
+# 9. Implementation sequence summary
+
+```text
+PHASE 4
+POS TRANSACTION & POSTING FOUNDATION
+│
+├── operation contract
+├── working transaction
+├── basic price
+├── ordinary tax
+├── Cash settlement
+├── idempotency
+├── authoritative completion
+├── receipt identity
+└── Inventory posting
+        ↓
+
+PHASE 5
+FIRST OPERATIONAL CASH REGISTER
+│
+├── Register/Z period
+├── cashier Session
+├── opening float
+├── scanner/keyboard UI
+├── Standard merchandise
+├── quantity/cancel
+├── Cash tender
+├── receipt printing
+├── Session totals
+├── count/variance
+└── minimum Z
+        ↓
+
+PHASE 6
+CORE POS BREADTH
+│
+├── 6.1 merchandise breadth
+├── 6.2 controlled-action framework
+├── 6.3 price/tax controls
+├── 6.4 discounts
+├── 6.5 tender breadth
+├── 6.6 suspend/recall
+├── 6.7 returns/refunds
+├── 6.8 post-void
+├── 6.9 full Cash operations
+├── 6.10 Cash accountability
+├── 6.11 reporting breadth
+├── 6.12 transaction retrieval
+└── 6.13 controlled-action audit
+        ↓
+
+LATER
+STANDALONE/OFFLINE REGISTER
+```
+
+## 10. Definition of success
+
+At the end of Phase 6, the Rails-native POS should be a functionally complete online bookstore register for the intended initial scope.
+
+More importantly, every completed commercial operation should already be expressible through a stable boundary that a future standalone Register can reproduce:
+
+```text
+Register behavior
+        ↓
+completed POS operation
+        ↓
+authoritative ShelfSense posting
+```
+
+That means the eventual .NET effort becomes primarily a new implementation of the **Register-side runtime, persistence, calculations, and synchronization**, rather than a redesign of the POS business model.

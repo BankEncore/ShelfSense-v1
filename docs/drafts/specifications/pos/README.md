@@ -1,6 +1,3 @@
-The current directory contains the expected POS domain set, with the exceptions noted above: `report-period.md` uses a singular filename, `returns` lacks `.md`, `tender.md` is still the pre-spec discussion, and `customer-display.md` is currently empty.  The formal specs already consistently describe phased delivery and cross-spec relationships, so I would make the README primarily a **navigation and authority document**, rather than another summary of all business rules.
-
-````markdown
 # ShelfSense POS Specifications
 
 This directory contains the durable domain and architectural specifications for the ShelfSense point-of-sale system.
