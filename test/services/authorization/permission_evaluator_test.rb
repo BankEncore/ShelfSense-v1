@@ -49,7 +49,7 @@ class Authorization::PermissionEvaluatorTest < ActiveSupport::TestCase
 
   test "store manager permissions apply only in assigned store" do
     at_store = Authorization::PermissionEvaluator.permissions_for(user: @manager, store: @store)
-    assert_includes at_store, "workstations.manage"
+    assert_includes at_store, "registers.manage"
     assert_includes at_store, "stores.manage"
     assert_not_includes at_store, "users.manage"
 
@@ -61,7 +61,7 @@ class Authorization::PermissionEvaluatorTest < ActiveSupport::TestCase
     keys = Authorization::PermissionEvaluator.permissions_for(user: @bootstrap[:administrator], store: @store)
     assert_includes keys, "system_settings.manage"
     assert_includes keys, "users.assign_roles"
-    assert_includes keys, "workstations.manage"
+    assert_includes keys, "registers.manage"
   end
 
   test "store-scoped audit viewers cannot see null-store events" do
@@ -84,7 +84,7 @@ class Authorization::PermissionEvaluatorTest < ActiveSupport::TestCase
       actor_type: "user",
       actor_user: @manager,
       actor_label: @manager.display_name,
-      action: "workstations.create",
+      action: "registers.create",
       outcome: "succeeded",
       correlation_id: SecureRandom.uuid_v7,
       metadata: {},

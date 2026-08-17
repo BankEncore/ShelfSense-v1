@@ -432,9 +432,9 @@ Before writing POS migrations:
 - [x] Envelope vs normalized Core locked (ADR-020 + operation-and-core-facts)  
 - [x] Register vs Terminal locked (ADR-021 + register-identity)  
 - [x] **Schema constraints locked** (this document: two-hash `pos_operations`, receipt counter, partial uniques, line/tax CHECKs, status NULL rules)  
-- [ ] **Pre-Phase-4:** `workstations` → `registers` rename (FKs, permissions, audit, tests)  
-- [ ] `registers.register_number` + `registers.receipt_sequence` added and backfilled  
-- [ ] Device-only fields reviewed/dropped on Register  
+- [x] **Pre-Phase-4:** `workstations` → `registers` rename (FKs, permissions, audit, tests)  
+- [x] `registers.register_number` + `registers.receipt_sequence` added and backfilled  
+- [x] Device-only fields reviewed/dropped on Register  
 - [ ] CompletedPosOperation v1 example fixtures reviewed  
 - [ ] Session table confirmed **without** Cash close columns  
 

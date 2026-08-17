@@ -100,7 +100,7 @@ Implement only what is necessary to run and administer one store:
 * `permissions`  
 * `role_permissions`  
 * `role_assignments`  
-* `workstations`  
+* `registers`  
 * `user_sessions`  
 * `audit_events`  
 * authentication and authorization  

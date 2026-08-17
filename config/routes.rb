@@ -50,7 +50,7 @@ Rails.application.routes.draw do
     end
     resources :roles
     resources :role_assignments, only: %i[index new create destroy]
-    resources :workstations
+    resources :registers
     resources :audit_events, only: %i[index show]
     resources :inventory_balances, only: %i[index show], path: "inventory" do
       member do

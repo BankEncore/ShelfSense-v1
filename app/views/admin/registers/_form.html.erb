@@ -1,0 +1,12 @@
+<%= form_with model: [:admin, register] do |form| %>
+  <% if register.errors.any? %><ul><% register.errors.full_messages.each do |m| %><li><%= m %></li><% end %></ul><% end %>
+  <%= form.hidden_field :lock_version %>
+  <% if register.persisted? && register.receipt_sequence.to_i.positive? %>
+    <p>Register number: <code><%= register.register_number %></code> (immutable after a receipt has been issued)</p>
+  <% else %>
+    <p><%= form.label :register_number %><%= form.text_field :register_number %></p>
+  <% end %>
+  <p><%= form.label :name %><%= form.text_field :name %></p>
+  <p><%= form.label :description %><%= form.text_area :description %></p>
+  <p><%= form.submit %></p>
+<% end %>

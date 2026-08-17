@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_12_190000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_16_221000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -54,13 +54,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_12_190000) do
     t.string "reason_code"
     t.text "reason_text"
     t.timestamptz "recorded_at", null: false
+    t.uuid "register_id"
     t.uuid "store_id"
     t.uuid "subject_id"
     t.string "subject_label"
     t.string "subject_type"
     t.text "user_agent"
     t.uuid "user_session_id"
-    t.uuid "workstation_id"
     t.index ["action", "occurred_at"], name: "index_audit_events_on_action_and_occurred_at"
     t.index ["actor_user_id", "occurred_at"], name: "index_audit_events_on_actor_user_id_and_occurred_at"
     t.index ["correlation_id"], name: "index_audit_events_on_correlation_id"
@@ -419,6 +419,22 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_12_190000) do
     t.check_constraint "status::text = ANY (ARRAY['draft'::character varying::text, 'active'::character varying::text, 'discontinued'::character varying::text])", name: "products_status_valid"
   end
 
+  create_table "registers", id: :uuid, default: nil, force: :cascade do |t|
+    t.boolean "active", default: true, null: false
+    t.timestamptz "created_at", null: false
+    t.timestamptz "deactivated_at"
+    t.uuid "deactivated_by_id"
+    t.text "description"
+    t.integer "lock_version", default: 0, null: false
+    t.string "name", null: false
+    t.bigint "receipt_sequence", default: 0, null: false
+    t.string "register_number", null: false
+    t.uuid "store_id", null: false
+    t.timestamptz "updated_at", null: false
+    t.index ["store_id", "register_number"], name: "index_registers_on_store_id_and_register_number", unique: true
+    t.check_constraint "receipt_sequence >= 0", name: "registers_receipt_sequence_nonnegative"
+  end
+
   create_table "role_assignments", id: :uuid, default: nil, force: :cascade do |t|
     t.uuid "assigned_by_id", null: false
     t.timestamptz "created_at", null: false
@@ -561,29 +577,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_12_190000) do
     t.check_constraint "failed_sign_in_count >= 0", name: "users_failed_sign_in_count_nonnegative"
   end
 
-  create_table "workstations", id: :uuid, default: nil, force: :cascade do |t|
-    t.timestamptz "activated_at"
-    t.boolean "active", default: true, null: false
-    t.string "code", null: false
-    t.timestamptz "created_at", null: false
-    t.timestamptz "deactivated_at"
-    t.uuid "deactivated_by_id"
-    t.text "description"
-    t.timestamptz "last_seen_at"
-    t.integer "lock_version", default: 0, null: false
-    t.string "name", null: false
-    t.bigint "receipt_sequence", default: 0, null: false
-    t.timestamptz "revoked_at"
-    t.uuid "store_id", null: false
-    t.timestamptz "updated_at", null: false
-    t.index ["store_id", "code"], name: "index_workstations_on_store_id_and_code", unique: true
-    t.check_constraint "receipt_sequence >= 0", name: "workstations_receipt_sequence_nonnegative"
-  end
-
+  add_foreign_key "audit_events", "registers"
   add_foreign_key "audit_events", "stores"
   add_foreign_key "audit_events", "user_sessions"
   add_foreign_key "audit_events", "users", column: "actor_user_id"
-  add_foreign_key "audit_events", "workstations"
   add_foreign_key "departments", "gl_accounts", column: "cost_of_goods_sold_gl_account_id"
   add_foreign_key "departments", "gl_accounts", column: "freight_in_gl_account_id"
   add_foreign_key "departments", "gl_accounts", column: "inventory_adjustment_gain_gl_account_id"
@@ -627,6 +624,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_12_190000) do
   add_foreign_key "product_variants", "products"
   add_foreign_key "product_variants", "tax_classes"
   add_foreign_key "products", "merchandise_categories"
+  add_foreign_key "registers", "stores"
+  add_foreign_key "registers", "users", column: "deactivated_by_id"
   add_foreign_key "role_assignments", "roles"
   add_foreign_key "role_assignments", "stores"
   add_foreign_key "role_assignments", "users"
@@ -640,6 +639,4 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_12_190000) do
   add_foreign_key "user_sessions", "users"
   add_foreign_key "user_sessions", "users", column: "revoked_by_id"
   add_foreign_key "users", "users", column: "deactivated_by_id"
-  add_foreign_key "workstations", "stores"
-  add_foreign_key "workstations", "users", column: "deactivated_by_id"
 end

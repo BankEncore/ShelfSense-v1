@@ -1,0 +1,8 @@
+<% content_for :title, "Registers" %>
+<h1>Registers</h1>
+<% if effective_permissions.include?("registers.create") %><p><%= link_to "New register", new_admin_register_path %></p><% end %>
+<ul>
+  <% @registers.each do |register| %>
+    <li><%= link_to "#{register.register_number} — #{register.name}", admin_register_path(register) %> (<%= register.store.admin_label %>)</li>
+  <% end %>
+</ul>

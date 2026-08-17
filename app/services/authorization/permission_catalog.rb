@@ -21,11 +21,10 @@ module Authorization
       { key: "roles.create", group_key: "roles", name: "Create roles", scope_type: "global" },
       { key: "roles.manage", group_key: "roles", name: "Manage roles", scope_type: "global" },
       { key: "roles.deactivate", group_key: "roles", name: "Deactivate roles", scope_type: "global" },
-      { key: "workstations.view", group_key: "workstations", name: "View workstations", scope_type: "either" },
-      { key: "workstations.create", group_key: "workstations", name: "Create workstations", scope_type: "either" },
-      { key: "workstations.manage", group_key: "workstations", name: "Manage workstations", scope_type: "either" },
-      { key: "workstations.deactivate", group_key: "workstations", name: "Deactivate workstations", scope_type: "either" },
-      { key: "workstations.revoke", group_key: "workstations", name: "Revoke workstations", scope_type: "either" },
+      { key: "registers.view", group_key: "registers", name: "View registers", scope_type: "either" },
+      { key: "registers.create", group_key: "registers", name: "Create registers", scope_type: "either" },
+      { key: "registers.manage", group_key: "registers", name: "Manage registers", scope_type: "either" },
+      { key: "registers.deactivate", group_key: "registers", name: "Deactivate registers", scope_type: "either" },
       { key: "audit_events.view", group_key: "audit_events", name: "View audit events", scope_type: "either" }
     ].freeze
 
@@ -112,11 +111,10 @@ module Authorization
         permission_keys: %w[
           stores.view
           stores.manage
-          workstations.view
-          workstations.create
-          workstations.manage
-          workstations.deactivate
-          workstations.revoke
+          registers.view
+          registers.create
+          registers.manage
+          registers.deactivate
           audit_events.view
         ] + STORE_MANAGER_PHASE2_VIEWS + STORE_MANAGER_PHASE3
       },

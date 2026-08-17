@@ -2,7 +2,7 @@
 
 class Store < ApplicationRecord
   belongs_to :deactivated_by, class_name: "User", optional: true
-  has_many :workstations, dependent: :restrict_with_exception
+  has_many :registers, dependent: :restrict_with_exception
   has_many :role_assignments, dependent: :restrict_with_exception
 
   before_validation :normalize_codes

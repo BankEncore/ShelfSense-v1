@@ -40,6 +40,9 @@ class Installation::BootstrapTest < ActiveSupport::TestCase
     Authorization::PermissionCatalog::PHASE2_PERMISSIONS.each do |permission|
       assert_includes admin_role.permissions.pluck(:key), permission[:key]
     end
+    assert_includes admin_role.permissions.pluck(:key), "registers.view"
+    assert_not_includes admin_role.permissions.pluck(:key), "workstations.revoke"
+    assert_not Permission.exists?(key: "workstations.revoke")
 
     actions = AuditEvent.order(:occurred_at).pluck(:action)
     assert_includes actions, "installation.started"
