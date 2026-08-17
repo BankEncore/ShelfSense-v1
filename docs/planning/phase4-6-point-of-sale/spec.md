@@ -705,7 +705,7 @@ It belongs to Cash custody/accountability.
 
 # 5.4 Keyboard/scanner Register workspace
 
-Authority: [register-workspace.md](phase5-cash-register/register-workspace.md). That packet supersedes this section where they disagree.
+Authority: [register-workspace.md](phase5-cash-register/register-workspace.md). Interaction wireframes: [register-workspace-ux.md](phase5-cash-register/register-workspace-ux.md). That packet supersedes this section where they disagree.
 
 Build a dedicated Rails POS workspace (Importmap + Turbo + Stimulus; dedicated POS layout, not admin chrome).
 
@@ -731,7 +731,7 @@ without requiring a mouse. Every shortcut has a visible control.
 * Enter confirms the current ephemeral mode;
 * Escape backs out where [register-workspace.md](phase5-cash-register/register-workspace.md) allows;
 * focus returns to the primary input after ordinary operations;
-* GET workspace never creates a transaction; refresh resumes the same working transaction;
+* GET workspace never creates a transaction; working + tender restores completion-pending (and a matching completion `operation_id` if one exists); no working transaction redirects to the enter gate (never infers a “latest” receipt);
 * at most one working transaction per Session (`ResumeOrStartTransaction` on POST enter/continue);
 * completed sale shows an on-screen confirmation from immutable facts, then continue starts a fresh working transaction;
 * errors preserve the current working transaction.
@@ -797,6 +797,8 @@ Allow an open transaction to be cancelled.
 Cancellation:
 
 * requires explicit confirmation that scanner Enter cannot submit (second F9 confirms; Enter ignored);
+* is disabled when the working transaction has no lines;
+* then `ResumeOrStartTransaction` so the cashier returns to `SALE_ENTRY`;
 * creates no completed commercial facts;
 * creates no receipt;
 * posts no Inventory movement.
@@ -807,7 +809,7 @@ Preserve minimal cancellation activity where the transaction had meaningful work
 
 # 5.10 Cash tender UI
 
-Provide a focused Cash interface. `TenderCash` and `CompleteTransaction` are **two HTTP requests**. Completion retries must not call `TenderCash` again ([register-workspace.md](phase5-cash-register/register-workspace.md) §6).
+Provide a focused Cash interface. `TenderCash` and `CompleteTransaction` are **two HTTP requests**. Rails issues `completion_operation_id` on a successful tender (Stimulus treats it as opaque). Refresh of completion-pending **restores** a matching `in_flight`/`failed` operation rather than minting a second attempt. Completion retries must not call `TenderCash` again ([register-workspace.md](phase5-cash-register/register-workspace.md) §6). Return to sale is `AbandonTender` (clears the persisted tender). A lost complete response or `POST complete` against an already-completed transaction opens **that** sale's immutable receipt by id.
 
 Example:
 

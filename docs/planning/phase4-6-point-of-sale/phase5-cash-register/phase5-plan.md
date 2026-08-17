@@ -1,6 +1,6 @@
 # Phase 5 — First Operational Cash Register
 
-**Status:** Slice 1 implemented (headless cash accountability and Z finalize). Slice 2 interaction/HTTP contract locked in [register-workspace.md](register-workspace.md); workspace UI is not implemented. Register UX wireframes and Hotwire install are later Slice 2 steps.
+**Status:** Slice 1 implemented (headless cash accountability and Z finalize). Slice 2 HTTP/domain contract locked in [register-workspace.md](register-workspace.md). Interaction wireframes drafted in [register-workspace-ux.md](register-workspace-ux.md). Workspace UI is not implemented.
 
 **Authority**
 
@@ -8,6 +8,7 @@
 |---|---|
 | [Phase 5 schema](phase5-schema.md) | Session cash columns and period Z snapshots |
 | [Register workspace](register-workspace.md) | Slice 2 open gate, modes, HTTP/retry, focus, completion receipt vs print |
+| [Register workspace UX](register-workspace-ux.md) | Slice 2 low-fidelity wireframes (focus, keys, Turbo regions) |
 | [Phase 4 plan](../phase4-point-of-sale/phase4-plan.md) | Completion, receipt allocation, inventory posting |
 | [Receipt identity](../phase4-point-of-sale/receipt-identity.md) | Compact reference and print header form ([ADR-006](../../../adr/ADR-006-receipt-numbering.md)) |
 | [Phases 4–6 plan](../spec.md) | Broader sequencing; this packet supersedes conflicting §5 cash/Z and §5.4–5.11 workspace detail |
@@ -116,19 +117,19 @@ Slice 1 answers the cash-accountability half without screens. Slice 2 is the cas
 - Audit + immutability + concurrency tests
 - No POS screens
 
-### Slice 2 — Register workspace (contract locked; UI not implemented)
+### Slice 2 — Register workspace (HTTP/domain locked; wireframes drafted; UI not implemented)
 
-Authority: [register-workspace.md](register-workspace.md).
+Authority: [register-workspace.md](register-workspace.md). Interaction: [register-workspace-ux.md](register-workspace-ux.md).
 
 - Rails + Importmap + Turbo + Stimulus; system/browser tests required when the workspace is implemented
 - Open gate: confirm calculated business date, opening float, resume or open period/session for the cashier's register
-- At most one working transaction per Session; GET workspace is read-only; `ResumeOrStartTransaction` on POST enter/continue
+- At most one working transaction per Session; GET workspace is read-only (working + tender restores completion-pending; no working transaction → enter; never infer a receipt); `ResumeOrStartTransaction` on POST enter/continue/cancel; `AbandonTender` on Return to sale
 - Persistent primary scan/input; keyboard-first ephemeral `SALE_ENTRY` / `QUANTITY` / `TENDER`
 - Rescan of a compatible SKU increments the existing line in `AddMerchandise`
 - `POST tender` then `POST complete` (not one combined endpoint); completion retry does not re-tender
-- Basket mutation clears working tenders
+- Basket mutation and Return to sale (`AbandonTender`) clear working tenders; Cancel disabled on an empty basket
 - On-screen completion receipt/confirmation from completed facts; no print in this slice
-- Low-fidelity UX wireframes (`register-workspace-ux.md`) before Hotwire implementation
+- Low-fidelity UX wireframes: [register-workspace-ux.md](register-workspace-ux.md) (drafted; review before Hotwire)
 
 ### Slice 3 — Print + close / Z screens
 
@@ -198,7 +199,7 @@ Phase 5 does not introduce session-close or Z-finalize outbox events.
 3. SessionTotals / PeriodTotals (preview vs snapshot)
 4. OpenSession (period lock) / CloseSession (blind) / FinalizeReportingPeriod
 5. Headless and concurrency tests
-6. Slice 2 — lock workspace contract (done) → UX wireframes → domain invariants → Hotwire workspace + system tests
+6. Slice 2 — lock workspace contract (done) → UX wireframes (drafted) → domain invariants → Hotwire workspace + system tests
 7. Slice 3 — receipt print + blind close / Z screens
 ```
 
