@@ -77,5 +77,20 @@ Rails.application.routes.draw do
     resource :inventory_reconciliation, only: %i[show], controller: "inventory_reconciliations"
   end
 
+  namespace :pos do
+    get "register/enter", to: "enters#show", as: :register_enter
+    post "register/enter", to: "enters#create"
+    get "register", to: "workspaces#show", as: :register_workspace
+    post "register/merchandise", to: "workspaces#merchandise"
+    post "register/quantity", to: "workspaces#quantity"
+    post "register/remove", to: "workspaces#remove"
+    post "register/abandon_tender", to: "workspaces#abandon_tender"
+    post "register/cancel", to: "workspaces#cancel"
+    post "register/tender", to: "workspaces#tender"
+    post "register/complete", to: "workspaces#complete"
+    post "register/continue", to: "workspaces#continue"
+    get "transactions/:id/completed", to: "completed_transactions#show", as: :completed_transaction
+  end
+
   root "home#show"
 end

@@ -25,19 +25,28 @@ module Pos
 
       PosTransaction.transaction do
         transaction = Pos::Support.lock_working_transaction!(@transaction, @expected_lock_version)
-        line = transaction.pos_transaction_lines.build(
-          line_number: next_line_number(transaction),
-          direction: "sale",
-          product_variant: variant,
-          quantity: @quantity,
-          reference_unit_price_cents: variant.regular_price_cents,
-          selling_unit_price_cents: variant.regular_price_cents,
-          tax_class: variant.tax_class,
-          tax_class_code_snapshot: variant.tax_class.code
-        )
-        line.extended_selling_amount_cents = line.selling_unit_price_cents * line.quantity
-        Pos::Support.apply_provisional_tax!(line)
-        line.save!
+        Pos::Support.clear_working_tenders!(transaction)
+        line = compatible_line(transaction, variant)
+        if line
+          line.quantity += @quantity
+          line.recalc_extended!
+          Pos::Support.apply_provisional_tax!(line)
+          line.save!
+        else
+          line = transaction.pos_transaction_lines.build(
+            line_number: next_line_number(transaction),
+            direction: "sale",
+            product_variant: variant,
+            quantity: @quantity,
+            reference_unit_price_cents: variant.regular_price_cents,
+            selling_unit_price_cents: variant.regular_price_cents,
+            tax_class: variant.tax_class,
+            tax_class_code_snapshot: variant.tax_class.code
+          )
+          line.extended_selling_amount_cents = line.selling_unit_price_cents * line.quantity
+          Pos::Support.apply_provisional_tax!(line)
+          line.save!
+        end
         Pos::Support.refresh_totals!(transaction)
         line
       end
@@ -60,6 +69,15 @@ module Pos
       raise Pos::Error, "individually tracked merchandise is not supported" unless variant.derived_inventory_tracking == "quantity"
       raise Pos::Error, "open-price merchandise is not supported" if variant.merchandise_class.pricing_method == "open_price"
       raise Pos::Error, "regular price is required" if variant.regular_price_cents.nil?
+    end
+
+    def compatible_line(transaction, variant)
+      transaction.pos_transaction_lines.find do |line|
+        line.product_variant_id == variant.id &&
+          line.direction == "sale" &&
+          line.selling_unit_price_cents == variant.regular_price_cents &&
+          line.tax_class_id == variant.tax_class_id
+      end
     end
 
     def next_line_number(transaction)

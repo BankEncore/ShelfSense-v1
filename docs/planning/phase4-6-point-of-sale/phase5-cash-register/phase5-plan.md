@@ -1,6 +1,6 @@
 # Phase 5 — First Operational Cash Register
 
-**Status:** Slice 1 implemented (headless cash accountability and Z finalize). Slice 2 HTTP/domain contract locked in [register-workspace.md](register-workspace.md). Interaction wireframes drafted in [register-workspace-ux.md](register-workspace-ux.md). Workspace UI is not implemented.
+**Status:** Slice 1 implemented (headless cash accountability and Z finalize). Slice 2 Register workspace implemented ([register-workspace.md](register-workspace.md)). Interaction wireframes in [register-workspace-ux.md](register-workspace-ux.md). Slice 3 print and close/Z screens remain.
 
 **Authority**
 
@@ -93,7 +93,7 @@ Slice 1 answers the cash-accountability half without screens. Slice 2 is the cas
 | Drawer table | Deferred (POS-DEC-016). Cash custody is session-scoped |
 | Paid-in / paid-out / transfer | Out of Phase 5 |
 | Outbox | No session-close or Z-finalize outbox events unless a concrete consumer appears. Audit and immutable snapshots are sufficient |
-| UI stack | Rails + Importmap + Turbo + Stimulus for the Register workspace. System/browser tests are required. Not installed until the workspace implementation PR. Contract: [register-workspace.md](register-workspace.md) |
+| UI stack | Rails + Importmap + Turbo + Stimulus for the Register workspace. System/browser tests are required. Contract: [register-workspace.md](register-workspace.md) |
 | Input modes (slice 2) | `SALE_ENTRY`, `QUANTITY`, `TENDER` are **ephemeral UI modes**, not persisted transaction states. Completion-pending after successful `TenderCash` is locked input, not a fourth named mode |
 | One working transaction | Partial unique index `UNIQUE (pos_session_id) WHERE status = 'working'`. `StartTransaction` rejects a second working row. `ResumeOrStartTransaction` is the UI-safe boundary. GET never creates a transaction |
 | Rescan | Compatible SKU increments the existing line inside `AddMerchandise` |
@@ -117,7 +117,7 @@ Slice 1 answers the cash-accountability half without screens. Slice 2 is the cas
 - Audit + immutability + concurrency tests
 - No POS screens
 
-### Slice 2 — Register workspace (HTTP/domain locked; wireframes drafted; UI not implemented)
+### Slice 2 — Register workspace (implemented)
 
 Authority: [register-workspace.md](register-workspace.md). Interaction: [register-workspace-ux.md](register-workspace-ux.md).
 
@@ -200,7 +200,7 @@ Phase 5 does not introduce session-close or Z-finalize outbox events.
 3. SessionTotals / PeriodTotals (preview vs snapshot)
 4. OpenSession (period lock) / CloseSession (blind) / FinalizeReportingPeriod
 5. Headless and concurrency tests
-6. Slice 2 — lock workspace contract (done) → UX wireframes (drafted) → domain invariants → Hotwire workspace + system tests
+6. Slice 2 — lock workspace contract (done) → UX wireframes (drafted) → domain invariants (done) → Hotwire workspace + system tests (done)
 7. Slice 3 — receipt print + blind close / Z screens
 ```
 

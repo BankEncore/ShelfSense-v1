@@ -14,23 +14,15 @@ module Pos
 
     def call
       PosSession.transaction do
-        session = PosSession.lock.find(@session.id)
-        Pos::Support.authorize!(@actor, session.store)
-        Pos::Support.require_active_context!(session.store, session.register)
-        Pos::Support.require_session_cashier!(@actor, session)
-        raise Pos::Error, "session is not open" unless session.open?
-        raise Pos::Error, "reporting period is not open" unless session.reporting_period.open?
+        session = Pos::Support.lock_open_cashier_session!(@session, @actor)
+        if session.pos_transactions.working.exists?
+          raise Pos::Error, "a working transaction already exists"
+        end
 
-        PosTransaction.create!(
-          store: session.store,
-          register: session.register,
-          pos_session: session,
-          reporting_period: session.reporting_period,
-          cashier_user: session.cashier_user,
-          status: "working",
-          currency_code: @currency_code
-        )
+        Pos::Support.create_working_transaction!(session: session, currency_code: @currency_code)
       end
+    rescue ActiveRecord::RecordNotUnique
+      raise Pos::Error, "a working transaction already exists"
     end
   end
 end

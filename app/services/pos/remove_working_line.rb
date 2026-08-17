@@ -21,6 +21,7 @@ module Pos
 
       PosTransaction.transaction do
         transaction = Pos::Support.lock_working_transaction!(@transaction, @expected_lock_version)
+        Pos::Support.clear_working_tenders!(transaction)
         transaction.pos_transaction_lines.find(@line.id).destroy!
         Pos::Support.refresh_totals!(transaction)
         transaction

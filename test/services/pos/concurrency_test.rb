@@ -274,4 +274,34 @@ class Pos::ConcurrencyTest < ActiveSupport::TestCase
     )
     { context: context, transaction: transaction.reload }
   end
+
+  test "concurrent resume or start yields one working transaction" do
+    register = Register.create!(store: @store, register_number: 93, name: "Resume")
+    context = pos_open_context(store: @store, actor: @actor, register: register)
+    session_id = context[:session].id
+    actor_id = @actor.id
+
+    results = Array.new(2)
+    errors = Array.new(2)
+    threads = 2.times.map do |i|
+      Thread.new do
+        ActiveRecord::Base.connection_pool.with_connection do
+          results[i] = Pos::ResumeOrStartTransaction.call(
+            session: PosSession.find(session_id),
+            actor: User.find(actor_id)
+          )
+        rescue StandardError => e
+          errors[i] = e
+        end
+      end
+    end
+    threads.each { |thread| assert thread.join(30), "thread did not finish" }
+
+    assert_equal [], errors.compact.map(&:message)
+    ids = results.compact.map(&:id).uniq
+    assert_equal 1, ids.size
+    assert_equal 1, PosTransaction.uncached {
+      PosTransaction.where(pos_session_id: session_id, status: "working").count
+    }
+  end
 end

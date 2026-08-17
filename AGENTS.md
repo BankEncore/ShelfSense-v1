@@ -210,7 +210,7 @@ An ADR should include status, context, decision, and consequences. Mark unresolv
 
 Keep README setup instructions executable and current. Development procedures belong in `docs/development.md`; CI coverage and deferred checks belong in `docs/testing.md`. Issue, PR, milestone, and release conventions belong in `docs/github-workflow.md`.
 
-Use Rails-native patterns unless an accepted ADR or an established project pattern requires otherwise. Phase 5 Slice 2 locks Importmap + Turbo + Stimulus for the cashier Register workspace, with system/browser tests required when that UI is implemented ([register-workspace.md](docs/planning/phase4-6-point-of-sale/phase5-cash-register/register-workspace.md)). Those gems are in the Gemfile; they are not installed until the workspace implementation PR. Admin screens remain server-rendered Rails until a later decision. Do not treat Gemfile presence alone as installation.
+Use Rails-native patterns unless an accepted ADR or an established project pattern requires otherwise. Phase 5 Slice 2 uses Importmap + Turbo + Stimulus for the cashier Register workspace, with system/browser tests ([register-workspace.md](docs/planning/phase4-6-point-of-sale/phase5-cash-register/register-workspace.md)). Admin screens remain server-rendered Rails until a later decision. Do not add Hotwire to admin chrome as a side effect of POS work.
 
 ## 14. Change discipline
 

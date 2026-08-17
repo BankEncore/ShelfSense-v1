@@ -19,6 +19,7 @@ module Pos
 
       PosTransaction.transaction do
         transaction = Pos::Support.lock_working_transaction!(@transaction, @expected_lock_version)
+        Pos::Support.clear_working_tenders!(transaction)
         transaction.update!(status: "cancelled", cancelled_at: Time.current)
         Audit::Recorder.record!(
           action: "pos.transaction_cancelled",

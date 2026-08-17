@@ -1,6 +1,6 @@
 # Phase 5 — First Operational Cash Register
 
-**Status:** Slice 1 (headless cash / Z) implemented. Slice 2 HTTP/domain contract locked; interaction wireframes drafted; workspace UI not implemented.
+**Status:** Slice 1 (headless cash / Z) implemented. Slice 2 Register workspace implemented. Slice 3 print and close/Z screens remain.
 
 | Document | Purpose |
 |---|---|

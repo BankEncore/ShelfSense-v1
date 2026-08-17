@@ -23,6 +23,7 @@ module Pos
 
       PosTransaction.transaction do
         transaction = Pos::Support.lock_working_transaction!(@transaction, @expected_lock_version)
+        Pos::Support.clear_working_tenders!(transaction)
         line = transaction.pos_transaction_lines.find(@line.id)
         line.quantity = @quantity
         line.recalc_extended!

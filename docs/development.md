@@ -134,7 +134,10 @@ Run the Rails test suite:
 
 ```sh
 ./dev/rails-docker bin/rails test
+./dev/rails-docker bin/rails test:system
 ```
+
+System tests require Chromium in the development image. Rebuild after pulling Dockerfile changes: `docker compose build`.
 
 Run the other checks enforced by CI:
 

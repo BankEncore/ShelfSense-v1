@@ -1,0 +1,59 @@
+<% content_for :title, "Open register" %>
+
+<main class="pos-enter">
+  <h1>Open register</h1>
+  <% if current_store %>
+    <p>Store  <%= current_store.admin_label %></p>
+  <% end %>
+
+  <% if flash.now[:alert].present? || alert.present? %>
+    <p class="pos-enter__alert" role="alert"><%= flash.now[:alert] || alert %></p>
+  <% end %>
+
+  <% if @registers.blank? %>
+    <p>No active register is available in this store.</p>
+  <% else %>
+    <%= form_with url: pos_register_enter_path, method: :get, class: "pos-enter__form" do %>
+      <div class="form-field">
+        <label for="register_id">Register</label>
+        <%= select_tag :register_id,
+              options_from_collection_for_select(@registers, :id, :admin_label, @register&.id),
+              include_blank: (@registers.many? ? "Select a register" : false),
+              autofocus: @register.nil?,
+              onchange: "this.form.requestSubmit()" %>
+      </div>
+      <noscript><%= submit_tag "Select register", class: "btn btn--secondary" %></noscript>
+    <% end %>
+
+    <% if @register && @gate %>
+      <%= form_with url: pos_register_enter_path, method: :post, class: "pos-enter__form" do %>
+        <%= hidden_field_tag :register_id, @register.id %>
+        <% if @gate.occupied? %>
+          <p id="occupied-register" role="alert">
+            Register <%= @register.admin_label %> is open for <%= @gate.occupier.display_name %>.
+          </p>
+        <% else %>
+          <% if @gate.leftover_period? %>
+            <p class="pos-banner" role="status">This register is still on business date <%= @gate.business_date.iso8601 %>.</p>
+          <% end %>
+          <p>
+            <span class="<%= "pos-date-emphasis" if @gate.leftover_period? %>">Business date  <%= @gate.business_date.iso8601 %></span>
+            <% if @gate.own_session? %>
+              (this is your open Session)
+            <% end %>
+          </p>
+          <% if @gate.needs_opening_float? %>
+            <div class="form-field">
+              <label for="opening_float">Opening float</label>
+              <%= text_field_tag :opening_float, @opening_float, inputmode: "decimal", autocomplete: "off", autofocus: true %>
+            </div>
+          <% end %>
+        <% end %>
+
+        <%= submit_tag "Open register",
+              disabled: @gate.occupied?,
+              class: "btn" %>
+      <% end %>
+    <% end %>
+  <% end %>
+</main>

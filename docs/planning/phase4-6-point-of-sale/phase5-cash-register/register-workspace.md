@@ -1,6 +1,6 @@
 # Phase 5 Slice 2 — Register workspace contract
 
-**Status:** HTTP/domain contract locked. Interaction details provisionally accepted pending Slice 2 UX wireframes (`register-workspace-ux.md`). Not yet implemented.
+**Status:** HTTP/domain contract locked. Register workspace implemented (Importmap + Turbo + Stimulus).
 
 **Authority:** Cashier-facing online Register workspace: open gate, ephemeral UI modes, HTTP commands, focus/retry rules, and the Slice 2 vs Slice 3 receipt split. Domain completion, tax, inventory posting, and receipt identity remain in the [Phase 4 packet](../phase4-point-of-sale/). Cash/Z snapshots remain in [phase5-schema.md](phase5-schema.md).
 
@@ -50,7 +50,7 @@ completed-receipt New sale shortcut (not Enter)
 | Topic | Decision |
 |---|---|
 | Client | Rails-native online POS. No Terminal table (ADR-021). No scanner API; scanners are keyboard input ending in Enter |
-| UI stack | Importmap + Turbo + Stimulus. Gems are in the Gemfile; they are **not installed** until the workspace implementation PR |
+| UI stack | Importmap + Turbo + Stimulus. Gems are installed for the Register workspace |
 | Layout | Dedicated POS layout. Do not reuse admin chrome for the selling surface (it would steal scan focus) |
 | Permission | `pos.transact` at the current store. Session cashier for session/transaction commands (`require_session_cashier!` / `require_transaction_cashier!`) |
 | Controllers | Orchestrate Phase 4/5 services only. No receipt allocation, inventory posting, tax calculation, or commercial total mutation in controllers or Stimulus |
