@@ -776,7 +776,7 @@ Recalculate:
 * tax;
 * total.
 
-Basket mutations (`AddMerchandise`, `ChangeQuantity`, `RemoveWorkingLine`) clear any working tender in the same transaction.
+Basket mutations (`AddMerchandise`, `ChangeQuantity`, `RemoveWorkingLine`), Return to sale (`AbandonTender`), and `CancelTransaction` clear any working tender in the same transaction.
 
 Phase 5 has no approval requirement because price/discount-controlled actions are not yet exposed.
 
@@ -798,6 +798,7 @@ Cancellation:
 
 * requires explicit confirmation that scanner Enter cannot submit (second F9 confirms; Enter ignored);
 * is disabled when the working transaction has no lines;
+* clears any working tenders in the same database transaction before marking the sale cancelled (keep cancelled lines);
 * then `ResumeOrStartTransaction` so the cashier returns to `SALE_ENTRY`;
 * creates no completed commercial facts;
 * creates no receipt;
@@ -825,7 +826,7 @@ Insufficient Cash stays in `TENDER`. No split tender in Phase 5.
 
 # 5.11 Receipt rendering and printing
 
-Slice 2: on-screen **completion receipt/confirmation** from immutable completed transaction facts (`transaction_reference`, total, Cash presented, change, concise lines). No print controls.
+Slice 2: on-screen **completion receipt/confirmation** from immutable completed transaction facts (`transaction_reference`, total, Cash presented, change, concise lines). No print controls. Enter on this page is a no-op; **New sale** is an explicit control ([register-workspace-ux.md](phase5-cash-register/register-workspace-ux.md) frame 8).
 
 Slice 3: the first supported **print** path for those same facts.
 

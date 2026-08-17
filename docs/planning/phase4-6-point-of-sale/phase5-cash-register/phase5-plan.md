@@ -98,7 +98,7 @@ Slice 1 answers the cash-accountability half without screens. Slice 2 is the cas
 | One working transaction | Partial unique index `UNIQUE (pos_session_id) WHERE status = 'working'`. `ResumeOrStartTransaction` is the service boundary. GET never creates a transaction |
 | Rescan | Compatible SKU increments the existing line inside `AddMerchandise` |
 | Tender vs complete | Separate `POST tender` and `POST complete`. Completion retries must not call `TenderCash` again |
-| Basket vs tender | `AddMerchandise`, `ChangeQuantity`, and `RemoveWorkingLine` clear working tenders in the same transaction |
+| Basket vs tender | `AddMerchandise`, `ChangeQuantity`, `RemoveWorkingLine`, `AbandonTender`, and `CancelTransaction` clear working tenders in the same database transaction. Cancelled lines remain; cancelled rows must not keep a provisional Cash tender |
 | Slice 2 receipt | On-screen completion receipt/confirmation from immutable completed facts. Print is Slice 3 |
 | Controllers (slices 2–3) | Call Phase 4/5 services only. No receipt allocation or inventory mutation in controllers or Stimulus |
 | Print (slice 3) | Render from immutable completed facts. Proposed path: browser print. Printer failure must not undo completion |
@@ -127,7 +127,8 @@ Authority: [register-workspace.md](register-workspace.md). Interaction: [registe
 - Persistent primary scan/input; keyboard-first ephemeral `SALE_ENTRY` / `QUANTITY` / `TENDER`
 - Rescan of a compatible SKU increments the existing line in `AddMerchandise`
 - `POST tender` then `POST complete` (not one combined endpoint); completion retry does not re-tender
-- Basket mutation and Return to sale (`AbandonTender`) clear working tenders; Cancel disabled on an empty basket
+- Basket mutation, Return to sale (`AbandonTender`), and `CancelTransaction` clear working tenders; Cancel disabled on an empty basket
+- Domain (before Hotwire): unique working transaction; `ResumeOrStartTransaction`; `AddMerchandise` rescan merge; tender invalidation on basket/`AbandonTender`/`CancelTransaction`; `CancelTransaction` test with a Cash tender (tenders gone, status cancelled, expected Cash unchanged)
 - On-screen completion receipt/confirmation from completed facts; no print in this slice
 - Low-fidelity UX wireframes: [register-workspace-ux.md](register-workspace-ux.md) (drafted; review before Hotwire)
 

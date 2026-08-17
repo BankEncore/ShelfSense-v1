@@ -21,6 +21,7 @@ ResumeOrStartTransaction
 rescan merge in AddMerchandise
 basket mutation clears tender
 AbandonTender (return to sale)
+CancelTransaction clears working tenders
 TenderCash / CompleteTransaction split
 completion retry semantics (no re-tender)
 Rails-issued completion operation_id (restore matching in_flight/failed)
@@ -39,6 +40,7 @@ where errors appear
 how completion-pending looks
 visible button arrangement
 receipt confirmation layout
+completed-receipt New sale shortcut (not Enter)
 ```
 
 ---
@@ -202,7 +204,11 @@ POST abandon_tender
   → render SALE_ENTRY
 POST cancel
   → allowed only when the working transaction has at least one line
-  → CancelTransaction (after explicit confirmation)
+  → CancelTransaction (after explicit confirmation):
+       lock working transaction
+       clear working tenders
+       status = cancelled, cancelled_at = Time.current
+       (keep cancelled lines)
   → ResumeOrStartTransaction
   → redirect workspace (SALE_ENTRY)
 
@@ -378,11 +384,22 @@ Phase 5 has no discounts or price overrides, so unit price + tax class is the pr
 
 Same variant with a different price/tax context becomes a separate line.
 
-**Basket mutation and Return to sale invalidate working tenders.** `AddMerchandise`, `ChangeQuantity`, and `RemoveWorkingLine` clear existing working tenders in the same database transaction. **Return to sale** is `Pos::AbandonTender` (`POST abandon_tender`): lock the working transaction, require the transaction cashier, destroy the working tender, advance `lock_version`, render `SALE_ENTRY`. After that, GET workspace is `SALE_ENTRY` (no hidden tender). The cashier must re-enter `TENDER` to settle.
+**Basket mutation, Return to sale, and Cancel invalidate working tenders.** `AddMerchandise`, `ChangeQuantity`, and `RemoveWorkingLine` clear existing working tenders in the same database transaction. **Return to sale** is `Pos::AbandonTender` (`POST abandon_tender`): lock the working transaction, require the transaction cashier, destroy the working tender, advance `lock_version`, render `SALE_ENTRY`. After that, GET workspace is `SALE_ENTRY` (no hidden tender). The cashier must re-enter `TENDER` to settle.
+
+**`CancelTransaction` clears working tenders** in the same database transaction, under the working-transaction lock, before marking the transaction cancelled. Keep cancelled lines (minimal cancellation activity). Do not leave a cancelled row with a provisional Cash tender. Share the same clear-tender helper as basket mutation and `AbandonTender`. Completed tenders are never touched (`lock_working_transaction!` already forbids that).
+
+Exit paths:
+
+```text
+basket edit     → tender invalidated
+Return to sale  → tender abandoned
+Cancel          → tender discarded
+Complete        → tender becomes completed immutable fact
+```
 
 Inventory shortage is a **completion** error (Phase 4 posts on complete, not on add-line). The scan path will not catch oversell.
 
-Cancel: explicit confirmation overlay (see keyboard map). Disabled when the working transaction has no lines. Escape / Don't cancel returns to the prior mode and focus. Scanner Enter must not confirm.
+Cancel: explicit confirmation overlay (see keyboard map). Disabled when the working transaction has no lines. Escape / Don't cancel returns to the prior mode and focus. Scanner Enter must not confirm. Cancel from the recoverable completion-error screen (working + tender) uses this same `CancelTransaction` rule.
 
 ---
 
@@ -413,17 +430,17 @@ A cashier can:
 4. Continue scanning without manually restoring focus.
 5. Scan the same compatible SKU again and increment the existing line.
 6. Change quantity and remove a working line using keyboard-only interaction (visible controls also exist).
-7. Cancel a sale that has lines with explicit confirmation that scanner Enter cannot submit (second F9 confirms; Enter ignored). Cancel is disabled on an empty basket.
+7. Cancel a sale that has lines with explicit confirmation that scanner Enter cannot submit (second F9 confirms; Enter ignored). Cancel is disabled on an empty basket. `CancelTransaction` discards any working tender before marking the sale cancelled.
 8. Enter Cash presented; insufficient Cash stays in `TENDER`; valid settlement calls `TenderCash` then `CompleteTransaction` as two HTTP requests.
 9. Retry completion without calling `TenderCash` again; one receipt and one inventory posting. Refresh while working+tender restores a matching `in_flight`/`failed` `operation_id` rather than minting a second attempt.
 10. Refresh the workspace and resume the same working transaction (GET does not create another). Working + Cash tender restores completion-pending. No working transaction redirects to the enter gate — never to an inferred “latest” receipt.
-11. See a completion receipt/confirmation from completed facts at `GET /pos/transactions/:id/completed`, then continue to a fresh `SALE_ENTRY`. A lost complete response or complete retry against an already-completed transaction routes to **that** id's receipt. Scanner input on the receipt must not submit New sale.
+11. See a completion receipt/confirmation from completed facts at `GET /pos/transactions/:id/completed`, then continue to a fresh `SALE_ENTRY` via the **New sale** control. Enter on the receipt is a no-op (scanner-safe). A lost complete response or complete retry against an already-completed transaction routes to **that** id's receipt.
 12. Return to sale after a recoverable complete failure via `AbandonTender` (persisted tender is gone; GET workspace stays `SALE_ENTRY`).
 13. Receive inline feedback for unknown identifier, unsupported merchandise, stale `lock_version`, unresolved tax, insufficient Cash, inventory failure on complete, and recoverable completion/network errors, with the working transaction preserved.
 14. Be denied when a second cashier attempts to operate another cashier's Session.
 15. Never mutate receipt, inventory, tax, or totals in controller or Stimulus code.
 
-System tests (when the workspace is implemented) must cover at least: scan → focus restored → rescan increment; quantity mode; tender then complete; Escape; double Enter; insufficient Cash; refresh/re-entry; refresh with an existing tender restores completion-pending and the matching `operation_id`; completion retry without re-tender; complete succeeds / response lost / retry of that transaction's complete shows that receipt; GET workspace with no working transaction goes to enter; Return to sale clears the tender; empty-basket Cancel is disabled; cancel overlay ignores Enter and confirms on second F9; completed-receipt scanner Enter does not start New sale and drop the identifier; `pos_feedback` does not move the primary field.
+System tests (when the workspace is implemented) must cover at least: scan → focus restored → rescan increment; quantity mode; tender then complete; Escape; double Enter; insufficient Cash; refresh/re-entry; refresh with an existing tender restores completion-pending and the matching `operation_id`; completion retry without re-tender; complete succeeds / response lost / retry of that transaction's complete shows that receipt; GET workspace with no working transaction goes to enter; Return to sale clears the tender; cancel of a working sale with a Cash tender leaves no tenders on the cancelled row; empty-basket Cancel is disabled; cancel overlay ignores Enter and confirms on second F9; completed-receipt Enter does not start New sale; `pos_feedback` does not move the primary field.
 
 ---
 

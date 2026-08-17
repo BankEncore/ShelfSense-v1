@@ -480,7 +480,7 @@ Same layout as 6a, with `pos_feedback` and controls re-enabled for retry / retur
 | Shortcuts | Enter = retry; F9 = cancel overlay. `*` / `+` / Delete ignored |
 | Visible equivalents | **Retry complete**, **Return to sale**, **Cancel (F9)** |
 | Error location | `pos_feedback` in the reserved strip (inventory, tax, network, stale `lock_version`) |
-| Turbo region(s) | Retry success: full-page that transaction's receipt. Retry failure: `pos_feedback`. Return to sale: `POST abandon_tender` → `SALE_ENTRY` with no working tender. Cancel: overlay → `POST cancel` → `ResumeOrStartTransaction` → empty `SALE_ENTRY` |
+| Turbo region(s) | Retry success: full-page that transaction's receipt. Retry failure: `pos_feedback`. Return to sale: `POST abandon_tender` → `SALE_ENTRY` with no working tender. Cancel: overlay → `POST cancel` (`CancelTransaction` discards the tender, then `ResumeOrStartTransaction`) → empty `SALE_ENTRY` |
 
 Do not `POST tender` again from this frame. Changing Cash presented: **Return to sale** (clears tender) then `+` / Tender (new `TenderCash`, new token). Refresh after Return to sale stays `SALE_ENTRY`.
 
@@ -520,7 +520,7 @@ No caret in an input. Do not put `[FOCUS]` on a text field. Proposed: focus **Do
 | Shortcuts | F9 confirms cancel (`POST cancel`). Alphanumeric keys ignored. `*` / `+` / Delete ignored |
 | Visible equivalents | **Don't cancel (Esc)**, **Cancel sale (F9)** |
 | Error location | If `POST cancel` fails, close overlay, `pos_feedback` on the underlying frame, restore focus to primary |
-| Turbo region(s) | Overlay is Stimulus until confirm. Success: full-page `SALE_ENTRY` after `ResumeOrStartTransaction`. Do not land on a prior receipt |
+| Turbo region(s) | Overlay is Stimulus until confirm. Success: `CancelTransaction` discards working tenders, then full-page `SALE_ENTRY` after `ResumeOrStartTransaction`. Do not land on a prior receipt |
 
 First F9 opens this overlay. Second F9 confirms. There is no `Y` confirm.
 
@@ -569,15 +569,15 @@ The browser may retain the transaction id it was completing so a lost redirect c
 +------------------------------------------------------------------+
 ```
 
-Do **not** default-focus **New sale** as a control a scanner Enter would activate.
+Do **not** default-focus **New sale**. Slice 2: **Enter does nothing** on this page (no identifier buffer). **New sale** is an explicit control (click, or a dedicated non-Enter shortcut — which key is wireframe-validatable). A later slice may add “scan on receipt → start new sale and add that identifier”; do not implement that orchestration now.
 
 | Annotation | |
 |---|---|
 | Focused element | A non-activating target (heading or status). **New sale** is prominent and in tab order |
 | Selected line | n/a (completed lines are a summary, not a working selection) |
-| Next Enter | Keyboard Enter with **no** preceding identifier characters → `POST continue`. Identifier characters (scanner digits) then Enter → **do not** submit New sale and must not discard the identifier into a new sale. Slice 2 does not auto-start a transaction and add that SKU |
+| Next Enter | **No-op.** Does not `POST continue`. Scanner Enter cannot start a sale or drop a barcode |
 | Escape | no-op (do not cancel a completed sale) |
-| Shortcuts | No `*` / `+` / Delete / F9 |
+| Shortcuts | No `*` / `+` / Delete / F9. New sale uses the visible control (optional dedicated non-Enter key) |
 | Visible equivalents | **New sale** (prominent). No print control |
 | Error location | If continue fails (session closed, occupancy): message on this page; do not create a working transaction on GET |
 | Turbo region(s) | Full page. Not a Turbo Frame inside the selling surface — a scan must not be interpretable as `AddMerchandise` |
@@ -597,7 +597,7 @@ Render from completed transaction facts (`transaction_reference`, total, Cash pr
 | Enter | Completion-pending in flight | Ignored |
 | Enter | Completion error | Retry complete |
 | Enter | Cancel overlay | **Ignored** |
-| Enter | Completed receipt | Keyboard Enter with empty identifier buffer → `POST continue`. Scanner digits then Enter do **not** submit New sale |
+| Enter | Completed receipt | **Ignored** (New sale is the explicit control) |
 | Escape | `SALE_ENTRY` | Clear field |
 | Escape | `QUANTITY` / `TENDER` | Back to `SALE_ENTRY` |
 | Escape | Completion-pending | No silent return |
@@ -634,10 +634,10 @@ These are the interaction questions this pass is for:
 9. Feedback placement in the reserved strip, not a top-of-page admin flash.
 10. Does feedback appear without moving the command field?
 11. Does a long basket scroll independently while command/totals remain fixed?
-12. Return to sale discards the persisted tender (`POST abandon_tender`).
-13. What happens if the cashier scans while the completed receipt is displayed? (Slice 2: do not submit New sale / drop the identifier.)
+12. Return to sale discards the persisted tender (`POST abandon_tender`). Cancel from 6b also discards the tender (`CancelTransaction`).
+13. Completed receipt: Enter is a no-op; New sale is explicit. (Later: scan-on-receipt → new sale + add SKU.) Dedicated non-Enter New sale shortcut?
 14. Is the current mode unmistakable at a glance?
 
-HTTP/domain items 1–4 from the contract pass (no latest-receipt inference; restore matching `operation_id`; `AbandonTender`; empty-basket Cancel disabled) are **locked**, not open UX questions.
+HTTP/domain locks (not open UX questions): no latest-receipt inference; restore matching `operation_id`; `AbandonTender`; empty-basket Cancel disabled; `CancelTransaction` clears working tenders.
 
-Accepting this document (with any of items 1–5, 7, 14 adjusted) is what makes Slice 2 interaction locked enough to implement domain invariants, then Hotwire.
+Accepting this document (with any of items 1–5, 7, 13–14 adjusted) is what makes Slice 2 interaction locked enough to implement domain invariants, then Hotwire.
