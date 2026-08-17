@@ -3,6 +3,9 @@
 class Register < ApplicationRecord
   belongs_to :store
   belongs_to :deactivated_by, class_name: "User", optional: true
+  has_many :pos_reporting_periods, dependent: :restrict_with_exception
+  has_many :pos_sessions, dependent: :restrict_with_exception
+  has_many :pos_transactions, dependent: :restrict_with_exception
 
   before_validation :normalize_register_number
 

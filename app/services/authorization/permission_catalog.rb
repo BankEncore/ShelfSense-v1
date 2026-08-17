@@ -81,7 +81,8 @@ module Authorization
       { key: "store_taxes.view", group_key: "store_taxes", name: "View store taxes", scope_type: "either" },
       { key: "store_taxes.create", group_key: "store_taxes", name: "Create store taxes", scope_type: "either" },
       { key: "store_taxes.update", group_key: "store_taxes", name: "Update store taxes", scope_type: "either" },
-      { key: "store_taxes.deactivate", group_key: "store_taxes", name: "Deactivate store taxes", scope_type: "either" }
+      { key: "store_taxes.deactivate", group_key: "store_taxes", name: "Deactivate store taxes", scope_type: "either" },
+      { key: "pos.transact", group_key: "pos", name: "Operate POS transactions", scope_type: "either" }
     ].freeze
 
     PERMISSIONS = (PHASE1_PERMISSIONS + PHASE2_PERMISSIONS + PHASE3_PERMISSIONS + PHASE4_PERMISSIONS).freeze
@@ -109,6 +110,7 @@ module Authorization
       store_taxes.create
       store_taxes.update
       store_taxes.deactivate
+      pos.transact
     ].freeze
 
     ROLES = [
@@ -142,6 +144,7 @@ module Authorization
           products.view
           product_variants.view
           inventory.view
+          pos.transact
         ]
       }
     ].freeze

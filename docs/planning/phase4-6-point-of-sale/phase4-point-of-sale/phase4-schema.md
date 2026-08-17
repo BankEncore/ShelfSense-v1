@@ -436,6 +436,6 @@ Before writing POS migrations:
 - [x] `registers.register_number` + `registers.receipt_sequence` added and backfilled  
 - [x] Device-only fields reviewed/dropped on Register  
 - [x] CompletedPosOperation v1 example fixtures reviewed  
-- [ ] Session table confirmed **without** Cash close columns  
+- [x] Session table confirmed **without** Cash close columns  
 
 Then migrate in dependency order: rename slice → `store_taxes` / `store_tax_rules` → periods (with `register_id`) → sessions → transactions → lines → tax components → tenders → operations.
