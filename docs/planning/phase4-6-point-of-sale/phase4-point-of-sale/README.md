@@ -1,6 +1,8 @@
 # Phase 4 — Point of sale foundation
 
-**Implementation-ready** once the `workstations` → `registers` rename slice completes and CompletedPosOperation v1 golden fixtures are reviewed. See [phase4-plan.md](phase4-plan.md) readiness gate and [phase4-schema.md](phase4-schema.md) migration checklist.
+**Status:** Implemented (headless Cash sale, completion kernel, receipt identity, inventory posting).
+
+Phase 5 cash accountability and register UI: [../phase5-cash-register/](../phase5-cash-register/).
 
 | Document | Purpose |
 |---|---|

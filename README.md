@@ -190,6 +190,22 @@ The Phase 3 deliverable is:
 
 Authoritative plan: [phase-3-inventory-foundation.md](docs/planning/phase3-inventory-foundation/phase-3-inventory-foundation.md). Contract: [inventory-posting-contract.md](docs/planning/phase3-inventory-foundation/inventory-posting-contract.md).
 
+### Phase 4: POS transaction and posting foundation
+
+Status: implemented (headless Cash sale, `CompletedPosOperation` v1, receipt identity, inventory posting, idempotent completion).
+
+Phase 4 proves that ShelfSense can construct, complete, and authoritatively post one deterministic Cash sale without a cashier UI.
+
+Authoritative plan: [phase4-plan.md](docs/planning/phase4-6-point-of-sale/phase4-point-of-sale/phase4-plan.md).
+
+### Phase 5: First operational cash register
+
+Status: in progress (slice 1 locked — headless cash accountability and Z finalize). Register workspace and receipt/Z screens follow.
+
+Phase 5 turns the Phase 4 completion path into a cashier-usable online Rails register. Opening float, session close snapshots, and finalized Z facts are locked; the register UI stack is not.
+
+Authoritative plan: [phase5-plan.md](docs/planning/phase4-6-point-of-sale/phase5-cash-register/phase5-plan.md). Schema: [phase5-schema.md](docs/planning/phase4-6-point-of-sale/phase5-cash-register/phase5-schema.md).
+
 ## Phase 1 authorization model
 
 Permissions are additive and supplied by roles:
@@ -225,6 +241,7 @@ Start with the [documentation index](docs/README.md). Key references include:
 - [Phase 1 plan](docs/planning/phase1-operational-foundation/phase1-plan.md), [schema](docs/planning/phase1-operational-foundation/phase1-schema.md), and [authorization contract](docs/planning/phase1-operational-foundation/phase1-authorization.md)
 - [Phase 2 plan](docs/planning/phase2-financial-classification-and-merchandise-foundation/phase2-plan.md), [schema](docs/planning/phase2-financial-classification-and-merchandise-foundation/phase-2-database-schema.md), and [authorization contract](docs/planning/phase2-financial-classification-and-merchandise-foundation/phase2-authorization.md)
 - [Phase 2.2 UX foundation](docs/planning/phase2.2-ux-foundation/phase-2.2-ux-foundation.md) and [UX conventions](docs/ux-conventions.md)
+- [Phase 4 POS plan](docs/planning/phase4-6-point-of-sale/phase4-point-of-sale/phase4-plan.md) and [Phase 5 cash register plan](docs/planning/phase4-6-point-of-sale/phase5-cash-register/phase5-plan.md)
 - [Development guide](docs/development.md)
 - [Testing and CI](docs/testing.md)
 - [GitHub work management](docs/github-workflow.md)

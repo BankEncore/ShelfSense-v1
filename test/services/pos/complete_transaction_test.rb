@@ -243,8 +243,17 @@ class PosCompleteTransactionTest < ActiveSupport::TestCase
   test "replay of a completed operation succeeds after the register is deactivated" do
     operation_id = SecureRandom.uuid_v7
     first = Pos::CompleteTransaction.call(**complete_args(operation_id: operation_id))
-    @context[:session].reload.update!(status: "closed", closed_at: Time.current)
-    @context[:period].reload.update!(status: "finalized", closed_at: Time.current)
+    Pos::CloseSession.call(
+      session: @context[:session].reload,
+      actor: @actor,
+      expected_lock_version: @context[:session].lock_version,
+      closing_count_cents: 0
+    )
+    Pos::FinalizeReportingPeriod.call(
+      period: @context[:period].reload,
+      actor: @actor,
+      expected_lock_version: @context[:period].lock_version
+    )
     @context[:register].reload.update!(active: false, deactivated_at: Time.current, deactivated_by: @actor)
 
     second = Pos::CompleteTransaction.call(**complete_args(operation_id: operation_id))

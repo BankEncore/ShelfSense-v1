@@ -12,6 +12,13 @@ Below is a repository-ready **detailed implementation plan** translating the POS
 
 Those companions supersede conflicting Phase 4 detail in §4 of this document (especially command vs completed-operation naming, receipt-inside-operation, sales-tax model, receipt reference format, Register vs Terminal, envelope vs Core, session column minimality, `pos_operations`, and build order).
 
+**Phase 5 implementation authority:** For Phase 5 cash accountability, session close snapshots, Z finalize snapshots, and slice sequencing, prefer:
+
+- [phase5-plan.md](phase5-cash-register/phase5-plan.md)
+- [phase5-schema.md](phase5-cash-register/phase5-schema.md)
+
+Those companions supersede conflicting Phase 5 detail in §5 of this document (especially session cash column names, expected-cash formula, Z snapshot persistence, and authorization for finalize).
+
 **Phase 4 prerequisite:** Complete the `workstations` → `registers` rename slice (ADR-021 / [register-identity.md](phase4-point-of-sale/register-identity.md) §5) before POS reporting-period, session, or transaction migrations.
 
 # POS Phases 4–6 Detailed Implementation Plan

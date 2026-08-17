@@ -6,14 +6,17 @@ module Pos
       new(**attrs).call
     end
 
-    def initialize(session:, actor:, expected_lock_version:, closed_at: Time.current)
+    def initialize(session:, actor:, expected_lock_version:, closing_count_cents:, closed_at: Time.current)
       @session = session
       @actor = actor
       @expected_lock_version = expected_lock_version
+      @closing_count_cents = closing_count_cents
       @closed_at = closed_at
     end
 
     def call
+      count_cents = Pos::Support.parse_nonnegative_cents!(@closing_count_cents, "closing count")
+
       PosSession.transaction do
         session = PosSession.lock.find(@session.id)
         Pos::Support.authorize!(@actor, session.store)
@@ -27,7 +30,29 @@ module Pos
           raise Pos::Error, "session has a working transaction"
         end
 
-        session.update!(status: "closed", closed_at: @closed_at)
+        expected_cents = Pos::SessionTotals.for(session).expected_cash_cents
+        variance_cents = count_cents - expected_cents
+        session.update!(
+          status: "closed",
+          closed_at: @closed_at,
+          closing_expected_cash_cents: expected_cents,
+          closing_count_cents: count_cents,
+          closing_variance_cents: variance_cents
+        )
+        Audit::Recorder.record!(
+          action: "pos.session.closed",
+          outcome: "succeeded",
+          actor_user: @actor,
+          actor_label: @actor.display_name,
+          store: session.store,
+          register: session.register,
+          subject: session,
+          after_values: {
+            closing_count_cents: session.closing_count_cents,
+            closing_expected_cash_cents: session.closing_expected_cash_cents,
+            closing_variance_cents: session.closing_variance_cents
+          }
+        )
         session
       end
     end

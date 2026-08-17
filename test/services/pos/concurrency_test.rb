@@ -142,7 +142,8 @@ class Pos::ConcurrencyTest < ActiveSupport::TestCase
           close_result = Pos::CloseSession.call(
             session: PosSession.find(session_id),
             actor: User.find(actor_id),
-            expected_lock_version: lock_version
+            expected_lock_version: lock_version,
+            closing_count_cents: 0
           )
         rescue StandardError => e
           close_error = e
@@ -156,6 +157,54 @@ class Pos::ConcurrencyTest < ActiveSupport::TestCase
     refute session.closed? && working.positive?
     assert start_result || start_error
     assert close_result || close_error
+  end
+
+  test "open session versus finalize period never leaves an open session on a finalized period" do
+    register = Register.create!(store: @store, register_number: 92, name: "Z race")
+    period = Pos::OpenReportingPeriod.call(store: @store, register: register, actor: @actor)
+    period_id = period.id
+    lock_version = period.lock_version
+    actor_id = @actor.id
+    store_id = @store.id
+    register_id = register.id
+
+    open_result = nil
+    finalize_result = nil
+    open_error = nil
+    finalize_error = nil
+    threads = [
+      Thread.new do
+        ActiveRecord::Base.connection_pool.with_connection do
+          open_result = Pos::OpenSession.call(
+            store: Store.find(store_id),
+            register: Register.find(register_id),
+            actor: User.find(actor_id),
+            reporting_period: PosReportingPeriod.find(period_id),
+            opening_float_cents: 0
+          )
+        rescue StandardError => e
+          open_error = e
+        end
+      end,
+      Thread.new do
+        ActiveRecord::Base.connection_pool.with_connection do
+          finalize_result = Pos::FinalizeReportingPeriod.call(
+            period: PosReportingPeriod.find(period_id),
+            actor: User.find(actor_id),
+            expected_lock_version: lock_version
+          )
+        rescue StandardError => e
+          finalize_error = e
+        end
+      end
+    ]
+    threads.each { |thread| assert thread.join(30), "thread did not finish" }
+
+    period = PosReportingPeriod.uncached { PosReportingPeriod.find(period_id) }
+    open_sessions = PosSession.uncached { PosSession.where(reporting_period_id: period_id, status: "open").count }
+    refute period.finalized? && open_sessions.positive?
+    assert open_result || open_error
+    assert finalize_result || finalize_error
   end
 
   test "concurrent lease begin for the same operation_id recovers without recursion" do

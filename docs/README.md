@@ -24,6 +24,8 @@ This directory contains the project’s technical authority, development guidanc
 | [Receipt identity](planning/phase4-6-point-of-sale/phase4-point-of-sale/receipt-identity.md) | Compact `S…-R…-T…` transaction reference and receipt header forms (ADR-006) |
 | [Register identity](planning/phase4-6-point-of-sale/phase4-point-of-sale/register-identity.md) | Register vs Terminal; pre-Phase-4 `workstations`→`registers` rename (ADR-021) |
 | [POS operation and Core facts](planning/phase4-6-point-of-sale/phase4-point-of-sale/operation-and-core-facts.md) | Canonical envelope vs normalized Core dual authority (ADR-020) |
+| [Phase 5 cash register plan](planning/phase4-6-point-of-sale/phase5-cash-register/phase5-plan.md) | Phase 5 cash accountability, Z finalize, and register-UI slices |
+| [Phase 5 cash register schema](planning/phase4-6-point-of-sale/phase5-cash-register/phase5-schema.md) | Session close snapshots and reporting-period Z snapshots |
 | [POS Phases 4–6 plan](planning/phase4-6-point-of-sale/spec.md) | Multi-phase POS sequencing (foundation → cash register → breadth) |
 | [UX conventions](ux-conventions.md) | Shared admin page anatomy, partials, currency boundaries, palette, and Hotwire deferral |
 | [Development guide](development.md) | Docker-only local setup, PostgreSQL configuration, application commands, and troubleshooting |
