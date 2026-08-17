@@ -1,0 +1,29 @@
+<%= form_with model: [:admin, store_tax] do |form| %>
+  <% if store_tax.errors.any? %><ul><% store_tax.errors.full_messages.each do |m| %><li><%= m %></li><% end %></ul><% end %>
+  <%= form.hidden_field :lock_version %>
+  <% if store_tax.persisted? && store_tax.referenced_by_completed_component? %>
+    <p>Code: <code><%= store_tax.code %></code> (immutable after a completed sale)</p>
+  <% else %>
+    <p>
+      <%= form.label :code %>
+      <%= form.text_field :code %>
+      <span>Leave blank to generate from the name.</span>
+    </p>
+  <% end %>
+  <p><%= form.label :name %><%= form.text_field :name %></p>
+  <p><%= form.label :rate_percent, "Rate percent" %><%= form.text_field :rate_percent %></p>
+  <p><%= form.label :calculation_order %><%= form.number_field :calculation_order, min: 0 %></p>
+  <% if tax_classes.any? %>
+    <h2>Tax class applicability</h2>
+    <% tax_classes.each do |tax_class| %>
+      <% current = rules_by_tax_class_id[tax_class.id]&.applies %>
+      <p>
+        <%= tax_class.admin_label %>
+        <label><%= radio_button_tag "store_tax[applies_by_tax_class_id][#{tax_class.id}]", "", current.nil? %> Unresolved</label>
+        <label><%= radio_button_tag "store_tax[applies_by_tax_class_id][#{tax_class.id}]", "true", current == true %> Applies</label>
+        <label><%= radio_button_tag "store_tax[applies_by_tax_class_id][#{tax_class.id}]", "false", current == false %> Does not apply</label>
+      </p>
+    <% end %>
+  <% end %>
+  <p><%= form.submit %></p>
+<% end %>

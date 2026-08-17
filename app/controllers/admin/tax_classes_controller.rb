@@ -25,6 +25,7 @@ module Admin
         action: "tax_classes.create",
         after_values: { code: @tax_class.code, name: @tax_class.name }
       )
+        StoreTaxes::EnsureRules.for_tax_class(@tax_class) if @tax_class.active?
         redirect_to admin_tax_class_path(@tax_class), notice: "Tax class created."
       else
         render :new, status: :unprocessable_entity

@@ -25,6 +25,7 @@ module Configuration
       @record.class.transaction do
         @record.lock_version = @lock_version unless @lock_version.nil?
         @record.update!(active: true)
+        StoreTaxes::EnsureRules.for_tax_class(@record) if @record.is_a?(TaxClass)
         Audit::Recorder.record!(
           action: @audit_action,
           outcome: "succeeded",

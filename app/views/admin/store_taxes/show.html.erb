@@ -1,0 +1,31 @@
+<% content_for :title, @store_tax.admin_label %>
+<h1><%= @store_tax.admin_label %></h1>
+<p>
+  Code: <%= @store_tax.code %> ·
+  Rate: <%= @store_tax.rate_percent_display %>% ·
+  Order: <%= @store_tax.calculation_order %> ·
+  <%= @store_tax.active? ? "active" : "inactive" %>
+</p>
+<p>
+  <%= link_to "Edit", edit_admin_store_tax_path(@store_tax) if effective_permissions.include?("store_taxes.update") %>
+  <% if effective_permissions.include?("store_taxes.deactivate") && @store_tax.active? %>
+    <%= button_to "Deactivate", admin_store_tax_path(@store_tax), method: :delete, form: { data: { turbo_confirm: "Deactivate this store tax?" } } %>
+  <% elsif effective_permissions.include?("store_taxes.deactivate") && !@store_tax.active? %>
+    <%= button_to "Reactivate", reactivate_admin_store_tax_path(@store_tax), method: :post, params: { lock_version: @store_tax.lock_version } %>
+  <% end %>
+</p>
+<h2>Tax class applicability</h2>
+<ul>
+  <% @tax_classes.each do |tax_class| %>
+    <% rule = @rules_by_tax_class_id[tax_class.id] %>
+    <li>
+      <%= tax_class.admin_label %>:
+      <% if rule.nil? || rule.applies.nil? %>
+        unresolved
+      <% else %>
+        <%= rule.applies? ? "applies" : "does not apply" %>
+      <% end %>
+    </li>
+  <% end %>
+</ul>
+<p><%= link_to "Back to store taxes", admin_store_taxes_path %></p>

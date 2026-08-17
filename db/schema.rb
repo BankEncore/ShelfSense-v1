@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_16_221000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_16_230000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -476,6 +476,31 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_16_221000) do
     t.check_constraint "assignment_scope::text = ANY (ARRAY['global'::character varying::text, 'store'::character varying::text, 'either'::character varying::text])", name: "roles_assignment_scope_valid"
   end
 
+  create_table "store_tax_rules", id: :uuid, default: nil, force: :cascade do |t|
+    t.boolean "applies"
+    t.timestamptz "created_at", null: false
+    t.integer "lock_version", default: 0, null: false
+    t.uuid "store_tax_id", null: false
+    t.uuid "tax_class_id", null: false
+    t.timestamptz "updated_at", null: false
+    t.index ["store_tax_id", "tax_class_id"], name: "index_store_tax_rules_on_store_tax_id_and_tax_class_id", unique: true
+  end
+
+  create_table "store_taxes", id: :uuid, default: nil, force: :cascade do |t|
+    t.boolean "active", default: true, null: false
+    t.integer "calculation_order", default: 0, null: false
+    t.string "code", null: false
+    t.timestamptz "created_at", null: false
+    t.integer "lock_version", default: 0, null: false
+    t.string "name", null: false
+    t.decimal "rate_percent", precision: 6, scale: 3, null: false
+    t.uuid "store_id", null: false
+    t.timestamptz "updated_at", null: false
+    t.index ["store_id", "code"], name: "index_store_taxes_on_store_id_and_code", unique: true
+    t.check_constraint "calculation_order >= 0", name: "store_taxes_calculation_order_nonnegative"
+    t.check_constraint "rate_percent >= 0::numeric AND rate_percent <= 100::numeric", name: "store_taxes_rate_percent_range"
+  end
+
   create_table "stores", id: :uuid, default: nil, force: :cascade do |t|
     t.boolean "active", default: true, null: false
     t.string "city"
@@ -635,6 +660,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_16_221000) do
   add_foreign_key "role_permissions", "roles"
   add_foreign_key "role_permissions", "users", column: "granted_by_id"
   add_foreign_key "roles", "users", column: "deactivated_by_id"
+  add_foreign_key "store_tax_rules", "store_taxes"
+  add_foreign_key "store_tax_rules", "tax_classes"
+  add_foreign_key "store_taxes", "stores"
   add_foreign_key "stores", "users", column: "deactivated_by_id"
   add_foreign_key "user_sessions", "users"
   add_foreign_key "user_sessions", "users", column: "revoked_by_id"

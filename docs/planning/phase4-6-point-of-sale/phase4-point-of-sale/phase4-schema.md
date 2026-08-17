@@ -53,7 +53,7 @@ See [register-identity.md](register-identity.md) for the `registers` target shap
 | `name` | string | null: false |
 | `rate_percent` | numeric(6,3) | **NOT NULL**; CHECK `0 <= rate_percent AND rate_percent <= 100` |
 | `active` | boolean | null: false |
-| `calculation_order` | integer | **NOT NULL**; CHECK `>= 0`; **UNIQUE per `store_id`** |
+| `calculation_order` | integer | **NOT NULL**; CHECK `>= 0`; evaluation/display order, **not unique** (`ORDER BY calculation_order, code, id`) |
 | `lock_version` | integer | null: false, default 0 |
 | `created_at` / `updated_at` | timestamptz | |
 
@@ -403,7 +403,7 @@ Do not invent a POS-only domain `source_type` string unless a global inventory A
 
 - FKs for all store / register / session / period / user / variant / tax references.
 - Unique `(store_id, code)` on `store_taxes`.
-- Unique `(store_id, calculation_order)` on `store_taxes`.
+- CHECK `calculation_order >= 0` on `store_taxes` (not unique; query `ORDER BY calculation_order, code, id`).
 - CHECK `0 <= rate_percent AND rate_percent <= 100` on `store_taxes.rate_percent` (NOT NULL).
 - Unique `(store_tax_id, tax_class_id)` on `store_tax_rules`.
 - Partial unique `(register_id) WHERE status = 'open'` on `pos_reporting_periods`.

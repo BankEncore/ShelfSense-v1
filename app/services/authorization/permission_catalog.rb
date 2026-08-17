@@ -77,7 +77,14 @@ module Authorization
       { key: "inventory.backdate", group_key: "inventory", name: "Backdate inventory events", scope_type: "either" }
     ].freeze
 
-    PERMISSIONS = (PHASE1_PERMISSIONS + PHASE2_PERMISSIONS + PHASE3_PERMISSIONS).freeze
+    PHASE4_PERMISSIONS = [
+      { key: "store_taxes.view", group_key: "store_taxes", name: "View store taxes", scope_type: "either" },
+      { key: "store_taxes.create", group_key: "store_taxes", name: "Create store taxes", scope_type: "either" },
+      { key: "store_taxes.update", group_key: "store_taxes", name: "Update store taxes", scope_type: "either" },
+      { key: "store_taxes.deactivate", group_key: "store_taxes", name: "Deactivate store taxes", scope_type: "either" }
+    ].freeze
+
+    PERMISSIONS = (PHASE1_PERMISSIONS + PHASE2_PERMISSIONS + PHASE3_PERMISSIONS + PHASE4_PERMISSIONS).freeze
 
     STORE_MANAGER_PHASE2_VIEWS = %w[
       gl_accounts.view
@@ -95,6 +102,13 @@ module Authorization
       inventory.view
       inventory.adjust
       inventory.reverse_adjustment
+    ].freeze
+
+    STORE_MANAGER_PHASE4 = %w[
+      store_taxes.view
+      store_taxes.create
+      store_taxes.update
+      store_taxes.deactivate
     ].freeze
 
     ROLES = [
@@ -116,7 +130,7 @@ module Authorization
           registers.manage
           registers.deactivate
           audit_events.view
-        ] + STORE_MANAGER_PHASE2_VIEWS + STORE_MANAGER_PHASE3
+        ] + STORE_MANAGER_PHASE2_VIEWS + STORE_MANAGER_PHASE3 + STORE_MANAGER_PHASE4
       },
       {
         key: "associate",
