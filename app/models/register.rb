@@ -12,6 +12,7 @@ class Register < ApplicationRecord
   validates :register_number, uniqueness: { scope: :store_id }
   validates :receipt_sequence, numericality: { only_integer: true, greater_than_or_equal_to: 0 }
   validate :register_number_immutable_after_receipts, on: :update
+  validate :receipt_sequence_never_decreases, on: :update
   validate :cannot_deactivate_with_open_pos_context, if: :deactivating?
 
   scope :active, -> { where(active: true) }
@@ -22,11 +23,22 @@ class Register < ApplicationRecord
 
   private
 
+  def receipt_history?
+    persisted? && attribute_in_database("receipt_sequence").to_i.positive?
+  end
+
   def register_number_immutable_after_receipts
     return unless will_save_change_to_register_number?
-    return if receipt_sequence.to_i.zero?
+    return unless receipt_history?
 
     errors.add(:register_number, "cannot change after a receipt has been issued")
+  end
+
+  def receipt_sequence_never_decreases
+    return unless will_save_change_to_receipt_sequence?
+    return if receipt_sequence.to_i >= attribute_in_database("receipt_sequence").to_i
+
+    errors.add(:receipt_sequence, "cannot decrease")
   end
 
   def deactivating?

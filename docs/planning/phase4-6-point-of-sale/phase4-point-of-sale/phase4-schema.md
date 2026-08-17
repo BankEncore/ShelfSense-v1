@@ -353,7 +353,7 @@ Conceptual uniqueness:
 | Column | Type | Notes |
 |---|---|---|
 | `register_number` | integer | null: false; CHECK `> 0`; unique per `store_id`; parallel to `stores.store_number` |
-| `receipt_sequence` | bigint | null: false, default 0; next receipt allocated by increment under row lock |
+| `receipt_sequence` | bigint | null: false, default 0; next receipt allocated by increment under row lock; must not decrease |
 
 Do not use editable `name` in the reference. Prefer explicit `register_number` over reusing free-form `code` unless `code` is constrained to be that number.
 
@@ -414,6 +414,7 @@ Do not invent a POS-only domain `source_type` string unless a global inventory A
 - Unique `(pos_transaction_line_id, store_tax_id)` on tax components; nonnegative CHECKs on basis/tax cents.
 - Optional unique `transaction_reference` if stored; must match derived form from snapshots.
 - `pos_operations` uniqueness on `(source_id, command_type, idempotency_key)`.
+- Ordinary FK indexes on POS session/period/transaction/line/tender/operation references (not only uniqueness indexes).
 - Check constraints for status enums; `in_flight` requires lease; completed requires envelope + `envelope_hash`.
 - Transaction status NULL rules for receipt / `completed_at` / `cancelled_at` (§7).
 - Reject completed lines without required merchandise snapshot keys (DB CHECK and/or application validation).

@@ -20,7 +20,6 @@ module Pos
     def call
       lease = nil
       Pos::Support.authorize!(@actor, @transaction.store)
-      Pos::Support.require_active_context!(@transaction.store, @transaction.register)
       Pos::Support.require_transaction_cashier!(@actor, @transaction)
 
       lease = Pos::OperationLease.begin!(
@@ -32,12 +31,14 @@ module Pos
       )
       return replay_result(lease.operation) if lease.replayed
 
+      Pos::Support.require_active_context!(@transaction.store, @transaction.register)
       complete_commercially!(@transaction, lease.operation)
     rescue Pos::Denied => e
       record_rejection_audit!(e.message, outcome: "denied")
       fail_in_flight_lease!(lease)
       raise
-    rescue Pos::PayloadMismatch, OperationLease::Error
+    rescue Pos::PayloadMismatch, OperationLease::Error => e
+      record_integrity_rejection!(e)
       raise
     rescue StandardError => e
       fail_in_flight_lease!(lease)
@@ -378,6 +379,12 @@ module Pos
         reason_text: message,
         metadata: { operation_id: @operation_id }
       )
+    end
+
+    def record_integrity_rejection!(error)
+      return if error.is_a?(OperationLease::Error) && error.message.match?(/still in flight/i)
+
+      record_rejection_audit!(error.message, outcome: "failed")
     end
 
     def fail_in_flight_lease!(lease)

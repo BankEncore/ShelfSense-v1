@@ -295,7 +295,7 @@ A user may access a store when at least one effective assignment applies either 
 | `name` | varchar | null: false | Editable label; not used in receipt reference |
 | `description` | text |  |  |
 | `active` | boolean | null: false; default `true` |  |
-| `receipt_sequence` | bigint | null: false; default `0`; check `>= 0` | Last sequence permanently consumed |
+| `receipt_sequence` | bigint | null: false; default `0`; check `>= 0` | Last sequence permanently consumed; must not decrease |
 | `deactivated_at` | timestamptz |  | Register removed from normal operation |
 | `deactivated_by_id` | uuid | FK: `users`; nullable |  |
 | `lock_version` | integer | null: false; default `0` | Optimistic concurrency |

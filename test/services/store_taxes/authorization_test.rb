@@ -50,4 +50,24 @@ class StoreTaxes::AuthorizationTest < ActiveSupport::TestCase
     assert_equal "denied", event.outcome
     assert_equal "store_taxes.update", event.reason_code
   end
+
+  test "unauthorized reactivate is denied and audited" do
+    store_tax = StoreTaxes::Create.call(
+      store: @store,
+      actor: @actor,
+      name: "Illinois State",
+      rate_percent: "5.000",
+      calculation_order: 1,
+      applies_by_tax_class_id: { @tax.id => true }
+    )
+    store_tax.update!(active: false)
+
+    assert_raises(StoreTaxes::Denied) do
+      StoreTaxes::Reactivate.call(store_tax: store_tax, actor: @associate)
+    end
+    assert_not store_tax.reload.active?
+    event = AuditEvent.where(action: "authorization.denied").order(:created_at).last
+    assert_equal "denied", event.outcome
+    assert_equal "store_taxes.deactivate", event.reason_code
+  end
 end

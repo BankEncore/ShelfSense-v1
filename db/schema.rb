@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_16_250000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_16_260000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -375,6 +375,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_16_250000) do
     t.bigint "taxable_basis_cents", null: false
     t.timestamptz "updated_at", null: false
     t.index ["pos_transaction_line_id", "store_tax_id"], name: "index_pos_line_tax_components_on_line_and_store_tax", unique: true
+    t.index ["store_tax_id"], name: "index_pos_line_tax_components_on_store_tax_id"
     t.check_constraint "taxable_basis_cents >= 0 AND tax_cents >= 0", name: "pos_line_tax_components_nonnegative"
   end
 
@@ -400,7 +401,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_16_250000) do
     t.string "status", null: false
     t.uuid "store_id"
     t.timestamptz "updated_at", null: false
+    t.index ["pos_transaction_id"], name: "index_pos_operations_on_pos_transaction_id"
+    t.index ["register_id"], name: "index_pos_operations_on_register_id"
     t.index ["source_id", "command_type", "idempotency_key"], name: "index_pos_operations_on_scope_key", unique: true
+    t.index ["store_id"], name: "index_pos_operations_on_store_id"
     t.check_constraint "status::text = 'in_flight'::text AND lease_expires_at IS NOT NULL AND envelope IS NULL AND envelope_hash IS NULL AND fact_type IS NULL OR status::text = 'failed'::text AND envelope IS NULL AND envelope_hash IS NULL OR status::text = 'completed'::text AND fact_type IS NOT NULL AND schema_version IS NOT NULL AND pos_transaction_id IS NOT NULL AND envelope IS NOT NULL AND envelope_hash IS NOT NULL AND posted_at IS NOT NULL", name: "pos_operations_status_payload_rules"
     t.check_constraint "status::text = ANY (ARRAY['in_flight'::character varying, 'completed'::character varying, 'failed'::character varying]::text[])", name: "pos_operations_status_valid"
   end
@@ -415,7 +419,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_16_250000) do
     t.string "status", null: false
     t.uuid "store_id", null: false
     t.timestamptz "updated_at", null: false
+    t.index ["register_id"], name: "index_pos_reporting_periods_on_register_id"
     t.index ["register_id"], name: "index_pos_reporting_periods_one_open_per_register", unique: true, where: "((status)::text = 'open'::text)"
+    t.index ["store_id"], name: "index_pos_reporting_periods_on_store_id"
     t.check_constraint "status::text = 'open'::text AND closed_at IS NULL OR status::text = 'finalized'::text AND closed_at IS NOT NULL", name: "pos_reporting_periods_closed_at_matches_status"
     t.check_constraint "status::text = ANY (ARRAY['open'::character varying, 'finalized'::character varying]::text[])", name: "pos_reporting_periods_status_valid"
   end
@@ -431,7 +437,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_16_250000) do
     t.string "status", null: false
     t.uuid "store_id", null: false
     t.timestamptz "updated_at", null: false
+    t.index ["cashier_user_id"], name: "index_pos_sessions_on_cashier_user_id"
+    t.index ["register_id"], name: "index_pos_sessions_on_register_id"
     t.index ["register_id"], name: "index_pos_sessions_one_open_per_register", unique: true, where: "((status)::text = 'open'::text)"
+    t.index ["reporting_period_id"], name: "index_pos_sessions_on_reporting_period_id"
+    t.index ["store_id"], name: "index_pos_sessions_on_store_id"
     t.check_constraint "status::text = 'open'::text AND closed_at IS NULL OR status::text = 'closed'::text AND closed_at IS NOT NULL", name: "pos_sessions_closed_at_matches_status"
     t.check_constraint "status::text = ANY (ARRAY['open'::character varying, 'closed'::character varying]::text[])", name: "pos_sessions_status_valid"
   end
@@ -445,6 +455,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_16_250000) do
     t.uuid "pos_transaction_id", null: false
     t.string "tender_type", null: false
     t.timestamptz "updated_at", null: false
+    t.index ["pos_transaction_id"], name: "index_pos_tenders_on_pos_transaction_id"
     t.check_constraint "amount_cents >= 0 AND amount_presented_cents >= 0 AND change_cents >= 0", name: "pos_tenders_nonnegative"
     t.check_constraint "direction::text = 'payment'::text", name: "pos_tenders_direction_valid"
     t.check_constraint "tender_type::text = 'cash'::text", name: "pos_tenders_type_valid"
@@ -467,6 +478,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_16_250000) do
     t.uuid "tax_class_id", null: false
     t.timestamptz "updated_at", null: false
     t.index ["pos_transaction_id", "line_number"], name: "idx_on_pos_transaction_id_line_number_00590a67d2", unique: true
+    t.index ["product_variant_id"], name: "index_pos_transaction_lines_on_product_variant_id"
+    t.index ["tax_class_id"], name: "index_pos_transaction_lines_on_tax_class_id"
     t.check_constraint "direction::text = 'sale'::text", name: "pos_transaction_lines_direction_valid"
     t.check_constraint "quantity > 0", name: "pos_transaction_lines_quantity_positive"
   end
@@ -493,7 +506,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_16_250000) do
     t.bigint "total_cents", default: 0, null: false
     t.string "transaction_reference"
     t.timestamptz "updated_at", null: false
+    t.index ["cashier_user_id"], name: "index_pos_transactions_on_cashier_user_id"
+    t.index ["pos_session_id"], name: "index_pos_transactions_on_pos_session_id"
+    t.index ["register_id"], name: "index_pos_transactions_on_register_id"
+    t.index ["reporting_period_id"], name: "index_pos_transactions_on_reporting_period_id"
     t.index ["store_id", "register_id", "receipt_sequence"], name: "index_pos_transactions_receipt_identity", unique: true, where: "(receipt_sequence IS NOT NULL)"
+    t.index ["store_id"], name: "index_pos_transactions_on_store_id"
     t.index ["transaction_reference"], name: "index_pos_transactions_on_transaction_reference", unique: true, where: "(transaction_reference IS NOT NULL)"
     t.check_constraint "status::text = 'working'::text AND receipt_sequence IS NULL AND store_number_snapshot IS NULL AND register_number_snapshot IS NULL AND occurred_at IS NULL AND business_date IS NULL AND completed_at IS NULL AND cancelled_at IS NULL OR status::text = 'completed'::text AND receipt_sequence IS NOT NULL AND store_number_snapshot IS NOT NULL AND register_number_snapshot IS NOT NULL AND occurred_at IS NOT NULL AND business_date IS NOT NULL AND completed_at IS NOT NULL AND cancelled_at IS NULL OR status::text = 'cancelled'::text AND receipt_sequence IS NULL AND store_number_snapshot IS NULL AND register_number_snapshot IS NULL AND occurred_at IS NULL AND business_date IS NULL AND completed_at IS NULL AND cancelled_at IS NOT NULL", name: "pos_transactions_status_null_rules"
     t.check_constraint "status::text = ANY (ARRAY['working'::character varying, 'completed'::character varying, 'cancelled'::character varying]::text[])", name: "pos_transactions_status_valid"

@@ -55,6 +55,23 @@ class RegisterTest < ActiveSupport::TestCase
     assert_equal 2, register.reload.register_number
   end
 
+  test "cannot reset receipt history to change the register number" do
+    register = Register.create!(store: @store, register_number: 1, name: "Front", receipt_sequence: 5)
+    register.assign_attributes(register_number: 2, receipt_sequence: 0)
+
+    assert_not register.valid?
+    assert_includes register.errors[:register_number], "cannot change after a receipt has been issued"
+    assert_includes register.errors[:receipt_sequence], "cannot decrease"
+  end
+
+  test "receipt_sequence cannot decrease" do
+    register = Register.create!(store: @store, register_number: 1, name: "Front", receipt_sequence: 5)
+    register.receipt_sequence = 4
+
+    assert_not register.valid?
+    assert_includes register.errors[:receipt_sequence], "cannot decrease"
+  end
+
   test "cannot deactivate while an open reporting period exists" do
     actor = @bootstrap[:administrator]
     register = Register.create!(store: @store, register_number: 1, name: "Front")

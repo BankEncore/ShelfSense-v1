@@ -60,13 +60,16 @@ module Admin
     end
 
     def reactivate
-      reactivate_configuration!(
-        @store_tax,
-        permission_key: "store_taxes.deactivate",
-        audit_action: "store_taxes.reactivate",
-        redirect_path: admin_store_tax_path(@store_tax)
-      )
-      StoreTaxes::EnsureRules.for_store_tax(@store_tax.reload)
+      rescue_stale do
+        StoreTaxes::Reactivate.call(
+          store_tax: @store_tax,
+          actor: current_user,
+          expected_lock_version: params.dig(:store_tax, :lock_version) || params[:lock_version]
+        )
+        redirect_to admin_store_tax_path(@store_tax), notice: "Store tax reactivated."
+      rescue StoreTaxes::Reactivate::Error => e
+        redirect_to admin_store_tax_path(@store_tax), alert: e.message
+      end
     end
 
     private

@@ -152,6 +152,11 @@ class PosCompleteTransactionTest < ActiveSupport::TestCase
     end
     assert_equal "completed", PosOperation.find(operation_id).status
     assert_equal 1, OutboxMessage.where(event_type: "pos.transaction_completed").count
+    assert AuditEvent.exists?(
+      action: "pos.transaction_completion_rejected",
+      outcome: "failed",
+      subject_id: @transaction.id
+    )
   end
 
   test "unauthorized completion is denied without a receipt" do
@@ -228,6 +233,23 @@ class PosCompleteTransactionTest < ActiveSupport::TestCase
     end
     assert_match(/another register/, error.message)
     assert other_transaction.reload.working?
+    assert AuditEvent.exists?(
+      action: "pos.transaction_completion_rejected",
+      outcome: "failed",
+      subject_id: other_transaction.id
+    )
+  end
+
+  test "replay of a completed operation succeeds after the register is deactivated" do
+    operation_id = SecureRandom.uuid_v7
+    first = Pos::CompleteTransaction.call(**complete_args(operation_id: operation_id))
+    @context[:session].reload.update!(status: "closed", closed_at: Time.current)
+    @context[:period].reload.update!(status: "finalized", closed_at: Time.current)
+    @context[:register].reload.update!(active: false, deactivated_at: Time.current, deactivated_by: @actor)
+
+    second = Pos::CompleteTransaction.call(**complete_args(operation_id: operation_id))
+    assert second.replayed
+    assert_equal first.operation.envelope_hash, second.operation.envelope_hash
   end
 
   test "completed facts are readonly" do

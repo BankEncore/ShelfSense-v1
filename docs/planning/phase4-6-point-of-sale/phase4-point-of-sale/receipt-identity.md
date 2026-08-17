@@ -85,7 +85,7 @@ Parsers must not assume fixed widths; they recognize `S` / `R` / `T` segments se
 
 ## 4. Durability and snapshots
 
-Store numbers and register numbers must remain historically stable once used on a completed transaction. A Register number is immutable once that Register has `receipt_sequence > 0`. A Store number is immutable when either a completed POS transaction exists for the Store or any Register in the Store has `receipt_sequence > 0`.
+Store numbers and register numbers must remain historically stable once used on a completed transaction. A Register number is immutable once that Register has persisted `receipt_sequence > 0`. Resetting `receipt_sequence` cannot reopen the number. `receipt_sequence` itself must not decrease. A Store number is immutable when either a completed POS transaction exists for the Store or any Register in the Store has `receipt_sequence > 0`.
 
 Completed transactions should persist at least:
 
