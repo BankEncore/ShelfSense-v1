@@ -64,7 +64,7 @@ module Admin
 
     def set_balance
       @balance = InventoryBalance.find(params[:id])
-      return unless authorize!("inventory.view", store: @balance.store)
+      nil unless authorize!("inventory.view", store: @balance.store)
     end
   end
 end
