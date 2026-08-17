@@ -79,14 +79,7 @@ class PosCompleteTransactionTest < ActiveSupport::TestCase
 
   test "replay of the same operation_id does not allocate another receipt or outbox" do
     operation_id = SecureRandom.uuid_v7
-    args = {
-      transaction: @transaction,
-      actor: @actor,
-      operation_id: operation_id,
-      expected_lock_version: @transaction.lock_version,
-      expected_total_cents: @transaction.total_cents,
-      amount_presented_cents: 2500
-    }
+    args = complete_args(operation_id: operation_id)
     first = Pos::CompleteTransaction.call(**args)
     second = Pos::CompleteTransaction.call(**args)
 
@@ -96,5 +89,123 @@ class PosCompleteTransactionTest < ActiveSupport::TestCase
     assert_equal 1, PosTransaction.where(register: @context[:register], receipt_sequence: 1).count
     assert_equal 1, OutboxMessage.where(event_type: "pos.transaction_completed").count
     assert_equal 1, OutboxMessage.where(event_type: "inventory.sale_posted").count
+  end
+
+  test "validation failure writes rejection audit and consumes no receipt" do
+    operation_id = SecureRandom.uuid_v7
+    error = assert_raises(Pos::Error) do
+      Pos::CompleteTransaction.call(**complete_args(operation_id: operation_id, expected_total_cents: 1))
+    end
+    assert_match(/expected total/, error.message)
+    assert @transaction.reload.working?
+    assert_nil @transaction.receipt_sequence
+    assert_equal 0, @context[:register].reload.receipt_sequence
+    assert_equal "failed", PosOperation.find(operation_id).status
+    assert_equal 0, OutboxMessage.where(event_type: "pos.transaction_completed").count
+    assert_equal 0, OutboxMessage.where(event_type: "inventory.sale_posted").count
+    assert AuditEvent.exists?(action: "pos.transaction_completion_rejected", outcome: "failed", subject_id: @transaction.id)
+  end
+
+  test "commit failure leaves the working transaction incomplete and marks the operation failed" do
+    Pos::ChangeQuantity.call(
+      transaction: @transaction,
+      line: @transaction.pos_transaction_lines.first,
+      actor: @actor,
+      expected_lock_version: @transaction.lock_version,
+      quantity: 10
+    )
+    @transaction.reload
+    Pos::TenderCash.call(
+      transaction: @transaction,
+      actor: @actor,
+      expected_lock_version: @transaction.lock_version,
+      amount_presented_cents: @transaction.total_cents
+    )
+    @transaction.reload
+    operation_id = SecureRandom.uuid_v7
+
+    error = assert_raises(Pos::Error) do
+      Pos::CompleteTransaction.call(
+        **complete_args(operation_id: operation_id, amount_presented_cents: @transaction.total_cents)
+      )
+    end
+    assert_match(/insufficient|below zero/i, error.message)
+    assert @transaction.reload.working?
+    assert_nil @transaction.receipt_sequence
+    assert_equal 0, @context[:register].reload.receipt_sequence
+    assert_equal "failed", PosOperation.find(operation_id).status
+    assert_equal 0, OutboxMessage.where(event_type: "pos.transaction_completed").count
+    assert_equal 0, OutboxMessage.where(event_type: "inventory.sale_posted").count
+    assert AuditEvent.exists?(action: "pos.transaction_completion_rejected", subject_id: @transaction.id)
+  end
+
+  test "same operation_id with a different command hash is an integrity failure" do
+    operation_id = SecureRandom.uuid_v7
+    Pos::CompleteTransaction.call(**complete_args(operation_id: operation_id))
+    assert_raises(Pos::PayloadMismatch) do
+      Pos::CompleteTransaction.call(**complete_args(operation_id: operation_id, amount_presented_cents: 9999))
+    end
+    assert_equal "completed", PosOperation.find(operation_id).status
+    assert_equal 1, OutboxMessage.where(event_type: "pos.transaction_completed").count
+  end
+
+  test "unauthorized completion is denied without a receipt" do
+    clerk = User.create!(
+      username: "no_complete",
+      display_name: "No Complete",
+      password: "correct-horse-battery",
+      password_confirmation: "correct-horse-battery"
+    )
+    assert_raises(Pos::Denied) do
+      Pos::CompleteTransaction.call(**complete_args(actor: clerk))
+    end
+    assert @transaction.reload.working?
+    assert_nil @transaction.receipt_sequence
+    assert AuditEvent.exists?(action: "pos.transaction_completion_rejected", outcome: "denied", subject_id: @transaction.id)
+  end
+
+  test "unresolved store tax applicability blocks completion" do
+    StoreTaxes::Create.call(
+      store: @store,
+      actor: @actor,
+      name: "Unspecified local",
+      rate_percent: "1.000",
+      calculation_order: 2
+    )
+    error = assert_raises(Pos::Error) do
+      Pos::CompleteTransaction.call(**complete_args)
+    end
+    assert_match(/applicability|applies/i, error.message)
+    assert @transaction.reload.working?
+    assert_nil @transaction.receipt_sequence
+  end
+
+  test "headless vertical slice matches Phase 4 acceptance" do
+    envelope = Pos::CompleteTransaction.call(**complete_args).operation.envelope
+    assert_equal 1, envelope.fetch("schema_version")
+    assert_equal PosOperation::FACT_TYPE, envelope.fetch("operation").fetch("fact_type")
+    assert envelope.fetch("receipt").fetch("sequence").present?
+    assert_match(/\AS\d+-R\d+-T\d+\z/, envelope.fetch("receipt").fetch("reference"))
+    line = envelope.fetch("lines").first
+    assert_equal 1, line.fetch("quantity")
+    assert_equal 1999, line.fetch("selling_unit_price_cents")
+    assert line.fetch("tax_components").any? { |component| component.fetch("applies") }
+    assert_equal "cash", envelope.fetch("tenders").first.fetch("tender_type")
+    assert_equal 1, InventoryLedgerEntry.where(source_type: "PosTransactionLine").count
+    assert_equal 1, InventoryValuationEntry.where(source_type: "PosTransactionLine").count
+    assert_equal 1, OutboxMessage.where(event_type: "pos.transaction_completed").count
+  end
+
+  private
+
+  def complete_args(operation_id: SecureRandom.uuid_v7, actor: @actor, expected_total_cents: @transaction.total_cents, amount_presented_cents: 2500)
+    {
+      transaction: @transaction,
+      actor: actor,
+      operation_id: operation_id,
+      expected_lock_version: @transaction.lock_version,
+      expected_total_cents: expected_total_cents,
+      amount_presented_cents: amount_presented_cents
+    }
   end
 end

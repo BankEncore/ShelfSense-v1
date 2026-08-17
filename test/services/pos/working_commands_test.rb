@@ -174,4 +174,42 @@ class PosWorkingCommandsTest < ActiveSupport::TestCase
     Pos::CloseSession.call(session: session, actor: @actor, expected_lock_version: session.lock_version)
     assert session.reload.closed?
   end
+
+  test "individually tracked merchandise is rejected" do
+    used_class = merchandise_class(
+      code: "pos_used_#{SecureRandom.hex(3)}",
+      used_merchandise_allowed: true,
+      default_standard_department: department(code: "pos_used_d_#{SecureRandom.hex(3)}", default_tax_class: @tax),
+      default_used_department: department(code: "pos_used_u_#{SecureRandom.hex(3)}", default_tax_class: @tax),
+      pricing_method: "fixed"
+    )
+    product = Products::Create.call(
+      attributes: { name: "Used Book", status: "active" },
+      actor: @actor,
+      identifier_mode: "generate"
+    )
+    used = ProductVariants::Create.call(
+      product: product,
+      attributes: {
+        variant_type: "used",
+        status: "active",
+        merchandise_class_id: used_class.id,
+        merchandise_condition_id: merchandise_condition(code: "pos_good_#{SecureRandom.hex(2)}").id,
+        department_id: used_class.default_used_department_id,
+        tax_class_id: @tax.id,
+        regular_price_cents: 1200
+      },
+      actor: @actor
+    )
+    transaction = Pos::StartTransaction.call(session: @context[:session], actor: @actor)
+    error = assert_raises(Pos::Error) do
+      Pos::AddMerchandise.call(
+        transaction: transaction,
+        actor: @actor,
+        expected_lock_version: transaction.lock_version,
+        identifier: used.sku
+      )
+    end
+    assert_match(/individually tracked/, error.message)
+  end
 end
