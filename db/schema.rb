@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_12_190000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_16_260000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -54,13 +54,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_12_190000) do
     t.string "reason_code"
     t.text "reason_text"
     t.timestamptz "recorded_at", null: false
+    t.uuid "register_id"
     t.uuid "store_id"
     t.uuid "subject_id"
     t.string "subject_label"
     t.string "subject_type"
     t.text "user_agent"
     t.uuid "user_session_id"
-    t.uuid "workstation_id"
     t.index ["action", "occurred_at"], name: "index_audit_events_on_action_and_occurred_at"
     t.index ["actor_user_id", "occurred_at"], name: "index_audit_events_on_actor_user_id_and_occurred_at"
     t.index ["correlation_id"], name: "index_audit_events_on_correlation_id"
@@ -362,6 +362,161 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_12_190000) do
     t.check_constraint "scope_type::text = ANY (ARRAY['global'::character varying::text, 'store'::character varying::text, 'either'::character varying::text])", name: "permissions_scope_type_valid"
   end
 
+  create_table "pos_line_tax_components", id: :uuid, default: nil, force: :cascade do |t|
+    t.boolean "applies", null: false
+    t.integer "calculation_order", null: false
+    t.timestamptz "created_at", null: false
+    t.uuid "pos_transaction_line_id", null: false
+    t.decimal "rate_percent", precision: 6, scale: 3, null: false
+    t.string "store_tax_code_snapshot", null: false
+    t.uuid "store_tax_id", null: false
+    t.string "store_tax_name_snapshot", null: false
+    t.bigint "tax_cents", null: false
+    t.bigint "taxable_basis_cents", null: false
+    t.timestamptz "updated_at", null: false
+    t.index ["pos_transaction_line_id", "store_tax_id"], name: "index_pos_line_tax_components_on_line_and_store_tax", unique: true
+    t.index ["store_tax_id"], name: "index_pos_line_tax_components_on_store_tax_id"
+    t.check_constraint "taxable_basis_cents >= 0 AND tax_cents >= 0", name: "pos_line_tax_components_nonnegative"
+  end
+
+  create_table "pos_operations", id: :uuid, default: nil, force: :cascade do |t|
+    t.string "command_payload_hash", null: false
+    t.string "command_type", null: false
+    t.timestamptz "created_at", null: false
+    t.jsonb "envelope"
+    t.string "envelope_hash"
+    t.string "fact_type"
+    t.uuid "idempotency_key", null: false
+    t.timestamptz "lease_expires_at"
+    t.integer "lock_version", default: 0, null: false
+    t.timestamptz "originated_at"
+    t.uuid "pos_transaction_id"
+    t.timestamptz "posted_at"
+    t.string "producer_client"
+    t.string "producer_version"
+    t.timestamptz "received_at"
+    t.uuid "register_id"
+    t.integer "schema_version"
+    t.uuid "source_id", null: false
+    t.string "status", null: false
+    t.uuid "store_id"
+    t.timestamptz "updated_at", null: false
+    t.index ["pos_transaction_id"], name: "index_pos_operations_on_pos_transaction_id"
+    t.index ["register_id"], name: "index_pos_operations_on_register_id"
+    t.index ["source_id", "command_type", "idempotency_key"], name: "index_pos_operations_on_scope_key", unique: true
+    t.index ["store_id"], name: "index_pos_operations_on_store_id"
+    t.check_constraint "status::text = 'in_flight'::text AND lease_expires_at IS NOT NULL AND envelope IS NULL AND envelope_hash IS NULL AND fact_type IS NULL OR status::text = 'failed'::text AND envelope IS NULL AND envelope_hash IS NULL OR status::text = 'completed'::text AND fact_type IS NOT NULL AND schema_version IS NOT NULL AND pos_transaction_id IS NOT NULL AND envelope IS NOT NULL AND envelope_hash IS NOT NULL AND posted_at IS NOT NULL", name: "pos_operations_status_payload_rules"
+    t.check_constraint "status::text = ANY (ARRAY['in_flight'::character varying, 'completed'::character varying, 'failed'::character varying]::text[])", name: "pos_operations_status_valid"
+  end
+
+  create_table "pos_reporting_periods", id: :uuid, default: nil, force: :cascade do |t|
+    t.date "business_date", null: false
+    t.timestamptz "closed_at"
+    t.timestamptz "created_at", null: false
+    t.integer "lock_version", default: 0, null: false
+    t.timestamptz "opened_at", null: false
+    t.uuid "register_id", null: false
+    t.string "status", null: false
+    t.uuid "store_id", null: false
+    t.timestamptz "updated_at", null: false
+    t.index ["register_id"], name: "index_pos_reporting_periods_on_register_id"
+    t.index ["register_id"], name: "index_pos_reporting_periods_one_open_per_register", unique: true, where: "((status)::text = 'open'::text)"
+    t.index ["store_id"], name: "index_pos_reporting_periods_on_store_id"
+    t.check_constraint "status::text = 'open'::text AND closed_at IS NULL OR status::text = 'finalized'::text AND closed_at IS NOT NULL", name: "pos_reporting_periods_closed_at_matches_status"
+    t.check_constraint "status::text = ANY (ARRAY['open'::character varying, 'finalized'::character varying]::text[])", name: "pos_reporting_periods_status_valid"
+  end
+
+  create_table "pos_sessions", id: :uuid, default: nil, force: :cascade do |t|
+    t.uuid "cashier_user_id", null: false
+    t.timestamptz "closed_at"
+    t.timestamptz "created_at", null: false
+    t.integer "lock_version", default: 0, null: false
+    t.timestamptz "opened_at", null: false
+    t.uuid "register_id", null: false
+    t.uuid "reporting_period_id", null: false
+    t.string "status", null: false
+    t.uuid "store_id", null: false
+    t.timestamptz "updated_at", null: false
+    t.index ["cashier_user_id"], name: "index_pos_sessions_on_cashier_user_id"
+    t.index ["register_id"], name: "index_pos_sessions_on_register_id"
+    t.index ["register_id"], name: "index_pos_sessions_one_open_per_register", unique: true, where: "((status)::text = 'open'::text)"
+    t.index ["reporting_period_id"], name: "index_pos_sessions_on_reporting_period_id"
+    t.index ["store_id"], name: "index_pos_sessions_on_store_id"
+    t.check_constraint "status::text = 'open'::text AND closed_at IS NULL OR status::text = 'closed'::text AND closed_at IS NOT NULL", name: "pos_sessions_closed_at_matches_status"
+    t.check_constraint "status::text = ANY (ARRAY['open'::character varying, 'closed'::character varying]::text[])", name: "pos_sessions_status_valid"
+  end
+
+  create_table "pos_tenders", id: :uuid, default: nil, force: :cascade do |t|
+    t.bigint "amount_cents", null: false
+    t.bigint "amount_presented_cents", null: false
+    t.bigint "change_cents", default: 0, null: false
+    t.timestamptz "created_at", null: false
+    t.string "direction", null: false
+    t.uuid "pos_transaction_id", null: false
+    t.string "tender_type", null: false
+    t.timestamptz "updated_at", null: false
+    t.index ["pos_transaction_id"], name: "index_pos_tenders_on_pos_transaction_id"
+    t.check_constraint "amount_cents >= 0 AND amount_presented_cents >= 0 AND change_cents >= 0", name: "pos_tenders_nonnegative"
+    t.check_constraint "direction::text = 'payment'::text", name: "pos_tenders_direction_valid"
+    t.check_constraint "tender_type::text = 'cash'::text", name: "pos_tenders_type_valid"
+  end
+
+  create_table "pos_transaction_lines", id: :uuid, default: nil, force: :cascade do |t|
+    t.timestamptz "created_at", null: false
+    t.string "direction", null: false
+    t.bigint "extended_selling_amount_cents", null: false
+    t.integer "line_number", null: false
+    t.bigint "line_tax_cents", default: 0, null: false
+    t.bigint "line_total_cents", default: 0, null: false
+    t.jsonb "merchandise_snapshot"
+    t.uuid "pos_transaction_id", null: false
+    t.uuid "product_variant_id", null: false
+    t.integer "quantity", null: false
+    t.bigint "reference_unit_price_cents", null: false
+    t.bigint "selling_unit_price_cents", null: false
+    t.string "tax_class_code_snapshot", null: false
+    t.uuid "tax_class_id", null: false
+    t.timestamptz "updated_at", null: false
+    t.index ["pos_transaction_id", "line_number"], name: "idx_on_pos_transaction_id_line_number_00590a67d2", unique: true
+    t.index ["product_variant_id"], name: "index_pos_transaction_lines_on_product_variant_id"
+    t.index ["tax_class_id"], name: "index_pos_transaction_lines_on_tax_class_id"
+    t.check_constraint "direction::text = 'sale'::text", name: "pos_transaction_lines_direction_valid"
+    t.check_constraint "quantity > 0", name: "pos_transaction_lines_quantity_positive"
+  end
+
+  create_table "pos_transactions", id: :uuid, default: nil, force: :cascade do |t|
+    t.date "business_date"
+    t.timestamptz "cancelled_at"
+    t.uuid "cashier_user_id", null: false
+    t.timestamptz "completed_at"
+    t.timestamptz "created_at", null: false
+    t.string "currency_code", limit: 3, null: false
+    t.integer "lock_version", default: 0, null: false
+    t.timestamptz "occurred_at"
+    t.uuid "pos_session_id", null: false
+    t.bigint "receipt_sequence"
+    t.uuid "register_id", null: false
+    t.integer "register_number_snapshot"
+    t.uuid "reporting_period_id", null: false
+    t.string "status", null: false
+    t.uuid "store_id", null: false
+    t.integer "store_number_snapshot"
+    t.bigint "subtotal_cents", default: 0, null: false
+    t.bigint "tax_cents", default: 0, null: false
+    t.bigint "total_cents", default: 0, null: false
+    t.string "transaction_reference"
+    t.timestamptz "updated_at", null: false
+    t.index ["cashier_user_id"], name: "index_pos_transactions_on_cashier_user_id"
+    t.index ["pos_session_id"], name: "index_pos_transactions_on_pos_session_id"
+    t.index ["register_id"], name: "index_pos_transactions_on_register_id"
+    t.index ["reporting_period_id"], name: "index_pos_transactions_on_reporting_period_id"
+    t.index ["store_id", "register_id", "receipt_sequence"], name: "index_pos_transactions_receipt_identity", unique: true, where: "(receipt_sequence IS NOT NULL)"
+    t.index ["store_id"], name: "index_pos_transactions_on_store_id"
+    t.index ["transaction_reference"], name: "index_pos_transactions_on_transaction_reference", unique: true, where: "(transaction_reference IS NOT NULL)"
+    t.check_constraint "status::text = 'working'::text AND receipt_sequence IS NULL AND store_number_snapshot IS NULL AND register_number_snapshot IS NULL AND occurred_at IS NULL AND business_date IS NULL AND completed_at IS NULL AND cancelled_at IS NULL OR status::text = 'completed'::text AND receipt_sequence IS NOT NULL AND store_number_snapshot IS NOT NULL AND register_number_snapshot IS NOT NULL AND occurred_at IS NOT NULL AND business_date IS NOT NULL AND completed_at IS NOT NULL AND cancelled_at IS NULL OR status::text = 'cancelled'::text AND receipt_sequence IS NULL AND store_number_snapshot IS NULL AND register_number_snapshot IS NULL AND occurred_at IS NULL AND business_date IS NULL AND completed_at IS NULL AND cancelled_at IS NOT NULL", name: "pos_transactions_status_null_rules"
+    t.check_constraint "status::text = ANY (ARRAY['working'::character varying, 'completed'::character varying, 'cancelled'::character varying]::text[])", name: "pos_transactions_status_valid"
+  end
+
   create_table "product_variants", id: :uuid, default: nil, force: :cascade do |t|
     t.timestamptz "created_at", null: false
     t.uuid "department_id"
@@ -419,6 +574,23 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_12_190000) do
     t.check_constraint "status::text = ANY (ARRAY['draft'::character varying::text, 'active'::character varying::text, 'discontinued'::character varying::text])", name: "products_status_valid"
   end
 
+  create_table "registers", id: :uuid, default: nil, force: :cascade do |t|
+    t.boolean "active", default: true, null: false
+    t.timestamptz "created_at", null: false
+    t.timestamptz "deactivated_at"
+    t.uuid "deactivated_by_id"
+    t.text "description"
+    t.integer "lock_version", default: 0, null: false
+    t.string "name", null: false
+    t.bigint "receipt_sequence", default: 0, null: false
+    t.integer "register_number", null: false
+    t.uuid "store_id", null: false
+    t.timestamptz "updated_at", null: false
+    t.index ["store_id", "register_number"], name: "index_registers_on_store_id_and_register_number", unique: true
+    t.check_constraint "receipt_sequence >= 0", name: "registers_receipt_sequence_nonnegative"
+    t.check_constraint "register_number > 0", name: "registers_register_number_positive"
+  end
+
   create_table "role_assignments", id: :uuid, default: nil, force: :cascade do |t|
     t.uuid "assigned_by_id", null: false
     t.timestamptz "created_at", null: false
@@ -460,6 +632,31 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_12_190000) do
     t.check_constraint "assignment_scope::text = ANY (ARRAY['global'::character varying::text, 'store'::character varying::text, 'either'::character varying::text])", name: "roles_assignment_scope_valid"
   end
 
+  create_table "store_tax_rules", id: :uuid, default: nil, force: :cascade do |t|
+    t.boolean "applies"
+    t.timestamptz "created_at", null: false
+    t.integer "lock_version", default: 0, null: false
+    t.uuid "store_tax_id", null: false
+    t.uuid "tax_class_id", null: false
+    t.timestamptz "updated_at", null: false
+    t.index ["store_tax_id", "tax_class_id"], name: "index_store_tax_rules_on_store_tax_id_and_tax_class_id", unique: true
+  end
+
+  create_table "store_taxes", id: :uuid, default: nil, force: :cascade do |t|
+    t.boolean "active", default: true, null: false
+    t.integer "calculation_order", default: 0, null: false
+    t.string "code", null: false
+    t.timestamptz "created_at", null: false
+    t.integer "lock_version", default: 0, null: false
+    t.string "name", null: false
+    t.decimal "rate_percent", precision: 6, scale: 3, null: false
+    t.uuid "store_id", null: false
+    t.timestamptz "updated_at", null: false
+    t.index ["store_id", "code"], name: "index_store_taxes_on_store_id_and_code", unique: true
+    t.check_constraint "calculation_order >= 0", name: "store_taxes_calculation_order_nonnegative"
+    t.check_constraint "rate_percent >= 0::numeric AND rate_percent <= 100::numeric", name: "store_taxes_rate_percent_range"
+  end
+
   create_table "stores", id: :uuid, default: nil, force: :cascade do |t|
     t.boolean "active", default: true, null: false
     t.string "city"
@@ -477,13 +674,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_12_190000) do
     t.text "receipt_header"
     t.string "region_code"
     t.string "san"
-    t.string "store_number", null: false
+    t.integer "store_number", null: false
     t.string "street_address_1"
     t.string "street_address_2"
     t.string "timezone", null: false
     t.timestamptz "updated_at", null: false
     t.index "lower((code)::text)", name: "index_stores_on_lower_code", unique: true
-    t.index "lower((store_number)::text)", name: "index_stores_on_lower_store_number", unique: true
+    t.index ["store_number"], name: "index_stores_on_store_number", unique: true
+    t.check_constraint "store_number > 0", name: "stores_store_number_positive"
   end
 
   create_table "system_settings", id: :uuid, default: nil, force: :cascade do |t|
@@ -561,29 +759,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_12_190000) do
     t.check_constraint "failed_sign_in_count >= 0", name: "users_failed_sign_in_count_nonnegative"
   end
 
-  create_table "workstations", id: :uuid, default: nil, force: :cascade do |t|
-    t.timestamptz "activated_at"
-    t.boolean "active", default: true, null: false
-    t.string "code", null: false
-    t.timestamptz "created_at", null: false
-    t.timestamptz "deactivated_at"
-    t.uuid "deactivated_by_id"
-    t.text "description"
-    t.timestamptz "last_seen_at"
-    t.integer "lock_version", default: 0, null: false
-    t.string "name", null: false
-    t.bigint "receipt_sequence", default: 0, null: false
-    t.timestamptz "revoked_at"
-    t.uuid "store_id", null: false
-    t.timestamptz "updated_at", null: false
-    t.index ["store_id", "code"], name: "index_workstations_on_store_id_and_code", unique: true
-    t.check_constraint "receipt_sequence >= 0", name: "workstations_receipt_sequence_nonnegative"
-  end
-
+  add_foreign_key "audit_events", "registers"
   add_foreign_key "audit_events", "stores"
   add_foreign_key "audit_events", "user_sessions"
   add_foreign_key "audit_events", "users", column: "actor_user_id"
-  add_foreign_key "audit_events", "workstations"
   add_foreign_key "departments", "gl_accounts", column: "cost_of_goods_sold_gl_account_id"
   add_foreign_key "departments", "gl_accounts", column: "freight_in_gl_account_id"
   add_foreign_key "departments", "gl_accounts", column: "inventory_adjustment_gain_gl_account_id"
@@ -621,12 +800,34 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_12_190000) do
   add_foreign_key "merchandise_categories", "merchandise_classes", column: "default_merchandise_class_id"
   add_foreign_key "merchandise_classes", "departments", column: "default_standard_department_id"
   add_foreign_key "merchandise_classes", "departments", column: "default_used_department_id"
+  add_foreign_key "pos_line_tax_components", "pos_transaction_lines"
+  add_foreign_key "pos_line_tax_components", "store_taxes"
+  add_foreign_key "pos_operations", "pos_transactions"
+  add_foreign_key "pos_operations", "registers"
+  add_foreign_key "pos_operations", "stores"
+  add_foreign_key "pos_reporting_periods", "registers"
+  add_foreign_key "pos_reporting_periods", "stores"
+  add_foreign_key "pos_sessions", "pos_reporting_periods", column: "reporting_period_id"
+  add_foreign_key "pos_sessions", "registers"
+  add_foreign_key "pos_sessions", "stores"
+  add_foreign_key "pos_sessions", "users", column: "cashier_user_id"
+  add_foreign_key "pos_tenders", "pos_transactions"
+  add_foreign_key "pos_transaction_lines", "pos_transactions"
+  add_foreign_key "pos_transaction_lines", "product_variants"
+  add_foreign_key "pos_transaction_lines", "tax_classes"
+  add_foreign_key "pos_transactions", "pos_reporting_periods", column: "reporting_period_id"
+  add_foreign_key "pos_transactions", "pos_sessions"
+  add_foreign_key "pos_transactions", "registers"
+  add_foreign_key "pos_transactions", "stores"
+  add_foreign_key "pos_transactions", "users", column: "cashier_user_id"
   add_foreign_key "product_variants", "departments"
   add_foreign_key "product_variants", "merchandise_classes"
   add_foreign_key "product_variants", "merchandise_conditions"
   add_foreign_key "product_variants", "products"
   add_foreign_key "product_variants", "tax_classes"
   add_foreign_key "products", "merchandise_categories"
+  add_foreign_key "registers", "stores"
+  add_foreign_key "registers", "users", column: "deactivated_by_id"
   add_foreign_key "role_assignments", "roles"
   add_foreign_key "role_assignments", "stores"
   add_foreign_key "role_assignments", "users"
@@ -636,10 +837,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_12_190000) do
   add_foreign_key "role_permissions", "roles"
   add_foreign_key "role_permissions", "users", column: "granted_by_id"
   add_foreign_key "roles", "users", column: "deactivated_by_id"
+  add_foreign_key "store_tax_rules", "store_taxes"
+  add_foreign_key "store_tax_rules", "tax_classes"
+  add_foreign_key "store_taxes", "stores"
   add_foreign_key "stores", "users", column: "deactivated_by_id"
   add_foreign_key "user_sessions", "users"
   add_foreign_key "user_sessions", "users", column: "revoked_by_id"
   add_foreign_key "users", "users", column: "deactivated_by_id"
-  add_foreign_key "workstations", "stores"
-  add_foreign_key "workstations", "users", column: "deactivated_by_id"
 end

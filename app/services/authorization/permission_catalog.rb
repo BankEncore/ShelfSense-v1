@@ -21,11 +21,10 @@ module Authorization
       { key: "roles.create", group_key: "roles", name: "Create roles", scope_type: "global" },
       { key: "roles.manage", group_key: "roles", name: "Manage roles", scope_type: "global" },
       { key: "roles.deactivate", group_key: "roles", name: "Deactivate roles", scope_type: "global" },
-      { key: "workstations.view", group_key: "workstations", name: "View workstations", scope_type: "either" },
-      { key: "workstations.create", group_key: "workstations", name: "Create workstations", scope_type: "either" },
-      { key: "workstations.manage", group_key: "workstations", name: "Manage workstations", scope_type: "either" },
-      { key: "workstations.deactivate", group_key: "workstations", name: "Deactivate workstations", scope_type: "either" },
-      { key: "workstations.revoke", group_key: "workstations", name: "Revoke workstations", scope_type: "either" },
+      { key: "registers.view", group_key: "registers", name: "View registers", scope_type: "either" },
+      { key: "registers.create", group_key: "registers", name: "Create registers", scope_type: "either" },
+      { key: "registers.manage", group_key: "registers", name: "Manage registers", scope_type: "either" },
+      { key: "registers.deactivate", group_key: "registers", name: "Deactivate registers", scope_type: "either" },
       { key: "audit_events.view", group_key: "audit_events", name: "View audit events", scope_type: "either" }
     ].freeze
 
@@ -78,7 +77,15 @@ module Authorization
       { key: "inventory.backdate", group_key: "inventory", name: "Backdate inventory events", scope_type: "either" }
     ].freeze
 
-    PERMISSIONS = (PHASE1_PERMISSIONS + PHASE2_PERMISSIONS + PHASE3_PERMISSIONS).freeze
+    PHASE4_PERMISSIONS = [
+      { key: "store_taxes.view", group_key: "store_taxes", name: "View store taxes", scope_type: "either" },
+      { key: "store_taxes.create", group_key: "store_taxes", name: "Create store taxes", scope_type: "either" },
+      { key: "store_taxes.update", group_key: "store_taxes", name: "Update store taxes", scope_type: "either" },
+      { key: "store_taxes.deactivate", group_key: "store_taxes", name: "Deactivate store taxes", scope_type: "either" },
+      { key: "pos.transact", group_key: "pos", name: "Operate POS transactions", scope_type: "either" }
+    ].freeze
+
+    PERMISSIONS = (PHASE1_PERMISSIONS + PHASE2_PERMISSIONS + PHASE3_PERMISSIONS + PHASE4_PERMISSIONS).freeze
 
     STORE_MANAGER_PHASE2_VIEWS = %w[
       gl_accounts.view
@@ -98,6 +105,14 @@ module Authorization
       inventory.reverse_adjustment
     ].freeze
 
+    STORE_MANAGER_PHASE4 = %w[
+      store_taxes.view
+      store_taxes.create
+      store_taxes.update
+      store_taxes.deactivate
+      pos.transact
+    ].freeze
+
     ROLES = [
       {
         key: "system_administrator",
@@ -112,13 +127,12 @@ module Authorization
         permission_keys: %w[
           stores.view
           stores.manage
-          workstations.view
-          workstations.create
-          workstations.manage
-          workstations.deactivate
-          workstations.revoke
+          registers.view
+          registers.create
+          registers.manage
+          registers.deactivate
           audit_events.view
-        ] + STORE_MANAGER_PHASE2_VIEWS + STORE_MANAGER_PHASE3
+        ] + STORE_MANAGER_PHASE2_VIEWS + STORE_MANAGER_PHASE3 + STORE_MANAGER_PHASE4
       },
       {
         key: "associate",
@@ -130,6 +144,7 @@ module Authorization
           products.view
           product_variants.view
           inventory.view
+          pos.transact
         ]
       }
     ].freeze
@@ -141,6 +156,8 @@ module Authorization
           permission.save!
         end
       end
+
+      ensure_deprecated_revoke_permission!
 
       ROLES.each do |role_attrs|
         role = Role.find_or_initialize_by(key: role_attrs[:key])
@@ -160,6 +177,18 @@ module Authorization
         (current - desired).each do |key|
           role.role_permissions.joins(:permission).where(permissions: { key: key }).find_each(&:destroy!)
         end
+      end
+    end
+
+    def ensure_deprecated_revoke_permission!
+      Permission.find_or_initialize_by(key: "workstations.revoke").tap do |permission|
+        permission.assign_attributes(
+          group_key: "workstations",
+          name: "Revoke workstations (deprecated)",
+          scope_type: "either",
+          active: false
+        )
+        permission.save!
       end
     end
   end

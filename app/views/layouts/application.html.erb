@@ -73,8 +73,11 @@
             <% if effective_permissions.include?("users.assign_roles") %>
               <%= link_to "Role assignments", admin_role_assignments_path %>
             <% end %>
-            <% if effective_permissions.include?("workstations.view") %>
-              <%= link_to "Workstations", admin_workstations_path %>
+            <% if effective_permissions.include?("store_taxes.view") %>
+              <%= link_to "Store taxes", admin_store_taxes_path %>
+            <% end %>
+            <% if effective_permissions.include?("registers.view") %>
+              <%= link_to "Registers", admin_registers_path %>
             <% end %>
             <% if effective_permissions.include?("audit_events.view") %>
               <%= link_to "Audit", admin_audit_events_path %>

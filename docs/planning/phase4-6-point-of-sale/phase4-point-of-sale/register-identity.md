@@ -43,7 +43,7 @@ Constraints:
 UNIQUE(store_id, register_number)
 ```
 
-`register_number` becomes effectively immutable once the Register has issued a completed transaction.
+`register_number` is a positive integer unique within the store. Leading zeroes are presentation only. It becomes immutable once the Register has issued a completed transaction (`receipt_sequence > 0` in persisted history). `receipt_sequence` must not decrease. Next number assignment is `max(register_number) + 1` and does not recycle gaps.
 
 ### Prefer not to keep
 

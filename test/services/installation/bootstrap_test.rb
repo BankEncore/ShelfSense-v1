@@ -30,7 +30,7 @@ class Installation::BootstrapTest < ActiveSupport::TestCase
     assert_equal "system_administrator", result[:assignment].role.key
     assert_nil result[:assignment].store_id
 
-    assert_equal Authorization::PermissionCatalog::PERMISSIONS.size, Permission.count
+    assert_equal Authorization::PermissionCatalog::PERMISSIONS.size, Permission.active.count
     assert_equal 3, Role.count
     assert Role.find_by!(key: "store_manager").assignment_scope == "store"
 
@@ -40,6 +40,10 @@ class Installation::BootstrapTest < ActiveSupport::TestCase
     Authorization::PermissionCatalog::PHASE2_PERMISSIONS.each do |permission|
       assert_includes admin_role.permissions.pluck(:key), permission[:key]
     end
+    assert_includes admin_role.permissions.pluck(:key), "registers.view"
+    assert_not_includes admin_role.permissions.pluck(:key), "workstations.revoke"
+    revoke = Permission.find_by!(key: "workstations.revoke")
+    assert_not revoke.active?
 
     actions = AuditEvent.order(:occurred_at).pluck(:action)
     assert_includes actions, "installation.started"

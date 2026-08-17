@@ -1,0 +1,11 @@
+<% content_for :title, "Store Taxes" %>
+<h1>Store Taxes</h1>
+<% if effective_permissions.include?("store_taxes.create") %><p><%= link_to "New store tax", new_admin_store_tax_path %></p><% end %>
+<ul>
+  <% @store_taxes.each do |store_tax| %>
+    <li>
+      <%= link_to store_tax.admin_label, admin_store_tax_path(store_tax) %>
+      <%= "inactive" unless store_tax.active? %>
+    </li>
+  <% end %>
+</ul>

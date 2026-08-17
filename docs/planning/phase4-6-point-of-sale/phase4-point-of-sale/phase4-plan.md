@@ -113,13 +113,17 @@ Working POS transaction (mutable)
         ↓
 CompleteTransactionCommand
         ↓
+canonicalize and hash command
+        ↓
+begin/reclaim pos_operation (outside the commercial transaction)
+        ↓
 BEGIN authoritative completion (PostgreSQL)
+   ├── lock pos_operation; completed lease returns stored result
    ├── authorize actor (`pos.transact`) and validate Store/Register/Session/period context
-   ├── begin/reclaim pos_operation on command_payload_hash
    ├── lock working transaction; validate expected lock_version
    ├── validate settlement
    ├── allocate Register receipt sequence (row lock on registers)
-   ├── freeze occurred_at / business_date
+   ├── freeze occurred_at / business_date from completion time + open reporting period
    ├── freeze commercial facts
    ├── construct canonical CompletedPosOperation v1
    │         fact_type = pos.transaction_completed
@@ -132,6 +136,8 @@ BEGIN authoritative completion (PostgreSQL)
         ↓
 COMMIT
 ```
+
+On failure after begin: ROLLBACK the commercial transaction, then mark `pos_operations` `failed` and record `pos.transaction_completion_rejected` in a separate transaction.
 
 **Invariant:** `CompletedPosOperation` always represents an already-completed originating fact and therefore contains its permanent receipt identity. Rails constructs it inside the same PostgreSQL transaction in which normalized Core facts are written (ADR-020).
 

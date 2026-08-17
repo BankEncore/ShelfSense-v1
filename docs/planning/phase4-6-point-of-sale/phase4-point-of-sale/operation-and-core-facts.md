@@ -83,7 +83,7 @@ Example: a return walks transaction → lines → historical tax components. It 
 id, store_id, register_id, pos_session_id, reporting_period_id, cashier_user_id
 receipt_sequence, store_number_snapshot, register_number_snapshot
 occurred_at, business_date, status, currency_code
-merchandise_subtotal_cents / subtotal_cents, tax_cents, total_cents
+subtotal_cents, tax_cents, total_cents
 completed_at
 ```
 

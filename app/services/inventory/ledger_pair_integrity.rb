@@ -2,12 +2,22 @@
 
 module Inventory
   class LedgerPairIntegrity
+    class Error < StandardError; end
+
     COMPARE_FIELDS = %w[
       store_id product_variant_id inventory_unit_id quantity_delta business_date occurred_at
+      source_type source_id
     ].freeze
 
     def self.drifts(store_id: nil, product_variant_id: nil)
       new(store_id: store_id, product_variant_id: product_variant_id).drifts
+    end
+
+    def self.assert_pair!(ledger, valuation)
+      mismatched = COMPARE_FIELDS.select { |field| ledger.public_send(field) != valuation.public_send(field) }
+      return if mismatched.empty?
+
+      raise Error, "paired rows disagree on #{mismatched.join(", ")}"
     end
 
     def initialize(store_id: nil, product_variant_id: nil)

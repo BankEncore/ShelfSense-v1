@@ -53,7 +53,7 @@ See [register-identity.md](register-identity.md) for the `registers` target shap
 | `name` | string | null: false |
 | `rate_percent` | numeric(6,3) | **NOT NULL**; CHECK `0 <= rate_percent AND rate_percent <= 100` |
 | `active` | boolean | null: false |
-| `calculation_order` | integer | **NOT NULL**; CHECK `>= 0`; **UNIQUE per `store_id`** |
+| `calculation_order` | integer | **NOT NULL**; CHECK `>= 0`; evaluation/display order, **not unique** (`ORDER BY calculation_order, code, id`) |
 | `lock_version` | integer | null: false, default 0 |
 | `created_at` / `updated_at` | timestamptz | |
 
@@ -153,13 +153,13 @@ One row for working and completed (or cancelled) commercial state.
 | `cashier_user_id` | uuid | FK, null: false |
 | `status` | string | `working`, `completed`, `cancelled` (exact enum locked in migration) |
 | `currency_code` | string(3) | null: false |
-| `occurred_at` | timestamptz | set/frozen at completion; may be provisional while working |
-| `business_date` | date | explicit; frozen at completion |
+| `occurred_at` | timestamptz | null while working; set at completion (not provisional) |
+| `business_date` | date | null while working; explicit store business date at completion |
 | `completed_at` | timestamptz | null until completed |
 | `cancelled_at` | timestamptz | null until cancelled |
 | `receipt_sequence` | bigint | null until completed |
-| `store_number_snapshot` | string | null until completed; from `stores.store_number` |
-| `register_number_snapshot` | string | null until completed; from `registers.register_number` |
+| `store_number_snapshot` | integer | null until completed; from `stores.store_number` |
+| `register_number_snapshot` | integer | null until completed; from `registers.register_number` |
 | `transaction_reference` | string | optional derived compact `S…-R…-T…`; regenerable from snapshots + sequence |
 | `subtotal_cents` | bigint | Phase 4: sum of sale line extended amounts (positive) |
 | `tax_cents` | bigint | Phase 4: sum of component tax (positive for sale-only) |
@@ -169,16 +169,16 @@ One row for working and completed (or cancelled) commercial state.
 
 ### Status NULL / required rules
 
-| Status | `receipt_sequence` + number snapshots | `completed_at` | `cancelled_at` |
-|---|---|---|---|
-| `working` | NULL | NULL | NULL |
-| `completed` | NOT NULL | NOT NULL | NULL |
-| `cancelled` | NULL | NULL | NOT NULL |
+| Status | `occurred_at` / `business_date` | `receipt_sequence` + number snapshots | `completed_at` | `cancelled_at` |
+|---|---|---|---|---|
+| `working` | NULL | NULL | NULL | NULL |
+| `completed` | NOT NULL | NOT NULL | NOT NULL | NULL |
+| `cancelled` | NULL | NULL | NULL | NOT NULL |
 
 ### Rules
 
 - Working transactions may be edited.
-- Completed rows are immutable commercially; no generic update/delete of completed facts.
+- Completed and cancelled rows are application-readonly (`readonly?`); no generic update/delete of completed facts. Child lines, tenders, and tax components are readonly when the parent is not working. Completed `pos_operations` are readonly.
 - Cancelled working transactions create no receipt and no Inventory effect.
 - No Phase 4 `inventory_unit_id` on the header.
 
@@ -352,8 +352,8 @@ Conceptual uniqueness:
 
 | Column | Type | Notes |
 |---|---|---|
-| `register_number` | string | null: false; unique per `store_id`; parallel to `stores.store_number` |
-| `receipt_sequence` | bigint | null: false, default 0; next receipt allocated by increment under row lock |
+| `register_number` | integer | null: false; CHECK `> 0`; unique per `store_id`; parallel to `stores.store_number` |
+| `receipt_sequence` | bigint | null: false, default 0; next receipt allocated by increment under row lock; must not decrease |
 
 Do not use editable `name` in the reference. Prefer explicit `register_number` over reusing free-form `code` unless `code` is constrained to be that number.
 
@@ -403,7 +403,7 @@ Do not invent a POS-only domain `source_type` string unless a global inventory A
 
 - FKs for all store / register / session / period / user / variant / tax references.
 - Unique `(store_id, code)` on `store_taxes`.
-- Unique `(store_id, calculation_order)` on `store_taxes`.
+- CHECK `calculation_order >= 0` on `store_taxes` (not unique; query `ORDER BY calculation_order, code, id`).
 - CHECK `0 <= rate_percent AND rate_percent <= 100` on `store_taxes.rate_percent` (NOT NULL).
 - Unique `(store_tax_id, tax_class_id)` on `store_tax_rules`.
 - Partial unique `(register_id) WHERE status = 'open'` on `pos_reporting_periods`.
@@ -414,6 +414,7 @@ Do not invent a POS-only domain `source_type` string unless a global inventory A
 - Unique `(pos_transaction_line_id, store_tax_id)` on tax components; nonnegative CHECKs on basis/tax cents.
 - Optional unique `transaction_reference` if stored; must match derived form from snapshots.
 - `pos_operations` uniqueness on `(source_id, command_type, idempotency_key)`.
+- Ordinary FK indexes on POS session/period/transaction/line/tender/operation references (not only uniqueness indexes).
 - Check constraints for status enums; `in_flight` requires lease; completed requires envelope + `envelope_hash`.
 - Transaction status NULL rules for receipt / `completed_at` / `cancelled_at` (§7).
 - Reject completed lines without required merchandise snapshot keys (DB CHECK and/or application validation).
@@ -432,10 +433,23 @@ Before writing POS migrations:
 - [x] Envelope vs normalized Core locked (ADR-020 + operation-and-core-facts)  
 - [x] Register vs Terminal locked (ADR-021 + register-identity)  
 - [x] **Schema constraints locked** (this document: two-hash `pos_operations`, receipt counter, partial uniques, line/tax CHECKs, status NULL rules)  
-- [ ] **Pre-Phase-4:** `workstations` → `registers` rename (FKs, permissions, audit, tests)  
-- [ ] `registers.register_number` + `registers.receipt_sequence` added and backfilled  
-- [ ] Device-only fields reviewed/dropped on Register  
-- [ ] CompletedPosOperation v1 example fixtures reviewed  
-- [ ] Session table confirmed **without** Cash close columns  
+- [x] **Pre-Phase-4:** `workstations` → `registers` rename (FKs, permissions, audit, tests)  
+- [x] `registers.register_number` + `registers.receipt_sequence` added and backfilled  
+- [x] Store/Register numbers stored as positive integers (follow-on conversion; receipt padding remains display-only)  
+- [x] Device-only fields reviewed/dropped on Register  
+- [x] CompletedPosOperation v1 example fixtures reviewed  
+- [x] Session table confirmed **without** Cash close columns  
 
 Then migrate in dependency order: rename slice → `store_taxes` / `store_tax_rules` → periods (with `register_id`) → sessions → transactions → lines → tax components → tenders → operations.
+
+## 16. Permissions
+
+| Permission | scope_type | Seeded on |
+|---|---|---|
+| `store_taxes.view` | either | `store_manager` |
+| `store_taxes.create` | either | `store_manager` |
+| `store_taxes.update` | either | `store_manager` |
+| `store_taxes.deactivate` | either | `store_manager` |
+| `pos.transact` | either | `associate`, `store_manager` |
+
+`system_administrator` receives the entire catalog. `pos.transact` authorizes open period/session, working commands, complete, and cancel. Store Tax admin HTML is authorized with `store_taxes.*`.

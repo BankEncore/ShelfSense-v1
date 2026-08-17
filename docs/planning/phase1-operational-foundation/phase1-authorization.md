@@ -33,11 +33,10 @@ Permission `scope_type` alone cannot prevent an inappropriate global role assign
 | `roles.create` | global | roles |
 | `roles.manage` | global | roles |
 | `roles.deactivate` | global | roles |
-| `workstations.view` | either | workstations |
-| `workstations.create` | either | workstations |
-| `workstations.manage` | either | workstations |
-| `workstations.deactivate` | either | workstations |
-| `workstations.revoke` | either | workstations |
+| `registers.view` | either | registers |
+| `registers.create` | either | registers |
+| `registers.manage` | either | registers |
+| `registers.deactivate` | either | registers |
 | `audit_events.view` | either | audit_events |
 
 Permission keys are seeded by application code. The UI must not invent new permission semantics.
@@ -69,7 +68,7 @@ Examples:
 | Role | assignment_scope | Permissions |
 |---|---|---|
 | `system_administrator` | global | Entire catalog |
-| `store_manager` | store | `stores.view`, `stores.manage`, `workstations.view`, `workstations.create`, `workstations.manage`, `workstations.deactivate`, `workstations.revoke`, `audit_events.view` |
+| `store_manager` | store | `stores.view`, `stores.manage`, `registers.view`, `registers.create`, `registers.manage`, `registers.deactivate`, `audit_events.view` |
 | `associate` | store | `stores.view` |
 
 `system_administrator` is a normal role populated through `role_permissions`. It is not an authorization bypass.

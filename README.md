@@ -124,7 +124,7 @@ Phase 1 implements only what is required to initialize, operate, and administer 
 - `permissions`
 - `role_permissions`
 - `role_assignments`
-- `workstations`
+- `registers`
 - `user_sessions`
 - `audit_events`
 - Authentication and authorization

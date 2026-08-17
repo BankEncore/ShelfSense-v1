@@ -135,7 +135,7 @@ A store is an operational and reporting boundary. Even though Phase 1 initially 
 | Field | Type | Constraints / notes |
 | :---- | :---- | :---- |
 | `id` | UUID | PK; UUIDv7 |
-| `store_number` | string | null: false; unique |
+| `store_number` | integer | null: false; unique; CHECK `> 0` |
 | `code` | string | null: false; unique; stable short code |
 | `name` | string | null: false |
 | `legal_name` | string | optional store-specific legal name |
@@ -155,7 +155,7 @@ A store is an operational and reporting boundary. Even though Phase 1 initially 
 | `created_at` | timestamp | null: false |
 | `updated_at` | timestamp | null: false |
 
-I recommend making `store_number` a string, not an integer. Store identifiers often acquire leading zeroes or letters, and arithmetic on them is meaningless.
+`store_number` is a positive integer. Leading zeroes are presentation only (`1` displays as `S001`); `"1"` and `"01"` are the same identity. Letters are not part of the store number.
 
 `code` should be a short, immutable operational identifier suitable for receipt numbers and UI contexts:
 

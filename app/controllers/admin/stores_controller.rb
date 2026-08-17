@@ -69,7 +69,11 @@ module Admin
         return
       end
 
-      @store.update!(active: false, deactivated_at: Time.current, deactivated_by: current_user)
+      unless @store.update(active: false, deactivated_at: Time.current, deactivated_by: current_user)
+        redirect_to admin_store_path(@store), alert: @store.errors.full_messages.to_sentence
+        return
+      end
+
       Audit::Recorder.record!(
         action: "stores.deactivate",
         outcome: "succeeded",
@@ -88,11 +92,13 @@ module Admin
     end
 
     def store_params
-      params.require(:store).permit(
-        :store_number, :code, :name, :legal_name, :street_address_1, :street_address_2,
+      permitted = [
+        :code, :name, :legal_name, :street_address_1, :street_address_2,
         :city, :region_code, :postal_code, :country_code, :phone, :san, :timezone,
         :receipt_header, :receipt_footer, :lock_version
-      )
+      ]
+      permitted.unshift(:store_number) unless @store&.store_number_locked?
+      params.require(:store).permit(*permitted)
     end
   end
 end

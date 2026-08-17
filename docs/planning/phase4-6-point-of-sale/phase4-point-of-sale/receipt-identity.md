@@ -36,8 +36,8 @@ Store: 003   Reg: 02   Trans: 0018427
 
 | Piece | Source | Notes |
 |---|---|---|
-| Store number | `stores.store_number` | Stable human store identifier; not the editable store name; not `stores.code` for this reference |
-| Register number | `registers.register_number` | Stable within store; cashier UI may label it Register / `Reg` |
+| Store number | `stores.store_number` | Positive integer; stable human store identifier; not the editable store name; not `stores.code` for this reference |
+| Register number | `registers.register_number` | Positive integer unique within store; cashier UI may label it Register / `Reg` |
 | Receipt sequence | Allocated at completion | Register-scoped; field name `receipt_sequence`, never `transaction_id` |
 
 Internal technical identity remains:
@@ -47,6 +47,15 @@ pos_transactions.id   # UUIDv7
 ```
 
 Customer/cashier header label `Trans:` means the padded receipt sequence, not the UUID.
+
+Store and Register numbers are stored as positive integers. Leading zeroes are presentation only:
+
+```text
+stored:  store_number = 1, register_number = 2, receipt_sequence = 18427
+display: S001-R02-T0018427
+```
+
+`"1"` and `"01"` are the same identity after conversion to integer `1`.
 
 ---
 
@@ -76,7 +85,7 @@ Parsers must not assume fixed widths; they recognize `S` / `R` / `T` segments se
 
 ## 4. Durability and snapshots
 
-Store numbers and register numbers must remain historically stable once used on a completed transaction.
+Store numbers and register numbers must remain historically stable once used on a completed transaction. A Register number is immutable once that Register has persisted `receipt_sequence > 0`. Resetting `receipt_sequence` cannot reopen the number. `receipt_sequence` itself must not decrease. A Store number is immutable when either a completed POS transaction exists for the Store or any Register in the Store has `receipt_sequence > 0`.
 
 Completed transactions should persist at least:
 
@@ -169,9 +178,9 @@ Barcode/QR may encode the compact reference so printed and typed values match. P
 ```text
 receipt:
   sequence                      # integer receipt_sequence
-  store_number                  # snapshot string as displayed without requiring fixed width
-  register_number            # snapshot
-  reference                     # optional derived compact form S…-R…-T…
+  store_number                  # integer snapshot (padding is display-only)
+  register_number               # integer snapshot
+  reference                     # derived compact form S…-R…-T…
 ```
 
 Phase 4 completion must populate sequence and number snapshots (and may include `reference`).

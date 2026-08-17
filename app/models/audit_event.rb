@@ -6,7 +6,7 @@ class AuditEvent < ApplicationRecord
 
   belongs_to :actor_user, class_name: "User", optional: true
   belongs_to :store, optional: true
-  belongs_to :workstation, optional: true
+  belongs_to :register, optional: true
 
   validates :occurred_at, :recorded_at, :actor_type, :actor_label, :action, :outcome, :correlation_id, presence: true
   validates :outcome, inclusion: { in: OUTCOMES }

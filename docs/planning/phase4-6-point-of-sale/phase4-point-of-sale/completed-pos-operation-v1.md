@@ -35,14 +35,19 @@ Those hashes are intentionally different. The command hash binds a retry to the 
 
 ### 2.2 `CompleteTransactionCommand` (internal / client request)
 
-Input that asks the authority to complete a working transaction. May include:
+Input that asks the authority to complete a working transaction. Phase 4 hashed command material (no receipt, no completion-only timestamps):
 
-- working `transaction_id`
-- `operation_id` / idempotency key (client-generated UUIDv7)
-- expected totals / tender presentation for validation
-- actor and context already bound on the working transaction
+| Field | Required | Notes |
+|---|---|---|
+| `transaction_id` | yes | Working commercial transaction |
+| `operation_id` | yes | Client-generated UUIDv7; also `pos_operations.id` and `idempotency_key` |
+| `expected_lock_version` | yes | Optimistic concurrency on the working transaction |
+| `expected_total_cents` | yes | Amount due the client believes will be charged |
+| `amount_presented_cents` | yes | Cash presented |
 
-This payload **does not** claim to be a completed operation and **does not** contain the permanent receipt until completion succeeds. It must not include server-assigned receipt sequence or final completion-only timestamps in the material covered by `command_payload_hash`.
+`source_id` is **not** client-supplied. Rails Phase 4 sets `source_id = register_id` from the working transaction (ADR-009 scope). Actor and store/register/session/period context are already bound on the working transaction.
+
+This payload **does not** claim to be a completed operation and **does not** contain the permanent receipt until completion succeeds. Golden hashing fixtures live under `test/fixtures/files/pos/`.
 
 ### 2.3 `CompletedPosOperation` (canonical fact)
 
@@ -205,8 +210,8 @@ CompletedPosOperation
 │
 ├── receipt
 │   ├── sequence                  # receipt_sequence
-│   ├── store_number              # snapshot
-│   ├── register_number           # snapshot (“Reg”)
+│   ├── store_number              # integer snapshot
+│   ├── register_number           # integer snapshot (“Reg”)
 │   └── reference                 # optional derived S003-R02-T0018427
 │
 ├── transaction
@@ -275,8 +280,8 @@ Illustrative only. Includes both applicable and non-applicable Store Tax determi
   },
   "receipt": {
     "sequence": 18427,
-    "store_number": "003",
-    "register_number": "02",
+    "store_number": 3,
+    "register_number": 2,
     "reference": "S003-R02-T0018427"
   },
   "transaction": {
@@ -360,15 +365,18 @@ Component taxes above assume half-up on `1999 × rate / 100` (`5.000%` → 100, 
 
 ## 10. Golden fixture set (minimum)
 
-Portable fixtures (JSON preferred) covering tax cases in [pos-tax-contract.md](pos-tax-contract.md) §14, plus:
+Portable fixtures live under `test/fixtures/files/pos/`:
 
-| # | Case |
+| Path | Case |
 |---|---|
-| … | Full envelope including receipt after successful completion |
-| … | Idempotent replay: same command identity + `command_payload_hash` → identical envelope / result |
-| … | Quantity encoded as JSON integer |
+| `tax_cases.json` | Tax cases from [pos-tax-contract.md](pos-tax-contract.md) §14, including `applies IS NULL` blocking completion |
+| `completed_pos_operation_v1/cash_sale.json` | Full envelope including receipt after successful completion |
+| `complete_transaction_command.json` plus `.canonical.json` / `.sha256` | Canonical command bytes and `command_payload_hash` |
+| `completed_pos_operation_v1/cash_sale.canonical.json` / `.sha256` | Canonical envelope bytes and `envelope_hash` |
 
-These become the eventual Ruby / .NET parity suite. Fixture content review is a migration readiness gate.
+Quantity is a JSON integer. Replay uses the same command identity + `command_payload_hash` and must produce the same envelope hash.
+
+These become the eventual Ruby / .NET parity suite.
 
 ---
 

@@ -1,8 +1,0 @@
-<% content_for :title, "Workstations" %>
-<h1>Workstations</h1>
-<% if effective_permissions.include?("workstations.create") %><p><%= link_to "New workstation", new_admin_workstation_path %></p><% end %>
-<ul>
-  <% @workstations.each do |workstation| %>
-    <li><%= link_to "#{workstation.code} — #{workstation.name}", admin_workstation_path(workstation) %> (<%= workstation.store.admin_label %>)</li>
-  <% end %>
-</ul>

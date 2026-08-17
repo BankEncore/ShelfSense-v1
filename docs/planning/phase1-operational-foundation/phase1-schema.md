@@ -1,6 +1,6 @@
 # Phase 1 Database Schema
 
-* `registers` → `workstations`  
+* `registers` (renamed from Phase 1 `workstations`; ADR-021)  
 * `user_roles` → `role_assignments`  
 * Organization administration requires globally scoped role assignments  
 * Administrators use the ordinary permission engine  
@@ -47,7 +47,7 @@ Defines an operational store and reporting boundary.
 | Field | Type | Constraints | Notes |
 | :---- | :---- | :---- | :---- |
 | `id` | uuid | PK; UUIDv7 |  |
-| `store_number` | varchar | null: false; unique | Business-facing identifier; stored as text |
+| `store_number` | integer | null: false; unique; CHECK `> 0` | Business-facing identifier; leading zeroes are display-only |
 | `code` | varchar | null: false; unique | Short, stable operational code |
 | `name` | varchar | null: false | Display name |
 | `legal_name` | varchar |  | Optional store-specific legal name |
@@ -71,8 +71,8 @@ Defines an operational store and reporting boundary.
 
 Recommended rules:
 
-* Normalize `code` and `store_number` before enforcing uniqueness.  
-* Do not allow `store_number` to change after it appears in a completed receipt identity (ADR-006); treat Register `register_number` the same once receipts exist.  
+* Normalize `code` before enforcing uniqueness. Store numbers are positive integers (`"01"` and `"1"` are the same identity).  
+* Do not allow `store_number` to change after a completed POS transaction exists for the Store or any Register in the Store has `receipt_sequence > 0`; treat Register `register_number` as immutable once that Register has issued a receipt.  
 * Do not allow the final active store to be deactivated normally.  
 * Do not hard-delete a store after another record references it.
 
@@ -199,7 +199,7 @@ For example:
 | `users.assign_roles` | `global` |
 | `stores.create` | `global` |
 | `stores.view` | `either` |
-| `workstations.manage` | `either` |
+| `registers.manage` | `either` |
 | `audit_events.view` | `either` |
 
 Permissions are seeded by application code. The administration interface should not permit arbitrary permission creation or deletion.
@@ -283,36 +283,32 @@ A user may access a store when at least one effective assignment applies either 
 
 ---
 
-## 8\. `workstations` → target `registers` (ADR-021)
+## 8\. `registers` (ADR-021)
 
-**Implemented today:** table `workstations` (Phase 1).
-
-**Target before Phase 4 POS migrations:** rename to `registers` per [ADR-021](../../adr/ADR-021-register-and-terminal-identity.md) and [register-identity.md](../phase4-6-point-of-sale/phase4-point-of-sale/register-identity.md). A Register is the durable logical checkout position. A Terminal (deferred) is the concrete POS client.
+**Implemented:** table `registers` (renamed from Phase 1 `workstations`). A Register is the durable logical checkout position. A Terminal (deferred) is the concrete POS client. See [ADR-021](../../adr/ADR-021-register-and-terminal-identity.md) and [register-identity.md](../phase4-6-point-of-sale/phase4-point-of-sale/register-identity.md).
 
 | Field | Type | Constraints | Notes |
 | :---- | :---- | :---- | :---- |
 | `id` | uuid | PK; UUIDv7 |  |
 | `store_id` | uuid | FK: `stores`; null: false |  |
-| `code` | varchar | null: false today | Prefer drop after rename review; operational identity becomes `register_number` |
-| `register_number` | varchar | required in rename slice | Durable number parallel to `stores.store_number`; unique per store |
+| `register_number` | integer | null: false; unique per store; CHECK `> 0` | Durable number parallel to `stores.store_number`; immutable once a receipt has been issued |
 | `name` | varchar | null: false | Editable label; not used in receipt reference |
 | `description` | text |  |  |
 | `active` | boolean | null: false; default `true` |  |
-| `receipt_sequence` | bigint | null: false; default `0`; check `>= 0` | Last sequence permanently consumed |
-| `activated_at` | timestamptz | drop in rename if unused | Device/client lifecycle → Terminal later |
-| `revoked_at` | timestamptz | drop in rename if unused | Device/client lifecycle → Terminal later |
+| `receipt_sequence` | bigint | null: false; default `0`; check `>= 0` | Last sequence permanently consumed; must not decrease |
 | `deactivated_at` | timestamptz |  | Register removed from normal operation |
 | `deactivated_by_id` | uuid | FK: `users`; nullable |  |
-| `last_seen_at` | timestamptz | drop in rename if unused | Device presence → Terminal later |
 | `lock_version` | integer | null: false; default `0` | Optimistic concurrency |
 | `created_at` | timestamptz | null: false |  |
 | `updated_at` | timestamptz | null: false |  |
 
-Constraints (target):
+Constraints:
 
 ```
 unique(store_id, register_number)
 ```
+
+Device/client columns (`code`, `activated_at`, `revoked_at`, `last_seen_at`) were dropped with the rename. Permission `workstations.revoke` is retained inactive (deprecated) so custom-role grants remain in authorization history; it is removed from current system-role grants. Terminal lifecycle belongs to a later phase.
 
 Important distinctions:
 
@@ -320,7 +316,6 @@ Important distinctions:
 * A Register is not an employee session.  
 * POS Sessions are operational use of a Register.  
 * Hardware/Terminal may be replaced while preserving the Register identity.  
-* `register_number` should become immutable once a receipt has been issued.  
 * Human-facing receipt / transaction reference (ADR-006):
 
 ```
@@ -328,8 +323,6 @@ S{store_number}-R{register_number}-T{receipt_sequence}
 ```
 
 For example: `S003-R02-T0018427`. See [receipt-identity.md](../phase4-6-point-of-sale/phase4-point-of-sale/receipt-identity.md).
-
-Although Phase 1 does not issue receipts, retaining `receipt_sequence` establishes Register-scoped numbering once the rename lands.
 
 ---
 
@@ -386,7 +379,7 @@ Append-only record of security, authorization, and material configuration activi
 | `actor_user_id` | uuid | FK: `users`; nullable | Nullable for anonymous or external actors |
 | `actor_label` | varchar | null: false | Historical display snapshot |
 | `store_id` | uuid | FK: `stores`; nullable | Store context, if applicable |
-| `workstation_id` | uuid | FK: `workstations`; nullable |  |
+| `register_id` | uuid | FK: `registers`; nullable |  |
 | `user_session_id` | uuid | FK: `user_sessions`; nullable |  |
 | `action` | varchar | null: false | Stable event key |
 | `outcome` | varchar | null: false | `succeeded`, `failed`, `denied` |
