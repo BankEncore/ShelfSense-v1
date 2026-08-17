@@ -53,9 +53,19 @@
           <% end %>
         <% end %>
 
-        <%= submit_tag "Open register",
-              disabled: @gate.occupied?,
-              class: "btn" %>
+        <div class="pos-enter__actions">
+          <%= submit_tag @gate.can_finalize_period? ? "Open session" : "Open register",
+                disabled: @gate.occupied?,
+                class: "btn" %>
+        </div>
+      <% end %>
+      <% if @register && @gate&.can_finalize_period? %>
+        <%= form_with url: pos_reporting_period_finalize_path(@gate.period), method: :post, class: "pos-enter__form" do %>
+          <%= hidden_field_tag :expected_lock_version, @gate.period.lock_version %>
+          <%= hidden_field_tag :return_to, "enter" %>
+          <%= hidden_field_tag :register_id, @register.id %>
+          <%= submit_tag "Finalize Z", class: "btn btn--secondary" %>
+        <% end %>
       <% end %>
     <% end %>
   <% end %>

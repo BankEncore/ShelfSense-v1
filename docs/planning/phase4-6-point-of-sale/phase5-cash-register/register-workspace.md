@@ -4,7 +4,7 @@
 
 **Authority:** Cashier-facing online Register workspace: open gate, ephemeral UI modes, HTTP commands, focus/retry rules, and the Slice 2 vs Slice 3 receipt split. Domain completion, tax, inventory posting, and receipt identity remain in the [Phase 4 packet](../phase4-point-of-sale/). Cash/Z snapshots remain in [phase5-schema.md](phase5-schema.md).
 
-Companions: [phase5-plan.md](phase5-plan.md), [register-workspace-ux.md](register-workspace-ux.md), [receipt-identity.md](../phase4-point-of-sale/receipt-identity.md). Low-fidelity wireframes in `register-workspace-ux.md` (review before Hotwire). Changing a key binding or layout in that pass is not an architectural reversal.
+Companions: [phase5-plan.md](phase5-plan.md), [register-workspace-ux.md](register-workspace-ux.md), [close-z-screens.md](close-z-screens.md), [receipt-identity.md](../phase4-point-of-sale/receipt-identity.md). Low-fidelity wireframes in `register-workspace-ux.md` (review before Hotwire). Changing a key binding or layout in that pass is not an architectural reversal.
 
 Where this document and [spec.md](../spec.md) §5.4–5.11 disagree, **prefer this document**.
 
@@ -64,11 +64,11 @@ Do not install Importmap / Turbo / Stimulus in a docs-only change.
 
 ## 2. Slice 2 vs Slice 3
 
-| Slice 2 | Slice 3 |
+| Slice 2 | Slice 3 ([close-z-screens.md](close-z-screens.md)) |
 |---|---|
 | Open gate, selling workspace, on-screen **completion receipt/confirmation** | Receipt **print** path, blind session close, Z finalize screens |
 | Render completion confirmation from **immutable completed transaction facts** | Print representation of those same facts |
-| No print controls | One supported print path; printer failure does not undo completion |
+| No print controls in the Slice 2 contract | One supported print path; printer failure does not undo completion |
 
 Slice 2 completion receipt minimum:
 
@@ -460,4 +460,6 @@ System tests (when the workspace is implemented) must cover at least: scan → f
 
 ## 11. Out of this contract
 
-Close session UI, blind count, Z screens, receipt print, split tender, discounts, returns, suspend/recall, drawers, Terminal, new permissions, close/Z outbox, polished visual design, mobile POS, customer display.
+Split tender, discounts, returns, suspend/recall, drawers, Terminal, new permissions, close/Z outbox, polished visual design, mobile POS, customer display.
+
+Receipt print, blind close, and Z screens are Slice 3: [close-z-screens.md](close-z-screens.md).

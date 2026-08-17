@@ -71,6 +71,8 @@ class PosRegisterTest < ActionDispatch::IntegrationTest
     assert_match "Sale complete", response.body
     assert_match transaction.reload.transaction_reference, response.body
     assert_match "New sale", response.body
+    assert_match "Print receipt", response.body
+    assert_match "Close register", response.body
 
     get pos_register_workspace_path
     assert_redirected_to pos_register_enter_path(register_id: @register.id)

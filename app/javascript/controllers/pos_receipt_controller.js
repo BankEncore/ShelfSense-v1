@@ -6,4 +6,9 @@ export default class extends Controller {
     if (event.target && event.target.closest && event.target.closest("button, [type=submit], a[href]")) return
     event.preventDefault()
   }
+
+  print(event) {
+    event.preventDefault()
+    window.print()
+  }
 }

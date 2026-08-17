@@ -1,6 +1,6 @@
 # Phase 5 — First Operational Cash Register
 
-**Status:** Slice 1 implemented (headless cash accountability and Z finalize). Slice 2 Register workspace implemented; HTTP/browser hardening in progress ([register-workspace.md](register-workspace.md)). Interaction wireframes in [register-workspace-ux.md](register-workspace-ux.md). Slice 3 print and close/Z screens remain.
+**Status:** Slice 1 implemented (headless cash accountability and Z finalize). Slice 2 Register workspace implemented ([register-workspace.md](register-workspace.md)). Slice 3 print and close/Z screens implemented ([close-z-screens.md](close-z-screens.md); wireframes in [close-z-screens-ux.md](close-z-screens-ux.md)).
 
 **Authority**
 
@@ -9,6 +9,8 @@
 | [Phase 5 schema](phase5-schema.md) | Session cash columns and period Z snapshots |
 | [Register workspace](register-workspace.md) | Slice 2 open gate, modes, HTTP/retry, focus, completion receipt vs print |
 | [Register workspace UX](register-workspace-ux.md) | Slice 2 low-fidelity wireframes (focus, keys, Turbo regions) |
+| [Close / Z screens](close-z-screens.md) | Slice 3 print, blind close, enter-gate Z, HTTP/auth/retry |
+| [Close / Z UX](close-z-screens-ux.md) | Slice 3 low-fidelity frames (receipt, blind count, closed Session, Z) |
 | [Phase 4 plan](../phase4-point-of-sale/phase4-plan.md) | Completion, receipt allocation, inventory posting |
 | [Receipt identity](../phase4-point-of-sale/receipt-identity.md) | Compact reference and print header form ([ADR-006](../../../adr/ADR-006-receipt-numbering.md)) |
 | [Phases 4–6 plan](../spec.md) | Broader sequencing; this packet supersedes conflicting §5 cash/Z and §5.4–5.11 workspace detail |
@@ -101,7 +103,7 @@ Slice 1 answers the cash-accountability half without screens. Slice 2 is the cas
 | Basket vs tender | Shared `clear_working_tenders!` (destroy only; no extra aggregate `save!`). `AddMerchandise`, `ChangeQuantity`, `RemoveWorkingLine`, `AbandonTender`, and `CancelTransaction` clear working tenders in the same database transaction. `AbandonTender` does not bump `lock_version` when there is no tender. Cancelled lines remain; cancelled rows must not keep a provisional Cash tender. Empty-basket cancel is a Slice 2 UI disable; the service may still cancel an empty working transaction |
 | Slice 2 receipt | On-screen completion receipt/confirmation from immutable completed facts. Print is Slice 3 |
 | Controllers (slices 2–3) | Call Phase 4/5 services only. No receipt allocation or inventory mutation in controllers or Stimulus |
-| Print (slice 3) | Render from immutable completed facts. Proposed path: browser print. Printer failure must not undo completion |
+| Print (slice 3) | Browser `window.print()` only; explicit Print receipt action; never print on GET. Failure must not undo completion. Contract: [close-z-screens.md](close-z-screens.md) |
 
 ---
 
@@ -134,11 +136,17 @@ Authority: [register-workspace.md](register-workspace.md). Interaction: [registe
 
 ### Slice 3 — Print + close / Z screens
 
-- Print path for the Slice 2 completion receipt; header form in [receipt-identity.md](../phase4-point-of-sale/receipt-identity.md)
-- Print prompt; one supported path; failure does not undo completion
-- Session totals: closed sessions show persisted close snapshots
-- Blind count first; then reveal expected and variance
-- Finalize and show basic immutable Z from persisted snapshots
+Authority: [close-z-screens.md](close-z-screens.md). Interaction: [close-z-screens-ux.md](close-z-screens-ux.md).
+
+- Print the Slice 2 completion receipt through one explicit browser-print path; header form in [receipt-identity.md](../phase4-point-of-sale/receipt-identity.md)
+- Close Register from the completed receipt or empty `SALE_ENTRY`; initiate POST may cancel an empty working ticket and must not weaken `CloseSession`
+- Blind count GET is read-only and contains no expected Cash, variance, opening float, or tender totals
+- Closed Session UI shows persisted `closing_*` snapshots; close does not finalize the period
+- Enter gate with an open period and no Session offers Finalize Z or Open session (including unused all-zero Z)
+- Finalize through `FinalizeReportingPeriod` only; Z UI renders persisted `finalized_*` fields
+- No new permission, printer model, Z number, or drawer
+
+Slice 3 acceptance lives in [close-z-screens.md](close-z-screens.md) §12.
 
 ---
 
@@ -201,7 +209,7 @@ Phase 5 does not introduce session-close or Z-finalize outbox events.
 4. OpenSession (period lock) / CloseSession (blind) / FinalizeReportingPeriod
 5. Headless and concurrency tests
 6. Slice 2 — lock workspace contract (done) → UX wireframes (drafted) → domain invariants (done) → Hotwire workspace + system tests (done)
-7. Slice 3 — receipt print + blind close / Z screens
+7. Slice 3 — lock close/Z contract (done) → UX wireframes (done) → receipt print + blind close / Z screens (done)
 ```
 
 ---

@@ -137,6 +137,9 @@
               disabled>
         Cancel (F9)
       </button>
+      <% if @ui_mode == "sale_entry" && lines.empty? && tender.blank? %>
+        <%= button_to "Close register", pos_register_close_path, method: :post, class: "btn btn--secondary" %>
+      <% end %>
     </div>
 
     <%= form_with url: pos_register_merchandise_path, method: :post, html: { class: "pos-hidden", data: { register_workspace_target: "merchandiseForm", turbo: true } } do %>

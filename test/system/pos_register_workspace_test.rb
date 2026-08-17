@@ -71,6 +71,7 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
   test "empty basket disables cancel" do
     open_register
     assert_button "Cancel (F9)", disabled: true
+    assert_button "Close register"
   end
 
   test "quantity mode prefills and invalid quantity stays in quantity" do

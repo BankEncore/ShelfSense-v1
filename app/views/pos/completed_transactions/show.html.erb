@@ -1,30 +1,70 @@
 <% content_for :title, "Sale complete" %>
 
 <main class="pos-receipt" data-controller="pos-receipt" data-action="keydown@document->pos-receipt#onKeydown">
-  <header class="pos-header">
-    <div class="pos-header__row">
-      <span>Store  <%= @transaction.store.admin_label %></span>
-      <span>Register  <%= @register.register_number %></span>
-      <span><%= current_user.display_name %></span>
-    </div>
-    <div class="pos-header__date">Business date  <%= @transaction.business_date.iso8601 %></div>
-  </header>
+  <div class="pos-receipt__screen">
+    <header class="pos-header">
+      <div class="pos-header__row">
+        <span>Store  <%= @transaction.store.admin_label %></span>
+        <span>Register  <%= @register.register_number %></span>
+        <span><%= current_user.display_name %></span>
+      </div>
+      <div class="pos-header__date">Business date  <%= @transaction.business_date.iso8601 %></div>
+    </header>
 
-  <h1 tabindex="-1" autofocus>Sale complete</h1>
-  <p class="pos-receipt__ref"><%= @transaction.transaction_reference %></p>
+    <h1 tabindex="-1" autofocus>Sale complete</h1>
+    <p class="pos-receipt__ref"><%= @transaction.transaction_reference %></p>
 
-  <dl class="pos-receipt__totals">
-    <div><dt>Total</dt><dd><%= format_money_cents(@transaction.total_cents) %></dd></div>
-    <div><dt>Cash presented</dt><dd><%= format_money_cents(@tender&.amount_presented_cents) %></dd></div>
-    <div><dt>Change</dt><dd><%= format_money_cents(@tender&.change_cents) %></dd></div>
-  </dl>
+    <dl class="pos-receipt__totals">
+      <div><dt>Total</dt><dd><%= format_money_cents(@transaction.total_cents) %></dd></div>
+      <div><dt>Cash presented</dt><dd><%= format_money_cents(@tender&.amount_presented_cents) %></dd></div>
+      <div><dt>Change</dt><dd><%= format_money_cents(@tender&.change_cents) %></dd></div>
+    </dl>
 
-  <ul class="pos-receipt__lines">
-    <% @transaction.pos_transaction_lines.each do |line| %>
-      <li><%= line.quantity %> × <%= pos_line_description(line) %>  <%= format_money_cents(line.extended_selling_amount_cents) %></li>
-    <% end %>
-    <li>Tax  <%= format_money_cents(@transaction.tax_cents) %></li>
-  </ul>
+    <ul class="pos-receipt__lines">
+      <% @transaction.pos_transaction_lines.each do |line| %>
+        <li><%= line.quantity %> × <%= pos_line_description(line) %>  <%= format_money_cents(line.extended_selling_amount_cents) %></li>
+      <% end %>
+      <li>Tax  <%= format_money_cents(@transaction.tax_cents) %></li>
+    </ul>
+  </div>
 
-  <%= button_to "New sale", pos_register_continue_path, method: :post, class: "btn pos-receipt__new" %>
+  <section class="pos-receipt__print pos-print-only" aria-hidden="true">
+    <p class="pos-receipt__print-header"><%= pos_receipt_print_header(@transaction) %></p>
+    <p><%= @transaction.transaction_reference %></p>
+    <p>Business date  <%= @transaction.business_date.iso8601 %></p>
+    <p>Completed  <%= format_store_timestamp(@transaction.completed_at, @transaction.store) %></p>
+
+    <table class="pos-receipt__print-lines">
+      <thead>
+        <tr>
+          <th>Qty</th>
+          <th>Description</th>
+          <th>Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @transaction.pos_transaction_lines.each do |line| %>
+          <tr>
+            <td><%= line.quantity %></td>
+            <td><%= pos_print_line_description(line) %></td>
+            <td><%= format_money_cents(line.extended_selling_amount_cents) %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+
+    <dl class="pos-receipt__print-totals">
+      <div><dt>Subtotal</dt><dd><%= format_money_cents(@transaction.subtotal_cents) %></dd></div>
+      <div><dt>Tax</dt><dd><%= format_money_cents(@transaction.tax_cents) %></dd></div>
+      <div><dt>Total</dt><dd><%= format_money_cents(@transaction.total_cents) %></dd></div>
+      <div><dt>Cash presented</dt><dd><%= format_money_cents(@tender&.amount_presented_cents) %></dd></div>
+      <div><dt>Change</dt><dd><%= format_money_cents(@tender&.change_cents) %></dd></div>
+    </dl>
+  </section>
+
+  <div class="pos-receipt__actions pos-no-print">
+    <button type="button" class="btn" data-action="pos-receipt#print">Print receipt</button>
+    <%= button_to "New sale", pos_register_continue_path, method: :post, class: "btn pos-receipt__new" %>
+    <%= button_to "Close register", pos_register_close_path, method: :post, class: "btn btn--secondary" %>
+  </div>
 </main>

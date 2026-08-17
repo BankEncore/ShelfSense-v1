@@ -1,0 +1,32 @@
+<% content_for :title, "Session closed" %>
+
+<main class="pos-close">
+  <h1>Session closed</h1>
+
+  <% if flash.now[:alert].present? || alert.present? %>
+    <p class="pos-enter__alert" role="alert"><%= flash.now[:alert] || alert %></p>
+  <% end %>
+
+  <dl class="pos-close__facts">
+    <div><dt>Transactions</dt><dd><%= @totals.completed_transaction_count %></dd></div>
+    <div><dt>Subtotal</dt><dd><%= format_money_cents(@totals.subtotal_cents) %></dd></div>
+    <div><dt>Tax</dt><dd><%= format_money_cents(@totals.tax_cents) %></dd></div>
+    <div><dt>Sales total</dt><dd><%= format_money_cents(@totals.total_cents) %></dd></div>
+    <div><dt>Cash payments</dt><dd><%= format_money_cents(@totals.cash_tender_cents) %></dd></div>
+    <div><dt>Opening float</dt><dd><%= format_money_cents(@session_record.opening_float_cents) %></dd></div>
+    <div><dt>Expected closing Cash</dt><dd><%= format_money_cents(@session_record.closing_expected_cash_cents) %></dd></div>
+    <div><dt>Counted Cash</dt><dd><%= format_money_cents(@session_record.closing_count_cents) %></dd></div>
+    <div><dt>Variance</dt><dd><%= format_money_cents(@session_record.closing_variance_cents) %></dd></div>
+  </dl>
+
+  <div class="pos-close__actions">
+    <%= form_with url: pos_reporting_period_finalize_path(@period), method: :post do %>
+      <%= hidden_field_tag :expected_lock_version, @period.lock_version %>
+      <%= hidden_field_tag :return_to, "closed" %>
+      <%= hidden_field_tag :session_id, @session_record.id %>
+      <%= hidden_field_tag :register_id, @register.id %>
+      <%= submit_tag "Finalize Z", class: "btn" %>
+    <% end %>
+    <%= link_to "Leave period open", pos_register_enter_path(register_id: @register.id), class: "btn btn--secondary" %>
+  </div>
+</main>

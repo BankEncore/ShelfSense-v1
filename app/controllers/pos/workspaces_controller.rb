@@ -21,6 +21,7 @@ module Pos
       end
 
       prepare_view_state
+      @feedback ||= flash[:alert]
     end
 
     def merchandise

@@ -48,6 +48,10 @@ module Pos
       period.nil?
     end
 
+    def can_finalize_period?
+      period.present? && period.open? && session.nil?
+    end
+
     def enterable?
       !occupied?
     end
