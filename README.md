@@ -2,7 +2,7 @@
 
 ShelfSense is an inventory, purchasing, customer-service, and point-of-sale system for independent bookstores. It is designed for one organization operating one or more stores, with a central organization server and store Registers. A future standalone Terminal (ADR-021) may continue ordinary checkout during temporary connectivity loss.
 
-Phases 0–4 are implemented. Phase 5 slice 1 (headless cash accountability and Z finalize) is locked. The next work is the cashier-facing register workspace and receipt/Z screens.
+Phases 0–4 are implemented. Phase 5 slice 1 (headless cash accountability and Z finalize) is implemented. Slice 2 interaction/HTTP contract is locked; the workspace UI is not built yet.
 
 ## Goals
 
@@ -31,7 +31,7 @@ The accepted application scaffold currently uses:
 - Minitest, RuboCop, Brakeman, and Bundler Audit
 - GitHub Actions for continuous integration
 
-The frontend dependency strategy is not yet settled. Importmap, Turbo, and Stimulus gems are present in the scaffold, but Importmap has not been installed or configured. Browser-based system testing is also intentionally deferred. See [Testing and CI](docs/testing.md).
+The cashier Register workspace (Phase 5 Slice 2) locks Importmap + Turbo + Stimulus, with system/browser tests required when that UI is implemented. Those gems are in the Gemfile and are **not installed** until the workspace PR. Admin screens remain server-rendered Rails. See [register-workspace.md](docs/planning/phase4-6-point-of-sale/phase5-cash-register/register-workspace.md) and [Testing and CI](docs/testing.md).
 
 ## Quick start
 
@@ -200,11 +200,11 @@ Authoritative plan: [phase4-plan.md](docs/planning/phase4-6-point-of-sale/phase4
 
 ### Phase 5: First operational cash register
 
-Status: in progress (slice 1 locked — headless cash accountability and Z finalize). Register workspace and receipt/Z screens follow.
+Status: in progress (slice 1 implemented; slice 2 workspace contract locked, UI not implemented).
 
-Phase 5 turns the Phase 4 completion path into a cashier-usable online Rails register. Opening float, session close snapshots, and finalized Z facts are locked; the register UI stack is not.
+Phase 5 turns the Phase 4 completion path into a cashier-usable online Rails register. Opening float, session close snapshots, and finalized Z facts are implemented. The Register workspace stack is Importmap + Turbo + Stimulus with system tests; gems are not installed until the workspace PR.
 
-Authoritative plan: [phase5-plan.md](docs/planning/phase4-6-point-of-sale/phase5-cash-register/phase5-plan.md). Schema: [phase5-schema.md](docs/planning/phase4-6-point-of-sale/phase5-cash-register/phase5-schema.md).
+Authoritative plan: [phase5-plan.md](docs/planning/phase4-6-point-of-sale/phase5-cash-register/phase5-plan.md). Schema: [phase5-schema.md](docs/planning/phase4-6-point-of-sale/phase5-cash-register/phase5-schema.md). Workspace contract: [register-workspace.md](docs/planning/phase4-6-point-of-sale/phase5-cash-register/register-workspace.md).
 
 ## Phase 1 authorization model
 

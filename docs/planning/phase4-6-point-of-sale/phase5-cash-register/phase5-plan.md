@@ -1,15 +1,16 @@
 # Phase 5 — First Operational Cash Register
 
-**Status:** Slice 1 locked (headless cash accountability and Z finalize). Register UI stack is **not** locked.
+**Status:** Slice 1 implemented (headless cash accountability and Z finalize). Slice 2 interaction/HTTP contract locked in [register-workspace.md](register-workspace.md); workspace UI is not implemented. Register UX wireframes and Hotwire install are later Slice 2 steps.
 
 **Authority**
 
 | Document | Role |
 |---|---|
 | [Phase 5 schema](phase5-schema.md) | Session cash columns and period Z snapshots |
+| [Register workspace](register-workspace.md) | Slice 2 open gate, modes, HTTP/retry, focus, completion receipt vs print |
 | [Phase 4 plan](../phase4-point-of-sale/phase4-plan.md) | Completion, receipt allocation, inventory posting |
 | [Receipt identity](../phase4-point-of-sale/receipt-identity.md) | Compact reference and print header form ([ADR-006](../../../adr/ADR-006-receipt-numbering.md)) |
-| [Phases 4–6 plan](../spec.md) | Broader sequencing; this packet supersedes conflicting §5 cash/Z detail |
+| [Phases 4–6 plan](../spec.md) | Broader sequencing; this packet supersedes conflicting §5 cash/Z and §5.4–5.11 workspace detail |
 | Accepted ADRs | ADR-006, ADR-007, ADR-008, ADR-009, ADR-011, ADR-012, ADR-013, ADR-019, ADR-020, ADR-021 |
 
 Phase 4 is a headless Cash sale. Phase 5 turns that path into a cashier-usable online Rails register. No Terminal table (ADR-021). Offline sales stay out.
@@ -56,7 +57,7 @@ Deliver the minimum shift lifecycle:
 
 > Can a cashier operate an ordinary Cash register through open → sell → close → Z using the Phase 4 completion path?
 
-Slice 1 answers the cash-accountability half without screens. Slices 2–3 add the register workspace and receipt/Z presentation.
+Slice 1 answers the cash-accountability half without screens. Slice 2 is the cashier-facing ordinary sale path plus on-screen completion receipt/confirmation. Slice 3 is printing plus blind close / Z screens.
 
 ---
 
@@ -91,9 +92,14 @@ Slice 1 answers the cash-accountability half without screens. Slices 2–3 add t
 | Drawer table | Deferred (POS-DEC-016). Cash custody is session-scoped |
 | Paid-in / paid-out / transfer | Out of Phase 5 |
 | Outbox | No session-close or Z-finalize outbox events unless a concrete consumer appears. Audit and immutable snapshots are sufficient |
-| UI stack | **Not locked.** Slice 2 locks the UI stack **and** its browser-level testing strategy together. Do not install Importmap / Turbo / Stimulus in slice 1 |
-| Input modes (slice 2) | `SALE_ENTRY`, `QUANTITY`, `TENDER` are **ephemeral UI modes**, not persisted transaction states |
-| Controllers (slices 2–3) | Call Phase 4/5 services only. No receipt allocation or inventory mutation in controllers |
+| UI stack | Rails + Importmap + Turbo + Stimulus for the Register workspace. System/browser tests are required. Not installed until the workspace implementation PR. Contract: [register-workspace.md](register-workspace.md) |
+| Input modes (slice 2) | `SALE_ENTRY`, `QUANTITY`, `TENDER` are **ephemeral UI modes**, not persisted transaction states. Completion-pending after successful `TenderCash` is locked input, not a fourth named mode |
+| One working transaction | Partial unique index `UNIQUE (pos_session_id) WHERE status = 'working'`. `ResumeOrStartTransaction` is the service boundary. GET never creates a transaction |
+| Rescan | Compatible SKU increments the existing line inside `AddMerchandise` |
+| Tender vs complete | Separate `POST tender` and `POST complete`. Completion retries must not call `TenderCash` again |
+| Basket vs tender | `AddMerchandise`, `ChangeQuantity`, and `RemoveWorkingLine` clear working tenders in the same transaction |
+| Slice 2 receipt | On-screen completion receipt/confirmation from immutable completed facts. Print is Slice 3 |
+| Controllers (slices 2–3) | Call Phase 4/5 services only. No receipt allocation or inventory mutation in controllers or Stimulus |
 | Print (slice 3) | Render from immutable completed facts. Proposed path: browser print. Printer failure must not undo completion |
 
 ---
@@ -110,20 +116,23 @@ Slice 1 answers the cash-accountability half without screens. Slices 2–3 add t
 - Audit + immutability + concurrency tests
 - No POS screens
 
-### Slice 2 — Register workspace
+### Slice 2 — Register workspace (contract locked; UI not implemented)
 
-Lock the UI stack and browser-testing strategy in the same change.
+Authority: [register-workspace.md](register-workspace.md).
 
-- If the workspace stays conventional server-rendered Rails, request/integration tests plus manual UX acceptance may suffice.
-- If it adopts Turbo/Stimulus or other meaningful client-side behavior, revisit “system tests deferred.”
-- Confirm the calculated store business date (no free-form date field).
-- Persistent scan/input workspace; quantity correction; working-line removal; cancel.
-- Cash tender and complete through Phase 4 services.
-- Keyboard-first ordinary path using ephemeral `SALE_ENTRY` / `QUANTITY` / `TENDER` modes.
+- Rails + Importmap + Turbo + Stimulus; system/browser tests required when the workspace is implemented
+- Open gate: confirm calculated business date, opening float, resume or open period/session for the cashier's register
+- At most one working transaction per Session; GET workspace is read-only; `ResumeOrStartTransaction` on POST enter/continue
+- Persistent primary scan/input; keyboard-first ephemeral `SALE_ENTRY` / `QUANTITY` / `TENDER`
+- Rescan of a compatible SKU increments the existing line in `AddMerchandise`
+- `POST tender` then `POST complete` (not one combined endpoint); completion retry does not re-tender
+- Basket mutation clears working tenders
+- On-screen completion receipt/confirmation from completed facts; no print in this slice
+- Low-fidelity UX wireframes (`register-workspace-ux.md`) before Hotwire implementation
 
-### Slice 3 — Receipt + close / Z screens
+### Slice 3 — Print + close / Z screens
 
-- Receipt from completed facts; header form in [receipt-identity.md](../phase4-point-of-sale/receipt-identity.md)
+- Print path for the Slice 2 completion receipt; header form in [receipt-identity.md](../phase4-point-of-sale/receipt-identity.md)
 - Print prompt; one supported path; failure does not undo completion
 - Session totals: closed sessions show persisted close snapshots
 - Blind count first; then reveal expected and variance
@@ -189,7 +198,7 @@ Phase 5 does not introduce session-close or Z-finalize outbox events.
 3. SessionTotals / PeriodTotals (preview vs snapshot)
 4. OpenSession (period lock) / CloseSession (blind) / FinalizeReportingPeriod
 5. Headless and concurrency tests
-6. Slice 2 — UI stack + testing strategy + register workspace
+6. Slice 2 — lock workspace contract (done) → UX wireframes → domain invariants → Hotwire workspace + system tests
 7. Slice 3 — receipt print + blind close / Z screens
 ```
 
@@ -216,6 +225,8 @@ A headless scenario can:
 15. `CloseSession` receives only count; expected/variance are server-derived.
 16. Multi-session Z aggregates independent session snapshots (`closing_variance_cents_sum == SUM(session.closing_variance_cents)`) without treating them as one drawer.
 
+Slice 2 acceptance lives in [register-workspace.md](register-workspace.md) §9.
+
 ---
 
 ## 9. Phase 5 acceptance (all slices)
@@ -226,4 +237,4 @@ A cashier can complete [spec.md §5.16](../spec.md) (business date through final
 
 ## 10. Out of Phase 5
 
-Returns, discounts, approvals, suspend/recall, post-void, card / stored value, paid-ins / paid-outs / transfers, drawers, offline Terminal, customer display, Z numbering, close/Z outbox events, a dedicated finalize permission, Hotwire unless slice 2 accepts it together with a browser-testing strategy.
+Returns, discounts, approvals, suspend/recall, post-void, card / stored value, paid-ins / paid-outs / transfers, drawers, offline Terminal, customer display, Z numbering, close/Z outbox events, a dedicated finalize permission.

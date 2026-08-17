@@ -79,7 +79,7 @@ Keep keyboard focus visible. Do not communicate meaning by color alone (pair bad
 
 ## Hotwire
 
-Importmap, Turbo, and Stimulus remain deferred. Phase 2.2 is Propshaft CSS + ERB only. Any Hotwire adoption must be a separately accepted change.
+Admin screens remain Propshaft CSS + ERB (Phase 2.2). Phase 5 Slice 2 locks Importmap + Turbo + Stimulus for the cashier Register workspace only ([register-workspace.md](planning/phase4-6-point-of-sale/phase5-cash-register/register-workspace.md)). Those gems are not installed until the workspace implementation PR. Do not add Hotwire to admin chrome in the same change.
 
 ## Phase 3 and later
 
