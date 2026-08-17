@@ -2,10 +2,9 @@
 
 - **Status:** Accepted
 - **Date:** 2026-08-09
+- **Interpretation (ADR-021):** “POS workstations” that receive reference-data snapshots are **Terminals**.
 
 ## Context
-
-POS workstations need products, prices, taxes, configuration, permissions, and other reference data while disconnected. Incremental-only replication can become unrecoverable after cursor loss, while repeated full snapshots are wasteful.
 
 ## Decision
 

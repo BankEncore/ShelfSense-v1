@@ -9,12 +9,15 @@
 | [CompletedPosOperation v1](completed-pos-operation-v1.md) | Canonical completed-operation contract, command/completion boundary, fixtures |
 | [POS tax contract](pos-tax-contract.md) | Store Tax / rules / calculator; completed tax facts ([ADR-019](../../../adr/ADR-019-pos-sales-tax-model.md)) |
 | [Receipt identity](receipt-identity.md) | Transaction reference and receipt display forms ([ADR-006](../../../adr/ADR-006-receipt-numbering.md)) |
+| [Register identity](register-identity.md) | Register vs Terminal; pre-Phase-4 rename ([ADR-021](../../../adr/ADR-021-register-and-terminal-identity.md)) |
 | [Operation and Core facts](operation-and-core-facts.md) | Envelope vs normalized Core ([ADR-020](../../../adr/ADR-020-pos-operation-envelope-and-core-facts.md)) |
 | [Phase 4 schema](phase4-schema.md) | Tables, columns, constraints for Phase 4 migrations |
 | [Phases 4–6 implementation plan](../spec.md) | Broader Phase 4–6 sequencing; Phase 5–6 detail |
-| Accepted ADRs | Cross-cutting policy (`AGENTS.md`, ADR-006, ADR-007, ADR-009, ADR-011, ADR-019, ADR-020, inventory posting contract) |
+| Accepted ADRs | Cross-cutting policy (`AGENTS.md`, ADR-006, ADR-007, ADR-009, ADR-011, ADR-019, ADR-020, ADR-021, inventory posting contract) |
 
 Where this plan and `../spec.md` §4 disagree on completion semantics, tax representation, session columns, or operation identity, **prefer this document and its companions**. Update `../spec.md` when convenient so the multi-phase plan stays aligned.
+
+**Prerequisite:** Complete the `workstations` → `registers` rename slice ([register-identity.md](register-identity.md) §5 / ADR-021) before POS period/session/transaction migrations.
 
 Phase 4 proves that ShelfSense can construct, validate, complete, and authoritatively post one deterministic Cash sale without UI-specific or Rails-specific hidden state. It is an architectural and domain foundation, **not** a complete operational register.
 
@@ -39,12 +42,13 @@ Rails is the first POS client. A future standalone Register must be able to prod
 
 | Topic | Decision |
 |---|---|
-| Client | Rails-native POS only; standalone/offline Register deferred |
+| Client | Rails-native POS only; standalone/offline Terminal deferred (ADR-021) |
 | Transaction model | One `pos_transactions` row transitions working → completed (or cancelled); no separate sale/refund/exchange tables |
 | Line directions (Phase 4) | Sale lines only; return lines deferred to Phase 6, but **sign convention is locked now** |
 | Monetary signs | Store positive magnitudes; `direction` supplies economic sign (lines and tenders) |
 | Completion vs operation | `CompleteTransactionCommand` is the pre-completion Rails command; `CompletedPosOperation` is built **inside** authoritative completion and always includes receipt identity |
-| Receipt | Allocated at completion; scoped to store + workstation; human reference `S{store_number}-R{workstation_number}-T{receipt_sequence}` per [receipt-identity.md](receipt-identity.md) / ADR-006; print layout deferred to Phase 5 |
+| Receipt | Allocated at completion; scoped to store + Register; human reference `S{store_number}-R{register_number}-T{receipt_sequence}` per [receipt-identity.md](receipt-identity.md) / ADR-006; print layout deferred to Phase 5 |
+| Register identity | Logical checkout is **Register** (ADR-021); no Terminal table in Phases 4–6; rename `workstations` → `registers` before POS FKs |
 | Tax model | [ADR-019](../../../adr/ADR-019-pos-sales-tax-model.md) / [pos-tax-contract.md](pos-tax-contract.md): Tax Class → Store Tax Rule → Store Tax; Store Tax is the POS component |
 | Tax rate storage | `rate_percent` as `numeric(6,3)`; contract strings like `"1.250"`; not basis points |
 | Tax applicability | Rule `applies` is `true` / `false` / `NULL` (unresolved); no treatment enum; auto-create rule rows |
@@ -58,7 +62,7 @@ Rails is the first POS client. A future standalone Register must be able to prod
 | Identity separation | `operation_id` ≠ `transaction_id`; never use `transaction_id` as the completion idempotency key |
 | Inventory causal `source_type` | Stay consistent with Phase 3 Rails class-name convention (`PosTransactionLine`) unless a later ADR changes inventory source kinds globally |
 | Money / IDs / time | Integer cents; UUIDv7; `occurred_at` (UTC) + explicit `business_date`; store IANA timezone retained on store |
-| Vocabulary | Use `workstation` for durable POS identity (ADR-011). Parent plan “Register” means that workstation |
+| Vocabulary | Use `register` / `terminal` per ADR-021 and ADR-011; do not use `workstation` in new POS work |
 
 ---
 
@@ -69,7 +73,7 @@ Rails is the first POS client. A future standalone Register must be able to prod
 - Minimal `pos_reporting_periods` and `pos_sessions` (no Cash accountability columns)
 - Working and completed `pos_transactions`, lines, line tax components, Cash tenders
 - Durable `pos_operations` (completion provenance + idempotency)
-- Workstation-scoped receipt sequence allocation at completion
+- Register-scoped receipt sequence allocation at completion
 - Merchandise resolution for Standard quantity-tracked sellable variants
 - Pricing: reference unit price → selling unit price → extended amount (no overrides/discounts)
 - Ordinary tax calculation per [pos-tax-contract.md](pos-tax-contract.md) (Store Taxes, nullable rules, full determination snapshots)
@@ -86,7 +90,7 @@ Rails is the first POS client. A future standalone Register must be able to prod
 - Returns, mixed-direction transactions, discounts, approvals, suspend/recall, post-void (Phase 6)
 - Individually tracked and non-inventory merchandise; open-ring (Phase 6)
 - Card / Stored Value / multi-tender beyond single Cash payment
-- Offline credential replication, installation enrollment, standalone Register runtime
+- Offline Terminal credentials/replication, enrollment, standalone Terminal runtime (Terminal required later before offline completion — ADR-021)
 - Customer display, customer reservation pickup
 - Inventory `reserved` from open or suspended transactions
 - Tax Class override, purchaser exemption, tax profiles domain, effective-dated Store Tax versions, cashier rate edits
@@ -157,14 +161,14 @@ Every completion must answer:
 | Question | Source |
 |---|---|
 | Where? | `store_id` |
-| Which workstation? | `workstation_id` |
+| Which register? | `register_id` |
 | Which session? | `pos_session_id` |
 | Which reporting period? | `reporting_period_id` (via session) |
 | Who? | cashier / performed_by user |
 | When? | `occurred_at` |
 | Which business date? | explicit `business_date` (never reconstructed later from `created_at`) |
 
-Actor identity uses existing central authentication. Phase 4 does not require installation enrollment or offline PIN replication.
+Actor identity uses existing central authentication. Phase 4 does not require Terminal enrollment or offline PIN replication.
 
 ### 5.2 Working transaction
 
@@ -186,7 +190,7 @@ Initial commercial scope:
 
 ```text
 one store
-one workstation
+one register
 one active session
 Standard quantity-tracked merchandise
 sale-directed lines only
@@ -277,21 +281,21 @@ source_id   = line.id
 Authority: [receipt-identity.md](receipt-identity.md) and amended [ADR-006](../../../adr/ADR-006-receipt-numbering.md).
 
 ```text
-UNIQUE(store_id, workstation_id, receipt_sequence)
+UNIQUE(store_id, register_id, receipt_sequence)
 
 Compact reference:
-S{store_number}-R{workstation_number}-T{receipt_sequence}
+S{store_number}-R{register_number}-T{receipt_sequence}
   min pad 3 / 2 / 7
 
 Header form (same identity):
 Store: 003   Reg: 02   Trans: 0018427
 ```
 
-Persist `receipt_sequence` plus `store_number_snapshot` and `workstation_number_snapshot`. Derive the compact reference; do not treat a formatted string alone as authority. Requires durable `workstations.workstation_number` (see schema). Rendering/printing deferred to Phase 5.
+Persist `receipt_sequence` plus `store_number_snapshot` and `register_number_snapshot`. Derive the compact reference; do not treat a formatted string alone as authority. Requires durable `registers.register_number` (see schema). Rendering/printing deferred to Phase 5.
 
 ### 5.11 Audit
 
-Record enough to explain: operation completed, operation rejected, transaction cancelled, actor, workstation, session. Full controlled-action audit waits for Phase 6.
+Record enough to explain: operation completed, operation rejected, transaction cancelled, actor, register, session. Full controlled-action audit waits for Phase 6.
 
 ### 5.12 UI prohibition
 
@@ -356,7 +360,7 @@ Schema is subordinate to the contract. Do **not** discover the contract from col
 
 Phase 4 is complete when a headless/application-level scenario can:
 
-1. Establish store / workstation / reporting period / session / actor context.  
+1. Establish store / register / reporting period / session / actor context.  
 2. Start a working transaction.  
 3. Resolve a Standard quantity-tracked variant.  
 4. Add quantity and resolve regular price.  
@@ -367,7 +371,7 @@ Phase 4 is complete when a headless/application-level scenario can:
 9. Observe completed POS facts and exactly one Inventory effect per sale line.  
 10. Retry the same operation and observe no duplicate business effect.  
 
-Plus: companions remain consistent with migrated schema; golden tax/pricing fixtures pass; vocabulary uses `workstation` / `supplier` / etc. per ADR-011.
+Plus: companions remain consistent with migrated schema; golden tax/pricing fixtures pass; vocabulary uses `register` / `supplier` / etc. per ADR-011 and ADR-021.
 
 ---
 
@@ -377,7 +381,7 @@ Plus: companions remain consistent with migrated schema; golden tax/pricing fixt
 |---|---|
 | Phase 5 Cash close | Session table stays minimal; Phase 5 adds `closing_*` snapshot columns, not live cash counters |
 | Phase 6 return lines | Same line table + `direction`; magnitudes stay positive |
-| Standalone Register | Same `CompletedPosOperation` contract; sync posts equivalent central facts; envelope + Core dual authority (ADR-020) |
+| Standalone offline POS | Same `CompletedPosOperation` contract; **Terminal** required before offline completion authority (ADR-021); envelope + Core dual authority (ADR-020) |
 | Discounts / approvals | Contract may reserve extensibility; no Phase 4 columns or algorithms required |
 
 ---
@@ -389,7 +393,9 @@ Plus: companions remain consistent with migrated schema; golden tax/pricing fixt
 | Tax rate / applicability model | **Locked** — ADR-019 + [pos-tax-contract.md](pos-tax-contract.md) |
 | Receipt / transaction reference format | **Locked** — ADR-006 (amended) + [receipt-identity.md](receipt-identity.md); print layout still Phase 5 |
 | Envelope vs normalized Core | **Locked** — ADR-020 + [operation-and-core-facts.md](operation-and-core-facts.md); full envelope required; Core for all commercial workflows |
-| Durable `workstations.workstation_number` | **Required** before issuing completed receipts under the new reference form |
+| Register vs Terminal | **Locked** — ADR-021 + [register-identity.md](register-identity.md); Phases 4–6 Registers only |
+| Pre-Phase-4 `workstations` → `registers` migration | **Required** before POS period/session/transaction migrations (schema, model, `registers.*` permissions, `audit_events.register_id`, tests) |
+| Durable `registers.register_number` | **Required** as part of rename slice / before completed receipts |
 | Tax component / rule model IDs from new `store_taxes` / `store_tax_rules` | Implement with Phase 4 (or immediately preceding) migrations |
 
 Unresolved items must not silently default sales-tax rates to basis points or make merchandise snapshots optional at completion.

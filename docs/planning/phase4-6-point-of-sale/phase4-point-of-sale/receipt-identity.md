@@ -14,10 +14,10 @@ Every completed POS transaction has one permanent human-facing identity:
 
 ```text
 Compact (transaction reference):
-S{store_number}-R{workstation_number}-T{receipt_sequence}
+S{store_number}-R{register_number}-T{receipt_sequence}
 
 Receipt header:
-Store: {store_number}   Reg: {workstation_number}   Trans: {receipt_sequence}
+Store: {store_number}   Reg: {register_number}   Trans: {receipt_sequence}
 ```
 
 They represent exactly the same identity. The compact form is the standard ShelfSense **transaction reference** for typing, support, search parsing, and eventual barcode/QR encoding.
@@ -37,8 +37,8 @@ Store: 003   Reg: 02   Trans: 0018427
 | Piece | Source | Notes |
 |---|---|---|
 | Store number | `stores.store_number` | Stable human store identifier; not the editable store name; not `stores.code` for this reference |
-| Workstation number | `workstations.workstation_number` | Stable within store; cashier UI may label it Register / `Reg` |
-| Receipt sequence | Allocated at completion | Workstation-scoped; field name `receipt_sequence`, never `transaction_id` |
+| Register number | `registers.register_number` | Stable within store; cashier UI may label it Register / `Reg` |
+| Receipt sequence | Allocated at completion | Register-scoped; field name `receipt_sequence`, never `transaction_id` |
 
 Internal technical identity remains:
 
@@ -57,16 +57,16 @@ Minimum zero-padded display widths (not structural maxima):
 | Component | Minimum digits |
 |---|---|
 | Store number | 3 |
-| Workstation number | 2 |
+| Register number | 2 |
 | Receipt sequence | 7 |
 
 ```text
-store 3, workstation 2, sequence 18427
+store 3, register 2, sequence 18427
 → S003-R02-T0018427
 ```
 
 ```text
-store 1002, workstation 2, sequence 18427
+store 1002, register 2, sequence 18427
 → S1002-R02-T0018427
 ```
 
@@ -76,22 +76,22 @@ Parsers must not assume fixed widths; they recognize `S` / `R` / `T` segments se
 
 ## 4. Durability and snapshots
 
-Store numbers and workstation numbers must remain historically stable once used on a completed transaction.
+Store numbers and register numbers must remain historically stable once used on a completed transaction.
 
 Completed transactions should persist at least:
 
 ```text
 store_id
-workstation_id
+register_id
 receipt_sequence
 store_number_snapshot
-workstation_number_snapshot
+register_number_snapshot
 ```
 
 The compact reference is derived:
 
 ```text
-format(store_number_snapshot, workstation_number_snapshot, receipt_sequence)
+format(store_number_snapshot, register_number_snapshot, receipt_sequence)
 ```
 
 Storing a denormalized `transaction_reference` / `receipt_number` string is optional if always regenerable from snapshots.
@@ -101,7 +101,7 @@ Storing a denormalized `transaction_reference` / `receipt_number` string is opti
 ## 5. Uniqueness
 
 ```text
-UNIQUE(store_id, workstation_id, receipt_sequence)
+UNIQUE(store_id, register_id, receipt_sequence)
 ```
 
 These are both valid and distinct:
@@ -139,7 +139,7 @@ The general search box should recognize:
 
 ```text
 S003-R02-T0018427
-→ store_number=3, workstation_number=2, receipt_sequence=18427
+→ store_number=3, register_number=2, receipt_sequence=18427
 → exact transaction
 ```
 
@@ -149,8 +149,8 @@ Advanced search may expose components separately and allow progressive narrowing
 |---|---|
 | Full compact reference | Exact match |
 | Store + Reg + Trans | Exact match |
-| Store + Trans only | Candidates across workstations |
-| Trans only | Candidates across stores/workstations |
+| Store + Trans only | Candidates across registers |
+| Trans only | Candidates across stores/registers |
 
 Show candidates when the supplied components are not globally unique.
 
@@ -170,7 +170,7 @@ Barcode/QR may encode the compact reference so printed and typed values match. P
 receipt:
   sequence                      # integer receipt_sequence
   store_number                  # snapshot string as displayed without requiring fixed width
-  workstation_number            # snapshot
+  register_number            # snapshot
   reference                     # optional derived compact form S…-R…-T…
 ```
 
@@ -180,18 +180,18 @@ Phase 4 completion must populate sequence and number snapshots (and may include 
 
 ## 10. Schema prerequisite
 
-`workstations` must expose a durable per-store `workstation_number` suitable for the `R` component (unique within `store_id`, normalized consistently with `store_number` practice).
+`registers` must expose a durable per-store `register_number` suitable for the `R` component (unique within `store_id`, normalized consistently with `store_number` practice). Delivered by the pre-Phase-4 rename slice ([register-identity.md](register-identity.md) / ADR-021).
 
-Do not use editable `workstations.name` in the reference. Do not use free-form alphanumeric `workstations.code` as the `R` value unless it is constrained to be that durable number—prefer an explicit `workstation_number` column parallel to `stores.store_number`.
+Do not use editable `registers.name` in the reference. Prefer dropping free-form `code` rather than using it as the `R` value.
 
 ---
 
 ## 11. Governing statement
 
-> Each completed POS transaction receives a permanent workstation-scoped receipt sequence. The human-facing transaction reference combines the originating store number, workstation number, and receipt sequence as `S{store}-R{workstation}-T{sequence}`, with minimum display padding of three, two, and seven digits respectively.
+> Each completed POS transaction receives a permanent register-scoped receipt sequence. The human-facing transaction reference combines the originating store number, register number, and receipt sequence as `S{store}-R{register}-T{sequence}`, with minimum display padding of three, two, and seven digits respectively.
 >
 > Receipts may present the same identity as separate fields (`Store` / `Reg` / `Trans`) for readability. Both presentations refer to the same completed transaction identity.
 >
-> The composite reference is intended for human entry, scanning, support, and transaction lookup. ShelfSense also permits searches using individual components. The POS transaction UUID remains the global technical identity and is distinct from the workstation-assigned receipt sequence.
+> The composite reference is intended for human entry, scanning, support, and transaction lookup. ShelfSense also permits searches using individual components. The POS transaction UUID remains the global technical identity and is distinct from the register-assigned receipt sequence.
 >
-> Display padding is a minimum, not a numeric limit. Store numbers, workstation numbers, and receipt sequences are stable historical identifiers and are not reused.
+> Display padding is a minimum, not a numeric limit. Store numbers, register numbers, and receipt sequences are stable historical identifiers and are not reused.

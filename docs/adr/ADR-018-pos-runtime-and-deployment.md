@@ -4,6 +4,7 @@
 **Date:** 2026-08-13
 **Decision owners:** ShelfSense architecture
 **Scope:** POS workstation runtime, cashier UI, local persistence, supported platforms, deployment, hardware integration, installation identity, durability, recovery, updating, and customer-facing display
+**Interpretation (ADR-021):** This proposed ADR primarily describes **Terminal** runtime concerns. Durable checkout identity, receipt sequencing, and Z/Session ownership are **Register** concepts. Align vocabulary to ADR-021 when this ADR is next revised; do not treat “workstation” here as the Register table.
 
 ---
 

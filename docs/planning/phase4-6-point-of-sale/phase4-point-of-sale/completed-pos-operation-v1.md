@@ -180,7 +180,7 @@ CompletedPosOperation
 │
 ├── origin
 │   ├── store_id
-│   ├── workstation_id
+│   ├── register_id
 │   ├── pos_session_id
 │   ├── reporting_period_id
 │   └── performed_by_user_id
@@ -188,7 +188,7 @@ CompletedPosOperation
 ├── receipt
 │   ├── sequence                  # receipt_sequence
 │   ├── store_number              # snapshot
-│   ├── workstation_number        # snapshot (“Reg”)
+│   ├── register_number        # snapshot (“Reg”)
 │   └── reference                 # optional derived S003-R02-T0018427
 │
 ├── transaction
@@ -248,7 +248,7 @@ Illustrative only. Includes both applicable and non-applicable Store Tax determi
   },
   "origin": {
     "store_id": "01920000-0000-7000-8000-000000000010",
-    "workstation_id": "01920000-0000-7000-8000-000000000020",
+    "register_id": "01920000-0000-7000-8000-000000000020",
     "pos_session_id": "01920000-0000-7000-8000-000000000030",
     "reporting_period_id": "01920000-0000-7000-8000-000000000040",
     "performed_by_user_id": "01920000-0000-7000-8000-000000000050"
@@ -256,7 +256,7 @@ Illustrative only. Includes both applicable and non-applicable Store Tax determi
   "receipt": {
     "sequence": 18427,
     "store_number": "003",
-    "workstation_number": "02",
+    "register_number": "02",
     "reference": "S003-R02-T0018427"
   },
   "transaction": {
@@ -357,7 +357,7 @@ Inside one PostgreSQL transaction:
 
 1. Validate working transaction and Cash settlement.  
 2. Begin or reclaim `pos_operations` lease (ADR-009 semantics).  
-3. Allocate `receipt_sequence`; snapshot store/workstation numbers; derive optional compact `reference`.  
+3. Allocate `receipt_sequence`; snapshot store/register numbers; derive optional compact `reference`.  
 4. Freeze `occurred_at`, `business_date`, line snapshots, tax components, tender.  
 5. Build `CompletedPosOperation` v1 (must include receipt sequence and number snapshots).  
 6. Persist completed POS rows.  
@@ -376,6 +376,6 @@ On validation or commit failure: no completed transaction, no receipt consumptio
 - Customer identity  
 - Receipt print layout (header presentation is specified in [receipt-identity.md](receipt-identity.md); rendering is Phase 5)  
 - Offline sync transport framing (envelope remains the business payload; transport metadata must not enter the envelope — see [operation-and-core-facts.md](operation-and-core-facts.md))  
-- Required `installation_id` / producer fields (optional until installations exist)  
+- Required Terminal / producer enrollment fields (Terminal deferred; producer optional)  
 
-Extensibility is preserved by versioning and by locking sign, tax-component, receipt, and envelope/Core dual-authority rules now—not by stuffing unused Phase 6 columns into v1.
+Extensibility is preserved by versioning and by locking sign, tax-component, receipt, Register/Terminal, and envelope/Core dual-authority rules now—not by stuffing unused Phase 6 columns into v1.

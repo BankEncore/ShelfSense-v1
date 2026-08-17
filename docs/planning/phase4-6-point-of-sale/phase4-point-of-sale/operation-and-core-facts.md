@@ -80,14 +80,14 @@ Example: a return walks transaction → lines → historical tax components. It 
 ### Transaction-level (illustrative)
 
 ```text
-id, store_id, workstation_id, pos_session_id, reporting_period_id, cashier_user_id
-receipt_sequence, store_number_snapshot, workstation_number_snapshot
+id, store_id, register_id, pos_session_id, reporting_period_id, cashier_user_id
+receipt_sequence, store_number_snapshot, register_number_snapshot
 occurred_at, business_date, status, currency_code
 merchandise_subtotal_cents / subtotal_cents, tax_cents, total_cents
 completed_at
 ```
 
-Use `workstation_*` in schema and contracts (ADR-011). Cashier UI may say Register / `Reg`.
+Use `register_*` in schema and contracts (ADR-021 / ADR-011). Cashier UI may say Register / `Reg`.
 
 ### Lines (Phase 4)
 
@@ -119,8 +119,8 @@ pos_operations
 ├── lease_expires_at
 ├── pos_transaction_id
 ├── store_id
-├── workstation_id
-├── installation_id           # optional until installations exist
+├── register_id
+├── installation_id           # optional later technical id only; not business vocabulary
 ├── producer_client           # optional
 ├── producer_version          # optional
 ├── envelope                  # JSONB — full CompletedPosOperation (required when completed)
@@ -131,7 +131,7 @@ pos_operations
 └── timestamps
 ```
 
-Indexed columns answer: which operation created transaction X, which workstation/install, which schema version, when Core received/posted — without searching JSON.
+Indexed columns answer: which operation created transaction X, which Register, which schema version, when Core received/posted — without searching JSON.
 
 Some duplication with `pos_transactions` is intentional.
 
@@ -144,8 +144,8 @@ The envelope is a **complete** immutable representation of what the origin says 
 Include:
 
 - operation identity, type, schema version
-- optional producer (`client`, `version`, `installation_id`)
-- origin context (store, workstation, session, operator, occurred_at, business_date)
+- optional producer (`client`, `version`; optional later technical install id)
+- origin context (store, register, session, operator, occurred_at, business_date)
 - full commercial transaction: receipt components, currency, lines with snapshots and tax components, tenders, totals
 
 Receipt numbers in the envelope use **string snapshots** consistent with display padding rules (e.g. `"003"`, `"02"`), not bare integers that drop leading zeros.
@@ -215,7 +215,7 @@ Accepted envelope and normalized facts must describe the same immutable transact
 | Transaction UUID | ✓ | ✓ |
 | Operation UUID | via relationship | ✓ |
 | Schema version | `pos_operations` | ✓ |
-| Store / workstation / session / operator | ✓ | ✓ |
+| Store / Register / session / operator | ✓ | ✓ |
 | `occurred_at` / `business_date` | ✓ | ✓ |
 | Receipt sequence + number snapshots | ✓ | ✓ |
 | Currency, lines, prices, tax class | ✓ | ✓ |
@@ -224,9 +224,10 @@ Accepted envelope and normalized facts must describe the same immutable transact
 | Tender facts / totals | ✓ | ✓ |
 | Payload hash | `pos_operations` | calculated alongside |
 | Client/build version | normally `pos_operations` | ✓ (optional producer) |
-| Installation identity | later / optional | ✓ optional |
+| Installation / producer technical ids | later / optional | ✓ optional |
 | Central `received_at` / `posted_at` | `pos_operations` only | **No** |
 | Retry / HTTP / transport | no commercial table | **No** |
+| Terminal id | deferred (ADR-021) | deferred |
 
 > The envelope describes the originating completed operation. It does not describe what happened to the operation after transmission.
 
@@ -240,6 +241,6 @@ Accepted envelope and normalized facts must describe the same immutable transact
 
 > Core also preserves the accepted canonical operation and its payload hash on a durable `pos_operations` record with ADR-009 idempotency semantics. The operation record provides immutable origin and contract provenance and is distinct from generic request-idempotency infrastructure that may expire.
 
-> Operation metadata may include schema version, operation identity, and optional producing client/installation. Central processing facts such as receipt time, posting time, retry attempts, request IDs, and transport information are not part of the canonical originating operation and are recorded separately where required.
+> Operation metadata may include schema version, operation identity, and optional producing client. Central processing facts such as receipt time, posting time, retry attempts, request IDs, and transport information are not part of the canonical originating operation and are recorded separately where required.
 
 > The canonical operation and normalized completed facts must describe the same immutable transaction. They are created or accepted as part of one authoritative posting boundary and may not diverge.

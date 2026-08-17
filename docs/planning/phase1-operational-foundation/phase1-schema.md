@@ -72,7 +72,7 @@ Defines an operational store and reporting boundary.
 Recommended rules:
 
 * Normalize `code` and `store_number` before enforcing uniqueness.  
-* Do not allow `store_number` to change after it appears in a completed receipt identity (ADR-006); treat `code` as similarly sticky once operationally relied upon.  
+* Do not allow `store_number` to change after it appears in a completed receipt identity (ADR-006); treat Register `register_number` the same once receipts exist.  
 * Do not allow the final active store to be deactivated normally.  
 * Do not hard-delete a store after another record references it.
 
@@ -283,53 +283,53 @@ A user may access a store when at least one effective assignment applies either 
 
 ---
 
-## 8\. `workstations`
+## 8\. `workstations` → target `registers` (ADR-021)
 
-A durable configured workstation identity belonging to a store.
+**Implemented today:** table `workstations` (Phase 1).
+
+**Target before Phase 4 POS migrations:** rename to `registers` per [ADR-021](../../adr/ADR-021-register-and-terminal-identity.md) and [register-identity.md](../phase4-6-point-of-sale/phase4-point-of-sale/register-identity.md). A Register is the durable logical checkout position. A Terminal (deferred) is the concrete POS client.
 
 | Field | Type | Constraints | Notes |
 | :---- | :---- | :---- | :---- |
 | `id` | uuid | PK; UUIDv7 |  |
 | `store_id` | uuid | FK: `stores`; null: false |  |
-| `code` | varchar | null: false | Short operational identifier; unique per store |
-| `workstation_number` | varchar | planned for POS receipt identity | Durable numeric-style number parallel to `stores.store_number`; required before completed receipts under ADR-006 (amended 2026-08-16). Not yet in Phase 1 schema as implemented. |
-| `name` | varchar | null: false | Human-facing name (editable; not used in receipt reference) |
+| `code` | varchar | null: false today | Prefer drop after rename review; operational identity becomes `register_number` |
+| `register_number` | varchar | required in rename slice | Durable number parallel to `stores.store_number`; unique per store |
+| `name` | varchar | null: false | Editable label; not used in receipt reference |
 | `description` | text |  |  |
 | `active` | boolean | null: false; default `true` |  |
 | `receipt_sequence` | bigint | null: false; default `0`; check `>= 0` | Last sequence permanently consumed |
-| `activated_at` | timestamptz |  | Provisioning lifecycle |
-| `revoked_at` | timestamptz |  | Device credentials no longer accepted |
-| `deactivated_at` | timestamptz |  | Workstation removed from normal operation |
+| `activated_at` | timestamptz | drop in rename if unused | Device/client lifecycle → Terminal later |
+| `revoked_at` | timestamptz | drop in rename if unused | Device/client lifecycle → Terminal later |
+| `deactivated_at` | timestamptz |  | Register removed from normal operation |
 | `deactivated_by_id` | uuid | FK: `users`; nullable |  |
-| `last_seen_at` | timestamptz |  | Updated later by synchronization |
+| `last_seen_at` | timestamptz | drop in rename if unused | Device presence → Terminal later |
 | `lock_version` | integer | null: false; default `0` | Optimistic concurrency |
 | `created_at` | timestamptz | null: false |  |
 | `updated_at` | timestamptz | null: false |  |
 
-Constraint:
+Constraints (target):
 
 ```
-unique(store_id, code)
+unique(store_id, register_number)
 ```
-
-When `workstation_number` is added: `unique(store_id, workstation_number)` (normalized like `store_number`).
 
 Important distinctions:
 
-* A workstation is not a cash drawer.  
-* A workstation is not an employee session.  
-* Future workstation/register sessions represent operational use of a workstation.  
-* Hardware may be replaced while preserving the workstation identity.  
-* `workstation_number` (and historically `code` if used as the number) should become immutable once a receipt has been issued.  
-* Human-facing receipt / transaction reference (ADR-006 amended):
+* A Register is not a cash drawer.  
+* A Register is not an employee session.  
+* POS Sessions are operational use of a Register.  
+* Hardware/Terminal may be replaced while preserving the Register identity.  
+* `register_number` should become immutable once a receipt has been issued.  
+* Human-facing receipt / transaction reference (ADR-006):
 
 ```
-S{store_number}-R{workstation_number}-T{receipt_sequence}
+S{store_number}-R{register_number}-T{receipt_sequence}
 ```
 
 For example: `S003-R02-T0018427`. See [receipt-identity.md](../phase4-6-point-of-sale/phase4-point-of-sale/receipt-identity.md).
 
-Although Phase 1 does not issue receipts, retaining `receipt_sequence` now formally establishes the durable workstation-scoped numbering model.
+Although Phase 1 does not issue receipts, retaining `receipt_sequence` establishes Register-scoped numbering once the rename lands.
 
 ---
 

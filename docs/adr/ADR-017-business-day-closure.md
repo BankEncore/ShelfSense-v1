@@ -2,6 +2,7 @@
 
 - **Status:** Proposed
 - **Date:** 2026-08-09
+- **Interpretation (ADR-021):** Unreported offline clients are **Terminals**; Register-scoped Sessions and Z periods remain the business reporting units. Prefer Register/Terminal vocabulary when this ADR is next revised.
 
 ## Context
 

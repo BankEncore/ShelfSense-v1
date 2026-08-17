@@ -23,21 +23,23 @@ Implement only the approved phase or task scope. Phase 1 is the operable foundat
 - Stores
 - Users and server-side authentication sessions
 - Roles, permissions, role permissions, and scoped role assignments
-- Workstations as durable configured identities
+- Registers as durable logical POS checkout identities (table may still be named `workstations` until the pre-Phase-4 rename; see ADR-021)
 - Authentication and authorization
 - Append-only audit events
 - Safe bootstrap of the first organization configuration, store, system actor, and administrator
 
-Do not pull later-domain functionality into Phase 1 merely because the schema may eventually need it. In particular, defer POS transactions, business days, POS sessions, drawers, merchandise, inventory, customers, suppliers, purchasing, offline workstation authentication, and synchronization unless the task explicitly advances that scope.
+Do not pull later-domain functionality into Phase 1 merely because the schema may eventually need it. In particular, defer POS transactions, business days, POS sessions, drawers, merchandise, inventory, customers, suppliers, purchasing, offline Terminal authentication, and synchronization unless the task explicitly advances that scope.
 
 Build vertical slices that produce demonstrable behavior. Avoid migrations or generic CRUD screens that have no corresponding authorization, validation, audit, and test coverage.
 
 ## 3. Use ShelfSense vocabulary exactly
 
-Use the canonical language established by ADR-011 and project documentation:
+Use the canonical language established by ADR-011, ADR-021, and project documentation:
 
 - `supplier`, not `vendor`
-- `workstation` for a durable configured POS identity
+- `register` for a durable logical POS checkout position within a store (ADR-021)
+- `terminal` for a concrete POS client/device identity (deferred until standalone/offline POS; ADR-021)
+- Do not use `workstation` as a POS domain synonym for Register or Terminal in new work
 - `session` for an authenticated or operational period, qualified when ambiguity exists
 - `inventory_unit` for an individually tracked physical unit
 - `inventory_balance` for a mutable inventory projection
@@ -53,9 +55,9 @@ Tables are lowercase plural `snake_case`. Primary keys are `id`; foreign keys us
 
 ShelfSense is single-tenant and multi-store. Do not add a tenant or organization ID to every table unless a later ADR changes the deployment model. Retain `store_id` wherever store scope is meaningful.
 
-The central server owns master data and consolidated projections. A workstation caches server-owned reference data and must not directly edit those cached records. Workstation-originated completed operations synchronize as immutable facts.
+The central server owns master data and consolidated projections. A Terminal (when introduced) caches server-owned reference data and must not directly edit those cached records. Register-originated completed operations (produced via an authorized Terminal when offline) synchronize as immutable facts.
 
-Classify new workstation operations explicitly as one of:
+Classify new Terminal-originated operations explicitly as one of:
 
 - Locally completable
 - Locally completable with reconciliation risk
@@ -111,7 +113,7 @@ Every authenticated request should resolve the current user, current store when 
 
 Create append-only audit events for material security, configuration, pricing, tax, POS, returns, inventory, cash, purchasing, financial, synchronization, and sensitive-access activity as applicable.
 
-Audit events should capture the actor, outcome, action, subject, occurrence and recording times, relevant store/workstation/session context, reason, correlation, selective before/after values, and application version. Snapshot human-readable labels where later renaming would obscure history.
+Audit events should capture the actor, outcome, action, subject, occurrence and recording times, relevant store/register/session context, reason, correlation, selective before/after values, and application version. Snapshot human-readable labels where later renaming would obscure history.
 
 Write an audit event in the same database transaction as a successful server-side change whenever possible. Record failed authentication and denied sensitive actions independently when no business transaction exists.
 
@@ -190,7 +192,7 @@ System tests and JavaScript dependency auditing are intentionally deferred. Do n
 - Use the selected framework's proven password hashing and session facilities; do not invent cryptography.
 - Store only a digest of a server-side session token, never the usable bearer token.
 - Revoke active sessions after user deactivation and according to the password-change policy.
-- Use least privilege for database, workstation, integration, and deployment credentials.
+- Use least privilege for database, register, Terminal, integration, and deployment credentials.
 - Keep secrets out of source, fixtures, logs, audit metadata, screenshots, and documentation.
 - Validate all authorization server-side and scope store queries explicitly.
 - Treat customer, payment, employee, and audit data as sensitive.

@@ -1,15 +1,18 @@
 Below is a repository-ready **detailed implementation plan** translating the POS operating model and the implementation map into concrete Phase 4–6 work. It preserves the broader “initial complete POS” as the destination while deliberately sequencing the work from architectural foundation → first operational cash register → core POS breadth.
 
-**Phase 4 implementation authority:** For Phase 4 scope, schema outline, completion boundary, tax, receipt identity, operation/Core dual authority, and `CompletedPosOperation` v1 semantics, prefer:
+**Phase 4 implementation authority:** For Phase 4 scope, schema outline, completion boundary, tax, receipt identity, Register/Terminal vocabulary, operation/Core dual authority, and `CompletedPosOperation` v1 semantics, prefer:
 
 - [phase4-plan.md](phase4-point-of-sale/phase4-plan.md)
 - [phase4-schema.md](phase4-point-of-sale/phase4-schema.md)
 - [completed-pos-operation-v1.md](phase4-point-of-sale/completed-pos-operation-v1.md)
 - [pos-tax-contract.md](phase4-point-of-sale/pos-tax-contract.md) ([ADR-019](../../adr/ADR-019-pos-sales-tax-model.md))
 - [receipt-identity.md](phase4-point-of-sale/receipt-identity.md) ([ADR-006](../../adr/ADR-006-receipt-numbering.md))
+- [register-identity.md](phase4-point-of-sale/register-identity.md) ([ADR-021](../../adr/ADR-021-register-and-terminal-identity.md))
 - [operation-and-core-facts.md](phase4-point-of-sale/operation-and-core-facts.md) ([ADR-020](../../adr/ADR-020-pos-operation-envelope-and-core-facts.md))
 
-Those companions supersede conflicting Phase 4 detail in §4 of this document (especially command vs completed-operation naming, receipt-inside-operation, sales-tax model, receipt reference format, envelope vs Core, session column minimality, `pos_operations`, and build order).
+Those companions supersede conflicting Phase 4 detail in §4 of this document (especially command vs completed-operation naming, receipt-inside-operation, sales-tax model, receipt reference format, Register vs Terminal, envelope vs Core, session column minimality, `pos_operations`, and build order).
+
+**Phase 4 prerequisite:** Complete the `workstations` → `registers` rename slice (ADR-021 / [register-identity.md](phase4-point-of-sale/register-identity.md) §5) before POS reporting-period, session, or transaction migrations.
 
 # POS Phases 4–6 Detailed Implementation Plan
 
@@ -43,7 +46,7 @@ Authoritative POS posting effects
 
 The Rails POS performs completion and posting in one PostgreSQL transaction.
 
-A future standalone Register completes locally (including receipt), then synchronizes the same canonical `CompletedPosOperation`.
+A future standalone Terminal completes locally on behalf of a Register (including receipt), then synchronizes the same canonical `CompletedPosOperation`. Terminal identity is required before offline completion authority (ADR-021).
 
 The resulting central business facts must remain equivalent regardless of originating client.
 
@@ -65,7 +68,7 @@ Explicitly deferred beyond these phases:
 * customer reservation pickup;
 * customer display;
 * integrated Card processor;
-* standalone/offline Register runtime.
+* standalone/offline Terminal runtime (requires first-class Terminal before offline completion).
 
 ---
 
@@ -168,16 +171,16 @@ cancelled transaction → no final receipt sequence / reference
 completed transaction → permanent receipt sequence + human reference
 ```
 
-Receipt sequencing is scoped to store + workstation (`UNIQUE(store_id, workstation_id, receipt_sequence)`).
+Receipt sequencing is scoped to store + register (`UNIQUE(store_id, register_id, receipt_sequence)`).
 
 Human-facing forms (same identity):
 
 ```text
-S{store_number}-R{workstation_number}-T{receipt_sequence}
+S{store_number}-R{register_number}-T{receipt_sequence}
 Store: 003   Reg: 02   Trans: 0018427
 ```
 
-See [receipt-identity.md](phase4-point-of-sale/receipt-identity.md) and amended ADR-006. Domain term remains `workstation`; cashier copy may say Register / `Reg`.
+See [receipt-identity.md](phase4-point-of-sale/receipt-identity.md), ADR-006, and ADR-021. Domain term is **Register**; cashier copy may say `Reg`. **Terminal** is deferred for Phases 4–6.
 
 ---
 
@@ -234,11 +237,12 @@ business_date
 
 ### Requirements
 
-* Register remains a durable logical workstation identity.
-* Register is distinct from a future standalone installation.
-* Phase 4 does not require installation enrollment.
+* Register is the durable logical checkout identity (ADR-021).
+* Register is distinct from a future Terminal (concrete POS client).
+* Phase 4 does not require Terminal enrollment.
 * Actor identity comes from existing central authentication.
 * Business date must be explicitly resolved rather than inferred later from `created_at`.
+* Reporting/Z periods and Sessions are Register-scoped.
 
 ### Acceptance
 
@@ -513,13 +517,13 @@ Retrying the same POS operation must produce no second Inventory ledger effect.
 
 # 4.11 Receipt identity
 
-Implement workstation-scoped receipt sequence allocation and the human-facing reference per [receipt-identity.md](phase4-point-of-sale/receipt-identity.md):
+Implement Register-scoped receipt sequence allocation and the human-facing reference per [receipt-identity.md](phase4-point-of-sale/receipt-identity.md):
 
 ```text
-S{store_number}-R{workstation_number}-T{receipt_sequence}
+S{store_number}-R{register_number}-T{receipt_sequence}
 ```
 
-Requires durable `workstations.workstation_number`. Snapshot store/workstation numbers on the completed transaction. Assignment must occur atomically with completion.
+Requires durable `registers.register_number`. Snapshot store/register numbers on the completed transaction. Assignment must occur atomically with completion.
 
 Receipt rendering/printing (header layout) is not required yet (Phase 5).
 
@@ -607,6 +611,8 @@ Phase 4 is complete when a headless/application-level scenario can:
 ## Objective
 
 Turn the Phase 4 completion path into a cashier-usable online Rails register.
+
+Active context is Store / Register / Reporting period / Session / Cashier. No Terminal table is required (ADR-021).
 
 Phase 5 answers:
 

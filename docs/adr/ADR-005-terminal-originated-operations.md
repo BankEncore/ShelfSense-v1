@@ -2,10 +2,9 @@
 
 - **Status:** Accepted
 - **Date:** 2026-08-09
+- **Interpretation (ADR-021):** Local completion and synchronization described here occur on a **Terminal**. Record commercial origin as **Register**; “originating workstation” in this ADR means the Terminal operating that Register (and may also capture Register id in the payload).
 
 ## Context
-
-Checkout must not depend on real-time access to the central server, but some operations consume scarce shared resources and cannot safely use an unrestricted stale balance.
 
 ## Decision
 

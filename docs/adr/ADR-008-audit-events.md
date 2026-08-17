@@ -2,10 +2,9 @@
 
 - **Status:** Accepted
 - **Date:** 2026-08-09
+- **Interpretation (ADR-021):** Business audit context “store, workstation, and session” should be read as store, **Register**, and session. Offline occurrence on a device may additionally retain **Terminal** context when Terminals exist.
 
 ## Context
-
-Operational history must explain who performed a material action, where, when, and why. Domain events alone do not contain sufficient accountability context, and generic database triggers cannot reliably express business intent.
 
 ## Decision
 

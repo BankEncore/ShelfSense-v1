@@ -16,6 +16,8 @@ Stored status values are lowercase and machine-stable. UI labels may vary withou
 Standardize these terms:
 
 - `supplier`, not alternating with vendor
+- `register` for the durable logical POS checkout position (see [ADR-021](ADR-021-register-and-terminal-identity.md)); not `workstation`
+- `terminal` for the concrete POS client/device (deferred until standalone POS; ADR-021)
 - `cancelled`, with double “l”
 - `return_to_supplier`
 - `inventory_unit` for individually tracked physical stock
@@ -29,5 +31,6 @@ Prefer explicit foreign keys. Reserve polymorphic references mainly for audit an
 ## Consequences
 
 - Schema and documentation have predictable vocabulary.
-- Existing inconsistent names should be migrated deliberately rather than perpetuated.
+- Existing inconsistent names should be migrated deliberately rather than perpetuated (including the pre-Phase-4 `workstations` → `registers` rename required by ADR-021).
 - New terms must be added to the project glossary when their distinction is material.
+- Register vs Terminal entity boundaries are defined in ADR-021, not only by this naming list.

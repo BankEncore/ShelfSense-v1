@@ -17,7 +17,7 @@ These ADRs capture the architecture decisions reached during the ShelfSense offl
 | [ADR-003](ADR-003-data-authority.md) | Server and terminal data authority | Accepted |
 | [ADR-004](ADR-004-reference-data-replication.md) | Terminal reference-data replication and retention | Accepted |
 | [ADR-005](ADR-005-terminal-originated-operations.md) | Offline terminal-originated operations | Accepted |
-| [ADR-006](ADR-006-receipt-numbering.md) | Workstation-scoped receipt numbering and `S…-R…-T…` reference | Accepted |
+| [ADR-006](ADR-006-receipt-numbering.md) | Register-scoped receipt numbering and `S…-R…-T…` reference | Accepted |
 | [ADR-007](ADR-007-money-rates-and-time.md) | Money, percentages, dates, and timestamps | Accepted |
 | [ADR-008](ADR-008-audit-events.md) | Append-only audit events | Accepted |
 | [ADR-009](ADR-009-concurrency-and-idempotency.md) | Optimistic concurrency and idempotency | Accepted |
@@ -32,6 +32,7 @@ These ADRs capture the architecture decisions reached during the ShelfSense offl
 | [ADR-018](ADR-018-pos-runtime-and-deployment.md) | POS runtime and workstation architecture | Proposed |
 | [ADR-019](ADR-019-pos-sales-tax-model.md) | U.S. retail sales-tax model for POS | Accepted |
 | [ADR-020](ADR-020-pos-operation-envelope-and-core-facts.md) | Canonical POS operation envelope and normalized Core facts | Accepted |
+| [ADR-021](ADR-021-register-and-terminal-identity.md) | Register and Terminal identities | Accepted |
 
 ## Governing principle
 

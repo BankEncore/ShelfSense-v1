@@ -2,10 +2,9 @@
 
 - **Status:** Accepted
 - **Date:** 2026-08-09
+- **Interpretation (ADR-021):** “Workstation” holding cached reference data or owning open local work is a **Terminal**. Commercial checkout origin remains the **Register**.
 
 ## Context
-
-Offline POS requires local writes, but allowing every node to edit every record would create pervasive merge conflicts.
 
 ## Decision
 

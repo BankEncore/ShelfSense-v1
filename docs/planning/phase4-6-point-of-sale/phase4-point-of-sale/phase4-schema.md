@@ -24,6 +24,7 @@ Companions: [Phase 4 plan](phase4-plan.md), [POS tax contract](pos-tax-contract.
 ## 2. Table set
 
 ```text
+registers                              # after ADR-021 rename (was workstations)
 store_taxes                         # tax configuration (ADR-019)
 store_tax_rules
 tax_classes                         # existing merchandise domain
@@ -35,8 +36,10 @@ pos_transaction_lines
 pos_line_tax_components
 pos_tenders
 pos_operations
-(+ receipt sequence support — see §12)
+(+ receipt sequence on registers — see §12)
 ```
+
+See [register-identity.md](register-identity.md) for the `registers` target shape and pre-Phase-4 rename prerequisite.
 
 ---
 
@@ -75,12 +78,13 @@ Auto-create rows when Store Taxes or Tax Classes appear (see tax contract). Sell
 
 ## 5. `pos_reporting_periods`
 
-Logical Z / reporting period for a store (and eventually workstation association rules as Phase 5 needs them).
+Logical Z / reporting period for exactly one Register (ADR-021).
 
 | Column | Type | Notes |
 |---|---|---|
 | `id` | uuid | PK, UUIDv7 |
 | `store_id` | uuid | FK, null: false |
+| `register_id` | uuid | FK → `registers`, null: false |
 | `status` | string | e.g. `open`, `closed` |
 | `opened_at` | timestamptz | null: false |
 | `closed_at` | timestamptz | null when open |
@@ -88,19 +92,19 @@ Logical Z / reporting period for a store (and eventually workstation association
 | `lock_version` | integer | null: false, default 0 |
 | `created_at` / `updated_at` | timestamptz | |
 
-Phase 4 needs enough structure that sessions and completions can attach to a period. Full Z reporting UI is Phase 5.
+Invariants: `store_id` matches `registers.store_id`; **at most one open reporting period per Register**. Full Z reporting UI is Phase 5.
 
 ---
 
 ## 6. `pos_sessions`
 
-Cashier session on a workstation. **Phase 4 columns only:**
+Cashier session on a register. **Phase 4 columns only:**
 
 | Column | Type | Notes |
 |---|---|---|
 | `id` | uuid | PK, UUIDv7 |
 | `store_id` | uuid | FK, null: false |
-| `workstation_id` | uuid | FK → `workstations`, null: false |
+| `register_id` | uuid | FK → `registers`, null: false |
 | `reporting_period_id` | uuid | FK → `pos_reporting_periods`, null: false |
 | `cashier_user_id` | uuid | FK → `users`, null: false |
 | `status` | string | e.g. `open`, `closed` |
@@ -108,6 +112,8 @@ Cashier session on a workstation. **Phase 4 columns only:**
 | `closed_at` | timestamptz | null when open |
 | `lock_version` | integer | null: false, default 0 |
 | `created_at` / `updated_at` | timestamptz | |
+
+Invariants: `session.store_id` and `session.register_id` match the Register and the Session’s `reporting_period` (`period.register_id == session.register_id`).
 
 ### Explicitly deferred to Phase 5
 
@@ -141,7 +147,7 @@ One row for working and completed (or cancelled) commercial state.
 |---|---|---|
 | `id` | uuid | PK, UUIDv7 (= `transaction_id`) |
 | `store_id` | uuid | FK, null: false |
-| `workstation_id` | uuid | FK, null: false |
+| `register_id` | uuid | FK, null: false |
 | `pos_session_id` | uuid | FK, null: false |
 | `reporting_period_id` | uuid | FK, null: false (denormalized for query convenience; must match session) |
 | `cashier_user_id` | uuid | FK, null: false |
@@ -153,7 +159,7 @@ One row for working and completed (or cancelled) commercial state.
 | `cancelled_at` | timestamptz | null until cancelled |
 | `receipt_sequence` | bigint | null until completed |
 | `store_number_snapshot` | string | null until completed; from `stores.store_number` |
-| `workstation_number_snapshot` | string | null until completed; from `workstations.workstation_number` |
+| `register_number_snapshot` | string | null until completed; from `registers.register_number` |
 | `transaction_reference` | string | optional derived compact `S…-R…-T…`; regenerable from snapshots + sequence |
 | `subtotal_cents` | bigint | Phase 4: sum of sale line extended amounts (positive) |
 | `tax_cents` | bigint | Phase 4: sum of component tax (positive for sale-only) |
@@ -273,8 +279,8 @@ Durable completion provenance **and** ADR-009 idempotency. Authority: [operation
 | `lease_expires_at` | timestamptz | required while `in_flight` |
 | `pos_transaction_id` | uuid | FK when associated |
 | `store_id` | uuid | indexed origin |
-| `workstation_id` | uuid | indexed origin |
-| `installation_id` | uuid | optional until installations exist |
+| `register_id` | uuid | indexed origin |
+| `installation_id` | uuid | optional later technical id only; not POS business vocabulary (ADR-021) |
 | `producer_client` | string | optional |
 | `producer_version` | string | optional |
 | `envelope` | jsonb | **required when completed** — full `CompletedPosOperation` |
@@ -315,40 +321,40 @@ Receipt identity is assigned only during authoritative completion.
 Conceptual uniqueness:
 
 ```text
-(store_id, workstation_id, receipt_sequence)
+(store_id, register_id, receipt_sequence)
 ```
 
-### Prerequisite: durable workstation number
+### Prerequisite: durable register number
 
-`workstations` must include a per-store durable number for the `R` component:
+`registers` must include a per-store durable number for the `R` component:
 
 | Column | Type | Notes |
 |---|---|---|
-| `workstation_number` | string | null: false; unique per `store_id`; parallel to `stores.store_number` |
+| `register_number` | string | null: false; unique per `store_id`; parallel to `stores.store_number` |
 
-Do not use editable `name` in the reference. Prefer explicit `workstation_number` over reusing free-form `code` unless `code` is constrained to be that number.
+Do not use editable `name` in the reference. Prefer explicit `register_number` over reusing free-form `code` unless `code` is constrained to be that number.
 
-Numbers become effectively immutable once a completed receipt has been issued for that workstation.
+Numbers become effectively immutable once a completed receipt has been issued for that register.
 
 ### Allocation
 
 Implementation options (pick one in migration design):
 
-1. Counter on `workstations.receipt_sequence`; increment inside the completion transaction.  
-2. Sequence object per workstation with careful transactional semantics.
+1. Counter on `registers.receipt_sequence`; increment inside the completion transaction.  
+2. Sequence object per register with careful transactional semantics.
 
 Persist on the completed transaction:
 
 ```text
 receipt_sequence
 store_number_snapshot
-workstation_number_snapshot
+register_number_snapshot
 transaction_reference   # optional derived S003-R02-T0018427
 ```
 
 Include sequence, number snapshots, and optional `reference` in `CompletedPosOperation.receipt`.
 
-Minimum display padding: store 3, workstation 2, sequence 7 digits — minima only, not maxima.
+Minimum display padding: store 3, register 2, sequence 7 digits — minima only, not maxima.
 
 Print layout (header `Store` / `Reg` / `Trans`) is Phase 5; identity/reference rules are Phase 4.
 
@@ -375,11 +381,13 @@ Do not invent a POS-only domain `source_type` string unless a global inventory A
 
 ## 14. Indexes and constraints (minimum intent)
 
-- FKs for all store / workstation / session / period / user / variant / tax references.
+- FKs for all store / register / session / period / user / variant / tax references.
 - Unique `(store_id, code)` on `store_taxes`.
 - Unique `(store_tax_id, tax_class_id)` on `store_tax_rules`.
-- Unique `(store_id, workstation_id, receipt_sequence)` where sequence is not null.
-- Unique `(store_id, workstation_number)` on `workstations` (when column added).
+- Unique `(store_id, register_id)` open reporting period policy (at most one open Z per Register).
+- Unique `(store_id, register_id, receipt_sequence)` where sequence is not null.
+- Unique `(store_id, register_number)` on `registers`.
+- At most one open reporting period per `register_id`.
 - Optional unique `transaction_reference` if stored; must match derived form from snapshots.
 - `pos_operations` uniqueness on `(source_id, operation_type, idempotency_key)`.
 - Check constraints for status enums; `in_flight` requires lease.
@@ -393,14 +401,16 @@ Exact constraint names follow existing migration conventions.
 
 ## 15. Phase 4 migration checklist
 
-Before writing migrations:
+Before writing POS migrations:
 
 - [x] Tax rate / applicability model locked (ADR-019 + pos-tax-contract)  
-- [x] Receipt / transaction reference format locked (ADR-006 amended + receipt-identity)  
-- [x] Envelope vs normalized Core locked (ADR-020 + operation-and-core-facts); full envelope required  
-- [ ] `workstations.workstation_number` added and backfilled before completed receipts  
-- [ ] CompletedPosOperation v1 example fixtures reviewed (including full Store Tax determinations)  
-- [ ] Sign/direction conventions documented in contract  
+- [x] Receipt / transaction reference format locked (ADR-006 + receipt-identity)  
+- [x] Envelope vs normalized Core locked (ADR-020 + operation-and-core-facts)  
+- [x] Register vs Terminal locked (ADR-021 + register-identity)  
+- [ ] **Pre-Phase-4:** `workstations` → `registers` rename (FKs, permissions, audit, tests)  
+- [ ] `registers.register_number` added and backfilled  
+- [ ] Device-only fields reviewed/dropped on Register  
+- [ ] CompletedPosOperation v1 example fixtures reviewed  
 - [ ] Session table confirmed **without** Cash close columns  
 
-Then migrate in dependency order: `workstation_number` (if needed) → `store_taxes` / `store_tax_rules` → periods → sessions → transactions → lines → tax components → tenders → operations → receipt counter (as needed).
+Then migrate in dependency order: rename slice → `store_taxes` / `store_tax_rules` → periods (with `register_id`) → sessions → transactions → lines → tax components → tenders → operations.

@@ -2,10 +2,9 @@
 
 - **Status:** Accepted
 - **Date:** 2026-08-09
+- **Interpretation (ADR-021):** Historical “store workstations” that maintain local POS data and cached reference projections are **Terminals**. The durable logical checkout position is a **Register**.
 
 ## Context
-
-ShelfSense must support multiple stores while avoiding the complexity of a shared SaaS database serving unrelated organizations. Store-specific operation must continue during temporary loss of connectivity.
 
 ## Decision
 

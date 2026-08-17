@@ -4,6 +4,7 @@
 * **Amended:** 2026-08-09; 2026-08-11 (scannable inventory-unit namespace `220`)
 * **Decision scope:** Central Rails application, offline POS nodes, synchronization, and domain data
 * **Supersedes:** Any earlier assumption that identifiers must be generated exclusively by PostgreSQL
+* **Interpretation (ADR-021):** Example table `workstations` in this ADR should be read as target **`registers`**. Offline POS “nodes” that allocate IDs are **Terminals** operating a Register.
 
 ## Context
 
