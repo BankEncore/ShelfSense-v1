@@ -15,6 +15,8 @@ module Pos
 
     def call
       Pos::Support.authorize!(@actor, @transaction.store)
+      Pos::Support.require_active_context!(@transaction.store, @transaction.register)
+      Pos::Support.require_transaction_cashier!(@actor, @transaction)
       raise Pos::Error, "presented amount must be positive" unless @amount_presented_cents.positive?
 
       PosTransaction.transaction do

@@ -21,6 +21,10 @@ class PosTransactionLine < ApplicationRecord
     self.line_total_cents = extended_selling_amount_cents + line_tax_cents
   end
 
+  def readonly?
+    super || (persisted? && pos_transaction&.commercially_immutable?)
+  end
+
   private
 
   def merchandise_snapshot_complete

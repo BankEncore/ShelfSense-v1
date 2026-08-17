@@ -60,7 +60,11 @@ module Admin
     end
 
     def destroy
-      @register.update!(active: false, deactivated_at: Time.current, deactivated_by: current_user)
+      unless @register.update(active: false, deactivated_at: Time.current, deactivated_by: current_user)
+        redirect_to admin_register_path(@register), alert: @register.errors.full_messages.to_sentence
+        return
+      end
+
       Audit::Recorder.record!(
         action: "registers.deactivate",
         outcome: "succeeded",
@@ -94,16 +98,9 @@ module Admin
     end
 
     def next_register_number(store)
-      return "01" unless store
+      return 1 unless store
 
-      existing = store.registers.pluck(:register_number)
-      n = 1
-      loop do
-        candidate = format("%02d", n)
-        return candidate unless existing.include?(candidate)
-
-        n += 1
-      end
+      (store.registers.maximum(:register_number) || 0) + 1
     end
   end
 end

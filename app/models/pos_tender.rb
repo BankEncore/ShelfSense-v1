@@ -10,4 +10,8 @@ class PosTender < ApplicationRecord
   validates :tender_type, inclusion: { in: TENDER_TYPES }
   validates :direction, inclusion: { in: DIRECTIONS }
   validates :amount_cents, :amount_presented_cents, :change_cents, numericality: { greater_than_or_equal_to: 0 }
+
+  def readonly?
+    super || (persisted? && pos_transaction&.commercially_immutable?)
+  end
 end

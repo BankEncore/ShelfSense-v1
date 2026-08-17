@@ -52,8 +52,8 @@ class PosCompleteTransactionTest < ActiveSupport::TestCase
     assert_not result.replayed
     assert transaction.completed?
     assert_equal 1, transaction.receipt_sequence
-    assert_equal "1", transaction.store_number_snapshot
-    assert_equal @context[:register].register_number, transaction.register_number_snapshot
+    assert_equal 1, transaction.store_number_snapshot
+    assert_equal 1, transaction.register_number_snapshot
     assert_equal "S001-R01-T0000001", transaction.transaction_reference
     assert_equal @context[:period].business_date, transaction.business_date
     assert_equal transaction.occurred_at, transaction.completed_at
@@ -67,7 +67,12 @@ class PosCompleteTransactionTest < ActiveSupport::TestCase
     assert_equal @context[:register].id, operation.source_id
     assert_equal Idempotency::CanonicalJson.hash(operation.envelope), operation.envelope_hash
     assert_equal transaction.receipt_sequence, operation.envelope.dig("receipt", "sequence")
+    assert_equal 1, operation.envelope.dig("receipt", "store_number")
+    assert_equal 1, operation.envelope.dig("receipt", "register_number")
     assert_equal transaction.transaction_reference, operation.envelope.dig("receipt", "reference")
+    assert_equal @actor.id.to_s, operation.envelope.dig("origin", "performed_by_user_id")
+    assert_equal @actor.id, transaction.cashier_user_id
+    assert_equal @actor.id, transaction.pos_session.cashier_user_id
 
     balance = InventoryBalance.find_by!(store: @store, product_variant: @variant)
     assert_equal 4, balance.on_hand_quantity
@@ -180,11 +185,72 @@ class PosCompleteTransactionTest < ActiveSupport::TestCase
     assert_nil @transaction.receipt_sequence
   end
 
+  test "second cashier cannot complete another cashier's transaction" do
+    other = pos_transacting_user(store: @store, assigned_by: @actor, username: "other_cashier")
+    assert_raises(Pos::Denied) do
+      Pos::CompleteTransaction.call(**complete_args(actor: other))
+    end
+    assert @transaction.reload.working?
+    assert_nil @transaction.receipt_sequence
+    assert AuditEvent.exists?(action: "pos.transaction_completion_rejected", outcome: "denied", subject_id: @transaction.id)
+  end
+
+  test "same operation_id reused against another register is rejected" do
+    operation_id = SecureRandom.uuid_v7
+    Pos::CompleteTransaction.call(**complete_args(operation_id: operation_id))
+
+    other_context = pos_open_context(store: @store, actor: @actor)
+    other_transaction = Pos::StartTransaction.call(session: other_context[:session], actor: @actor)
+    Pos::AddMerchandise.call(
+      transaction: other_transaction,
+      actor: @actor,
+      expected_lock_version: other_transaction.lock_version,
+      identifier: @variant.sku
+    )
+    other_transaction.reload
+    Pos::TenderCash.call(
+      transaction: other_transaction,
+      actor: @actor,
+      expected_lock_version: other_transaction.lock_version,
+      amount_presented_cents: 2500
+    )
+    other_transaction.reload
+
+    error = assert_raises(Pos::OperationLease::Error) do
+      Pos::CompleteTransaction.call(
+        transaction: other_transaction,
+        actor: @actor,
+        operation_id: operation_id,
+        expected_lock_version: other_transaction.lock_version,
+        expected_total_cents: other_transaction.total_cents,
+        amount_presented_cents: 2500
+      )
+    end
+    assert_match(/another register/, error.message)
+    assert other_transaction.reload.working?
+  end
+
+  test "completed facts are readonly" do
+    result = Pos::CompleteTransaction.call(**complete_args)
+    transaction = result.transaction
+    line = transaction.pos_transaction_lines.first
+    tender = transaction.pos_tenders.first
+    component = line.pos_line_tax_components.first
+
+    assert_raises(ActiveRecord::ReadOnlyRecord) { transaction.update!(subtotal_cents: 1) }
+    assert_raises(ActiveRecord::ReadOnlyRecord) { line.update!(quantity: 2) }
+    assert_raises(ActiveRecord::ReadOnlyRecord) { tender.update!(change_cents: 0) }
+    assert_raises(ActiveRecord::ReadOnlyRecord) { component.update!(tax_cents: 0) }
+    assert_raises(ActiveRecord::ReadOnlyRecord) { result.operation.update!(producer_client: "tampered") }
+  end
+
   test "headless vertical slice matches Phase 4 acceptance" do
     envelope = Pos::CompleteTransaction.call(**complete_args).operation.envelope
     assert_equal 1, envelope.fetch("schema_version")
     assert_equal PosOperation::FACT_TYPE, envelope.fetch("operation").fetch("fact_type")
     assert envelope.fetch("receipt").fetch("sequence").present?
+    assert_kind_of Integer, envelope.fetch("receipt").fetch("store_number")
+    assert_kind_of Integer, envelope.fetch("receipt").fetch("register_number")
     assert_match(/\AS\d+-R\d+-T\d+\z/, envelope.fetch("receipt").fetch("reference"))
     line = envelope.fetch("lines").first
     assert_equal 1, line.fetch("quantity")

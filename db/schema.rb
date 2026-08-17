@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_16_240000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_16_250000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -483,11 +483,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_16_240000) do
     t.uuid "pos_session_id", null: false
     t.bigint "receipt_sequence"
     t.uuid "register_id", null: false
-    t.string "register_number_snapshot"
+    t.integer "register_number_snapshot"
     t.uuid "reporting_period_id", null: false
     t.string "status", null: false
     t.uuid "store_id", null: false
-    t.string "store_number_snapshot"
+    t.integer "store_number_snapshot"
     t.bigint "subtotal_cents", default: 0, null: false
     t.bigint "tax_cents", default: 0, null: false
     t.bigint "total_cents", default: 0, null: false
@@ -495,7 +495,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_16_240000) do
     t.timestamptz "updated_at", null: false
     t.index ["store_id", "register_id", "receipt_sequence"], name: "index_pos_transactions_receipt_identity", unique: true, where: "(receipt_sequence IS NOT NULL)"
     t.index ["transaction_reference"], name: "index_pos_transactions_on_transaction_reference", unique: true, where: "(transaction_reference IS NOT NULL)"
-    t.check_constraint "status::text = 'working'::text AND receipt_sequence IS NULL AND store_number_snapshot IS NULL AND register_number_snapshot IS NULL AND completed_at IS NULL AND cancelled_at IS NULL OR status::text = 'completed'::text AND receipt_sequence IS NOT NULL AND store_number_snapshot IS NOT NULL AND register_number_snapshot IS NOT NULL AND completed_at IS NOT NULL AND cancelled_at IS NULL OR status::text = 'cancelled'::text AND receipt_sequence IS NULL AND completed_at IS NULL AND cancelled_at IS NOT NULL", name: "pos_transactions_status_null_rules"
+    t.check_constraint "status::text = 'working'::text AND receipt_sequence IS NULL AND store_number_snapshot IS NULL AND register_number_snapshot IS NULL AND occurred_at IS NULL AND business_date IS NULL AND completed_at IS NULL AND cancelled_at IS NULL OR status::text = 'completed'::text AND receipt_sequence IS NOT NULL AND store_number_snapshot IS NOT NULL AND register_number_snapshot IS NOT NULL AND occurred_at IS NOT NULL AND business_date IS NOT NULL AND completed_at IS NOT NULL AND cancelled_at IS NULL OR status::text = 'cancelled'::text AND receipt_sequence IS NULL AND store_number_snapshot IS NULL AND register_number_snapshot IS NULL AND occurred_at IS NULL AND business_date IS NULL AND completed_at IS NULL AND cancelled_at IS NOT NULL", name: "pos_transactions_status_null_rules"
     t.check_constraint "status::text = ANY (ARRAY['working'::character varying, 'completed'::character varying, 'cancelled'::character varying]::text[])", name: "pos_transactions_status_valid"
   end
 
@@ -565,11 +565,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_16_240000) do
     t.integer "lock_version", default: 0, null: false
     t.string "name", null: false
     t.bigint "receipt_sequence", default: 0, null: false
-    t.string "register_number", null: false
+    t.integer "register_number", null: false
     t.uuid "store_id", null: false
     t.timestamptz "updated_at", null: false
     t.index ["store_id", "register_number"], name: "index_registers_on_store_id_and_register_number", unique: true
     t.check_constraint "receipt_sequence >= 0", name: "registers_receipt_sequence_nonnegative"
+    t.check_constraint "register_number > 0", name: "registers_register_number_positive"
   end
 
   create_table "role_assignments", id: :uuid, default: nil, force: :cascade do |t|
@@ -655,13 +656,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_16_240000) do
     t.text "receipt_header"
     t.string "region_code"
     t.string "san"
-    t.string "store_number", null: false
+    t.integer "store_number", null: false
     t.string "street_address_1"
     t.string "street_address_2"
     t.string "timezone", null: false
     t.timestamptz "updated_at", null: false
     t.index "lower((code)::text)", name: "index_stores_on_lower_code", unique: true
-    t.index "lower((store_number)::text)", name: "index_stores_on_lower_store_number", unique: true
+    t.index ["store_number"], name: "index_stores_on_store_number", unique: true
+    t.check_constraint "store_number > 0", name: "stores_store_number_positive"
   end
 
   create_table "system_settings", id: :uuid, default: nil, force: :cascade do |t|

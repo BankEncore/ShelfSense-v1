@@ -20,6 +20,8 @@ module Pos
     def call
       lease = nil
       Pos::Support.authorize!(@actor, @transaction.store)
+      Pos::Support.require_active_context!(@transaction.store, @transaction.register)
+      Pos::Support.require_transaction_cashier!(@actor, @transaction)
 
       lease = Pos::OperationLease.begin!(
         register_id: @transaction.register_id,
@@ -71,6 +73,8 @@ module Pos
         end
 
         Pos::Support.authorize!(@actor, transaction.store)
+        Pos::Support.require_active_context!(transaction.store, transaction.register)
+        Pos::Support.require_transaction_cashier!(@actor, transaction)
         raise Pos::Error, "transaction is not working" unless transaction.working?
         if transaction.lock_version != @expected_lock_version
           raise Pos::StaleObject, "stale lock_version"

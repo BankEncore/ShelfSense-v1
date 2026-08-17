@@ -16,6 +16,7 @@ module Pos
 
     def call
       Pos::Support.authorize!(@actor, @store)
+      Pos::Support.require_active_context!(@store, @register)
       period = @reporting_period || PosReportingPeriod.open.find_by!(register: @register)
       raise Pos::Error, "reporting period is not open" unless period.open?
       raise Pos::Error, "reporting period does not belong to this register" unless period.register_id == @register.id

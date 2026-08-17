@@ -17,7 +17,7 @@ module Pos
     def call
       Pos::Support.authorize!(@actor, @store)
       raise Pos::Error, "register does not belong to store" unless @register.store_id == @store.id
-      raise Pos::Error, "register is not active" unless @register.active?
+      Pos::Support.require_active_context!(@store, @register)
 
       PosReportingPeriod.create!(
         store: @store,

@@ -7,7 +7,7 @@ class PosSchemaTest < ActiveSupport::TestCase
     @bootstrap = bootstrap!
     @store = @bootstrap[:store]
     @user = @bootstrap[:administrator]
-    @register = Register.create!(store: @store, register_number: "01", name: "Front")
+    @register = Register.create!(store: @store, register_number: 1, name: "Front")
   end
 
   test "one open reporting period and session per register" do

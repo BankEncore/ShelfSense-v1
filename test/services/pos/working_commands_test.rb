@@ -77,6 +77,7 @@ class PosWorkingCommandsTest < ActiveSupport::TestCase
     assert transaction.reload.cancelled?
     assert_nil transaction.receipt_sequence
     assert AuditEvent.exists?(action: "pos.transaction_cancelled", subject_id: transaction.id)
+    assert_raises(ActiveRecord::ReadOnlyRecord) { transaction.update!(subtotal_cents: 1) }
   end
 
   test "open_price merchandise is rejected" do
@@ -103,6 +104,107 @@ class PosWorkingCommandsTest < ActiveSupport::TestCase
     assert_raises(Pos::Denied) do
       Pos::StartTransaction.call(session: @context[:session], actor: clerk)
     end
+  end
+
+  test "second cashier cannot close another cashier's session" do
+    other = pos_transacting_user(store: @store, assigned_by: @actor, username: "other_close")
+    assert_raises(Pos::Denied) do
+      Pos::CloseSession.call(
+        session: @context[:session],
+        actor: other,
+        expected_lock_version: @context[:session].lock_version
+      )
+    end
+    assert @context[:session].reload.open?
+  end
+
+  test "second cashier cannot start against another cashier's session" do
+    other = pos_transacting_user(store: @store, assigned_by: @actor, username: "other_start")
+    assert_raises(Pos::Denied) do
+      Pos::StartTransaction.call(session: @context[:session], actor: other)
+    end
+    assert_equal 0, PosTransaction.where(pos_session: @context[:session]).count
+  end
+
+  test "second cashier cannot mutate another cashier's working transaction" do
+    transaction = Pos::StartTransaction.call(session: @context[:session], actor: @actor)
+    line = Pos::AddMerchandise.call(
+      transaction: transaction,
+      actor: @actor,
+      expected_lock_version: transaction.lock_version,
+      identifier: @variant.sku
+    )
+    transaction.reload
+    other = pos_transacting_user(store: @store, assigned_by: @actor, username: "other_mutate")
+
+    assert_raises(Pos::Denied) do
+      Pos::AddMerchandise.call(
+        transaction: transaction,
+        actor: other,
+        expected_lock_version: transaction.lock_version,
+        identifier: @variant.sku
+      )
+    end
+    assert_raises(Pos::Denied) do
+      Pos::ChangeQuantity.call(
+        transaction: transaction,
+        line: line,
+        actor: other,
+        expected_lock_version: transaction.lock_version,
+        quantity: 2
+      )
+    end
+    assert_raises(Pos::Denied) do
+      Pos::RemoveWorkingLine.call(
+        transaction: transaction,
+        line: line,
+        actor: other,
+        expected_lock_version: transaction.lock_version
+      )
+    end
+    assert_raises(Pos::Denied) do
+      Pos::TenderCash.call(
+        transaction: transaction,
+        actor: other,
+        expected_lock_version: transaction.lock_version,
+        amount_presented_cents: 2500
+      )
+    end
+    assert_raises(Pos::Denied) do
+      Pos::CancelTransaction.call(
+        transaction: transaction,
+        actor: other,
+        expected_lock_version: transaction.lock_version
+      )
+    end
+    assert transaction.reload.working?
+    assert_equal 1, transaction.pos_transaction_lines.count
+  end
+
+  test "inactive store rejects POS commands" do
+    @store.active = false
+    assert_not @store.valid?
+    assert_includes @store.errors[:base], "cannot deactivate while an open reporting period exists"
+
+    @context[:session].update!(status: "closed", closed_at: Time.current)
+    @context[:period].update!(status: "finalized", closed_at: Time.current)
+    @store.update!(active: false, deactivated_at: Time.current, deactivated_by: @actor)
+
+    error = assert_raises(Pos::Error) do
+      Pos::OpenReportingPeriod.call(store: @store, register: @context[:register], actor: @actor)
+    end
+    assert_match(/store is not active/, error.message)
+  end
+
+  test "inactive register rejects POS commands" do
+    @context[:session].update!(status: "closed", closed_at: Time.current)
+    @context[:period].update!(status: "finalized", closed_at: Time.current)
+    @context[:register].update!(active: false, deactivated_at: Time.current, deactivated_by: @actor)
+
+    error = assert_raises(Pos::Error) do
+      Pos::OpenReportingPeriod.call(store: @store, register: @context[:register], actor: @actor)
+    end
+    assert_match(/register is not active/, error.message)
   end
 
   test "change quantity and remove working line recompute totals without tax components" do

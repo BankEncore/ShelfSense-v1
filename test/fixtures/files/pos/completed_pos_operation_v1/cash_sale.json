@@ -13,8 +13,8 @@
   },
   "receipt": {
     "sequence": 18427,
-    "store_number": "003",
-    "register_number": "02",
+    "store_number": 3,
+    "register_number": 2,
     "reference": "S003-R02-T0018427"
   },
   "transaction": {

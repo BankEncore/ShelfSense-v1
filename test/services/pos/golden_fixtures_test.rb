@@ -22,6 +22,8 @@ class PosGoldenFixturesTest < ActiveSupport::TestCase
     assert_equal expected_canonical, Idempotency::CanonicalJson.dump(payload)
     assert_equal expected_hash, Idempotency::CanonicalJson.hash(payload)
     assert_kind_of Integer, payload.fetch("lines").first.fetch("quantity")
+    assert_kind_of Integer, payload.fetch("receipt").fetch("store_number")
+    assert_kind_of Integer, payload.fetch("receipt").fetch("register_number")
     assert payload.fetch("receipt").fetch("sequence").present?
   end
 

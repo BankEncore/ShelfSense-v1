@@ -18,29 +18,37 @@ module Pos
 
     def begin!(register_id:, operation_id:, command_payload:, store_id:, pos_transaction_id:)
       hash = Idempotency::CanonicalJson.hash(command_payload)
-      existing = PosOperation.find_by(
-        source_id: register_id,
-        command_type: PosOperation::COMMAND_TYPE,
-        idempotency_key: operation_id
-      )
+      existing = PosOperation.find_by(id: operation_id)
+      return resolve_existing!(existing, register_id: register_id, hash: hash) if existing
 
-      if existing
-        raise Pos::PayloadMismatch, "idempotency key reused with a different payload" if existing.command_payload_hash != hash
-        return Result.new(operation: existing, replayed: true) if existing.status == "completed"
+      begin
+        create_in_flight!(
+          register_id: register_id,
+          operation_id: operation_id,
+          hash: hash,
+          store_id: store_id,
+          pos_transaction_id: pos_transaction_id
+        )
+      rescue ActiveRecord::RecordNotUnique
+        recovered = PosOperation.find_by(id: operation_id) || PosOperation.find_by(
+          source_id: register_id,
+          command_type: PosOperation::COMMAND_TYPE,
+          idempotency_key: operation_id
+        )
+        raise Error, "could not resolve operation uniqueness collision" if recovered.nil?
 
-        if existing.status == "in_flight"
-          reclaimed = reclaim_stale_in_flight!(existing)
-          return Result.new(operation: reclaimed, replayed: false) if reclaimed
-
-          raise Error, "idempotency operation is still in flight"
-        end
-
-        if existing.status == "failed"
-          retried = retry_failed!(existing)
-          return Result.new(operation: retried, replayed: false)
-        end
+        resolve_existing!(recovered, register_id: register_id, hash: hash)
       end
+    end
 
+    def self.fail!(operation)
+      operation.update!(status: "failed", lease_expires_at: nil)
+      operation
+    end
+
+    private
+
+    def create_in_flight!(register_id:, operation_id:, hash:, store_id:, pos_transaction_id:)
       operation = PosOperation.create!(
         id: operation_id,
         command_type: PosOperation::COMMAND_TYPE,
@@ -54,22 +62,28 @@ module Pos
         pos_transaction_id: pos_transaction_id
       )
       Result.new(operation: operation, replayed: false)
-    rescue ActiveRecord::RecordNotUnique
-      begin!(
-        register_id: register_id,
-        operation_id: operation_id,
-        command_payload: command_payload,
-        store_id: store_id,
-        pos_transaction_id: pos_transaction_id
-      )
     end
 
-    def self.fail!(operation)
-      operation.update!(status: "failed", lease_expires_at: nil)
-      operation
-    end
+    def resolve_existing!(existing, register_id:, hash:)
+      raise Error, "operation_id reused against another register" if existing.source_id != register_id
+      raise Error, "operation_id reused with a different command type" if existing.command_type != PosOperation::COMMAND_TYPE
+      raise Pos::PayloadMismatch, "idempotency key reused with a different payload" if existing.command_payload_hash != hash
+      return Result.new(operation: existing, replayed: true) if existing.status == "completed"
 
-    private
+      if existing.status == "in_flight"
+        reclaimed = reclaim_stale_in_flight!(existing)
+        return Result.new(operation: reclaimed, replayed: false) if reclaimed
+
+        raise Error, "idempotency operation is still in flight"
+      end
+
+      if existing.status == "failed"
+        retried = retry_failed!(existing)
+        return Result.new(operation: retried, replayed: false)
+      end
+
+      raise Error, "idempotency operation is in an unexpected status"
+    end
 
     def reclaim_stale_in_flight!(operation)
       now = Time.current

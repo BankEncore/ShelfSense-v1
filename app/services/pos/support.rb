@@ -10,6 +10,22 @@ module Pos
       end
     end
 
+    def require_active_context!(store, register)
+      raise Pos::Error, "store is not active" unless Store.where(id: store.id, active: true).exists?
+      raise Pos::Error, "register is not active" unless Register.where(id: register.id, active: true).exists?
+    end
+
+    def require_session_cashier!(actor, session)
+      raise Pos::Denied, "actor is not the session cashier" unless actor.id == session.cashier_user_id
+    end
+
+    def require_transaction_cashier!(actor, transaction)
+      session = transaction.pos_session
+      unless actor.id == transaction.cashier_user_id && transaction.cashier_user_id == session.cashier_user_id
+        raise Pos::Denied, "actor is not the transaction cashier"
+      end
+    end
+
     def lock_working_transaction!(transaction, expected_lock_version)
       transaction.lock!
       raise Pos::Error, "transaction is not working" unless transaction.working?

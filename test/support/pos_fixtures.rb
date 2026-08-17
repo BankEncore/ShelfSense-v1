@@ -30,7 +30,7 @@ module PosFixtures
   end
 
   def pos_open_context(store:, actor:, register: nil)
-    register ||= Register.create!(store: store, register_number: format("%02d", store.registers.count + 1), name: "Front")
+    register ||= Register.create!(store: store, register_number: (store.registers.maximum(:register_number) || 0) + 1, name: "Front")
     period = Pos::OpenReportingPeriod.call(store: store, register: register, actor: actor)
     session = Pos::OpenSession.call(store: store, register: register, actor: actor, reporting_period: period)
     { register: register, period: period, session: session }
@@ -48,5 +48,22 @@ module PosFixtures
       idempotency_key: SecureRandom.uuid_v7,
       acquisition_unit_cost_cents: unit_cost_cents
     )
+  end
+
+  def pos_transacting_user(store:, assigned_by:, username:)
+    user = User.create!(
+      username: username,
+      display_name: username,
+      password: "correct-horse-battery",
+      password_confirmation: "correct-horse-battery"
+    )
+    RoleAssignment.create!(
+      user: user,
+      role: Role.find_by!(key: "associate"),
+      store: store,
+      assigned_by: assigned_by,
+      effective_at: Time.current
+    )
+    user
   end
 end

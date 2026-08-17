@@ -5,7 +5,7 @@ module Phase2Fixtures
 
   BOOTSTRAP_ATTRS = {
     organization_name: "Example Books",
-    store_number: "1",
+    store_number: 1,
     store_code: "main",
     store_name: "Main Store",
     store_timezone: "America/New_York",

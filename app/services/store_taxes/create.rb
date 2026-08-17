@@ -19,6 +19,8 @@ module StoreTaxes
     end
 
     def call
+      StoreTaxes::Support.authorize!(@actor, @store, "store_taxes.create")
+
       store_tax = StoreTax.new(
         store: @store,
         code: @code,

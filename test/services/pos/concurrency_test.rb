@@ -37,7 +37,7 @@ class Pos::ConcurrencyTest < ActiveSupport::TestCase
 
   test "concurrent completion of the same working transaction yields one receipt" do
     open_quantity_stock(store: @store, variant: @variant, actor: @actor, quantity: 5)
-    ready = prepare_sale(register_number: "01", presented_cents: 2500)
+    ready = prepare_sale(register_number: 1, presented_cents: 2500)
     transaction_id = ready[:transaction].id
     lock_version = ready[:transaction].lock_version
     total = ready[:transaction].total_cents
@@ -76,8 +76,8 @@ class Pos::ConcurrencyTest < ActiveSupport::TestCase
 
   test "two transactions racing the last unit leave the loser without a receipt" do
     open_quantity_stock(store: @store, variant: @variant, actor: @actor, quantity: 1)
-    first = prepare_sale(register_number: "01", presented_cents: 2500)
-    second = prepare_sale(register_number: "02", presented_cents: 2500)
+    first = prepare_sale(register_number: 1, presented_cents: 2500)
+    second = prepare_sale(register_number: 2, presented_cents: 2500)
     actor_id = @actor.id
 
     jobs = [ first, second ]
@@ -116,6 +116,82 @@ class Pos::ConcurrencyTest < ActiveSupport::TestCase
     assert_equal 0, Register.uncached { loser.register.reload.receipt_sequence }
     assert_equal 1, OutboxMessage.uncached { OutboxMessage.where(event_type: "pos.transaction_completed").count }
     assert_equal 0, InventoryBalance.uncached { InventoryBalance.find_by!(store: @store, product_variant: @variant).on_hand_quantity }
+  end
+
+  test "start transaction versus close session cannot leave a working transaction on a closed session" do
+    register = Register.create!(store: @store, register_number: 90, name: "Race")
+    context = pos_open_context(store: @store, actor: @actor, register: register)
+    session_id = context[:session].id
+    lock_version = context[:session].lock_version
+    actor_id = @actor.id
+
+    start_result = nil
+    close_result = nil
+    start_error = nil
+    close_error = nil
+    threads = [
+      Thread.new do
+        ActiveRecord::Base.connection_pool.with_connection do
+          start_result = Pos::StartTransaction.call(session: PosSession.find(session_id), actor: User.find(actor_id))
+        rescue StandardError => e
+          start_error = e
+        end
+      end,
+      Thread.new do
+        ActiveRecord::Base.connection_pool.with_connection do
+          close_result = Pos::CloseSession.call(
+            session: PosSession.find(session_id),
+            actor: User.find(actor_id),
+            expected_lock_version: lock_version
+          )
+        rescue StandardError => e
+          close_error = e
+        end
+      end
+    ]
+    threads.each { |thread| assert thread.join(30), "thread did not finish" }
+
+    session = PosSession.uncached { PosSession.find(session_id) }
+    working = PosTransaction.uncached { PosTransaction.where(pos_session_id: session_id, status: "working").count }
+    refute session.closed? && working.positive?
+    assert start_result || start_error
+    assert close_result || close_error
+  end
+
+  test "concurrent lease begin for the same operation_id recovers without recursion" do
+    register = Register.create!(store: @store, register_number: 91, name: "Lease")
+    operation_id = SecureRandom.uuid_v7
+    payload = {
+      "transaction_id" => SecureRandom.uuid_v7,
+      "operation_id" => operation_id,
+      "expected_lock_version" => 0,
+      "expected_total_cents" => 100,
+      "amount_presented_cents" => 100
+    }
+    results = Array.new(2)
+    errors = Array.new(2)
+    threads = 2.times.map do |i|
+      Thread.new do
+        ActiveRecord::Base.connection_pool.with_connection do
+          results[i] = Pos::OperationLease.begin!(
+            register_id: register.id,
+            operation_id: operation_id,
+            command_payload: payload,
+            store_id: @store.id,
+            pos_transaction_id: nil
+          )
+        rescue StandardError => e
+          errors[i] = e
+        end
+      end
+    end
+    threads.each { |thread| assert thread.join(30), "thread did not finish" }
+
+    assert errors.compact.none? { |error| error.is_a?(SystemStackError) }, errors.compact.map(&:class).inspect
+    assert_equal 1, PosOperation.uncached { PosOperation.where(id: operation_id).count }
+    successes = results.compact
+    assert successes.any?
+    assert_equal [ operation_id ], successes.map { |result| result.operation.id }.uniq
   end
 
   private

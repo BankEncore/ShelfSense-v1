@@ -210,8 +210,8 @@ CompletedPosOperation
 │
 ├── receipt
 │   ├── sequence                  # receipt_sequence
-│   ├── store_number              # snapshot
-│   ├── register_number           # snapshot (“Reg”)
+│   ├── store_number              # integer snapshot
+│   ├── register_number           # integer snapshot (“Reg”)
 │   └── reference                 # optional derived S003-R02-T0018427
 │
 ├── transaction
@@ -280,8 +280,8 @@ Illustrative only. Includes both applicable and non-applicable Store Tax determi
   },
   "receipt": {
     "sequence": 18427,
-    "store_number": "003",
-    "register_number": "02",
+    "store_number": 3,
+    "register_number": 2,
     "reference": "S003-R02-T0018427"
   },
   "transaction": {

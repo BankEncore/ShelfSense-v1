@@ -20,6 +20,8 @@ module StoreTaxes
     end
 
     def call
+      StoreTaxes::Support.authorize!(@actor, @store_tax.store, "store_taxes.update")
+
       StoreTax.transaction do
         @store_tax.lock_version = @expected_lock_version
         attrs = {

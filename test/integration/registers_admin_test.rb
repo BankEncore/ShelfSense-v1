@@ -19,9 +19,10 @@ class RegistersAdminTest < ActionDispatch::IntegrationTest
       }
     end
 
-    register = Register.find_by!(register_number: "01")
+    register = Register.find_by!(register_number: 1)
     assert_redirected_to admin_register_path(register)
     assert_equal "Front Register", register.name
+    assert_equal 1, register.register_number
     event = AuditEvent.order(:created_at).last
     assert_equal "registers.create", event.action
     assert_equal register.id, event.register_id
@@ -44,11 +45,11 @@ class RegistersAdminTest < ActionDispatch::IntegrationTest
 
     sign_in_as("clerk")
     post admin_registers_path, params: {
-      register: { register_number: "09", name: "Unauthorized" }
+      register: { register_number: 9, name: "Unauthorized" }
     }
     assert_redirected_to root_path
     assert_equal "denied", AuditEvent.where(action: "authorization.denied").order(:created_at).last.outcome
-    assert_not Register.exists?(register_number: "09")
+    assert_not Register.exists?(register_number: 9)
   end
 
   private

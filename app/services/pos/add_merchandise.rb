@@ -16,6 +16,8 @@ module Pos
 
     def call
       Pos::Support.authorize!(@actor, @transaction.store)
+      Pos::Support.require_active_context!(@transaction.store, @transaction.register)
+      Pos::Support.require_transaction_cashier!(@actor, @transaction)
       raise Pos::Error, "quantity must be positive" unless @quantity.positive?
 
       variant = resolve_variant!

@@ -14,6 +14,8 @@ module Pos
 
     def call
       Pos::Support.authorize!(@actor, @transaction.store)
+      Pos::Support.require_active_context!(@transaction.store, @transaction.register)
+      Pos::Support.require_transaction_cashier!(@actor, @transaction)
 
       PosTransaction.transaction do
         transaction = Pos::Support.lock_working_transaction!(@transaction, @expected_lock_version)

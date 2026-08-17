@@ -39,12 +39,18 @@ module Pos
 
     def verify!
       receipt = @envelope.fetch("receipt")
-      raise Pos::Error, "completed envelope is missing receipt sequence" if receipt["sequence"].blank?
+      raise Pos::Error, "completed envelope is missing receipt sequence" unless positive_integer?(receipt["sequence"])
       raise Pos::Error, "completed envelope is missing receipt reference" if receipt["reference"].blank?
-      raise Pos::Error, "completed envelope is missing store number" if receipt["store_number"].blank?
-      raise Pos::Error, "completed envelope is missing register number" if receipt["register_number"].blank?
+      raise Pos::Error, "completed envelope is missing store number" unless positive_integer?(receipt["store_number"])
+      raise Pos::Error, "completed envelope is missing register number" unless positive_integer?(receipt["register_number"])
       raise Pos::Error, "completed envelope fact_type is invalid" unless @envelope.dig("operation", "fact_type") == PosOperation::FACT_TYPE
       raise Pos::Error, "completed envelope schema_version is invalid" unless @envelope.fetch("schema_version") == 1
+    end
+
+    private
+
+    def positive_integer?(value)
+      value.is_a?(Integer) && value.positive?
     end
   end
 end

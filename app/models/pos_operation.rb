@@ -13,4 +13,8 @@ class PosOperation < ApplicationRecord
   validates :command_type, :source_id, :idempotency_key, :command_payload_hash, :status, presence: true
   validates :status, inclusion: { in: STATUSES }
   validates :idempotency_key, uniqueness: { scope: %i[source_id command_type] }
+
+  def readonly?
+    super || (persisted? && attribute_in_database("status") == "completed")
+  end
 end

@@ -47,7 +47,7 @@ Defines an operational store and reporting boundary.
 | Field | Type | Constraints | Notes |
 | :---- | :---- | :---- | :---- |
 | `id` | uuid | PK; UUIDv7 |  |
-| `store_number` | varchar | null: false; unique | Business-facing identifier; stored as text |
+| `store_number` | integer | null: false; unique; CHECK `> 0` | Business-facing identifier; leading zeroes are display-only |
 | `code` | varchar | null: false; unique | Short, stable operational code |
 | `name` | varchar | null: false | Display name |
 | `legal_name` | varchar |  | Optional store-specific legal name |
@@ -71,8 +71,8 @@ Defines an operational store and reporting boundary.
 
 Recommended rules:
 
-* Normalize `code` and `store_number` before enforcing uniqueness.  
-* Do not allow `store_number` to change after it appears in a completed receipt identity (ADR-006); treat Register `register_number` the same once receipts exist.  
+* Normalize `code` before enforcing uniqueness. Store numbers are positive integers (`"01"` and `"1"` are the same identity).  
+* Do not allow `store_number` to change after a completed POS transaction exists for the Store or any Register in the Store has `receipt_sequence > 0`; treat Register `register_number` as immutable once that Register has issued a receipt.  
 * Do not allow the final active store to be deactivated normally.  
 * Do not hard-delete a store after another record references it.
 
@@ -291,7 +291,7 @@ A user may access a store when at least one effective assignment applies either 
 | :---- | :---- | :---- | :---- |
 | `id` | uuid | PK; UUIDv7 |  |
 | `store_id` | uuid | FK: `stores`; null: false |  |
-| `register_number` | varchar | null: false; unique per store | Durable number parallel to `stores.store_number`; immutable once a receipt has been issued |
+| `register_number` | integer | null: false; unique per store; CHECK `> 0` | Durable number parallel to `stores.store_number`; immutable once a receipt has been issued |
 | `name` | varchar | null: false | Editable label; not used in receipt reference |
 | `description` | text |  |  |
 | `active` | boolean | null: false; default `true` |  |
@@ -308,7 +308,7 @@ Constraints:
 unique(store_id, register_number)
 ```
 
-Device/client columns (`code`, `activated_at`, `revoked_at`, `last_seen_at`) and permission `workstations.revoke` were dropped with the rename. Terminal lifecycle belongs to a later phase.
+Device/client columns (`code`, `activated_at`, `revoked_at`, `last_seen_at`) were dropped with the rename. Permission `workstations.revoke` is retained inactive (deprecated) so custom-role grants remain in authorization history; it is removed from current system-role grants. Terminal lifecycle belongs to a later phase.
 
 Important distinctions:
 

@@ -5,7 +5,11 @@
   <%= render layout: "shared/form_section", locals: { title: "Identity" } do %>
     <div class="form-field">
       <%= form.label :store_number %>
-      <%= form.text_field :store_number %>
+      <% if store.persisted? && store.store_number_locked? %>
+        <p><code><%= store.store_number %></code> (immutable after a receipt has been issued)</p>
+      <% else %>
+        <%= form.number_field :store_number, min: 1, step: 1 %>
+      <% end %>
     </div>
     <div class="form-field">
       <%= form.label :code %>

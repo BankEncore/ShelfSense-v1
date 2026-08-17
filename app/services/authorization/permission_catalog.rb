@@ -157,6 +157,8 @@ module Authorization
         end
       end
 
+      ensure_deprecated_revoke_permission!
+
       ROLES.each do |role_attrs|
         role = Role.find_or_initialize_by(key: role_attrs[:key])
         role.assign_attributes(
@@ -175,6 +177,18 @@ module Authorization
         (current - desired).each do |key|
           role.role_permissions.joins(:permission).where(permissions: { key: key }).find_each(&:destroy!)
         end
+      end
+    end
+
+    def ensure_deprecated_revoke_permission!
+      Permission.find_or_initialize_by(key: "workstations.revoke").tap do |permission|
+        permission.assign_attributes(
+          group_key: "workstations",
+          name: "Revoke workstations (deprecated)",
+          scope_type: "either",
+          active: false
+        )
+        permission.save!
       end
     end
   end

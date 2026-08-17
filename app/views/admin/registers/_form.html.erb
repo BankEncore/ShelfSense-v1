@@ -4,7 +4,7 @@
   <% if register.persisted? && register.receipt_sequence.to_i.positive? %>
     <p>Register number: <code><%= register.register_number %></code> (immutable after a receipt has been issued)</p>
   <% else %>
-    <p><%= form.label :register_number %><%= form.text_field :register_number %></p>
+    <p><%= form.label :register_number %><%= form.number_field :register_number, min: 1, step: 1 %></p>
   <% end %>
   <p><%= form.label :name %><%= form.text_field :name %></p>
   <p><%= form.label :description %><%= form.text_area :description %></p>

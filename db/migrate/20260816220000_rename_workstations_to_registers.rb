@@ -27,7 +27,7 @@ class RenameWorkstationsToRegisters < ActiveRecord::Migration[8.1]
     add_index :registers, [ :store_id, :register_number ], unique: true, name: "index_registers_on_store_id_and_register_number"
 
     rename_permissions
-    drop_revoke_permission
+    deprecate_revoke_permission
   end
 
   def down
@@ -135,25 +135,20 @@ class RenameWorkstationsToRegisters < ActiveRecord::Migration[8.1]
     end
   end
 
-  def drop_revoke_permission
-    revoke_id = connection.select_value(<<~SQL)
-      SELECT id FROM permissions WHERE key = 'workstations.revoke'
-    SQL
-    return if revoke_id.blank?
-
-    execute(<<~SQL)
-      DELETE FROM role_permissions WHERE permission_id = #{connection.quote(revoke_id)}
-    SQL
-    execute(<<~SQL)
-      DELETE FROM permissions WHERE id = #{connection.quote(revoke_id)}
-    SQL
-  end
-
-  def restore_revoke_permission
+  def deprecate_revoke_permission
     existing = connection.select_value(<<~SQL)
       SELECT id FROM permissions WHERE key = 'workstations.revoke'
     SQL
-    return if existing.present?
+    if existing.present?
+      execute(<<~SQL)
+        UPDATE permissions
+        SET active = FALSE,
+            name = 'Revoke workstations (deprecated)',
+            updated_at = CURRENT_TIMESTAMP
+        WHERE key = 'workstations.revoke'
+      SQL
+      return
+    end
 
     now = connection.quote(Time.current)
     id = connection.quote(SecureRandom.uuid_v7)
@@ -163,12 +158,22 @@ class RenameWorkstationsToRegisters < ActiveRecord::Migration[8.1]
         #{id},
         'workstations.revoke',
         'workstations',
-        'Revoke workstations',
+        'Revoke workstations (deprecated)',
         'either',
-        TRUE,
+        FALSE,
         #{now},
         #{now}
       )
+    SQL
+  end
+
+  def restore_revoke_permission
+    execute(<<~SQL)
+      UPDATE permissions
+      SET active = TRUE,
+          name = 'Revoke workstations',
+          updated_at = CURRENT_TIMESTAMP
+      WHERE key = 'workstations.revoke'
     SQL
   end
 end

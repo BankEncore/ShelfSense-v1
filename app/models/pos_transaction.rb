@@ -18,6 +18,7 @@ class PosTransaction < ApplicationRecord
   validate :context_consistency
 
   scope :working, -> { where(status: "working") }
+  scope :completed, -> { where(status: "completed") }
 
   def working?
     status == "working"
@@ -29,6 +30,14 @@ class PosTransaction < ApplicationRecord
 
   def cancelled?
     status == "cancelled"
+  end
+
+  def commercially_immutable?
+    persisted? && %w[completed cancelled].include?(attribute_in_database("status"))
+  end
+
+  def readonly?
+    super || commercially_immutable?
   end
 
   def amount_due_cents
