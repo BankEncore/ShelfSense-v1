@@ -36,7 +36,7 @@ module Pos
         command_type: PosOperation::COMMAND_TYPE,
         source_id: @transaction.register_id,
         status: %w[in_flight failed]
-      )
+      ).order(created_at: :desc, id: :desc)
     end
 
     def payload_matches?(operation, tender)

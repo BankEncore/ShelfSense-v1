@@ -8,11 +8,12 @@ module Pos
       new(**attrs).call
     end
 
-    def initialize(store:, register:, actor:, opening_float_cents: nil)
+    def initialize(store:, register:, actor:, opening_float_cents: nil, business_date: nil)
       @store = store
       @register = register
       @actor = actor
       @opening_float_cents = opening_float_cents
+      @business_date = business_date
     end
 
     def call
@@ -48,7 +49,12 @@ module Pos
 
     def existing_or_open_period
       PosReportingPeriod.open.find_by(register: @register) ||
-        Pos::OpenReportingPeriod.call(store: @store, register: @register, actor: @actor)
+        Pos::OpenReportingPeriod.call(
+          store: @store,
+          register: @register,
+          actor: @actor,
+          business_date: @business_date
+        )
     rescue Pos::Error => e
       raise unless e.message.match?(/already has an open reporting period/)
 

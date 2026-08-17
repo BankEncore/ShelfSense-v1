@@ -3,7 +3,7 @@
 module Pos
   class CompletedTransactionsController < BaseController
     def show
-      @transaction = PosTransaction.find(params[:id])
+      @transaction = PosTransaction.find_by!(id: params[:id], store_id: current_store.id)
       raise ActiveRecord::RecordNotFound unless @transaction.completed?
 
       Pos::Support.authorize!(current_user, @transaction.store)

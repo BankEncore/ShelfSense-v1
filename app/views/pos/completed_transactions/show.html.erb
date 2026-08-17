@@ -3,7 +3,7 @@
 <main class="pos-receipt" data-controller="pos-receipt" data-action="keydown@document->pos-receipt#onKeydown">
   <header class="pos-header">
     <div class="pos-header__row">
-      <span>Store  <%= current_store.admin_label %></span>
+      <span>Store  <%= @transaction.store.admin_label %></span>
       <span>Register  <%= @register.register_number %></span>
       <span><%= current_user.display_name %></span>
     </div>

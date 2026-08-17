@@ -87,8 +87,8 @@ Rails.application.routes.draw do
     post "register/abandon_tender", to: "workspaces#abandon_tender"
     post "register/cancel", to: "workspaces#cancel"
     post "register/tender", to: "workspaces#tender"
-    post "register/complete", to: "workspaces#complete"
     post "register/continue", to: "workspaces#continue"
+    post "transactions/:transaction_id/complete", to: "workspaces#complete", as: :transaction_complete
     get "transactions/:id/completed", to: "completed_transactions#show", as: :completed_transaction
   end
 

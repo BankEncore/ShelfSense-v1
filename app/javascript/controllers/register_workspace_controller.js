@@ -3,6 +3,9 @@ import { Controller } from "@hotwired/stimulus"
 export default class extends Controller {
   static targets = [
     "field",
+    "fieldLabel",
+    "modeLabel",
+    "chrome",
     "overlay",
     "completeForm",
     "tenderForm",
@@ -15,7 +18,13 @@ export default class extends Controller {
     "presentedInput",
     "quantityLineInput",
     "removeLineInput",
-    "dontCancel"
+    "dontCancel",
+    "confirmCancel",
+    "retry",
+    "quantityButton",
+    "tenderButton",
+    "removeButton",
+    "cancelButton"
   ]
 
   static values = {
@@ -34,6 +43,10 @@ export default class extends Controller {
 
   onKeydown(event) {
     if (this.overlayOpen()) {
+      if (event.key === "Tab") {
+        this.trapOverlayTab(event)
+        return
+      }
       event.preventDefault()
       if (event.key === "Escape") this.closeOverlay()
       if (event.key === "F9") this.confirmCancel()
@@ -41,12 +54,14 @@ export default class extends Controller {
     }
 
     if (this.inFlight || this.modeValue === "completion_pending") {
+      if (event.key === "Enter" && this.isActionableControl(event.target)) return
       if (event.key === "Enter" || event.key === "F9") event.preventDefault()
       return
     }
 
     if (this.modeValue === "completion_failed") {
       if (event.key === "Enter") {
+        if (this.isActionableControl(event.target)) return
         event.preventDefault()
         this.submitComplete()
       }
@@ -59,6 +74,7 @@ export default class extends Controller {
     }
 
     if (event.key === "Enter") {
+      if (this.isActionableControl(event.target)) return
       event.preventDefault()
       this.submitMode()
       return
@@ -81,7 +97,7 @@ export default class extends Controller {
     } else if (event.key === "+") {
       event.preventDefault()
       this.enterTender()
-    } else if (event.key === "-") {
+    } else if (event.key === "F8") {
       event.preventDefault()
       this.removeSelected()
     } else if (event.key === "ArrowUp" || event.key === "ArrowDown") {
@@ -130,24 +146,34 @@ export default class extends Controller {
 
   enterQuantity() {
     if (this.modeValue !== "sale_entry" || !this.selectedRow()) return
-    this.modeValue = "quantity"
-    this.element.dataset.registerWorkspaceModeValue = "quantity"
-    const mode = this.element.querySelector(".pos-command__mode")
-    if (mode) mode.textContent = "QUANTITY"
+    const row = this.selectedRow()
+    this.setMode("quantity", "QUANTITY")
+    const description = row.dataset.description || "Selected line"
+    const quantity = row.dataset.quantity || ""
+    this.setFieldLabel(`${description} · Current quantity ${quantity}`)
     this.fieldTarget.disabled = false
-    this.fieldTarget.value = ""
+    this.fieldTarget.inputMode = "numeric"
+    this.fieldTarget.value = quantity
+    this.setActionEnabled("quantityButton", false)
+    this.setActionEnabled("tenderButton", false)
+    this.setActionEnabled("removeButton", false)
     this.fieldTarget.focus()
+    this.fieldTarget.select()
   }
 
   enterTender() {
     if (this.modeValue !== "sale_entry") return
     if (!this.element.querySelector(".pos-lines tbody tr")) return
-    this.modeValue = "tender"
-    this.element.dataset.registerWorkspaceModeValue = "tender"
-    const mode = this.element.querySelector(".pos-command__mode")
-    if (mode) mode.textContent = "CASH TENDER"
+    this.setMode("tender", "CASH TENDER")
+    const due = this.element.querySelector(".pos-totals__due")
+    const dueText = due ? due.textContent.trim() : "Amount due"
+    this.setFieldLabel(`${dueText}. Cash presented`)
     this.fieldTarget.disabled = false
+    this.fieldTarget.inputMode = "decimal"
     this.fieldTarget.value = ""
+    this.setActionEnabled("quantityButton", false)
+    this.setActionEnabled("tenderButton", false)
+    this.setActionEnabled("removeButton", false)
     this.fieldTarget.focus()
   }
 
@@ -160,24 +186,30 @@ export default class extends Controller {
 
   escape() {
     if (this.modeValue === "quantity" || this.modeValue === "tender") {
-      this.modeValue = "sale_entry"
-      this.element.dataset.registerWorkspaceModeValue = "sale_entry"
-      const mode = this.element.querySelector(".pos-command__mode")
-      if (mode) mode.textContent = "SALE ENTRY"
+      this.setMode("sale_entry", "SALE ENTRY")
+      this.setFieldLabel("Scan or identifier")
+      this.fieldTarget.inputMode = "text"
       this.fieldTarget.value = ""
+      const hasSelection = Boolean(this.selectedRow())
+      const hasLines = Boolean(this.element.querySelector(".pos-lines tbody tr"))
+      this.setActionEnabled("quantityButton", hasSelection)
+      this.setActionEnabled("tenderButton", hasLines)
+      this.setActionEnabled("removeButton", hasSelection)
       this.fieldTarget.focus()
     }
   }
 
   openOverlay() {
-    const cancel = this.element.querySelector(".pos-actions .btn--danger")
+    const cancel = this.hasCancelButtonTarget ? this.cancelButtonTarget : this.element.querySelector(".pos-actions .btn--danger")
     if (!cancel || cancel.disabled) return
     this.overlayTarget.hidden = false
+    if (this.hasChromeTarget) this.chromeTarget.inert = true
     this.dontCancelTarget.focus()
   }
 
   closeOverlay() {
     this.overlayTarget.hidden = true
+    if (this.hasChromeTarget) this.chromeTarget.inert = false
     this.restoreFocus()
   }
 
@@ -222,13 +254,51 @@ export default class extends Controller {
   }
 
   restoreFocus() {
-    if (!this.hasFieldTarget) return
-    if (this.modeValue === "completion_failed") {
-      const retry = this.element.querySelector("[data-register-workspace-target='retry']")
-      if (retry) retry.focus()
+    if (this.hasRetryTarget && (this.modeValue === "completion_failed" || (this.modeValue === "completion_pending" && !this.autoCompleteValue))) {
+      this.retryTarget.focus()
       return
     }
+    if (!this.hasFieldTarget) return
     if (this.fieldTarget.disabled) return
     this.fieldTarget.focus()
+  }
+
+  setMode(mode, heading) {
+    this.modeValue = mode
+    this.element.dataset.registerWorkspaceModeValue = mode
+    if (this.hasModeLabelTarget) this.modeLabelTarget.textContent = heading
+  }
+
+  setFieldLabel(text) {
+    if (this.hasFieldLabelTarget) this.fieldLabelTarget.textContent = text
+  }
+
+  setActionEnabled(targetName, enabled) {
+    const has = `has${targetName.charAt(0).toUpperCase()}${targetName.slice(1)}Target`
+    if (!this[has]) return
+    this[`${targetName}Target`].disabled = !enabled
+  }
+
+  isActionableControl(target) {
+    if (!target || !target.closest) return false
+    return Boolean(target.closest("button, [type=submit], a[href], [role=button]"))
+  }
+
+  trapOverlayTab(event) {
+    const controls = this.overlayControls()
+    if (controls.length === 0) return
+    event.preventDefault()
+    const current = controls.indexOf(document.activeElement)
+    let next = current
+    if (event.shiftKey) {
+      next = current <= 0 ? controls.length - 1 : current - 1
+    } else {
+      next = current === controls.length - 1 || current < 0 ? 0 : current + 1
+    }
+    controls[next].focus()
+  }
+
+  overlayControls() {
+    return [this.dontCancelTarget, this.confirmCancelTarget].filter(Boolean)
   }
 }

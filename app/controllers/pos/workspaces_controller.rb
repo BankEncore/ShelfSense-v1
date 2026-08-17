@@ -2,9 +2,10 @@
 
 module Pos
   class WorkspacesController < BaseController
-    before_action :require_register!
-    before_action :prepare_workspace!, except: %i[show continue]
+    before_action :require_register!, except: :complete
+    before_action :prepare_workspace!, except: %i[show continue complete]
     before_action :prepare_session!, only: :continue
+    before_action :load_completion_transaction!, only: :complete
 
     def show
       @session_record = actor_session
@@ -23,7 +24,7 @@ module Pos
     end
 
     def merchandise
-      rescue_workspace do
+      rescue_workspace(error_mode: "sale_entry") do
         @selected_line = Pos::AddMerchandise.call(
           transaction: @transaction,
           actor: current_user,
@@ -38,7 +39,7 @@ module Pos
     end
 
     def quantity
-      rescue_workspace do
+      rescue_workspace(error_mode: "quantity") do
         line = find_line!
         @selected_line = Pos::ChangeQuantity.call(
           transaction: @transaction,
@@ -54,7 +55,7 @@ module Pos
     end
 
     def remove
-      rescue_workspace do
+      rescue_workspace(error_mode: "sale_entry") do
         line = find_line!
         previous = previous_line(line)
         Pos::RemoveWorkingLine.call(
@@ -71,7 +72,7 @@ module Pos
     end
 
     def abandon_tender
-      rescue_workspace do
+      rescue_workspace(error_mode: "derive") do
         Pos::AbandonTender.call(
           transaction: @transaction,
           actor: current_user,
@@ -84,7 +85,7 @@ module Pos
     end
 
     def cancel
-      rescue_workspace do
+      rescue_workspace(error_mode: "sale_entry") do
         Pos::CancelTransaction.call(
           transaction: @transaction,
           actor: current_user,
@@ -96,7 +97,7 @@ module Pos
     end
 
     def tender
-      rescue_workspace do
+      rescue_workspace(error_mode: "tender") do
         presented = Money::ParseCents.call(params[:amount_presented])
         raise Pos::Error, "cash presented is required" if presented.nil?
 
@@ -109,15 +110,14 @@ module Pos
         @transaction.reload
         mint_or_restore_completion!
         @ui_mode = "completion_pending"
-        @auto_complete = @completion_status == "pending"
         respond_workspace
       end
     end
 
     def complete
-      rescue_workspace do
-        @transaction.reload
+      rescue_workspace(error_mode: "derive") do
         if @transaction.completed?
+          authorize_completion_transaction!
           redirect_to pos_completed_transaction_path(@transaction)
           return
         end
@@ -174,6 +174,22 @@ module Pos
       redirect_to pos_register_enter_path(register_id: @register.id)
     end
 
+    def load_completion_transaction!
+      @transaction = PosTransaction.find_by!(id: params[:transaction_id], store_id: current_store.id)
+      raise ActiveRecord::RecordNotFound if @transaction.cancelled?
+
+      @session_record = @transaction.pos_session
+      @register = @transaction.register
+      session[:pos_register_id] = @register.id
+    end
+
+    def authorize_completion_transaction!
+      Pos::Support.authorize!(current_user, @transaction.store)
+      Pos::Support.require_transaction_cashier!(current_user, @transaction)
+    rescue Pos::Denied
+      raise ActiveRecord::RecordNotFound
+    end
+
     def prepare_view_state
       @period = @session_record.reporting_period
       @lines = @transaction.pos_transaction_lines.includes(product_variant: :product)
@@ -183,20 +199,49 @@ module Pos
       @command_value ||= nil
       if @tender
         mint_or_restore_completion!
-        @ui_mode ||= @completion_status == "failed" ? "completion_failed" : "completion_pending"
-        @auto_complete = @completion_status == "pending" || @completion_status == "in_flight"
+        apply_completion_view_state
       else
         @ui_mode ||= "sale_entry"
         @auto_complete = false
       end
     end
 
+    def apply_completion_view_state
+      case @completion_status
+      when "pending"
+        @ui_mode ||= "completion_pending"
+        @auto_complete = true
+      when "in_flight"
+        if completion_lease_active?
+          @ui_mode ||= "completion_pending"
+          @auto_complete = false
+          @feedback ||= "Completion is still processing"
+        else
+          @ui_mode ||= "completion_failed"
+          @auto_complete = false
+        end
+      when "failed"
+        @ui_mode ||= "completion_failed"
+        @auto_complete = false
+      else
+        @ui_mode ||= "completion_pending"
+        @auto_complete = false
+      end
+    end
+
+    def completion_lease_active?
+      expires_at = @completion_operation&.lease_expires_at
+      expires_at.present? && expires_at >= Time.current
+    end
+
     def mint_or_restore_completion!
       found = Pos::FindCompletionOperation.call(transaction: @transaction, actor: current_user)
       if found
+        @completion_operation = found
         @completion_operation_id = found.id
         @completion_status = found.status
       else
+        @completion_operation = nil
         @completion_operation_id = SecureRandom.uuid_v7
         @completion_status = "pending"
       end
@@ -210,31 +255,34 @@ module Pos
       end
     end
 
-    def rescue_workspace
+    def rescue_workspace(error_mode: "sale_entry")
       yield
     rescue Pos::Denied
       redirect_to root_path, alert: "You are not authorized to perform that action."
     rescue Pos::StaleObject
-      @feedback = "This sale was changed. Reload and try again."
-      @transaction.reload
-      @ui_mode = "sale_entry"
-      respond_workspace
+      recover_from_workspace_error("This sale was changed. Reload and try again.", error_mode)
     rescue Money::ParseCents::Error, Pos::Error => e
-      @feedback = e.message
-      @transaction.reload
-      @command_value = params[:identifier] || params[:quantity] || params[:amount_presented]
-      @ui_mode = e.message.match?(/less than amount due|cash presented/i) ? "tender" : workspace_mode_after_error
-      if @transaction.completed?
-        redirect_to pos_completed_transaction_path(@transaction)
-      else
-        respond_workspace
-      end
+      recover_from_workspace_error(e.message, error_mode)
     end
 
-    def workspace_mode_after_error
-      return "completion_failed" if @transaction.pos_tenders.exists?
+    def recover_from_workspace_error(message, error_mode)
+      @feedback = message
+      @transaction.reload
+      @command_value = params[:identifier] || params[:quantity] || params[:amount_presented]
+      if @transaction.completed?
+        redirect_to pos_completed_transaction_path(@transaction)
+        return
+      end
 
-      "sale_entry"
+      apply_error_mode(error_mode)
+      respond_workspace
+    end
+
+    def apply_error_mode(error_mode)
+      return if @transaction.pos_tenders.where(tender_type: "cash").exists?
+      return if error_mode == "derive"
+
+      @ui_mode = error_mode
     end
 
     def expected_lock_version

@@ -44,6 +44,10 @@ module Pos
       period.present? && period.business_date != BusinessDate.for_store(@store)
     end
 
+    def opening_new_period?
+      period.nil?
+    end
+
     def enterable?
       !occupied?
     end

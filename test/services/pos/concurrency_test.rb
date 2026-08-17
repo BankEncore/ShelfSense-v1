@@ -253,28 +253,6 @@ class Pos::ConcurrencyTest < ActiveSupport::TestCase
     assert_equal [ operation_id ], successes.map { |result| result.operation.id }.uniq
   end
 
-  private
-
-  def prepare_sale(register_number:, presented_cents:)
-    register = Register.create!(store: @store, register_number: register_number, name: "Lane #{register_number}")
-    context = pos_open_context(store: @store, actor: @actor, register: register)
-    transaction = Pos::StartTransaction.call(session: context[:session], actor: @actor)
-    Pos::AddMerchandise.call(
-      transaction: transaction,
-      actor: @actor,
-      expected_lock_version: transaction.lock_version,
-      identifier: @variant.sku
-    )
-    transaction.reload
-    Pos::TenderCash.call(
-      transaction: transaction,
-      actor: @actor,
-      expected_lock_version: transaction.lock_version,
-      amount_presented_cents: presented_cents
-    )
-    { context: context, transaction: transaction.reload }
-  end
-
   test "concurrent resume or start yields one working transaction" do
     register = Register.create!(store: @store, register_number: 93, name: "Resume")
     context = pos_open_context(store: @store, actor: @actor, register: register)
@@ -303,5 +281,27 @@ class Pos::ConcurrencyTest < ActiveSupport::TestCase
     assert_equal 1, PosTransaction.uncached {
       PosTransaction.where(pos_session_id: session_id, status: "working").count
     }
+  end
+
+  private
+
+  def prepare_sale(register_number:, presented_cents:)
+    register = Register.create!(store: @store, register_number: register_number, name: "Lane #{register_number}")
+    context = pos_open_context(store: @store, actor: @actor, register: register)
+    transaction = Pos::StartTransaction.call(session: context[:session], actor: @actor)
+    Pos::AddMerchandise.call(
+      transaction: transaction,
+      actor: @actor,
+      expected_lock_version: transaction.lock_version,
+      identifier: @variant.sku
+    )
+    transaction.reload
+    Pos::TenderCash.call(
+      transaction: transaction,
+      actor: @actor,
+      expected_lock_version: transaction.lock_version,
+      amount_presented_cents: presented_cents
+    )
+    { context: context, transaction: transaction.reload }
   end
 end

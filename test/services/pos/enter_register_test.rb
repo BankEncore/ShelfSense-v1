@@ -72,6 +72,37 @@ class PosEnterRegisterTest < ActiveSupport::TestCase
     assert_equal 0, PosSession.where(register: @register).count
   end
 
+  test "rejects a confirmed business date that no longer matches the store calendar" do
+    now = Time.current
+    confirmed = BusinessDate.for_store(@store, at: now)
+
+    travel_to now + 1.day do
+      error = assert_raises(Pos::Error) do
+        Pos::EnterRegister.call(
+          store: @store,
+          register: @register,
+          actor: @actor,
+          opening_float_cents: 0,
+          business_date: confirmed
+        )
+      end
+      assert_match(/business date must match/, error.message)
+      assert_equal 0, PosReportingPeriod.where(register: @register).count
+    end
+  end
+
+  test "opens a period when the confirmed business date matches the store calendar" do
+    confirmed = BusinessDate.for_store(@store)
+    result = Pos::EnterRegister.call(
+      store: @store,
+      register: @register,
+      actor: @actor,
+      opening_float_cents: 0,
+      business_date: confirmed
+    )
+    assert_equal confirmed, result.session.reporting_period.business_date
+  end
+
   test "open gate is occupied for a different cashier" do
     Pos::EnterRegister.call(
       store: @store,

@@ -1,6 +1,6 @@
 # Phase 5 — First Operational Cash Register
 
-**Status:** Slice 1 implemented (headless cash accountability and Z finalize). Slice 2 Register workspace implemented ([register-workspace.md](register-workspace.md)). Interaction wireframes in [register-workspace-ux.md](register-workspace-ux.md). Slice 3 print and close/Z screens remain.
+**Status:** Slice 1 implemented (headless cash accountability and Z finalize). Slice 2 Register workspace implemented; HTTP/browser hardening in progress ([register-workspace.md](register-workspace.md)). Interaction wireframes in [register-workspace-ux.md](register-workspace-ux.md). Slice 3 print and close/Z screens remain.
 
 **Authority**
 
@@ -97,7 +97,7 @@ Slice 1 answers the cash-accountability half without screens. Slice 2 is the cas
 | Input modes (slice 2) | `SALE_ENTRY`, `QUANTITY`, `TENDER` are **ephemeral UI modes**, not persisted transaction states. Completion-pending after successful `TenderCash` is locked input, not a fourth named mode |
 | One working transaction | Partial unique index `UNIQUE (pos_session_id) WHERE status = 'working'`. `StartTransaction` rejects a second working row. `ResumeOrStartTransaction` is the UI-safe boundary. GET never creates a transaction |
 | Rescan | Compatible SKU increments the existing line inside `AddMerchandise` |
-| Tender vs complete | Separate `POST tender` and `POST complete`. Completion retries must not call `TenderCash` again. GET workspace recovery matches a completion operation from **persisted** working transaction + Cash tender |
+| Tender vs complete | Separate `POST tender` and `POST /pos/transactions/:id/complete`. Completion retries must not call `TenderCash` again. GET workspace recovery matches a completion operation from **persisted** working transaction + Cash tender. Unexpired `in_flight` does not auto-submit |
 | Basket vs tender | Shared `clear_working_tenders!` (destroy only; no extra aggregate `save!`). `AddMerchandise`, `ChangeQuantity`, `RemoveWorkingLine`, `AbandonTender`, and `CancelTransaction` clear working tenders in the same database transaction. `AbandonTender` does not bump `lock_version` when there is no tender. Cancelled lines remain; cancelled rows must not keep a provisional Cash tender. Empty-basket cancel is a Slice 2 UI disable; the service may still cancel an empty working transaction |
 | Slice 2 receipt | On-screen completion receipt/confirmation from immutable completed facts. Print is Slice 3 |
 | Controllers (slices 2–3) | Call Phase 4/5 services only. No receipt allocation or inventory mutation in controllers or Stimulus |
@@ -117,20 +117,20 @@ Slice 1 answers the cash-accountability half without screens. Slice 2 is the cas
 - Audit + immutability + concurrency tests
 - No POS screens
 
-### Slice 2 — Register workspace (implemented)
+### Slice 2 — Register workspace (implemented; HTTP/browser hardening in progress)
 
-Authority: [register-workspace.md](register-workspace.md). Interaction: [register-workspace-ux.md](register-workspace-ux.md).
+Authority: [register-workspace.md](register-workspace.md). Interaction: [register-workspace-ux.md](register-workspace-ux.md). Slice 3 remains unimplemented.
 
-- Rails + Importmap + Turbo + Stimulus; system/browser tests required when the workspace is implemented
-- Open gate: confirm calculated business date, opening float, resume or open period/session for the cashier's register
+- Rails + Importmap + Turbo + Stimulus; system/browser tests required
+- Open gate: POST `confirmed_business_date` when opening a new period; opening float; resume or open period/session for the cashier's register
 - At most one working transaction per Session; GET workspace is read-only (working + tender restores completion-pending; no working transaction → enter; never infer a receipt); `ResumeOrStartTransaction` on POST enter/continue/cancel; `AbandonTender` on Return to sale
-- Persistent primary scan/input; keyboard-first ephemeral `SALE_ENTRY` / `QUANTITY` / `TENDER`
+- Persistent primary scan/input; keyboard-first ephemeral `SALE_ENTRY` / `QUANTITY` / `TENDER`; F8 removes the selected line
 - Rescan of a compatible SKU increments the existing line in `AddMerchandise`
-- `POST tender` then `POST complete` (not one combined endpoint); completion retry does not re-tender
+- `POST tender` then `POST /pos/transactions/:id/complete`; unexpired `in_flight` does not auto-submit; completion retry does not re-tender
 - Basket mutation, Return to sale (`AbandonTender`), and `CancelTransaction` clear working tenders; Slice 2 disables Cancel on an empty basket (`CancelTransaction` may still cancel empty)
-- Domain (headless PR, no UI): unique working transaction + preflight; `StartTransaction` stays start-only; `ResumeOrStartTransaction`; `AddMerchandise` rescan merge; `clear_working_tenders!`; `AbandonTender`; `CancelTransaction` tender discard; `FindCompletionOperation` from persisted settlement (re-tender must not restore the old failed operation)
+- Domain: unique working transaction + preflight; `StartTransaction` stays start-only; `ResumeOrStartTransaction`; `AddMerchandise` rescan merge; `clear_working_tenders!`; `AbandonTender`; `CancelTransaction` tender discard; `FindCompletionOperation` from persisted settlement (newest `in_flight`, else newest `failed`)
 - On-screen completion receipt/confirmation from completed facts; no print in this slice
-- Low-fidelity UX wireframes: [register-workspace-ux.md](register-workspace-ux.md) (drafted; review before Hotwire)
+- Low-fidelity UX wireframes: [register-workspace-ux.md](register-workspace-ux.md)
 
 ### Slice 3 — Print + close / Z screens
 

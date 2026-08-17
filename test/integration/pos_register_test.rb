@@ -28,6 +28,7 @@ class PosRegisterTest < ActionDispatch::IntegrationTest
     assert_equal 0, PosSession.count
     assert_equal 0, PosTransaction.count
     assert_match "Opening float", response.body
+    assert_select "input[name='confirmed_business_date']"
     assert_select "html:not([data-turbo])"
     assert_select "script[type=module]", text: /import "pos"/
   end
@@ -58,7 +59,7 @@ class PosRegisterTest < ActionDispatch::IntegrationTest
     assert_select "input[name='completion_operation_id']"
 
     operation_id = css_select("input[name='completion_operation_id']").first["value"]
-    post pos_register_complete_path, params: {
+    post pos_transaction_complete_path(transaction), params: {
       completion_operation_id: operation_id,
       lock_version: transaction.lock_version,
       expected_total_cents: transaction.total_cents,
@@ -174,6 +175,209 @@ class PosRegisterTest < ActionDispatch::IntegrationTest
     transaction = PosTransaction.working.find_by!(register: @register)
     get pos_completed_transaction_path(transaction)
     assert_response :not_found
+  end
+
+  test "complete retry of an already completed transaction shows that receipt" do
+    post pos_register_enter_path, params: { register_id: @register.id, opening_float: "0.00" }
+    transaction = PosTransaction.working.find_by!(register: @register)
+    post pos_register_merchandise_path, params: { identifier: @variant.sku, lock_version: transaction.lock_version }
+    transaction.reload
+    post pos_register_tender_path, params: { amount_presented: "25.00", lock_version: transaction.lock_version }
+    transaction.reload
+    operation_id = css_select("input[name='completion_operation_id']").first["value"]
+    params = {
+      completion_operation_id: operation_id,
+      lock_version: transaction.lock_version,
+      expected_total_cents: transaction.total_cents,
+      amount_presented_cents: 2500
+    }
+    post pos_transaction_complete_path(transaction), params: params
+    assert_redirected_to pos_completed_transaction_path(transaction)
+    assert transaction.reload.completed?
+
+    post pos_transaction_complete_path(transaction), params: params
+    assert_redirected_to pos_completed_transaction_path(transaction)
+    follow_redirect!
+    assert_response :success
+    assert_match transaction.transaction_reference, response.body
+    assert_equal 1, PosTransaction.completed.where(id: transaction.id).count
+  end
+
+  test "complete does not redirect to enter when the working transaction is gone" do
+    post pos_register_enter_path, params: { register_id: @register.id, opening_float: "0.00" }
+    transaction = PosTransaction.working.find_by!(register: @register)
+    post pos_register_merchandise_path, params: { identifier: @variant.sku, lock_version: transaction.lock_version }
+    transaction.reload
+    post pos_register_tender_path, params: { amount_presented: "25.00", lock_version: transaction.lock_version }
+    transaction.reload
+    operation_id = css_select("input[name='completion_operation_id']").first["value"]
+    Pos::CompleteTransaction.call(
+      transaction: transaction,
+      actor: @actor,
+      operation_id: operation_id,
+      expected_lock_version: transaction.lock_version,
+      expected_total_cents: transaction.total_cents,
+      amount_presented_cents: 2500
+    )
+    post pos_transaction_complete_path(transaction), params: {
+      completion_operation_id: operation_id,
+      lock_version: transaction.lock_version,
+      expected_total_cents: transaction.total_cents,
+      amount_presented_cents: 2500
+    }
+    assert_redirected_to pos_completed_transaction_path(transaction)
+    follow_redirect!
+    assert_response :success
+    assert_match transaction.reload.transaction_reference, response.body
+  end
+
+  test "invalid quantity stays in quantity and invalid cash stays in tender" do
+    post pos_register_enter_path, params: { register_id: @register.id, opening_float: "0.00" }
+    transaction = PosTransaction.working.find_by!(register: @register)
+    post pos_register_merchandise_path, params: { identifier: @variant.sku, lock_version: transaction.lock_version }
+    transaction.reload
+    line = transaction.pos_transaction_lines.first
+
+    post pos_register_quantity_path, params: {
+      line_id: line.id,
+      quantity: "0",
+      lock_version: transaction.lock_version
+    }
+    assert_response :success
+    assert_match "QUANTITY", response.body
+    assert_match "quantity must be positive", response.body
+    assert_select "#pos-command-field[value='0']"
+
+    post pos_register_tender_path, params: { amount_presented: "abc", lock_version: transaction.lock_version }
+    assert_response :success
+    assert_match "CASH TENDER", response.body
+    assert_match(/not a valid amount/i, response.body)
+    assert_select "#pos-command-field[value='abc']"
+
+    post pos_register_tender_path, params: { amount_presented: "0.01", lock_version: transaction.reload.lock_version }
+    assert_response :success
+    assert_match "CASH TENDER", response.body
+    assert_match(/amount due/i, response.body)
+    assert transaction.reload.pos_tenders.empty?
+  end
+
+  test "unexpired in_flight completion does not auto submit" do
+    post pos_register_enter_path, params: { register_id: @register.id, opening_float: "0.00" }
+    transaction = PosTransaction.working.find_by!(register: @register)
+    post pos_register_merchandise_path, params: { identifier: @variant.sku, lock_version: transaction.lock_version }
+    transaction.reload
+    post pos_register_tender_path, params: { amount_presented: "25.00", lock_version: transaction.lock_version }
+    transaction.reload
+    operation_id = SecureRandom.uuid_v7
+    payload = Pos::CompleteTransaction.command_payload(
+      transaction: transaction,
+      operation_id: operation_id,
+      expected_lock_version: transaction.lock_version,
+      expected_total_cents: transaction.total_cents,
+      amount_presented_cents: 2500
+    )
+    Pos::OperationLease.begin!(
+      register_id: transaction.register_id,
+      operation_id: operation_id,
+      command_payload: payload,
+      store_id: transaction.store_id,
+      pos_transaction_id: transaction.id
+    )
+    get pos_register_workspace_path
+    assert_response :success
+    assert_match "Completion is still processing", response.body
+    assert_select "[data-register-workspace-auto-complete-value='false']"
+    assert_select "input[name='completion_operation_id'][value='#{operation_id}']"
+  end
+
+  test "confirmed business date is rejected after the calendar boundary" do
+    now = Time.current
+    confirmed = BusinessDate.for_store(@store, at: now)
+    get pos_register_enter_path, params: { register_id: @register.id }
+    assert_response :success
+    assert_select "input[name='confirmed_business_date'][value='#{confirmed.iso8601}']"
+
+    travel_to now + 1.day do
+      UserSession.where(user: @actor).update_all(last_seen_at: Time.current)
+      post pos_register_enter_path, params: {
+        register_id: @register.id,
+        opening_float: "0.00",
+        confirmed_business_date: confirmed.iso8601
+      }
+      assert_response :unprocessable_content
+      assert_select "input[name='confirmed_business_date'][value='#{BusinessDate.for_store(@store).iso8601}']"
+      assert_equal 0, PosReportingPeriod.where(register: @register).count
+    end
+  end
+
+  test "completed receipt is scoped to the current store" do
+    post pos_register_enter_path, params: { register_id: @register.id, opening_float: "0.00" }
+    transaction = PosTransaction.working.find_by!(register: @register)
+    post pos_register_merchandise_path, params: { identifier: @variant.sku, lock_version: transaction.lock_version }
+    transaction.reload
+    post pos_register_tender_path, params: { amount_presented: "25.00", lock_version: transaction.lock_version }
+    transaction.reload
+    operation_id = css_select("input[name='completion_operation_id']").first["value"]
+    post pos_transaction_complete_path(transaction), params: {
+      completion_operation_id: operation_id,
+      lock_version: transaction.lock_version,
+      expected_total_cents: transaction.total_cents,
+      amount_presented_cents: 2500
+    }
+    follow_redirect!
+    assert_match @store.name, response.body
+
+    east = Store.create!(
+      store_number: "2",
+      code: "east",
+      name: "East Store",
+      timezone: "America/New_York",
+      country_code: "US"
+    )
+    post store_selection_path, params: { store_id: east.id }
+    get pos_completed_transaction_path(transaction)
+    assert_response :not_found
+  end
+
+  test "complete retry after inventory failure does not re-tender" do
+    post pos_register_enter_path, params: { register_id: @register.id, opening_float: "0.00" }
+    transaction = PosTransaction.working.find_by!(register: @register)
+    post pos_register_merchandise_path, params: { identifier: @variant.sku, lock_version: transaction.lock_version }
+    transaction.reload
+    post pos_register_tender_path, params: { amount_presented: "25.00", lock_version: transaction.lock_version }
+    transaction.reload
+    operation_id = css_select("input[name='completion_operation_id']").first["value"]
+    complete_params = {
+      completion_operation_id: operation_id,
+      lock_version: transaction.lock_version,
+      expected_total_cents: transaction.total_cents,
+      amount_presented_cents: 2500
+    }
+
+    Inventory::AdjustmentReasons.seed!
+    Inventory::PostAdjustment.call(
+      store: @store,
+      product_variant: @variant,
+      adjustment_reason: AdjustmentReason.find_by!(code: "shrinkage"),
+      quantity_delta: -5,
+      actor: @actor,
+      source_id: SecureRandom.uuid_v7,
+      idempotency_key: SecureRandom.uuid_v7
+    )
+
+    post pos_transaction_complete_path(transaction), params: complete_params
+    assert_response :success
+    assert_match "Retry complete", response.body
+    assert_select "input[name='completion_operation_id'][value='#{operation_id}']"
+    assert transaction.reload.working?
+    assert_equal 1, transaction.pos_tenders.count
+
+    open_quantity_stock(store: @store, variant: @variant, actor: @actor, quantity: 5)
+    post pos_transaction_complete_path(transaction), params: complete_params
+    assert_redirected_to pos_completed_transaction_path(transaction)
+    assert transaction.reload.completed?
+    assert_equal 1, transaction.pos_tenders.count
+    assert_equal 1, OutboxMessage.where(event_type: "pos.transaction_completed").count
   end
 
   private

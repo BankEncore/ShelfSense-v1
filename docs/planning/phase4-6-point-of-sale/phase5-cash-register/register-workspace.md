@@ -33,7 +33,7 @@ Slice 2 vs Slice 3 boundary
 ### Wireframe-validatable
 
 ```text
-* / + / - / F9 bindings
+* / + / F8 / F9 bindings
 header hierarchy
 line-table layout and selected-line styling
 where errors appear
@@ -110,7 +110,9 @@ Register has open Session for a different cashier
 Register has no open Session:
   use the existing open period if one exists
     (do not re-confirm a date; use the period's business_date)
-  otherwise open a period for BusinessDate.for_store(...) (confirm; no override)
+  otherwise open a period for BusinessDate.for_store(...) (confirm; no override).
+    POST the displayed date as `confirmed_business_date`. `EnterRegister` passes it to
+    `OpenReportingPeriod`. If the store calendar date has changed since GET, reject and re-render.
   then open Session (opening float required, integer cents >= 0, zero allowed)
 ```
 
@@ -217,16 +219,19 @@ POST tender
     completion_operation_id (SecureRandom.uuid_v7)
   → do not complete
 
-POST complete
+POST /pos/transactions/:transaction_id/complete
+  → load that transaction for the current store (not “the session’s working row”)
   → CompleteTransaction using the Rails-issued completion_operation_id as operation_id
   → retries hit only this endpoint with the same payload and same operation_id
-  → if the transaction is already completed: redirect to GET /pos/transactions/:id/completed
-    (lost-response / replay; do not create a second completion)
-  → otherwise redirect to GET /pos/transactions/:id/completed
+  → if the transaction is already completed: authorize Store + cashier, redirect to GET /pos/transactions/:id/completed
+    (lost-response / replay; do not create a second completion; do not redirect to enter)
+  → if working: CompleteTransaction, then redirect to GET /pos/transactions/:id/completed
+  → cancelled / other store / unknown id: not found
 
 GET /pos/transactions/:id/completed
-  → that transaction's immutable completed facts only
+  → that transaction's immutable completed facts only, loaded as id + current_store
   → session/transaction cashier only
+  → header uses the transaction's Store
   → if the transaction is not completed: not found (do not complete on GET)
 
 POST continue
@@ -250,6 +255,7 @@ POST tender (expected_lock_version = v5)
   → change + lock_version = v6
   → completion_operation_id = A   (Rails: SecureRandom.uuid_v7)
 POST complete (
+    /pos/transactions/:transaction_id/complete
     operation_id = A,
     expected_lock_version = v6,
     expected_total_cents from the tender response,
@@ -262,6 +268,7 @@ Completion retry:
 
 ```text
 POST complete again
+/pos/transactions/:transaction_id/complete
 operation_id = A
 expected_lock_version = v6
 same command payload
@@ -284,8 +291,11 @@ GET workspace while working + tender (refresh)
        (transaction.lock_version, transaction.total_cents,
         Cash tender amount_presented_cents — not browser-supplied values)
   → matching in_flight or failed pos.complete_transaction
-       (recompute CanonicalJson.hash with that row’s id as operation_id)
-       → restore that operation_id; Retry complete uses the same command
+       (newest in_flight, else newest failed; recompute CanonicalJson.hash with that row’s id as operation_id)
+       → restore that operation_id
+       → pending (no row yet): auto-complete
+       → failed or expired in_flight: Retry complete, no auto-submit
+       → unexpired in_flight: “Completion is still processing”; do not immediately POST again
   → no matching completion operation
        → mint a new completion_operation_id
   → transaction already completed
@@ -309,7 +319,7 @@ Phase 4 already prevents a second commercial effect. Recovery must reference **t
 ```text
 working transaction + Cash tender  → completion-pending (restore operation_id per above)
 POST complete / retry for an already-completed transaction
-  → GET /pos/transactions/:id/completed for that id
+  → GET /pos/transactions/:id/completed for that id (transaction-scoped complete; never infer via the working-row lookup)
 GET /pos/transactions/:id/completed
   → that transaction's receipt
 GET workspace, no working transaction
@@ -334,14 +344,14 @@ One primary POS input. Autofocus on load. After every successful action and reco
 
 Quantity and tender **reuse that same primary field** with a changed label. The only overlay is **cancel confirmation**. Occupied-register deny lives on `GET enter`, not on the selling surface.
 
-Intercept `*`, `+`, and `-` on keydown so they never become identifier text. Do not intercept letter keys such as `T`. Delete is native text editing, not a line-removal shortcut.
+Intercept `*` and `+` on keydown so they never become identifier text. Do not intercept letter keys such as `T` or hyphen. Delete is native text editing. F8 removes the selected line in `SALE_ENTRY`.
 
-`*` with no selected line is a no-op (stay `SALE_ENTRY`). `+` with no merchandise is a no-op. `-` with no selected line is a no-op. QUANTITY with no selected line is not entered.
+`*` with no selected line is a no-op (stay `SALE_ENTRY`). `+` with no merchandise is a no-op. F8 with no selected line is a no-op. QUANTITY with no selected line is not entered.
 
 | Mode | Enter | Escape | Other |
 |---|---|---|---|
-| `SALE_ENTRY` | identifier → `AddMerchandise`. Empty Enter is a no-op. Digits alone are an identifier, not quantity | clear input; stay `SALE_ENTRY` | `*` → `QUANTITY` if a line is selected; `+` → `TENDER` if merchandise exists; `-` removes selected line |
-| `QUANTITY` | `ChangeQuantity` on selected line → `SALE_ENTRY` | abandon → `SALE_ENTRY` | quantity `0` is invalid (service requires positive); `-` is not used here — Escape then `-` in `SALE_ENTRY` |
+| `SALE_ENTRY` | identifier → `AddMerchandise`. Empty Enter is a no-op. Digits alone are an identifier, not quantity | clear input; stay `SALE_ENTRY` | `*` → `QUANTITY` if a line is selected; `+` → `TENDER` if merchandise exists; F8 removes selected line |
+| `QUANTITY` | `ChangeQuantity` on selected line → `SALE_ENTRY` | abandon → `SALE_ENTRY` | quantity `0` is invalid (service requires positive); F8 is not used here — Escape then F8 in `SALE_ENTRY` |
 | `TENDER` (before `TenderCash` succeeds) | `POST tender` only | → `SALE_ENTRY` | insufficient Cash: remain `TENDER` |
 | completion pending (`TenderCash` succeeded, including GET workspace restore) | not a fourth named mode; input locked until complete response | do not silently return to `SALE_ENTRY` | retry is `POST complete` only; **Return to sale** is `POST abandon_tender` |
 
@@ -349,18 +359,18 @@ Keyboard map (shortcuts; each has a visible control). Bindings are **wireframe-v
 
 | Key | Action |
 |---|---|
-| Enter | confirm current mode; **ignored** on the cancel overlay |
+| Enter | confirm current mode; **ignored** on the cancel overlay; when focus is on a visible button, Enter activates that button |
 | Escape | back out where the table allows; on cancel overlay, abort confirm |
 | `*` | `QUANTITY` (no-op if no selected line) |
 | `+` | `TENDER` (no-op if no merchandise) |
-| `-` | `RemoveWorkingLine` on the selected line in `SALE_ENTRY` |
+| F8 | `RemoveWorkingLine` on the selected line in `SALE_ENTRY` |
 | ArrowUp / ArrowDown | move selected line (in `SALE_ENTRY`) |
 | F9 | open cancel confirmation (disabled while `POST complete` is in flight, and while the basket has no lines) |
 | F9 again | confirm cancel (**not** Enter, **not** `Y` — barcodes may contain letters) |
 
-Cancel overlay: no text field (so a scan cannot type into it). Ignore Enter and alphanumeric keys. Visible Confirm (activates on second F9) and Don't cancel (Escape). Abort restores the prior mode and focus.
+Cancel overlay: no text field (so a scan cannot type into it). Ignore Enter and alphanumeric keys. Visible Confirm (activates on second F9) and Don't cancel (Escape). The selling chrome behind the overlay is `inert`; Tab stays in the dialog. Abort restores the prior mode and focus.
 
-Selected line defaults to the line **returned** by the last `AddMerchandise`, or the last changed line. After `RemoveWorkingLine`, select the previous remaining line, or none if the basket is empty. Arrow keys move selection. QUANTITY and `-` apply to the selected line.
+Selected line defaults to the line **returned** by the last `AddMerchandise`, or the last changed line. After `RemoveWorkingLine`, select the previous remaining line, or none if the basket is empty. Arrow keys move selection. QUANTITY and F8 apply to the selected line.
 
 ---
 

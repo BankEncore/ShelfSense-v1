@@ -267,6 +267,52 @@ class PosWorkspaceInvariantsTest < ActiveSupport::TestCase
     assert_equal "failed", found.status
   end
 
+  test "find completion operation prefers the newest in_flight then the newest failed" do
+    transaction = working_sale_with_tender
+    older_failed = SecureRandom.uuid_v7
+    assert_raises(Pos::Error) do
+      Pos::CompleteTransaction.call(
+        transaction: transaction,
+        actor: @actor,
+        operation_id: older_failed,
+        expected_lock_version: transaction.lock_version,
+        expected_total_cents: transaction.total_cents,
+        amount_presented_cents: 2500
+      )
+    end
+    newer_failed = SecureRandom.uuid_v7
+    assert_raises(Pos::Error) do
+      Pos::CompleteTransaction.call(
+        transaction: transaction.reload,
+        actor: @actor,
+        operation_id: newer_failed,
+        expected_lock_version: transaction.lock_version,
+        expected_total_cents: transaction.total_cents,
+        amount_presented_cents: 2500
+      )
+    end
+    assert_equal newer_failed, Pos::FindCompletionOperation.call(transaction: transaction.reload, actor: @actor).id
+
+    in_flight_id = SecureRandom.uuid_v7
+    payload = Pos::CompleteTransaction.command_payload(
+      transaction: transaction,
+      operation_id: in_flight_id,
+      expected_lock_version: transaction.lock_version,
+      expected_total_cents: transaction.total_cents,
+      amount_presented_cents: transaction.pos_tenders.find_by!(tender_type: "cash").amount_presented_cents
+    )
+    Pos::OperationLease.begin!(
+      register_id: transaction.register_id,
+      operation_id: in_flight_id,
+      command_payload: payload,
+      store_id: transaction.store_id,
+      pos_transaction_id: transaction.id
+    )
+    found = Pos::FindCompletionOperation.call(transaction: transaction.reload, actor: @actor)
+    assert_equal in_flight_id, found.id
+    assert_equal "in_flight", found.status
+  end
+
   test "find completion operation is denied to a second cashier and nil without a cash tender" do
     transaction = Pos::StartTransaction.call(session: @context[:session], actor: @actor)
     assert_nil Pos::FindCompletionOperation.call(transaction: transaction, actor: @actor)

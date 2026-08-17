@@ -16,7 +16,8 @@ module Pos
         store: current_store,
         register: @register,
         actor: current_user,
-        opening_float_cents: float_cents
+        opening_float_cents: float_cents,
+        business_date: params[:confirmed_business_date]
       )
       session[:pos_register_id] = @register.id
       redirect_to pos_register_workspace_path

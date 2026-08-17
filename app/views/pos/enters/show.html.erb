@@ -33,6 +33,9 @@
             Register <%= @register.admin_label %> is open for <%= @gate.occupier.display_name %>.
           </p>
         <% else %>
+          <% if @gate.opening_new_period? %>
+            <%= hidden_field_tag :confirmed_business_date, @gate.business_date.iso8601 %>
+          <% end %>
           <% if @gate.leftover_period? %>
             <p class="pos-banner" role="status">This register is still on business date <%= @gate.business_date.iso8601 %>.</p>
           <% end %>
