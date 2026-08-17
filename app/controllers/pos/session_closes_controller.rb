@@ -37,25 +37,13 @@ module Pos
       )
       redirect_to pos_session_closed_path(@session_record)
     rescue ActionController::ParameterMissing
-      fail_blind("expected lock version is required")
+      recover_blind("expected lock version is required")
     rescue Money::ParseCents::Error => e
-      fail_blind(e.message)
+      recover_blind(e.message)
     rescue Pos::Error => e
-      @session_record.reload
-      if @session_record.closed?
-        redirect_to pos_session_closed_path(@session_record)
-      elsif e.message == "session has a working transaction"
-        redirect_to pos_register_workspace_path, alert: "Complete or cancel the current sale before closing."
-      else
-        fail_blind(e.message)
-      end
+      recover_blind(e.message)
     rescue Pos::StaleObject
-      @session_record.reload
-      if @session_record.closed?
-        redirect_to pos_session_closed_path(@session_record)
-      else
-        fail_blind("This session was changed. Reload and try again.")
-      end
+      recover_blind("This session was changed. Reload and try again.")
     end
 
     def resume_sales
@@ -92,10 +80,18 @@ module Pos
       parsed
     end
 
-    def fail_blind(message)
-      @closing_count = params[:closing_count]
-      @feedback = message
-      render :show, status: :unprocessable_content
+    def recover_blind(message)
+      @session_record.reload
+
+      if @session_record.closed?
+        redirect_to pos_session_closed_path(@session_record)
+      elsif @session_record.pos_transactions.working.exists?
+        redirect_to pos_register_workspace_path, alert: "Complete or cancel the current sale before closing."
+      else
+        @closing_count = params[:closing_count]
+        @feedback = message
+        render :show, status: :unprocessable_content
+      end
     end
   end
 end

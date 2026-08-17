@@ -57,7 +57,7 @@ Invariants:
 | Print lifecycle | No `printed_at`, print status, print job, printer record, or acknowledgement |
 | Print failure | Cannot undo or alter a completed transaction |
 | Receipt identity | Printed header uses `store_number_snapshot`, `register_number_snapshot`, and `receipt_sequence` |
-| Close initiation | Separate POST before blind count |
+| Close initiation | Separate POST before blind count; `session_id` is the Session represented by the page |
 | Working transaction cleanup | Empty working transaction may be explicitly cancelled during close initiation |
 | Nonempty sale | Must be completed or cancelled before close begins |
 | GET behavior | No GET may cancel a transaction, close a Session, or finalize a Reporting Period |
@@ -131,7 +131,7 @@ Store: 003   Reg: 02   Trans: 0018427
 
 Values come from the completed transaction snapshots, not current Store/Register configuration. The compact reference may also appear.
 
-Render from completed facts: Store / Reg / Trans, transaction reference, business date, completed timestamp (Store IANA zone), line snapshots, subtotal, tax, total, Cash presented, change.
+Render from completed facts: Store / Reg / Trans, transaction reference, business date, completed timestamp (Store IANA zone), line snapshots, subtotal, tax, total, Cash presented, change. Printed line descriptions use the completed merchandise snapshot only. If that snapshot is missing, render `Description unavailable` — do not substitute current Product metadata.
 
 The ordinary on-screen completion screen does not have to adopt the printed header format.
 
@@ -150,13 +150,21 @@ Do not expose it in `QUANTITY`, `TENDER`, completion-pending, completion-failed,
 
 ```text
 POST /pos/register/close
+  session_id = <Session represented by this page>
 ```
 
-resolves the actor's open Session for the selected Register:
+The POST is bound to that Session. Do not resolve “whatever open Session this cashier currently has on the Register.” A stale receipt or workspace for Session A must not cancel or close Session B.
+
+Load:
+
+```text
+id + current_store + selected Register + Session cashier
+```
 
 | Condition | Result |
 |---|---|
-| No open Session for actor | Redirect enter |
+| Missing / wrong Store / wrong cashier / wrong Register | Not found |
+| Named Session is closed | Redirect that Session's closed summary; never fall forward to a newer Session |
 | Working transaction with merchandise or tender | Reject, return workspace, "Complete or cancel the current sale before closing." |
 | Empty working transaction | `CancelTransaction`, then redirect blind-count GET |
 | No working transaction | Redirect blind-count GET |
@@ -196,11 +204,14 @@ POST /pos/sessions/:id/close
 
 parses the count and calls `Pos::CloseSession`. No Cash calculation belongs in the controller.
 
-| Error | Result |
+Every blind-count error recovery reloads the Session first:
+
+| Authoritative state | Result |
 |---|---|
-| Invalid count | Re-render blind count; preserve entered value; reveal no expected/variance |
-| Stale `lock_version` and Session still open | Reload Session; re-render blind count; preserve typed count; stay blind |
-| Session already closed | Authorize; redirect closed summary; do not call `CloseSession` again |
+| Session already closed | Redirect closed summary; do not call `CloseSession` again |
+| Working transaction exists | Redirect workspace, "Complete or cancel the current sale before closing." |
+| Still open, no working transaction, invalid count | Re-render blind count; preserve entered value; reveal no expected/variance |
+| Still open, no working transaction, stale `lock_version` | Re-render blind count; preserve typed count; stay blind |
 
 ```text
 POST /pos/sessions/:id/resume_sales
@@ -225,10 +236,15 @@ Commercial totals may be exposed through `Pos::SessionTotals` (optional `total_c
 Actions:
 
 ```text
-[ Finalize Z ]   [ Leave period open ]
+period open
+→ Finalize Z
+→ Leave period open
+
+period finalized
+→ View Z
 ```
 
-Leave period open redirects to `GET /pos/register/enter?register_id=...` (Reporting Period open, Session none).
+Leave period open redirects to `GET /pos/register/enter?register_id=...` (Reporting Period open, Session none). View Z is `GET` of the existing finalized Z.
 
 ---
 

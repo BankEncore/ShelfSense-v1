@@ -65,6 +65,7 @@
   <div class="pos-receipt__actions pos-no-print">
     <button type="button" class="btn" data-action="pos-receipt#print">Print receipt</button>
     <%= button_to "New sale", pos_register_continue_path, method: :post, class: "btn pos-receipt__new" %>
-    <%= button_to "Close register", pos_register_close_path, method: :post, class: "btn btn--secondary" %>
+    <%= button_to "Close register", pos_register_close_path, method: :post,
+          params: { session_id: @session_record.id }, class: "btn btn--secondary" %>
   </div>
 </main>

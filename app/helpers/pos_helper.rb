@@ -29,11 +29,8 @@ module PosHelper
 
   def pos_print_line_description(line)
     snapshot = line.merchandise_snapshot
-    if snapshot.is_a?(Hash) && snapshot["description"].present?
-      snapshot["description"]
-    else
-      pos_line_description(line)
-    end
+    description = snapshot.is_a?(Hash) ? snapshot["description"] : nil
+    description.presence || "Description unavailable"
   end
 
   def pos_padded_store_number(store)

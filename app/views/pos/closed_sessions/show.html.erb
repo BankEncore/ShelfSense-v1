@@ -20,13 +20,17 @@
   </dl>
 
   <div class="pos-close__actions">
-    <%= form_with url: pos_reporting_period_finalize_path(@period), method: :post do %>
-      <%= hidden_field_tag :expected_lock_version, @period.lock_version %>
-      <%= hidden_field_tag :return_to, "closed" %>
-      <%= hidden_field_tag :session_id, @session_record.id %>
-      <%= hidden_field_tag :register_id, @register.id %>
-      <%= submit_tag "Finalize Z", class: "btn" %>
+    <% if @period.finalized? %>
+      <%= link_to "View Z", pos_reporting_period_z_path(@period), class: "btn" %>
+    <% else %>
+      <%= form_with url: pos_reporting_period_finalize_path(@period), method: :post do %>
+        <%= hidden_field_tag :expected_lock_version, @period.lock_version %>
+        <%= hidden_field_tag :return_to, "closed" %>
+        <%= hidden_field_tag :session_id, @session_record.id %>
+        <%= hidden_field_tag :register_id, @register.id %>
+        <%= submit_tag "Finalize Z", class: "btn" %>
+      <% end %>
+      <%= link_to "Leave period open", pos_register_enter_path(register_id: @register.id), class: "btn btn--secondary" %>
     <% end %>
-    <%= link_to "Leave period open", pos_register_enter_path(register_id: @register.id), class: "btn btn--secondary" %>
   </div>
 </main>

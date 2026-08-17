@@ -9,9 +9,15 @@ module Pos
         return
       end
 
-      session_record = actor_open_session(@register)
-      unless session_record
-        redirect_to pos_register_enter_path(register_id: @register.id)
+      session_record = PosSession.find_by!(
+        id: params.require(:session_id),
+        store_id: current_store.id,
+        register: @register,
+        cashier_user: current_user
+      )
+
+      if session_record.closed?
+        redirect_to pos_session_closed_path(session_record)
         return
       end
 
@@ -30,6 +36,8 @@ module Pos
       end
 
       redirect_to pos_session_close_path(session_record)
+    rescue ActionController::ParameterMissing
+      raise ActiveRecord::RecordNotFound
     rescue Pos::Denied
       raise ActiveRecord::RecordNotFound
     rescue Pos::StaleObject, Pos::Error => e
@@ -37,10 +45,6 @@ module Pos
     end
 
     private
-
-    def actor_open_session(register)
-      PosSession.open.find_by(store: current_store, register: register, cashier_user: current_user)
-    end
 
     def nonempty_working?(transaction)
       transaction.pos_transaction_lines.exists? || transaction.pos_tenders.exists?

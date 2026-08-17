@@ -138,7 +138,8 @@
         Cancel (F9)
       </button>
       <% if @ui_mode == "sale_entry" && lines.empty? && tender.blank? %>
-        <%= button_to "Close register", pos_register_close_path, method: :post, class: "btn btn--secondary" %>
+        <%= button_to "Close register", pos_register_close_path, method: :post,
+              params: { session_id: @session_record.id }, class: "btn btn--secondary" %>
       <% end %>
     </div>
 

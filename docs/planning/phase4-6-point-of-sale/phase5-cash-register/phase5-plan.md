@@ -119,9 +119,9 @@ Slice 1 answers the cash-accountability half without screens. Slice 2 is the cas
 - Audit + immutability + concurrency tests
 - No POS screens
 
-### Slice 2 — Register workspace (implemented; HTTP/browser hardening in progress)
+### Slice 2 — Register workspace (implemented)
 
-Authority: [register-workspace.md](register-workspace.md). Interaction: [register-workspace-ux.md](register-workspace-ux.md). Slice 3 remains unimplemented.
+Authority: [register-workspace.md](register-workspace.md). Interaction: [register-workspace-ux.md](register-workspace-ux.md).
 
 - Rails + Importmap + Turbo + Stimulus; system/browser tests required
 - Open gate: POST `confirmed_business_date` when opening a new period; opening float; resume or open period/session for the cashier's register

@@ -33,6 +33,7 @@ class PosCloseZTest < ActionDispatch::IntegrationTest
     assert_match "Example Book", response.body
     assert_select ".pos-print-only"
     assert_select ".pos-no-print"
+    assert_select "input[name='session_id'][value='#{transaction.pos_session_id}']"
     assert transaction.reload.completed?
     assert_equal 1, PosTransaction.completed.where(id: transaction.id).count
   end
@@ -44,7 +45,7 @@ class PosCloseZTest < ActionDispatch::IntegrationTest
     transaction = PosTransaction.working.find_by!(register: @register)
     session_record = transaction.pos_session
 
-    post pos_register_close_path
+    post pos_register_close_path, params: { session_id: session_record.id }
     assert_redirected_to pos_session_close_path(session_record)
     assert transaction.reload.cancelled?
     follow_redirect!
@@ -65,7 +66,7 @@ class PosCloseZTest < ActionDispatch::IntegrationTest
     get pos_register_workspace_path
     assert_no_match "Close register", response.body
 
-    post pos_register_close_path
+    post pos_register_close_path, params: { session_id: transaction.pos_session_id }
     assert_redirected_to pos_register_workspace_path
     follow_redirect!
     assert_match "Complete or cancel the current sale before closing.", response.body
@@ -75,9 +76,9 @@ class PosCloseZTest < ActionDispatch::IntegrationTest
   test "repeating initiate close after empty cancel still reaches the count screen" do
     post pos_register_enter_path, params: enter_params
     session_record = PosSession.open.find_by!(register: @register)
-    post pos_register_close_path
+    post pos_register_close_path, params: { session_id: session_record.id }
     assert_redirected_to pos_session_close_path(session_record)
-    post pos_register_close_path
+    post pos_register_close_path, params: { session_id: session_record.id }
     assert_redirected_to pos_session_close_path(session_record)
     assert_equal 0, session_record.pos_transactions.working.count
   end
@@ -97,7 +98,7 @@ class PosCloseZTest < ActionDispatch::IntegrationTest
   test "zero dollars closes and reveals persisted snapshots" do
     complete_http_sale(opening_float: "100.00")
     session_record = PosSession.open.find_by!(register: @register)
-    post pos_register_close_path
+    post pos_register_close_path, params: { session_id: session_record.id }
     follow_redirect!
 
     post pos_session_close_path(session_record), params: {
@@ -123,7 +124,7 @@ class PosCloseZTest < ActionDispatch::IntegrationTest
   test "invalid and stale still-open counts stay blind and preserve input" do
     post pos_register_enter_path, params: enter_params(opening_float: "100.00")
     session_record = PosSession.open.find_by!(register: @register)
-    post pos_register_close_path
+    post pos_register_close_path, params: { session_id: session_record.id }
     follow_redirect!
 
     post pos_session_close_path(session_record), params: {
@@ -171,7 +172,7 @@ class PosCloseZTest < ActionDispatch::IntegrationTest
   test "return to sales resumes an empty working transaction" do
     post pos_register_enter_path, params: enter_params
     session_record = PosSession.open.find_by!(register: @register)
-    post pos_register_close_path
+    post pos_register_close_path, params: { session_id: session_record.id }
     follow_redirect!
 
     post pos_session_resume_sales_path(session_record)
@@ -399,6 +400,71 @@ class PosCloseZTest < ActionDispatch::IntegrationTest
     assert_match format_money(period.finalized_closing_variance_cents_sum), response.body
     assert_match "Opening floats total", response.body
     assert_no_match "Close session", response.body
+  end
+
+  test "stale close for session A does not cancel session B" do
+    complete_http_sale
+    session_a = PosSession.open.find_by!(register: @register)
+    Pos::CloseSession.call(
+      session: session_a,
+      actor: @actor,
+      expected_lock_version: session_a.lock_version,
+      closing_count_cents: 0
+    )
+    post pos_register_enter_path, params: { register_id: @register.id, opening_float: "10.00" }
+    session_b = PosSession.open.find_by!(register: @register)
+    refute_equal session_a.id, session_b.id
+    working_b = session_b.pos_transactions.working.first
+    assert working_b.present?
+
+    post pos_register_close_path, params: { session_id: session_a.id }
+    assert_redirected_to pos_session_closed_path(session_a)
+    assert session_b.reload.open?
+    assert working_b.reload.working?
+    assert_equal 0, AuditEvent.where(action: "pos.transaction_cancelled", subject_id: working_b.id).count
+  end
+
+  test "invalid blind count after resume sales returns to the workspace" do
+    post pos_register_enter_path, params: enter_params
+    session_record = PosSession.open.find_by!(register: @register)
+    post pos_register_close_path, params: { session_id: session_record.id }
+    follow_redirect!
+
+    post pos_session_resume_sales_path(session_record)
+    working = session_record.pos_transactions.working.first
+    assert working.present?
+
+    post pos_session_close_path(session_record), params: {
+      closing_count: "abc",
+      expected_lock_version: session_record.lock_version
+    }
+    assert_redirected_to pos_register_workspace_path
+    follow_redirect!
+    assert_match "Complete or cancel the current sale before closing.", response.body
+    refute_match "Closing Cash count", response.body
+    assert working.reload.working?
+  end
+
+  test "closed session shows view z after the period is finalized" do
+    complete_http_sale
+    session_record = PosSession.open.find_by!(register: @register)
+    Pos::CloseSession.call(
+      session: session_record,
+      actor: @actor,
+      expected_lock_version: session_record.lock_version,
+      closing_count_cents: 0
+    )
+    period = Pos::FinalizeReportingPeriod.call(
+      period: session_record.reporting_period,
+      actor: @actor,
+      expected_lock_version: session_record.reporting_period.lock_version
+    )
+
+    get pos_session_closed_path(session_record)
+    assert_response :success
+    assert_select "a[href='#{pos_reporting_period_z_path(period)}']", text: "View Z"
+    assert_select "input[type='submit'][value='Finalize Z']", count: 0
+    assert_select "a", text: "Leave period open", count: 0
   end
 
   private
