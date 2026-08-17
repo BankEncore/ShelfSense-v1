@@ -438,7 +438,7 @@ Define version 1 of the canonical completed operation per [completed-pos-operati
 Critical distinctions:
 
 * `CompleteTransactionCommand` — pre-completion request (no permanent receipt yet).
-* `CompletedPosOperation` — already-completed fact; **always includes** `receipt.sequence` / `receipt.number`.
+* `CompletedPosOperation` — already-completed fact; **always includes** `receipt.sequence` and store/register number snapshots (optional compact `reference`).
 
 The contract must be versioned, serializable, independent of Rails controller state, and sufficient without hidden input. Lock sign conventions, tax-component identity, and required merchandise snapshots before migrations.
 
@@ -448,14 +448,14 @@ The contract must be versioned, serializable, independent of Rails controller st
 
 Every completion receives a globally unique `operation_id`, distinct from `transaction_id`.
 
-Durable `pos_operations` holds the full canonical envelope, payload hash, and ADR-009 lease/status semantics (see [operation-and-core-facts.md](phase4-point-of-sale/operation-and-core-facts.md) / ADR-020). Do not use `transaction_id` as the idempotency substitute. Do not treat the envelope as optional or reconstruct-only.
+Durable `pos_operations` holds ADR-009 command state (`command_payload_hash`) and permanent completed-operation provenance (`envelope` + `envelope_hash`) — see [operation-and-core-facts.md](phase4-point-of-sale/operation-and-core-facts.md) / ADR-020. Do not use `transaction_id` as the idempotency substitute. Do not treat the envelope as optional or reconstruct-only.
 
 ```text
-same operation_id + same material payload → same authoritative result
-same operation_id + materially different payload → integrity failure
+same (source_id, command_type, idempotency_key) + same command_payload_hash → same authoritative result
+same key + different command_payload_hash → integrity failure
 ```
 
-Retry must never duplicate completed transaction, receipt sequence, tender, Inventory movement, or reporting effect.
+Retry must never duplicate completed transaction, receipt sequence, tender, Inventory movements, outbox fact, or reporting effect.
 
 Normalized Core is used for all ordinary commercial workflows; the envelope answers origin/provenance questions.
 
@@ -470,18 +470,18 @@ Conceptually:
 ```text
 CompleteTransactionCommand
         ↓
-validate working transaction
+authorize + lease on command_payload_hash
         ↓
 BEGIN PostgreSQL
         ↓
-allocate receipt identity
+allocate registers.receipt_sequence (row lock)
 freeze occurred_at / business_date
 freeze commercial facts
-construct canonical CompletedPosOperation v1
+construct canonical CompletedPosOperation v1 (fact_type = pos.transaction_completed)
 persist normalized completed POS facts
-persist pos_operations (envelope + hash + idempotency)
-post Inventory effects
-associate Session / reporting context
+persist pos_operations (envelope + envelope_hash)
+post paired Inventory effects (Inventory::PostSale)
+record audit + pos.transaction_completed outbox
         ↓
 COMMIT
 ```
@@ -492,13 +492,14 @@ Only after this commits successfully is the transaction complete. Receipt assign
 
 # 4.10 Inventory posting
 
-For each completed quantity-tracked sale line:
+For each completed quantity-tracked sale line, post through **`Inventory::PostSale`** (or equivalent)—not `Inventory::PostAdjustment`:
 
 ```text
-Inventory delta = -quantity
+paired physical effect  (delta −quantity)
+paired valuation effect
+reject_below_zero
+source_type = PosTransactionLine
 ```
-
-Post through the existing Inventory domain/service.
 
 Do not directly mutate `inventory_balances`.
 
@@ -508,13 +509,10 @@ Required linkage should allow tracing:
 POS operation
 → transaction
 → transaction line
-→ Inventory ledger entry
+→ paired Inventory ledger effects
 ```
 
-Retrying the same POS operation must produce no second Inventory ledger effect.
-
----
-
+Retrying the same POS operation must produce no second Inventory ledger effect set.
 # 4.11 Receipt identity
 
 Implement Register-scoped receipt sequence allocation and the human-facing reference per [receipt-identity.md](phase4-point-of-sale/receipt-identity.md):
@@ -594,14 +592,15 @@ Phase 4 is complete when a headless/application-level scenario can:
 2. Start a transaction.
 3. Resolve a Standard quantity-tracked variant.
 4. Add quantity.
-5. Resolve regular price.
+5. Resolve regular price (from product_variants.regular_price_cents).
 6. Calculate tax.
 7. Create Cash settlement.
 8. Complete through the versioned operation contract.
-9. Assign receipt identity.
-10. Post exactly one Inventory effect.
-11. Retry the same operation.
-12. Observe no duplicate business effect.
+9. Assign receipt identity (snapshots + sequence).
+10. Post exactly one paired Inventory physical + valuation effect set per sale line.
+11. Record pos.transaction_completed outbox in the same transaction.
+12. Retry the same operation.
+13. Observe no duplicate business effect.
 ```
 
 ---
@@ -1054,9 +1053,9 @@ Apply reason/approval policy.
 
 ## Tax override
 
-Allow selection only among valid configured tax treatments.
+Allow selection only among valid configured **Tax Classes** (Tax Class override).
 
-Do not permit arbitrary entered rates.
+Do not permit arbitrary entered rates. Purchaser exemption is deferred beyond Phase 6.
 
 ---
 
@@ -1258,14 +1257,16 @@ Default:
 
 ```text
 current selling price
-current tax treatment
+Tax Class + Store Tax configuration (current active determinations)
 ```
 
 but require explicit confirmation.
 
-Allow controlled price/tax overrides.
+Allow controlled price / Tax Class overrides.
 
 Require reason and configurable approval.
+
+Purchaser exemption remains deferred beyond Phase 6.
 
 ---
 
@@ -1529,7 +1530,7 @@ Processor authorization, capture, reversal, crash recovery, and unknown-result h
 
 ---
 
-## Standalone/offline Register
+## Standalone/offline Terminal (operating a Register)
 
 Deferred runtime work includes:
 
@@ -1537,8 +1538,9 @@ Deferred runtime work includes:
 .NET
 Terminal.Gui or selected dedicated UI
 SQLite
-installation identity
-installation credentials
+Terminal identity
+Terminal credentials
+Register assignment
 reference replication
 offline cashier authentication
 local deterministic calculation
@@ -1553,7 +1555,7 @@ clone detection
 backup/restore
 ```
 
-The standalone client must use the completed-operation semantics established during Phases 4–6.
+The standalone client must use completed-operation semantics established during Phases 4–6, including a later compatible envelope version that carries Terminal/config provenance before offline completion authority is enabled.
 
 ---
 
@@ -1679,14 +1681,14 @@ CORE POS BREADTH
         ↓
 
 LATER
-STANDALONE/OFFLINE REGISTER
+STANDALONE/OFFLINE TERMINAL (OPERATING A REGISTER)
 ```
 
 ## 10. Definition of success
 
 At the end of Phase 6, the Rails-native POS should be a functionally complete online bookstore register for the intended initial scope.
 
-More importantly, every completed commercial operation should already be expressible through a stable boundary that a future standalone Register can reproduce:
+More importantly, every completed commercial operation should already be expressible through a stable boundary that a future standalone Terminal operating a Register can reproduce:
 
 ```text
 Register behavior

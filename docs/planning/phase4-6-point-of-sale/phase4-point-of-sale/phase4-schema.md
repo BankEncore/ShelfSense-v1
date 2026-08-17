@@ -1,6 +1,6 @@
 # Phase 4 — POS schema outline
 
-**Status:** Planning (do not migrate until [phase4-plan.md](phase4-plan.md) semantic locks and [completed-pos-operation-v1.md](completed-pos-operation-v1.md) fixtures are stable)
+**Status:** Planning — schema constraints locked; do not migrate until the `workstations` → `registers` rename slice completes and [completed-pos-operation-v1.md](completed-pos-operation-v1.md) golden fixtures are reviewed ([phase4-plan.md](phase4-plan.md) readiness)
 
 **Authority:** Field-level intent for Phase 4 POS tables. Prefer this document over conversational outlines in chat or preliminary-specs drafts. Cross-cutting rules remain in `AGENTS.md` and accepted ADRs. Tax configuration and completed tax rows follow [pos-tax-contract.md](pos-tax-contract.md) and [ADR-019](../../../adr/ADR-019-pos-sales-tax-model.md).
 
@@ -51,9 +51,9 @@ See [register-identity.md](register-identity.md) for the `registers` target shap
 | `store_id` | uuid | FK, null: false |
 | `code` | string | stable; unique per store |
 | `name` | string | null: false |
-| `rate_percent` | numeric(6,3) | percentage; up to three decimal places |
+| `rate_percent` | numeric(6,3) | **NOT NULL**; CHECK `0 <= rate_percent AND rate_percent <= 100` |
 | `active` | boolean | null: false |
-| `calculation_order` | integer | null: false |
+| `calculation_order` | integer | **NOT NULL**; CHECK `>= 0`; **UNIQUE per `store_id`** |
 | `lock_version` | integer | null: false, default 0 |
 | `created_at` / `updated_at` | timestamptz | |
 
@@ -85,14 +85,14 @@ Logical Z / reporting period for exactly one Register (ADR-021).
 | `id` | uuid | PK, UUIDv7 |
 | `store_id` | uuid | FK, null: false |
 | `register_id` | uuid | FK → `registers`, null: false |
-| `status` | string | e.g. `open`, `closed` |
+| `status` | string | `open` \| `finalized` (locked enum) |
 | `opened_at` | timestamptz | null: false |
-| `closed_at` | timestamptz | null when open |
+| `closed_at` | timestamptz | null when open; set when `finalized` |
 | `business_date` | date | explicit; null: false for opened periods |
 | `lock_version` | integer | null: false, default 0 |
 | `created_at` / `updated_at` | timestamptz | |
 
-Invariants: `store_id` matches `registers.store_id`; **at most one open reporting period per Register**. Full Z reporting UI is Phase 5.
+Invariants: `store_id` matches `registers.store_id`. Partial unique: **`UNIQUE (register_id) WHERE status = 'open'`**. Full Z reporting UI is Phase 5.
 
 ---
 
@@ -107,13 +107,13 @@ Cashier session on a register. **Phase 4 columns only:**
 | `register_id` | uuid | FK → `registers`, null: false |
 | `reporting_period_id` | uuid | FK → `pos_reporting_periods`, null: false |
 | `cashier_user_id` | uuid | FK → `users`, null: false |
-| `status` | string | e.g. `open`, `closed` |
+| `status` | string | `open` \| `closed` (locked enum) |
 | `opened_at` | timestamptz | null: false |
 | `closed_at` | timestamptz | null when open |
 | `lock_version` | integer | null: false, default 0 |
 | `created_at` / `updated_at` | timestamptz | |
 
-Invariants: `session.store_id` and `session.register_id` match the Register and the Session’s `reporting_period` (`period.register_id == session.register_id`).
+Invariants: `session.store_id` and `session.register_id` match the Register and the Session’s `reporting_period` (`period.register_id == session.register_id`). Partial unique: **`UNIQUE (register_id) WHERE status = 'open'`**.
 
 ### Explicitly deferred to Phase 5
 
@@ -167,6 +167,14 @@ One row for working and completed (or cancelled) commercial state.
 | `lock_version` | integer | null: false, default 0 |
 | `created_at` / `updated_at` | timestamptz | |
 
+### Status NULL / required rules
+
+| Status | `receipt_sequence` + number snapshots | `completed_at` | `cancelled_at` |
+|---|---|---|---|
+| `working` | NULL | NULL | NULL |
+| `completed` | NOT NULL | NOT NULL | NULL |
+| `cancelled` | NULL | NULL | NOT NULL |
+
 ### Rules
 
 - Working transactions may be edited.
@@ -185,16 +193,18 @@ One row for working and completed (or cancelled) commercial state.
 | `line_number` | integer | stable display/order within transaction |
 | `direction` | string | Phase 4: `sale` only; Phase 6 adds `return` |
 | `product_variant_id` | uuid | FK, null: false for Phase 4 merchandise lines |
-| `quantity` | decimal/numeric | exact scale per merchandise rules; Phase 4 quantity-tracked |
+| `quantity` | integer | **NOT NULL**; CHECK `quantity > 0` (Phase 4 quantity-tracked) |
 | `reference_unit_price_cents` | bigint | null: false when priced |
 | `selling_unit_price_cents` | bigint | equals reference in Phase 4 |
 | `extended_selling_amount_cents` | bigint | positive magnitude |
 | `line_tax_cents` | bigint | sum of component tax_cents; positive magnitude |
 | `line_total_cents` | bigint | extended + tax for Phase 4 sale lines; positive magnitude |
 | `tax_class_id` | uuid | FK; merchandise Tax Class used for determination |
-| `tax_class_code` | string | snapshot; classification code (`physical_book`), not a treatment |
+| `tax_class_code_snapshot` | string | snapshot; classification code (`physical_book`), not a treatment |
 | `merchandise_snapshot` | jsonb | **required when transaction is completed**; fixed v1 keys (see §8.1); Phase 4 Core shape per ADR-020 — do not also require a competing column set |
 | `created_at` / `updated_at` | timestamptz | |
+
+Unique `(pos_transaction_id, line_number)`.
 
 ### Explicitly absent on the line
 
@@ -234,10 +244,12 @@ One row per **active Store Tax determination** on a completed line (including `a
 | `store_tax_name_snapshot` | string | null: false |
 | `rate_percent` | numeric(6,3) | snapshot of configured rate |
 | `applies` | boolean | null: false on completed rows |
-| `taxable_basis_cents` | bigint | basis when applies; else 0 |
-| `tax_cents` | bigint | rounded tax when applies; else 0 |
+| `taxable_basis_cents` | bigint | basis when applies; else 0; CHECK `>= 0` |
+| `tax_cents` | bigint | rounded tax when applies; else 0; CHECK `>= 0` |
 | `calculation_order` | integer | null: false |
 | `created_at` / `updated_at` | timestamptz | |
+
+Unique `(pos_transaction_line_id, store_tax_id)`.
 
 Optional provenance: `store_tax_rule_id` at calculation time.
 
@@ -264,23 +276,23 @@ Phase 4: one Cash payment tender per completed sale is sufficient.
 
 ## 11. `pos_operations`
 
-Durable completion provenance **and** ADR-009 idempotency. Authority: [operation-and-core-facts.md](operation-and-core-facts.md) and [ADR-020](../../../adr/ADR-020-pos-operation-envelope-and-core-facts.md).
+Durable completion-command ADR-009 state **and** permanent completed-operation provenance. Authority: [operation-and-core-facts.md](operation-and-core-facts.md) and [ADR-020](../../../adr/ADR-020-pos-operation-envelope-and-core-facts.md).
 
 | Column | Type | Notes |
 |---|---|---|
 | `id` | uuid | PK; prefer `id = operation_id` |
-| `operation_id` | uuid | if not identical to `id` |
-| `operation_type` | string | e.g. `pos.complete_transaction` |
-| `schema_version` | integer | envelope contract version |
-| `source_id` | string/uuid | ADR-009 scope |
-| `idempotency_key` | string | null: false |
-| `payload_hash` | string | hash of canonical commercial envelope (transport excluded) |
+| `command_type` | string | `pos.complete_transaction` |
+| `fact_type` | string | null until completed; then `pos.transaction_completed` |
+| `schema_version` | integer | null until completed envelope exists |
+| `source_id` | uuid | ADR-009 scope; null: false |
+| `idempotency_key` | uuid | null: false |
+| `command_payload_hash` | string | hash of canonical `CompleteTransactionCommand` material; null: false |
+| `envelope_hash` | string | hash of canonical `CompletedPosOperation`; null until completed |
 | `status` | string | `in_flight`, `completed`, `failed` |
 | `lease_expires_at` | timestamptz | required while `in_flight` |
-| `pos_transaction_id` | uuid | FK when associated |
+| `pos_transaction_id` | uuid | FK when associated; required when completed |
 | `store_id` | uuid | indexed origin |
 | `register_id` | uuid | indexed origin |
-| `installation_id` | uuid | optional later technical id only; not POS business vocabulary (ADR-021) |
 | `producer_client` | string | optional |
 | `producer_version` | string | optional |
 | `envelope` | jsonb | **required when completed** — full `CompletedPosOperation` |
@@ -290,13 +302,23 @@ Durable completion provenance **and** ADR-009 idempotency. Authority: [operation
 | `lock_version` | integer | |
 | `created_at` / `updated_at` | timestamptz | |
 
-Unique index on `(source_id, operation_type, idempotency_key)`.
+**Do not** store Phase 4 `installation_id` or a single `payload_hash`. Use distinct `command_payload_hash` and `envelope_hash`.
+
+Unique index: **`UNIQUE (source_id, command_type, idempotency_key)`**.
+
+### Status rules
+
+| Status | Envelope / hashes |
+|---|---|
+| `in_flight` | `lease_expires_at` required; `envelope`, `fact_type`, `envelope_hash` absent |
+| `failed` | completed envelope absent |
+| `completed` | `fact_type`, `schema_version`, `pos_transaction_id`, `envelope`, `envelope_hash`, `posted_at` required |
 
 ### Role
 
 ```text
 generic idempotency  → may expire; protects a request
-pos_operations       → durable commercial provenance + idempotency for POS completion
+pos_operations       → durable commercial provenance + completion-command idempotency
 ```
 
 Normalized Core tables are used for all ordinary business behavior. The envelope is not optional and is not reconstructed later from tables as a substitute for provenance. No commercial workflow may depend on parsing `envelope`.
@@ -331,17 +353,15 @@ Conceptual uniqueness:
 | Column | Type | Notes |
 |---|---|---|
 | `register_number` | string | null: false; unique per `store_id`; parallel to `stores.store_number` |
+| `receipt_sequence` | bigint | null: false, default 0; next receipt allocated by increment under row lock |
 
 Do not use editable `name` in the reference. Prefer explicit `register_number` over reusing free-form `code` unless `code` is constrained to be that number.
 
 Numbers become effectively immutable once a completed receipt has been issued for that register.
 
-### Allocation
+### Allocation (locked)
 
-Implementation options (pick one in migration design):
-
-1. Counter on `registers.receipt_sequence`; increment inside the completion transaction.  
-2. Sequence object per register with careful transactional semantics.
+Counter on **`registers.receipt_sequence`**; increment under **row lock on the Register** inside the same completion transaction. Do not use a separate sequence-object path for Phase 4.
 
 Persist on the completed transaction:
 
@@ -362,17 +382,17 @@ Print layout (header `Store` / `Reg` / `Trans`) is Phase 5; identity/reference r
 
 ## 13. Inventory linkage (no new inventory tables)
 
-Post through existing Inventory services. Ledger / valuation entries reference:
+Post through existing Inventory services via **`Inventory::PostSale`** (or equivalent sale-specific boundary)—**not** `Inventory::PostAdjustment`. Each completed sale line posts a **paired** physical + valuation effect with:
 
 ```text
 source_type = "PosTransactionLine"   # consistent with Phase 3 class-name convention
 source_id   = pos_transaction_lines.id
 ```
 
-Traceability must still support:
+Reject below-zero outcomes (`reject_below_zero`). Traceability:
 
 ```text
-operation_id → transaction_id → line_id → ledger entry
+operation_id → transaction_id → line_id → paired ledger effects
 ```
 
 Do not invent a POS-only domain `source_type` string unless a global inventory ADR changes causal reference conventions.
@@ -383,15 +403,19 @@ Do not invent a POS-only domain `source_type` string unless a global inventory A
 
 - FKs for all store / register / session / period / user / variant / tax references.
 - Unique `(store_id, code)` on `store_taxes`.
+- Unique `(store_id, calculation_order)` on `store_taxes`.
+- CHECK `0 <= rate_percent AND rate_percent <= 100` on `store_taxes.rate_percent` (NOT NULL).
 - Unique `(store_tax_id, tax_class_id)` on `store_tax_rules`.
-- Unique `(store_id, register_id)` open reporting period policy (at most one open Z per Register).
+- Partial unique `(register_id) WHERE status = 'open'` on `pos_reporting_periods`.
+- Partial unique `(register_id) WHERE status = 'open'` on `pos_sessions`.
 - Unique `(store_id, register_id, receipt_sequence)` where sequence is not null.
 - Unique `(store_id, register_number)` on `registers`.
-- At most one open reporting period per `register_id`.
+- Unique `(pos_transaction_id, line_number)` on lines; CHECK `quantity > 0`.
+- Unique `(pos_transaction_line_id, store_tax_id)` on tax components; nonnegative CHECKs on basis/tax cents.
 - Optional unique `transaction_reference` if stored; must match derived form from snapshots.
-- `pos_operations` uniqueness on `(source_id, operation_type, idempotency_key)`.
-- Check constraints for status enums; `in_flight` requires lease.
-- Reject completed transactions without receipt sequence and number snapshots.
+- `pos_operations` uniqueness on `(source_id, command_type, idempotency_key)`.
+- Check constraints for status enums; `in_flight` requires lease; completed requires envelope + `envelope_hash`.
+- Transaction status NULL rules for receipt / `completed_at` / `cancelled_at` (§7).
 - Reject completed lines without required merchandise snapshot keys (DB CHECK and/or application validation).
 - Completed `pos_line_tax_components.applies` is non-null.
 
@@ -407,8 +431,9 @@ Before writing POS migrations:
 - [x] Receipt / transaction reference format locked (ADR-006 + receipt-identity)  
 - [x] Envelope vs normalized Core locked (ADR-020 + operation-and-core-facts)  
 - [x] Register vs Terminal locked (ADR-021 + register-identity)  
+- [x] **Schema constraints locked** (this document: two-hash `pos_operations`, receipt counter, partial uniques, line/tax CHECKs, status NULL rules)  
 - [ ] **Pre-Phase-4:** `workstations` → `registers` rename (FKs, permissions, audit, tests)  
-- [ ] `registers.register_number` added and backfilled  
+- [ ] `registers.register_number` + `registers.receipt_sequence` added and backfilled  
 - [ ] Device-only fields reviewed/dropped on Register  
 - [ ] CompletedPosOperation v1 example fixtures reviewed  
 - [ ] Session table confirmed **without** Cash close columns  

@@ -1,3 +1,6 @@
+> [!WARNING]
+> **Historical / non-authoritative.** This document is a design-discussion draft. For implementation, use the Phase 4 packet README and its companions ([README.md](README.md)), accepted ADRs (especially ADR-019/020/021), and [../spec.md](../spec.md) only where they do not conflict with the packet.
+
 # POS Register Operating Model and Initial Implementation Scope
 
 The initial Rails-native POS follows the same Register transaction and authoritative-posting model intended for a future standalone Register.

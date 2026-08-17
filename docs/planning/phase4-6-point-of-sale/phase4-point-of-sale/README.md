@@ -1,6 +1,6 @@
 # Phase 4 — Point of sale foundation
 
-Implementation-ready Phase 4 packet for the POS transaction and posting foundation.
+**Implementation-ready** once the `workstations` → `registers` rename slice completes and CompletedPosOperation v1 golden fixtures are reviewed. See [phase4-plan.md](phase4-plan.md) readiness gate and [phase4-schema.md](phase4-schema.md) migration checklist.
 
 | Document | Purpose |
 |---|---|
@@ -14,4 +14,4 @@ Implementation-ready Phase 4 packet for the POS transaction and posting foundati
 
 Parent multi-phase sequencing: [../spec.md](../spec.md).
 
-`preliminary-specs-1.md` and `preliminary-specs-2.md` are historical design discussion notes. Prefer the documents above and ADR-021 for implementation.
+`preliminary-specs-1.md` and `preliminary-specs-2.md` are historical design discussion notes (bannered). Prefer the documents above and ADR-021 for implementation.

@@ -2,7 +2,9 @@
 
 **Status:** Planning contract (Phase 4)
 
-**Authority:** Canonical shape of a completed POS originating fact for Phase 4 Cash sales. Used by Rails completion today and by a future standalone Register after local completion. Dual authority with normalized Core: [operation-and-core-facts.md](operation-and-core-facts.md) / [ADR-020](../../../adr/ADR-020-pos-operation-envelope-and-core-facts.md).
+**Authority:** Canonical shape of a completed POS commercial fact for Phase 4 Cash sales under Rails. Dual authority with normalized Core: [operation-and-core-facts.md](operation-and-core-facts.md) / [ADR-020](../../../adr/ADR-020-pos-operation-envelope-and-core-facts.md).
+
+v1 establishes the **commercial base** only. It is **not** asserted to contain all provenance required for standalone Terminal completion. A later compatible contract version must add Terminal and reference-configuration provenance (ADR-004, ADR-005, ADR-021) before standalone completion authority is enabled.
 
 Companions: [Phase 4 plan](phase4-plan.md), [Phase 4 schema](phase4-schema.md), [operation-and-core-facts.md](operation-and-core-facts.md).
 
@@ -10,7 +12,7 @@ Companions: [Phase 4 plan](phase4-plan.md), [Phase 4 schema](phase4-schema.md), 
 
 ## 1. Purpose
 
-`CompletedPosOperation` is the **immutable canonical representation** of a commercial transaction as established by the originating Register (or Rails completion path). It is a complete commercial payload plus operation provenance — not mere metadata.
+`CompletedPosOperation` is the **immutable canonical representation** of a commercial transaction as established at completion. It is a complete commercial payload plus operation provenance — not mere metadata.
 
 It always describes an **already-completed** originating fact and therefore **always includes permanent receipt identity**.
 
@@ -22,7 +24,16 @@ It is not the Rails UI form payload. It is not a draft. It is not “almost comp
 
 ## 2. Command vs completed operation
 
-### 2.1 `CompleteTransactionCommand` (internal / client request)
+### 2.1 Types and hashes
+
+| Concern | Type | Hash on `pos_operations` |
+|---|---|---|
+| Pre-completion request | `command_type = pos.complete_transaction` | `command_payload_hash` |
+| Completed fact | `fact_type = pos.transaction_completed` | `envelope_hash` |
+
+Those hashes are intentionally different. The command hash binds a retry to the request that asked ShelfSense to complete. The envelope hash fingerprints the completed fact after receipt allocation.
+
+### 2.2 `CompleteTransactionCommand` (internal / client request)
 
 Input that asks the authority to complete a working transaction. May include:
 
@@ -31,9 +42,9 @@ Input that asks the authority to complete a working transaction. May include:
 - expected totals / tender presentation for validation
 - actor and context already bound on the working transaction
 
-This payload **does not** claim to be a completed operation and **does not** contain the permanent receipt until completion succeeds.
+This payload **does not** claim to be a completed operation and **does not** contain the permanent receipt until completion succeeds. It must not include server-assigned receipt sequence or final completion-only timestamps in the material covered by `command_payload_hash`.
 
-### 2.2 `CompletedPosOperation` (canonical fact)
+### 2.3 `CompletedPosOperation` (canonical fact)
 
 For Rails, constructed **inside** the authoritative completion transaction after receipt allocation and commercial freeze (not submitted as a pre-built external envelope).
 
@@ -41,29 +52,33 @@ For Rails, constructed **inside** the authoritative completion transaction after
 CompleteTransactionCommand
         ↓
 authoritative completion
+   ├── authorize + lease on command_payload_hash
    ├── allocate receipt
    ├── freeze commercial facts
    ├── construct CompletedPosOperation v1
+   │         fact_type = pos.transaction_completed
    ├── persist normalized Core facts
-   ├── persist pos_operations.envelope + payload_hash
-   └── post Inventory / reporting effects
+   ├── persist pos_operations.envelope + envelope_hash
+   ├── post paired Inventory effects
+   ├── audit + pos.transaction_completed outbox
+   └── mark operation completed
 ```
 
 Envelope and Core must match; written atomically.
 
-### 2.3 Future standalone
+### 2.4 Future standalone
 
 ```text
-local CompleteTransaction
+Terminal local completion on behalf of a Register
    ├── allocate receipt locally
-   └── construct CompletedPosOperation v1
+   └── construct CompletedPosOperation (compatible later version)
         ↓
 synchronize
         ↓
 central validation / posting
 ```
 
-Both origins produce materially the same completed fact.
+v1 commercial semantics remain the base; Terminal/config provenance is required in a later version before this path is authorized.
 
 ---
 
@@ -82,6 +97,7 @@ Additive keys may appear in later versions. Material semantic changes (sign rule
 | Field | Meaning |
 |---|---|
 | `operation.operation_id` | Identity of the **completion operation** |
+| `operation.fact_type` | `pos.transaction_completed` (not the command type) |
 | `transaction.transaction_id` | Identity of the **commercial transaction** |
 | `receipt.sequence` / number snapshots / optional `reference` | Permanent human-facing receipt identity (`S…-R…-T…`) assigned at completion |
 
@@ -90,8 +106,9 @@ Never overload `transaction_id` as the completion idempotency key.
 Idempotency (ADR-009 style on `pos_operations`):
 
 ```text
-same operation identity + same material payload hash → same result
-same operation identity + different payload hash → integrity failure
+same (source_id, command_type, idempotency_key) + same command_payload_hash → same result
+same key + different command_payload_hash → integrity failure
+accepted envelope must match envelope_hash
 ```
 
 ---
@@ -101,6 +118,7 @@ same operation identity + different payload hash → integrity failure
 - All money fields are integer **cents** (or documented minor units) for the stated `currency_code`.
 - **Magnitudes are positive.**
 - `direction` on lines and tenders supplies economic sign.
+- Line `quantity` is a JSON **integer** (not a decimal string) for Phase 4 quantity-tracked merchandise.
 
 ```text
 sale line   → +extended / +tax toward amount due
@@ -123,10 +141,10 @@ Authority: [pos-tax-contract.md](pos-tax-contract.md) and [ADR-019](../../../adr
 
 ```text
 tax_class_id
-tax_class_code   # merchandise classification, e.g. physical_book
+tax_class_code   # merchandise classification, e.g. physical_book (envelope field name)
 ```
 
-Phase 4: applied Tax Class always equals merchandise Tax Class. No line-level treatment enum.
+Normalized Core stores the same snapshot as `tax_class_code_snapshot`. Phase 4: applied Tax Class always equals merchandise Tax Class. No line-level treatment enum.
 
 ### Each Store Tax determination (`tax_components[]`)
 
@@ -176,7 +194,7 @@ CompletedPosOperation
 │
 ├── operation
 │   ├── operation_id
-│   └── operation_type          # e.g. pos.complete_transaction
+│   └── fact_type                 # pos.transaction_completed
 │
 ├── origin
 │   ├── store_id
@@ -188,7 +206,7 @@ CompletedPosOperation
 ├── receipt
 │   ├── sequence                  # receipt_sequence
 │   ├── store_number              # snapshot
-│   ├── register_number        # snapshot (“Reg”)
+│   ├── register_number           # snapshot (“Reg”)
 │   └── reference                 # optional derived S003-R02-T0018427
 │
 ├── transaction
@@ -205,7 +223,7 @@ CompletedPosOperation
 │   ├── line_number
 │   ├── direction                 # sale
 │   ├── product_variant_id
-│   ├── quantity
+│   ├── quantity                  # integer
 │   ├── reference_unit_price_cents
 │   ├── selling_unit_price_cents
 │   ├── extended_selling_amount_cents
@@ -233,6 +251,8 @@ CompletedPosOperation
     └── change_cents
 ```
 
+Do **not** use `operation_type` on the envelope; the completed fact uses `fact_type`. Command type lives only on the durable command/idempotency record.
+
 ---
 
 ## 9. Example (Phase 4 Cash sale)
@@ -244,7 +264,7 @@ Illustrative only. Includes both applicable and non-applicable Store Tax determi
   "schema_version": 1,
   "operation": {
     "operation_id": "01920000-0000-7000-8000-000000000001",
-    "operation_type": "pos.complete_transaction"
+    "fact_type": "pos.transaction_completed"
   },
   "origin": {
     "store_id": "01920000-0000-7000-8000-000000000010",
@@ -274,7 +294,7 @@ Illustrative only. Includes both applicable and non-applicable Store Tax determi
       "line_number": 1,
       "direction": "sale",
       "product_variant_id": "01920000-0000-7000-8000-000000000300",
-      "quantity": "1",
+      "quantity": 1,
       "reference_unit_price_cents": 1999,
       "selling_unit_price_cents": 1999,
       "extended_selling_amount_cents": 1999,
@@ -345,27 +365,31 @@ Portable fixtures (JSON preferred) covering tax cases in [pos-tax-contract.md](p
 | # | Case |
 |---|---|
 | … | Full envelope including receipt after successful completion |
-| … | Idempotent replay: same `operation_id` + payload → identical envelope / result |
+| … | Idempotent replay: same command identity + `command_payload_hash` → identical envelope / result |
+| … | Quantity encoded as JSON integer |
 
-These become the eventual Ruby / .NET parity suite.
+These become the eventual Ruby / .NET parity suite. Fixture content review is a migration readiness gate.
 
 ---
 
 ## 11. Construction checklist (Rails completion)
 
-Inside one PostgreSQL transaction:
+Inside one PostgreSQL transaction (matches [operation-and-core-facts.md](operation-and-core-facts.md) §8):
 
-1. Validate working transaction and Cash settlement.  
-2. Begin or reclaim `pos_operations` lease (ADR-009 semantics).  
-3. Allocate `receipt_sequence`; snapshot store/register numbers; derive optional compact `reference`.  
-4. Freeze `occurred_at`, `business_date`, line snapshots, tax components, tender.  
-5. Build `CompletedPosOperation` v1 (must include receipt sequence and number snapshots).  
-6. Persist completed POS rows.  
-7. Post Inventory effects for each sale line.  
-8. Store `pos_operations` with full envelope, payload hash, and idempotency completion (`received_at` / `posted_at` as Core processing times).  
-9. Commit.  
+1. Authorize actor (`pos.transact`) and validate Store/Register/Session/period/transaction consistency.  
+2. Begin or reclaim `pos_operations` lease using `command_payload_hash` (ADR-009).  
+3. Lock working transaction; validate expected `lock_version` and Cash settlement.  
+4. Allocate `registers.receipt_sequence` under Register row lock; snapshot store/register numbers; derive optional compact `reference`.  
+5. Freeze `occurred_at`, `business_date`, line snapshots, tax components, tender.  
+6. Build `CompletedPosOperation` v1 with `fact_type = pos.transaction_completed` (must include receipt sequence and number snapshots).  
+7. Canonicalize envelope; compute `envelope_hash`.  
+8. Persist completed POS rows.  
+9. Post paired Inventory physical + valuation effects via `Inventory::PostSale` (`reject_below_zero`).  
+10. Record required audit and slim `pos.transaction_completed` outbox message.  
+11. Store completed `pos_operations` with full envelope, `envelope_hash`, `fact_type`, and processing times (`received_at` / `posted_at`).  
+12. Commit.  
 
-On validation or commit failure: no completed transaction, no receipt consumption that escapes the failed transaction, no Inventory effect. Envelope and Core must not partially diverge.
+On validation or commit failure: no completed transaction, no receipt consumption that escapes the failed transaction, no Inventory effect, no POS outbox fact. Envelope and Core must not partially diverge.
 
 ---
 
@@ -376,6 +400,6 @@ On validation or commit failure: no completed transaction, no receipt consumptio
 - Customer identity  
 - Receipt print layout (header presentation is specified in [receipt-identity.md](receipt-identity.md); rendering is Phase 5)  
 - Offline sync transport framing (envelope remains the business payload; transport metadata must not enter the envelope — see [operation-and-core-facts.md](operation-and-core-facts.md))  
-- Required Terminal / producer enrollment fields (Terminal deferred; producer optional)  
+- Required Terminal / producer enrollment / reference-config provenance (later compatible version before standalone)  
 
 Extensibility is preserved by versioning and by locking sign, tax-component, receipt, Register/Terminal, and envelope/Core dual-authority rules now—not by stuffing unused Phase 6 columns into v1.

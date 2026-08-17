@@ -2,7 +2,7 @@
 
 **Status:** Accepted (implements [ADR-020](../../../adr/ADR-020-pos-operation-envelope-and-core-facts.md))
 
-**Authority:** Boundary between the canonical `CompletedPosOperation` envelope and normalized Core POS tables. Complements [completed-pos-operation-v1.md](completed-pos-operation-v1.md), [phase4-schema.md](phase4-schema.md), [receipt-identity.md](receipt-identity.md), and [pos-tax-contract.md](pos-tax-contract.md).
+**Authority:** Boundary between the canonical `CompletedPosOperation` envelope and normalized Core POS tables; command vs envelope hash semantics. Complements [completed-pos-operation-v1.md](completed-pos-operation-v1.md), [phase4-schema.md](phase4-schema.md), [receipt-identity.md](receipt-identity.md), and [pos-tax-contract.md](pos-tax-contract.md).
 
 ---
 
@@ -39,7 +39,7 @@ Transport/processing (HTTP, retries, sync batches, telemetry) is a **third** con
 | Need | Where |
 |---|---|
 | Receipt, return, reporting, inventory, tax, cash, lookup, audit/control | **Normalize** |
-| “What did the origin assert?”, contract version, client/install, payload integrity | **Envelope / `pos_operations`** |
+| “What did the origin assert?”, contract version, command/envelope integrity | **Envelope / `pos_operations`** |
 | Request IDs, IP, User-Agent, retry attempt, latency, sync batch | **Transport / logs** — not envelope, not commercial txn |
 
 ---
@@ -54,11 +54,11 @@ Used for receipts, returns, reporting, Inventory linkage, tax, cash reconciliati
 
 ### Canonical operation
 
-Authoritative provenance for: what exact completed operation the originating Register (or Rails completion) asserted.
+Authoritative provenance for: what exact completed operation the origin asserted (Rails completion path or, later, a Terminal operating a Register).
 
-Used for synchronization, idempotency/integrity, reconciliation, contract debugging.
+Used for synchronization, integrity, reconciliation, contract debugging.
 
-Avoid saying only “the envelope is authoritative” or only “the tables are authoritative.” They answer different questions. Neither is independently editable after acceptance.
+Neither is independently editable after acceptance.
 
 ---
 
@@ -91,9 +91,9 @@ Use `register_*` in schema and contracts (ADR-021 / ADR-011). Cashier UI may say
 
 ### Lines (Phase 4)
 
-Required commercial snapshots must be relationally usable. Phase 4 locks **required `merchandise_snapshot` jsonb** with fixed v1 keys (`sku`, `description`, `tax_class_code`) on the line, equivalent to first-class snapshot columns for those keys. Do not invent a second competing snapshot shape. Later phases may promote hot keys to columns if query patterns demand it; the envelope always carries the same completed merchandise facts.
+Required commercial snapshots must be relationally usable. Phase 4 locks **required `merchandise_snapshot` jsonb** with fixed v1 keys (`sku`, `description`, `tax_class_code`) on the line. Normalized Core also stores `tax_class_code_snapshot` (and `tax_class_id`). Envelope field may remain `tax_class_code` because the envelope itself is a completed snapshot.
 
-Also: direction, quantity, prices, extended amounts, tax class id/code snapshot, line tax/total, position/`line_number`.
+Also: direction, integer quantity, prices, extended amounts, line tax/total, `line_number`.
 
 ### Tax components and tenders
 
@@ -105,35 +105,54 @@ Phase 4 tenders may use `tender_type = cash` (string/enum) without a full tender
 
 ## 5. `pos_operations` purpose
 
-Durable completion provenance **and** ADR-009 idempotency — not a second transaction model.
+Durable completion-command ADR-009 state **and** permanent completed-operation provenance — not a second transaction model.
 
 ```text
 pos_operations
 ├── id / operation_id
-├── operation_type
-├── schema_version
-├── source_id
-├── idempotency_key
-├── payload_hash
-├── status                    # in_flight | completed | failed
+├── command_type                 # pos.complete_transaction
+├── fact_type                    # null until completed; then pos.transaction_completed
+├── schema_version               # null until completed envelope exists
+│
+├── source_id                    # UUID
+├── idempotency_key              # UUID
+├── command_payload_hash
+├── status                       # in_flight | completed | failed
 ├── lease_expires_at
+│
 ├── pos_transaction_id
 ├── store_id
 ├── register_id
-├── installation_id           # optional later technical id only; not business vocabulary
-├── producer_client           # optional
-├── producer_version          # optional
-├── envelope                  # JSONB — full CompletedPosOperation (required when completed)
-├── originated_at             # from commercial occurred_at / origin
-├── received_at               # central receipt of operation (Core only)
-├── posted_at                 # central materialization success (Core only)
+│
+├── envelope                     # full CompletedPosOperation; completed only
+├── envelope_hash                # completed only
+│
+├── producer_client              # optional
+├── producer_version             # optional
+│
+├── originated_at
+├── received_at
+├── posted_at
+│
 ├── lock_version
 └── timestamps
 ```
 
-Indexed columns answer: which operation created transaction X, which Register, which schema version, when Core received/posted — without searching JSON.
+Do **not** store Phase 4 `installation_id`. Future technical provenance uses `terminal_id` when Terminals exist (ADR-021).
 
-Some duplication with `pos_transactions` is intentional.
+> `command_payload_hash` and `envelope_hash` are intentionally different. The first binds a retry to the request that asked ShelfSense to complete the transaction. The second fingerprints the completed fact after receipt allocation and commercial freeze.
+
+Uniqueness: `UNIQUE(source_id, command_type, idempotency_key)`.
+
+### Status rules
+
+| Status | Rules |
+|---|---|
+| `in_flight` | `lease_expires_at` required; envelope / `fact_type` / `envelope_hash` absent |
+| `failed` | completed envelope absent |
+| `completed` | `fact_type`, `schema_version`, `pos_transaction_id`, `envelope`, `envelope_hash`, `posted_at` required |
+
+Indexed columns answer: which operation created transaction X, which Register, which schema version, when Core received/posted — without searching JSON.
 
 ---
 
@@ -143,19 +162,19 @@ The envelope is a **complete** immutable representation of what the origin says 
 
 Include:
 
-- operation identity, type, schema version
-- optional producer (`client`, `version`; optional later technical install id)
+- `operation_id`, `fact_type` (`pos.transaction_completed`), `schema_version`
+- optional producer (`client`, `version`)
 - origin context (store, register, session, operator, occurred_at, business_date)
 - full commercial transaction: receipt components, currency, lines with snapshots and tax components, tenders, totals
 
-Receipt numbers in the envelope use **string snapshots** consistent with display padding rules (e.g. `"003"`, `"02"`), not bare integers that drop leading zeros.
+Receipt numbers use **string snapshots** (e.g. `"003"`, `"02"`).
 
-Exclude from the envelope:
+Exclude:
 
-- `received_at` / `posted_at` (central processing)
-- retry attempt counts, HTTP/request IDs, IP, User-Agent, latency, sync batch numbers, tokens
+- `received_at` / `posted_at`
+- retry / HTTP / transport metadata
 
-Those must not affect payload hash. Hash identity must be identical for in-process Rails delivery and standalone sync of the same completed fact.
+Those must not affect `envelope_hash`.
 
 ---
 
@@ -177,32 +196,60 @@ Reporting must not treat `received_at` as sale time.
 ### Rails (Phase 4)
 
 ```text
+CompleteTransactionCommand
+        ↓
+begin/reclaim pos_operation
+using command_payload_hash
+        ↓
 BEGIN
-  validate working transaction
-  allocate receipt
-  construct canonical CompletedPosOperation
-  validate operation / payload hash
-  write normalized completed facts
-  write pos_operations (envelope + hash + idempotency completion)
-  post inventory effects
+  authorize actor and validate Store/Register/Session/period context
+  lock working transaction
+  validate expected working-transaction lock_version
+  validate settlement
+  allocate Register receipt sequence (row lock on registers)
+  freeze occurred_at / business_date
+  freeze commercial facts
+  build CompletedPosOperation
+      fact_type = pos.transaction_completed
+  canonicalize envelope
+  compute envelope_hash
+  write normalized Core POS facts
+  write completed pos_operation envelope/hash
+  post paired Inventory physical + valuation effects
+  record required audit
+  record pos.transaction_completed outbox message
+  mark operation completed
 COMMIT
 ```
 
-Rails **constructs** the envelope inside completion; it does not require a pre-existing external Register submission.
+On failure:
+
+```text
+business transaction rolls back
+→ no receipt effect
+→ no Inventory effect
+→ no POS outbox fact
+→ operation may transition to failed under ADR-009 retry semantics
+```
+
+Rails **constructs** the envelope inside completion.
 
 ### Future standalone
 
 ```text
-Register local completion → canonical operation
+Terminal local completion on behalf of a Register
+→ canonical CompletedPosOperation (compatible contract)
         ↓
 central ingest → validate
         ↓
 BEGIN
-  persist pos_operations
+  persist/complete pos_operations
   materialize normalized Core
-  post inventory/etc.
+  post Inventory / audit / outbox
 COMMIT
 ```
+
+`CompletedPosOperation v1` is the commercial base. Before standalone completion authority, a later compatible version must add Terminal and reference-configuration provenance (ADR-004/005/021).
 
 Accepted envelope and normalized facts must describe the same immutable transaction. Disagreement is an integrity defect.
 
@@ -214,7 +261,8 @@ Accepted envelope and normalized facts must describe the same immutable transact
 |---|:---:|:---:|
 | Transaction UUID | ✓ | ✓ |
 | Operation UUID | via relationship | ✓ |
-| Schema version | `pos_operations` | ✓ |
+| `command_type` / command hash | `pos_operations` | **No** (pre-completion) |
+| `fact_type` / schema version | `pos_operations` | ✓ |
 | Store / Register / session / operator | ✓ | ✓ |
 | `occurred_at` / `business_date` | ✓ | ✓ |
 | Receipt sequence + number snapshots | ✓ | ✓ |
@@ -222,12 +270,11 @@ Accepted envelope and normalized facts must describe the same immutable transact
 | Merchandise snapshots | ✓ | ✓ |
 | Tax components | ✓ | ✓ |
 | Tender facts / totals | ✓ | ✓ |
-| Payload hash | `pos_operations` | calculated alongside |
-| Client/build version | normally `pos_operations` | ✓ (optional producer) |
-| Installation / producer technical ids | later / optional | ✓ optional |
+| `envelope_hash` | `pos_operations` | calculated alongside |
+| Client/build version | normally `pos_operations` | ✓ optional producer |
 | Central `received_at` / `posted_at` | `pos_operations` only | **No** |
-| Retry / HTTP / transport | no commercial table | **No** |
-| Terminal id | deferred (ADR-021) | deferred |
+| Retry / HTTP / transport | no | **No** |
+| Terminal id | deferred (ADR-021) | deferred (later contract version) |
 
 > The envelope describes the originating completed operation. It does not describe what happened to the operation after transmission.
 
@@ -235,12 +282,12 @@ Accepted envelope and normalized facts must describe the same immutable transact
 
 ## 10. Contract language
 
-> A Completed POS Operation is the immutable canonical representation of a commercial transaction as established by the originating Register (or Rails completion path). It contains all commercial facts necessary for Core to validate and materialize the transaction, including origin context, permanent receipt identity, completed lines and economic snapshots, component tax results, tenders, and transaction totals.
+> A Completed POS Operation is the immutable canonical representation of a commercial transaction as established at completion. It contains all commercial facts necessary for Core to validate and materialize the transaction, including origin context, permanent receipt identity, completed lines and economic snapshots, component tax results, tenders, and transaction totals.
 
-> Core persists those commercial facts in normalized POS tables. Normalized tables are used for ordinary business behavior including receipt rendering, transaction lookup, returns, reporting, Inventory integration, and reconciliation. No required commercial behavior may depend on parsing the stored operation envelope.
+> Core persists those commercial facts in normalized POS tables. Normalized tables are used for ordinary business behavior. No required commercial behavior may depend on parsing the stored operation envelope.
 
-> Core also preserves the accepted canonical operation and its payload hash on a durable `pos_operations` record with ADR-009 idempotency semantics. The operation record provides immutable origin and contract provenance and is distinct from generic request-idempotency infrastructure that may expire.
+> Durable `pos_operations` owns ADR-009 completion-command state (`command_payload_hash`) and permanent completed-operation provenance (`envelope` + `envelope_hash`). Those hashes are not interchangeable.
 
-> Operation metadata may include schema version, operation identity, and optional producing client. Central processing facts such as receipt time, posting time, retry attempts, request IDs, and transport information are not part of the canonical originating operation and are recorded separately where required.
+> Central processing facts (`received_at`, `posted_at`) and transport metadata are not part of the canonical originating operation.
 
 > The canonical operation and normalized completed facts must describe the same immutable transaction. They are created or accepted as part of one authoritative posting boundary and may not diverge.

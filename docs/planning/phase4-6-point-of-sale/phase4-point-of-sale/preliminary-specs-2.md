@@ -1,3 +1,6 @@
+> [!WARNING]
+> **Historical / non-authoritative.** This document is a design-discussion draft. For implementation, use the Phase 4 packet README and its companions ([README.md](README.md)), accepted ADRs (especially ADR-019/020/021), and [../spec.md](../spec.md) only where they do not conflict with the packet.
+
 Yes. This is a **very reasonable breakdown**, and I think it is substantially better than treating the whole “initial complete POS” spec as one implementation phase. It correctly separates architectural proof, the first operational cash path, and later POS breadth.
 
 I would make about **six changes** before locking it.
