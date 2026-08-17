@@ -98,6 +98,13 @@ class InventoryStoreAuthzTest < ActionDispatch::IntegrationTest
     assert_not @east_adjustment.reload.reversed?
   end
 
+  test "store-scoped manager cannot show another store's balance" do
+    sign_in_as("manager")
+
+    get admin_inventory_balance_path(@east_balance)
+    assert_redirected_to root_path
+  end
+
   test "rebuild is denied for another store" do
     sign_in_as("manager")
 

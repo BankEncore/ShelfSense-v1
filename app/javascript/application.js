@@ -1,3 +1,2 @@
-// Configure your import map in config/importmap.rb. Read more: https://github.com/rails/importmap-rails
-import "@hotwired/turbo-rails"
-import "controllers"
+// Admin entry point. Do not import Turbo or Stimulus here.
+// The Register workspace boots those from pos.js via the POS layout.

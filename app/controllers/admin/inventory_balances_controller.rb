@@ -64,7 +64,7 @@ module Admin
 
     def set_balance
       @balance = InventoryBalance.find(params[:id])
-      throw :abort unless authorize!("inventory.view", store: @balance.store)
+      return unless authorize!("inventory.view", store: @balance.store)
     end
   end
 end

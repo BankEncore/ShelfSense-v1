@@ -50,7 +50,7 @@ completed-receipt New sale shortcut (not Enter)
 | Topic | Decision |
 |---|---|
 | Client | Rails-native online POS. No Terminal table (ADR-021). No scanner API; scanners are keyboard input ending in Enter |
-| UI stack | Importmap + Turbo + Stimulus. Gems are installed for the Register workspace |
+| UI stack | Importmap + Turbo + Stimulus. Gems are installed for the Register workspace. The POS layout loads `pos.js`; the admin layout loads `application.js` without Turbo and sets `data-turbo="false"` |
 | Layout | Dedicated POS layout. Do not reuse admin chrome for the selling surface (it would steal scan focus) |
 | Permission | `pos.transact` at the current store. Session cashier for session/transaction commands (`require_session_cashier!` / `require_transaction_cashier!`) |
 | Controllers | Orchestrate Phase 4/5 services only. No receipt allocation, inventory posting, tax calculation, or commercial total mutation in controllers or Stimulus |

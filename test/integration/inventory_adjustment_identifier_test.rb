@@ -60,6 +60,16 @@ class InventoryAdjustmentIdentifierTest < ActionDispatch::IntegrationTest
     @shrinkage = AdjustmentReason.find_by!(code: "shrinkage")
   end
 
+  test "adjustment form is a full page post without turbo" do
+    sign_in_as("admin")
+
+    get new_admin_inventory_adjustment_path
+    assert_response :success
+    assert_select "html[data-turbo=false]"
+    assert_select "script[type=module]", text: /import "application"/
+    assert_select "script[type=module]", text: /import "pos"/, count: 0
+  end
+
   test "posts quantity adjustment using variant SKU" do
     sign_in_as("admin")
 

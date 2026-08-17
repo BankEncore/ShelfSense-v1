@@ -25,6 +25,20 @@ class StoreTaxesAdminTest < ActionDispatch::IntegrationTest
     assert store_tax.store_tax_rules.find_by!(tax_class: TaxClass.find_by!(code: "physical_book")).applies
   end
 
+  test "admin with multiple stores is sent to store selection instead of aborting" do
+    Store.create!(
+      store_number: "2",
+      code: "east",
+      name: "East Store",
+      timezone: "America/New_York",
+      country_code: "US"
+    )
+    sign_in_as("admin")
+
+    get admin_store_taxes_path
+    assert_redirected_to new_store_selection_path
+  end
+
   test "associate is denied store_taxes.create" do
     associate = User.create!(
       username: "clerk",

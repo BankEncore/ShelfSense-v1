@@ -28,6 +28,8 @@ class PosRegisterTest < ActionDispatch::IntegrationTest
     assert_equal 0, PosSession.count
     assert_equal 0, PosTransaction.count
     assert_match "Opening float", response.body
+    assert_select "html:not([data-turbo])"
+    assert_select "script[type=module]", text: /import "pos"/
   end
 
   test "post enter then workspace sale tender and complete" do
@@ -95,6 +97,20 @@ class PosRegisterTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_content
     assert_equal 1, PosSession.open.where(register: @register).count
     assert_equal @actor.id, PosSession.open.find_by!(register: @register).cashier_user_id
+  end
+
+  test "user with multiple stores is sent to store selection on enter" do
+    Store.create!(
+      store_number: "2",
+      code: "east",
+      name: "East Store",
+      timezone: "America/New_York",
+      country_code: "US"
+    )
+
+    get pos_register_enter_path
+    assert_redirected_to new_store_selection_path
+    assert_equal 0, PosSession.count
   end
 
   test "user without store access cannot enter the register" do

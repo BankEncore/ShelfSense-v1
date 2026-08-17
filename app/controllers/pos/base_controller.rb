@@ -4,20 +4,10 @@ module Pos
   class BaseController < ApplicationController
     layout "pos"
 
-    before_action :ensure_store_context
+    before_action :require_store_context
     before_action :require_pos_transact!
 
     private
-
-    def ensure_store_context
-      return if current_store.present?
-
-      if accessible_stores.exists?
-        redirect_to new_store_selection_path
-      else
-        redirect_to root_path, alert: "No accessible store is available for your account."
-      end
-    end
 
     def require_pos_transact!
       return if Authorization::PermissionEvaluator.allowed?(
