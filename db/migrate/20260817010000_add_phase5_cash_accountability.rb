@@ -62,13 +62,23 @@ class AddPhase5CashAccountability < ActiveRecord::Migration[8.1]
     add_check_constraint :pos_sessions,
                          "closing_count_cents IS NULL OR closing_count_cents >= 0",
                          name: "pos_sessions_closing_count_nonnegative"
+    add_check_constraint :pos_sessions, <<~SQL.squish, name: "pos_sessions_closing_variance_matches_count"
+      closing_variance_cents IS NULL
+      OR closing_variance_cents = closing_count_cents - closing_expected_cash_cents
+    SQL
 
     remove_check_constraint :pos_reporting_periods, name: "pos_reporting_periods_closed_at_matches_status"
     add_check_constraint :pos_reporting_periods, period_status_sql, name: "pos_reporting_periods_closed_at_matches_status"
     add_nonnegative_period_checks
+    add_check_constraint :pos_reporting_periods, <<~SQL.squish, name: "pos_reporting_periods_finalized_variance_matches_sums"
+      finalized_closing_variance_cents_sum IS NULL
+      OR finalized_closing_variance_cents_sum =
+           finalized_closing_count_cents_sum - finalized_closing_expected_cash_cents_sum
+    SQL
   end
 
   def down
+    remove_check_constraint :pos_reporting_periods, name: "pos_reporting_periods_finalized_variance_matches_sums"
     remove_nonnegative_period_checks
     remove_check_constraint :pos_reporting_periods, name: "pos_reporting_periods_closed_at_matches_status"
     add_check_constraint :pos_reporting_periods,
@@ -78,6 +88,7 @@ class AddPhase5CashAccountability < ActiveRecord::Migration[8.1]
     remove_check_constraint :pos_sessions, name: "pos_sessions_opening_float_nonnegative"
     remove_check_constraint :pos_sessions, name: "pos_sessions_closing_expected_nonnegative"
     remove_check_constraint :pos_sessions, name: "pos_sessions_closing_count_nonnegative"
+    remove_check_constraint :pos_sessions, name: "pos_sessions_closing_variance_matches_count"
     remove_check_constraint :pos_sessions, name: "pos_sessions_closed_at_matches_status"
     add_check_constraint :pos_sessions,
                          "(status = 'open' AND closed_at IS NULL) OR (status = 'closed' AND closed_at IS NOT NULL)",

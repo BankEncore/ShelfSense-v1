@@ -69,12 +69,14 @@ Slice 1 answers the cash-accountability half without screens. Slices 2–3 add t
 | Session open/close | Session cashier only (`Pos::Support.require_session_cashier!`) |
 | Z finalize | Any actor with `pos.transact` at the store. **Intentionally broad for Phase 5**; reconsider with Phase 6 controlled actions. Do not add `pos.finalize_reporting_period` now |
 | Period serialization | `OpenSession` and `FinalizeReportingPeriod` both lock the same `pos_reporting_periods` row |
+| Lifecycle timestamps | Server assigns `Time.current` inside open/close/finalize. Callers cannot pass `opened_at` or `closed_at`. Tests freeze time with `travel_to` |
 | Business date | Confirm `BusinessDate.for_store(...)` only. No arbitrary backdate or override |
 | Opening float | Required at open; integer cents `>= 0`; zero allowed; not a paid-in or tender |
 | Blind close | `CloseSession` accepts only `closing_count_cents` + `expected_lock_version` (plus session/actor). Expected and variance are server-derived. Slice 3 collects the physical count **before** revealing expected or variance |
 | Expected Cash | `opening_float_cents + SUM(cash payment amount_cents)` on **completed** session transactions |
 | Tender amount | `pos_tenders.amount_cents` is applied (net in drawer). Do not add presented and subtract change separately |
-| Variance | `closing_count_cents - closing_expected_cash_cents` (may be negative) |
+| Variance | `closing_count_cents - closing_expected_cash_cents` (may be negative). Database CHECK plus model validation require that equality when the three closing cash columns are present |
+| Z variance CHECK | When present, `finalized_closing_variance_cents_sum = finalized_closing_count_cents_sum - finalized_closing_expected_cash_cents_sum` |
 | Close snapshots | Persist `closing_expected_cash_cents`, `closing_count_cents`, `closing_variance_cents`. Not live counters |
 | Snapshot authority | Open session/period: totals may preview from completed facts. Closed session / finalized period: persisted snapshots are authoritative. Calculation produces the snapshot; it does not replace it after close/finalize |
 | Closed session | Immutable. Do not reopen; open a new session |
@@ -209,7 +211,7 @@ A headless scenario can:
 10. Finalize an unused period as an all-zero Z.
 11. Reject mutation of a closed session or finalized period.
 12. Record the three audit actions above.
-13. Race `OpenSession` vs `FinalizeReportingPeriod` and never produce an open session on a finalized period.
+13. Race `OpenSession` vs `FinalizeReportingPeriod`: exactly one succeeds; never an open session on a finalized period.
 14. Closed session totals and finalized Z totals use persisted snapshots, not a later recomputation as authority.
 15. `CloseSession` receives only count; expected/variance are server-derived.
 16. Multi-session Z aggregates independent session snapshots (`closing_variance_cents_sum == SUM(session.closing_variance_cents)`) without treating them as one drawer.

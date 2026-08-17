@@ -53,9 +53,11 @@ Additional CHECKs:
 opening_float_cents >= 0
 closing_expected_cash_cents IS NULL OR closing_expected_cash_cents >= 0
 closing_count_cents IS NULL OR closing_count_cents >= 0
+closing_variance_cents IS NULL
+  OR closing_variance_cents = closing_count_cents - closing_expected_cash_cents
 ```
 
-Closing columns are all-null or all-present (implied by the status pairing). Variance has no sign CHECK.
+Closing columns are all-null or all-present (implied by the status pairing). Variance has no sign CHECK; the arithmetic CHECK holds whenever variance is present.
 
 ---
 
@@ -106,6 +108,14 @@ OR
 ```
 
 Non-negative CHECKs on count, money, and sum fields when present, except `finalized_closing_variance_cents_sum` (signed).
+
+Arithmetic CHECK when the Z cash sums are present:
+
+```text
+finalized_closing_variance_cents_sum IS NULL
+OR finalized_closing_variance_cents_sum =
+     finalized_closing_count_cents_sum - finalized_closing_expected_cash_cents_sum
+```
 
 ---
 

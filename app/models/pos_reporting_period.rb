@@ -33,6 +33,7 @@ class PosReportingPeriod < ApplicationRecord
   validates :finalized_closing_variance_cents_sum, numericality: { only_integer: true }, allow_nil: true
   validate :store_matches_register
   validate :finalized_snapshots_match_status
+  validate :finalized_variance_matches_count_and_expected_sums
 
   scope :open, -> { where(status: "open") }
   scope :finalized, -> { where(status: "finalized") }
@@ -65,5 +66,15 @@ class PosReportingPeriod < ApplicationRecord
     elsif finalized?
       errors.add(:base, "finalized snapshots are required when the period is finalized") if snapshots.any?(&:nil?)
     end
+  end
+
+  def finalized_variance_matches_count_and_expected_sums
+    return if finalized_closing_variance_cents_sum.nil? ||
+              finalized_closing_count_cents_sum.nil? ||
+              finalized_closing_expected_cash_cents_sum.nil?
+    return if finalized_closing_variance_cents_sum ==
+              finalized_closing_count_cents_sum - finalized_closing_expected_cash_cents_sum
+
+    errors.add(:finalized_closing_variance_cents_sum, "must equal closing count sum minus expected cash sum")
   end
 end

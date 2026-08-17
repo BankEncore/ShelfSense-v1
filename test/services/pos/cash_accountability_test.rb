@@ -374,16 +374,95 @@ class PosCashAccountabilityTest < ActiveSupport::TestCase
 
   test "open reporting period accepts the calculated store business date" do
     register = Register.create!(store: @store, register_number: 1, name: "Front")
-    calculated = BusinessDate.for_store(@store)
 
-    period = Pos::OpenReportingPeriod.call(
+    travel_to 1.minute.from_now do
+      calculated = BusinessDate.for_store(@store)
+      period = Pos::OpenReportingPeriod.call(
+        store: @store,
+        register: register,
+        actor: @actor,
+        business_date: calculated
+      )
+
+      assert_equal calculated, period.business_date
+      assert_equal Time.current, period.opened_at
+    end
+  end
+
+  test "open and close commands reject caller-supplied lifecycle timestamps" do
+    register = Register.create!(store: @store, register_number: 1, name: "Front")
+    supplied = 3.days.ago
+
+    assert_raises(ArgumentError) do
+      Pos::OpenReportingPeriod.call(store: @store, register: register, actor: @actor, opened_at: supplied)
+    end
+    period = Pos::OpenReportingPeriod.call(store: @store, register: register, actor: @actor)
+    assert_raises(ArgumentError) do
+      Pos::OpenSession.call(
+        store: @store,
+        register: register,
+        actor: @actor,
+        reporting_period: period,
+        opening_float_cents: 0,
+        opened_at: supplied
+      )
+    end
+    session = Pos::OpenSession.call(
       store: @store,
       register: register,
       actor: @actor,
-      business_date: calculated
+      reporting_period: period,
+      opening_float_cents: 0
     )
+    assert_raises(ArgumentError) do
+      Pos::CloseSession.call(
+        session: session,
+        actor: @actor,
+        expected_lock_version: session.lock_version,
+        closing_count_cents: 0,
+        closed_at: supplied
+      )
+    end
+    Pos::CloseSession.call(
+      session: session,
+      actor: @actor,
+      expected_lock_version: session.lock_version,
+      closing_count_cents: 0
+    )
+    assert_raises(ArgumentError) do
+      Pos::FinalizeReportingPeriod.call(
+        period: period,
+        actor: @actor,
+        expected_lock_version: period.lock_version,
+        closed_at: supplied
+      )
+    end
+  end
 
-    assert_equal calculated, period.business_date
+  test "unauthorized actor cannot finalize a reporting period" do
+    clerk = User.create!(
+      username: "no_pos_finalize",
+      display_name: "No POS",
+      password: "correct-horse-battery",
+      password_confirmation: "correct-horse-battery"
+    )
+    register = Register.create!(store: @store, register_number: 1, name: "Front")
+    period = Pos::OpenReportingPeriod.call(store: @store, register: register, actor: @actor)
+
+    assert_raises(Pos::Denied) do
+      Pos::FinalizeReportingPeriod.call(
+        period: period,
+        actor: clerk,
+        expected_lock_version: period.lock_version
+      )
+    end
+
+    period.reload
+    assert period.open?
+    assert_nil period.finalized_by_user_id
+    assert_nil period.finalized_transaction_count
+    assert_nil period.closed_at
+    assert_equal 0, AuditEvent.where(action: "pos.reporting_period.finalized", outcome: "succeeded").count
   end
 
   test "multi-session Z sums independent session snapshots without a drawer chain" do

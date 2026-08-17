@@ -6,12 +6,11 @@ module Pos
       new(**attrs).call
     end
 
-    def initialize(session:, actor:, expected_lock_version:, closing_count_cents:, closed_at: Time.current)
+    def initialize(session:, actor:, expected_lock_version:, closing_count_cents:)
       @session = session
       @actor = actor
       @expected_lock_version = expected_lock_version
       @closing_count_cents = closing_count_cents
-      @closed_at = closed_at
     end
 
     def call
@@ -34,7 +33,7 @@ module Pos
         variance_cents = count_cents - expected_cents
         session.update!(
           status: "closed",
-          closed_at: @closed_at,
+          closed_at: Time.current,
           closing_expected_cash_cents: expected_cents,
           closing_count_cents: count_cents,
           closing_variance_cents: variance_cents

@@ -17,6 +17,7 @@ class PosSession < ApplicationRecord
   validates :closing_variance_cents, numericality: { only_integer: true }, allow_nil: true
   validate :context_matches_period_and_register
   validate :closing_snapshots_match_status
+  validate :closing_variance_matches_count_and_expected
 
   scope :open, -> { where(status: "open") }
   scope :closed, -> { where(status: "closed") }
@@ -49,5 +50,12 @@ class PosSession < ApplicationRecord
     elsif closed?
       errors.add(:base, "closing snapshots are required when the session is closed") if snapshots.any?(&:nil?)
     end
+  end
+
+  def closing_variance_matches_count_and_expected
+    return if closing_variance_cents.nil? || closing_count_cents.nil? || closing_expected_cash_cents.nil?
+    return if closing_variance_cents == closing_count_cents - closing_expected_cash_cents
+
+    errors.add(:closing_variance_cents, "must equal closing count minus expected cash")
   end
 end

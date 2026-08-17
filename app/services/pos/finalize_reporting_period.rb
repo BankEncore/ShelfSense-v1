@@ -6,11 +6,10 @@ module Pos
       new(**attrs).call
     end
 
-    def initialize(period:, actor:, expected_lock_version:, closed_at: Time.current)
+    def initialize(period:, actor:, expected_lock_version:)
       @period = period
       @actor = actor
       @expected_lock_version = expected_lock_version
-      @closed_at = closed_at
     end
 
     def call
@@ -36,7 +35,7 @@ module Pos
         period.update!(
           snapshot.merge(
             status: "finalized",
-            closed_at: @closed_at,
+            closed_at: Time.current,
             finalized_by: @actor
           )
         )

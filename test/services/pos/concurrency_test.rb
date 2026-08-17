@@ -202,9 +202,19 @@ class Pos::ConcurrencyTest < ActiveSupport::TestCase
 
     period = PosReportingPeriod.uncached { PosReportingPeriod.find(period_id) }
     open_sessions = PosSession.uncached { PosSession.where(reporting_period_id: period_id, status: "open").count }
+    successes = [ open_result, finalize_result ].compact
+    failures = [ open_error, finalize_error ].compact
+
     refute period.finalized? && open_sessions.positive?
-    assert open_result || open_error
-    assert finalize_result || finalize_error
+    assert_equal 1, successes.size, "exactly one of OpenSession or FinalizeReportingPeriod must succeed"
+    assert_equal 1, failures.size, "the other command must reject"
+    if open_result
+      assert period.open?
+      assert_equal 1, open_sessions
+    else
+      assert period.finalized?
+      assert_equal 0, open_sessions
+    end
   end
 
   test "concurrent lease begin for the same operation_id recovers without recursion" do

@@ -14,7 +14,7 @@ module Pos
       completed_transactions.count
     end
 
-    def gross_sales_cents
+    def subtotal_cents
       completed_transactions.sum(:subtotal_cents)
     end
 

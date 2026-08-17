@@ -6,13 +6,12 @@ module Pos
       new(**attrs).call
     end
 
-    def initialize(store:, register:, actor:, opening_float_cents:, reporting_period: nil, opened_at: Time.current)
+    def initialize(store:, register:, actor:, opening_float_cents:, reporting_period: nil)
       @store = store
       @register = register
       @actor = actor
       @opening_float_cents = opening_float_cents
       @reporting_period = reporting_period
-      @opened_at = opened_at
     end
 
     def call
@@ -32,7 +31,7 @@ module Pos
           reporting_period: period,
           cashier_user: @actor,
           status: "open",
-          opened_at: @opened_at,
+          opened_at: Time.current,
           opening_float_cents: float_cents
         )
         Audit::Recorder.record!(
