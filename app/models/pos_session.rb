@@ -19,6 +19,10 @@ class PosSession < ApplicationRecord
     status == "open"
   end
 
+  def closed?
+    status == "closed"
+  end
+
   private
 
   def context_matches_period_and_register

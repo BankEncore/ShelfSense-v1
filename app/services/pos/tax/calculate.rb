@@ -2,8 +2,6 @@
 
 module Pos
   module Tax
-    class UnresolvedApplicability < StandardError; end
-
     class Calculate
       Determination = Struct.new(
         :store_tax_id,

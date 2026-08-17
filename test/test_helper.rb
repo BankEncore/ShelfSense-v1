@@ -2,6 +2,7 @@ ENV["RAILS_ENV"] ||= "test"
 require_relative "../config/environment"
 require "rails/test_help"
 require_relative "support/phase2_fixtures"
+require_relative "support/pos_fixtures"
 
 module ActiveSupport
   class TestCase
@@ -12,5 +13,6 @@ module ActiveSupport
     # fixtures :all
 
     include Phase2Fixtures
+    include PosFixtures
   end
 end
