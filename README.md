@@ -1,8 +1,8 @@
 # ShelfSense
 
-ShelfSense is an inventory, purchasing, customer-service, and point-of-sale system for independent bookstores. It is designed for one organization operating one or more stores, with a central organization server and store workstations that can continue ordinary checkout during temporary connectivity loss.
+ShelfSense is an inventory, purchasing, customer-service, and point-of-sale system for independent bookstores. It is designed for one organization operating one or more stores, with a central organization server and store Registers. A future standalone Terminal (ADR-021) may continue ordinary checkout during temporary connectivity loss.
 
-The project is in the planning and foundation stage. Phase 0 established the governing architecture decisions. A Ruby on Rails application foundation is now in place; Phase 1 business implementation has not yet begun. Phase 1 will deliver the minimum operable foundation needed to initialize and administer a store, authenticate users, authorize store access, configure workstations, and record audit events.
+Phases 0–4 are implemented. Phase 5 slice 1 (headless cash accountability and Z finalize) is locked. The next work is the cashier-facing register workspace and receipt/Z screens.
 
 ## Goals
 
@@ -70,11 +70,11 @@ CI prepares its PostgreSQL test database before running the Rails suite. See [Te
 
 ## Architecture at a glance
 
-ShelfSense uses a central-server/store-workstation topology:
+ShelfSense uses a central-server topology. The first POS client is Rails-native and online. Durable checkout identity is the **Register**; a concrete **Terminal** is deferred until standalone/offline POS (ADR-021).
 
 - The central server owns master data, configuration, users, permissions, purchasing, customer records, and consolidated projections.
-- Workstations cache the reference data required for checkout and originate local POS operations.
-- Ordinary sales may complete locally while disconnected and synchronize later.
+- A future Terminal caches the reference data required for checkout and originates completed POS operations for a Register.
+- Ordinary sales may later complete locally while disconnected and synchronize later.
 - Completed business facts remain immutable; corrections use reversals, compensating records, or explicit reconciliation.
 - UUIDv7 identifiers allow durable records to originate without a central sequence allocator.
 - Human-facing document numbers are separate from technical identifiers.

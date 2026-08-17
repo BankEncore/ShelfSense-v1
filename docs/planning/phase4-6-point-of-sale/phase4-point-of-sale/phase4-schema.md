@@ -1,6 +1,6 @@
 # Phase 4 — POS schema outline
 
-**Status:** Planning — schema constraints locked; do not migrate until the `workstations` → `registers` rename slice completes and [completed-pos-operation-v1.md](completed-pos-operation-v1.md) golden fixtures are reviewed ([phase4-plan.md](phase4-plan.md) readiness)
+**Status:** Implemented. Cash-accountability columns are specified in [phase5-schema.md](../phase5-cash-register/phase5-schema.md), not here.
 
 **Authority:** Field-level intent for Phase 4 POS tables. Prefer this document over conversational outlines in chat or preliminary-specs drafts. Cross-cutting rules remain in `AGENTS.md` and accepted ADRs. Tax configuration and completed tax rows follow [pos-tax-contract.md](pos-tax-contract.md) and [ADR-019](../../../adr/ADR-019-pos-sales-tax-model.md).
 

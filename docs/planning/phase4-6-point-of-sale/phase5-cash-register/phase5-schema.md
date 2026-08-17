@@ -1,6 +1,6 @@
 # Phase 5 — Cash accountability schema
 
-**Status:** Locked for slice 1 migrations.
+**Status:** Implemented (slice 1). Register UI does not add tables.
 
 **Authority:** Column and constraint intent for Phase 5 session cash and reporting-period Z snapshots. Phase 4 tables stay as migrated; this document only adds the deferred cash/Z fields. Cross-cutting rules remain in `AGENTS.md` and accepted ADRs.
 

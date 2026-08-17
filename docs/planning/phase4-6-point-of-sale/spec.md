@@ -614,6 +614,8 @@ Phase 4 is complete when a headless/application-level scenario can:
 
 # 5. Phase 5 — First Operational Cash Register
 
+**Implementation authority:** Prefer [phase5-plan.md](phase5-cash-register/phase5-plan.md) and [phase5-schema.md](phase5-cash-register/phase5-schema.md). Slice 1 (headless cash / Z) is locked. This section is the multi-phase narrative; where it disagrees on cash columns, blind close, snapshot authority, Z aggregates, business-date confirmation, or finalize gates, the Phase 5 packet wins.
+
 ## Objective
 
 Turn the Phase 4 completion path into a cashier-usable online Rails register.
@@ -633,25 +635,28 @@ Implement the minimum Register reporting period.
 Flow:
 
 ```text
-confirm business date
+derive BusinessDate.for_store(...)
+        ↓
+cashier confirms (no arbitrary override)
         ↓
 open Register/Z period
         ↓
-open cashier Session
+lock period; open Session; record opening float
         ↓
-perform transactions
+perform transactions (Phase 4 services)
         ↓
-close Session
+blind closing count; freeze Session cash snapshots
         ↓
-finalize Z when appropriate
+lock period; freeze Z aggregates; finalize
 ```
 
 ### Rules
 
 * one active Z/reporting period per Register;
-* one immutable business date per active period;
-* multiple Sessions may eventually belong to one Z;
-* closing a Session does not inherently finalize the Z.
+* one immutable business date per active period, confirmed from the store calendar (no backdate);
+* multiple Sessions may belong to one Z; each is an independent custody interval;
+* closing a Session does not inherently finalize the Z;
+* `OpenSession` and `FinalizeReportingPeriod` serialize on the reporting-period row.
 
 Phase 5 UI may remain simple if only one Session is commonly used during testing.
 
@@ -835,61 +840,58 @@ Cash tender total
 expected Cash
 ```
 
-Totals must be derived from authoritative facts.
+While the Session is open, totals may preview from completed facts. After close, cash figures come from persisted closing snapshots. Do not treat a later recomputation as authority.
 
 ---
 
 # 5.13 Session close
 
-Closing Session calculates:
+Close is **blind**. The cashier enters only the physical count. `CloseSession` does not accept expected Cash or variance from the client.
+
+The server calculates:
 
 ```text
 opening float
-+ Cash payments
++ completed cash payment amount_cents
 =
 expected Cash
+
+counted − expected = variance
 ```
 
-for the narrow Phase 5 scope.
+Slice 3 must collect the count **before** revealing expected or variance.
 
-Cashier enters:
-
-```text
-counted Cash
-```
-
-and ShelfSense calculates:
-
-```text
-counted
--
-expected
-=
-variance
-```
-
-No paid-ins, paid-outs, or transfers exist yet.
+No paid-ins, paid-outs, or transfers exist yet. Closed Sessions are immutable.
 
 ---
 
 # 5.14 Minimum Z
 
-Provide a basic finalized Register report containing at least:
+Provide a basic finalized Register report from **persisted** period snapshots, not a live recalculation.
+
+Commercial totals (completed transactions):
 
 ```text
-Register
-business date
-Session(s)
-completed transaction count
-gross sales
+transaction count
+subtotal
 tax
-Cash tender total
-expected Cash
-counted Cash
-variance
+total
+cash payment
 ```
 
-Finalized Z is immutable.
+Session-custody aggregates (sums of independent closed Sessions — not one drawer):
+
+```text
+session count
+opening float sum
+closing expected sum
+closing count sum
+closing variance sum
+```
+
+Also show Register, business date, and who finalized (`finalized_by_user_id`).
+
+Finalize requires: period open; matching `lock_version`; no open Sessions; no working transactions; every Session closed with complete cash snapshots. An unused period may finalize as an all-zero Z. Finalized Z is immutable. `pos.transact` authorizes finalize in Phase 5 (intentionally broad; reconsider in Phase 6).
 
 ---
 
@@ -922,7 +924,7 @@ This is intentional.
 A cashier can:
 
 ```text
-1. Confirm business date.
+1. Confirm the calculated store business date (no override).
 2. Open Register/Z period.
 3. Open Session.
 4. Establish opening float.
@@ -936,7 +938,7 @@ A cashier can:
 12. Print receipt.
 13. Immediately begin next transaction.
 14. View current Session totals.
-15. Count Cash.
+15. Enter a blind Cash count (expected/variance revealed after).
 16. See variance.
 17. Close Session.
 18. Finalize basic Z.
