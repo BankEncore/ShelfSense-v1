@@ -1,0 +1,91 @@
+{
+  "description": "Phase 4 POS tax and completion golden cases. Tax cents use half-up on basis × rate_percent / 100 with decimal arithmetic.",
+  "cases": [
+    {
+      "id": "01_all_false",
+      "extended_selling_amount_cents": 1999,
+      "quantity": 1,
+      "expected_line_tax_cents": 0,
+      "components": [
+        { "store_tax_code": "state_illinois", "rate_percent": "5.000", "applies": false, "taxable_basis_cents": 0, "tax_cents": 0, "calculation_order": 1 },
+        { "store_tax_code": "county_cook", "rate_percent": "0.250", "applies": false, "taxable_basis_cents": 0, "tax_cents": 0, "calculation_order": 2 }
+      ]
+    },
+    {
+      "id": "02_one_applicable",
+      "extended_selling_amount_cents": 1999,
+      "quantity": 1,
+      "expected_line_tax_cents": 100,
+      "components": [
+        { "store_tax_code": "state_illinois", "rate_percent": "5.000", "applies": true, "taxable_basis_cents": 1999, "tax_cents": 100, "calculation_order": 1 }
+      ]
+    },
+    {
+      "id": "03_multiple_applicable",
+      "extended_selling_amount_cents": 1999,
+      "quantity": 1,
+      "expected_line_tax_cents": 105,
+      "components": [
+        { "store_tax_code": "state_illinois", "rate_percent": "5.000", "applies": true, "taxable_basis_cents": 1999, "tax_cents": 100, "calculation_order": 1 },
+        { "store_tax_code": "county_cook", "rate_percent": "0.250", "applies": true, "taxable_basis_cents": 1999, "tax_cents": 5, "calculation_order": 2 }
+      ]
+    },
+    {
+      "id": "04_mix_applicable_and_not",
+      "extended_selling_amount_cents": 1999,
+      "quantity": 1,
+      "expected_line_tax_cents": 105,
+      "components": [
+        { "store_tax_code": "state_illinois", "rate_percent": "5.000", "applies": true, "taxable_basis_cents": 1999, "tax_cents": 100, "calculation_order": 1 },
+        { "store_tax_code": "county_cook", "rate_percent": "0.250", "applies": true, "taxable_basis_cents": 1999, "tax_cents": 5, "calculation_order": 2 },
+        { "store_tax_code": "local_schaumburg_prepared_food", "rate_percent": "2.000", "applies": false, "taxable_basis_cents": 0, "tax_cents": 0, "calculation_order": 3 }
+      ]
+    },
+    {
+      "id": "05_half_up_rounding",
+      "extended_selling_amount_cents": 25,
+      "quantity": 1,
+      "expected_line_tax_cents": 1,
+      "note": "25 × 2.000% = 0.50 → half-up 1",
+      "components": [
+        { "store_tax_code": "state_illinois", "rate_percent": "2.000", "applies": true, "taxable_basis_cents": 25, "tax_cents": 1, "calculation_order": 1 }
+      ]
+    },
+    {
+      "id": "06_quantity_gt_one",
+      "extended_selling_amount_cents": 3998,
+      "quantity": 2,
+      "expected_line_tax_cents": 200,
+      "note": "quantity is a JSON integer; 3998 × 5.000% = 199.90 → 200",
+      "components": [
+        { "store_tax_code": "state_illinois", "rate_percent": "5.000", "applies": true, "taxable_basis_cents": 3998, "tax_cents": 200, "calculation_order": 1 }
+      ]
+    },
+    {
+      "id": "07_null_applies_blocks",
+      "extended_selling_amount_cents": 1999,
+      "quantity": 1,
+      "blocks_completion": true,
+      "components": [
+        { "store_tax_code": "state_illinois", "rate_percent": "5.000", "applies": null, "calculation_order": 1 }
+      ]
+    },
+    {
+      "id": "08_three_decimal_rates",
+      "extended_selling_amount_cents": 1999,
+      "quantity": 1,
+      "expected_line_tax_cents": 40,
+      "note": "1999 × 0.250% = 4.9975 → 5; 1999 × 1.750% = 34.9825 → 35",
+      "components": [
+        { "store_tax_code": "county_cook", "rate_percent": "0.250", "applies": true, "taxable_basis_cents": 1999, "tax_cents": 5, "calculation_order": 1 },
+        { "store_tax_code": "home_rule", "rate_percent": "1.750", "applies": true, "taxable_basis_cents": 1999, "tax_cents": 35, "calculation_order": 2 }
+      ]
+    },
+    {
+      "id": "09_idempotent_replay",
+      "envelope_fixture": "cash_sale.json",
+      "same_command_payload_hash": true,
+      "same_envelope_hash": true
+    }
+  ]
+}
