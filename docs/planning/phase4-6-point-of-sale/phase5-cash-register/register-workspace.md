@@ -26,7 +26,7 @@ TenderCash / CompleteTransaction split
 completion retry semantics (no re-tender)
 Rails-issued completion operation_id (restore matching in_flight/failed)
 lost-complete recovery by explicit transaction id (not latest-in-session)
-cancel disabled when the basket is empty
+cancel disabled when the basket is empty (UI only)
 Slice 2 vs Slice 3 boundary
 ```
 
@@ -126,21 +126,19 @@ Opening float is collected **only when this POST will create a Session**. Resumi
 UNIQUE (pos_session_id) WHERE status = 'working'
 ```
 
-`StartTransaction` rejects if a working row exists while it holds the session lock.
+`StartTransaction` rejects if a working row exists while it holds the session lock. **Start means start** — do not give it resume semantics.
 
-Controllers must not `find || StartTransaction`. Use `Pos::ResumeOrStartTransaction`:
+Controllers must not `find || StartTransaction`. Use `Pos::ResumeOrStartTransaction` (UI-safe boundary). Both services share an internal create kernel after the Session is already locked and validated; Resume must not call Start (duplicated orchestration / second lock acquisition).
 
 ```text
-lock Session
-authorize actor
-require actor == Session cashier
-require Session and period open
+StartTransaction
+  → lock + authorize + validate
+  → reject if a working transaction exists
+  → create
 
-if working transaction exists
-  return it
-else
-  create through the same StartTransaction rules
-end
+ResumeOrStartTransaction
+  → lock + authorize + validate
+  → return existing working transaction or create
 ```
 
 **GET never creates transactions.** Refresh, prefetch, crawlers, and the back button must not mutate commercial state.
@@ -152,7 +150,7 @@ GET workspace (never create)
   if working transaction exists
     if it has a Cash tender
       → render completion-pending
-        (restore or issue completion_operation_id — see §6)
+        (restore matching completion_operation_id from persisted settlement — see §6)
     otherwise
       → render SALE_ENTRY
   else
@@ -168,7 +166,7 @@ Completed receipts are reached only with an **explicit** transaction identity: r
 
 Two browser tabs: last writer wins via `lock_version`. The stale tab shows an error and reloads. Slice 2 does not sync tabs.
 
-Empty working transactions created on enter/continue **block** `CloseSession` (existing Slice 1 gate). Do not auto-cancel on GET. **Cancel is disabled** while the working transaction has no lines (cancel+resume of an empty ticket is a no-op that still blocks close). After `CancelTransaction` of a sale that had lines, immediately `ResumeOrStartTransaction` (same as `POST continue`) so the cashier returns to empty `SALE_ENTRY`. Slice 3 may dispose of leftover empty working transactions on leave/close.
+Empty working transactions created on enter/continue **block** `CloseSession` (existing Slice 1 gate). Do not auto-cancel on GET. Slice 2 **disables the Cancel control** while the working transaction has no lines (cancel+resume of an empty ticket is a no-op that still blocks close). `CancelTransaction` itself **may** cancel an empty working transaction — Slice 3 may need that to dispose of leftovers before close. After `CancelTransaction` of a sale that had lines, immediately `ResumeOrStartTransaction` (same as `POST continue`) so the cashier returns to empty `SALE_ENTRY`.
 
 ---
 
@@ -190,7 +188,7 @@ GET workspace
   → read only; never create
   → find the Session's existing working transaction for this cashier
   → if working + Cash tender: render completion-pending
-       (restore matching completion_operation_id if one exists; otherwise mint)
+       (restore matching completion_operation_id from persisted settlement — see §6)
   → if working, no tender: render SALE_ENTRY
   → if no working transaction: redirect GET enter
        (never infer a completed receipt)
@@ -200,13 +198,14 @@ POST quantity        → ChangeQuantity; clear working tenders
 POST remove          → RemoveWorkingLine; clear working tenders
 POST abandon_tender
   → Pos::AbandonTender (lock working transaction; require transaction cashier;
-    destroy working tender; advance lock_version)
+    destroy working tender; advance lock_version only if a tender was removed)
   → render SALE_ENTRY
 POST cancel
-  → allowed only when the working transaction has at least one line
+  → workspace UI: only when the working transaction has at least one line
+    (CancelTransaction may still cancel an empty working transaction)
   → CancelTransaction (after explicit confirmation):
        lock working transaction
-       clear working tenders
+       clear working tenders (shared helper; no extra aggregate save)
        status = cancelled, cancelled_at = Time.current
        (keep cancelled lines)
   → ResumeOrStartTransaction
@@ -281,12 +280,13 @@ POST tender succeeds
 POST complete
   → operation_id = that token, unchanged on retries
 GET workspace while working + tender (refresh)
-  → look for an existing pos.complete_transaction for this transaction
-     whose command payload matches the current tender
-       (expected_lock_version, expected_total_cents, amount_presented_cents)
-  → matching in_flight or failed attempt
+  → FindCompletionOperation against persisted settlement
+       (transaction.lock_version, transaction.total_cents,
+        Cash tender amount_presented_cents — not browser-supplied values)
+  → matching in_flight or failed pos.complete_transaction
+       (recompute CanonicalJson.hash with that row’s id as operation_id)
        → restore that operation_id; Retry complete uses the same command
-  → no completion operation was ever started
+  → no matching completion operation
        → mint a new completion_operation_id
   → transaction already completed
        → redirect GET /pos/transactions/:id/completed for that id
@@ -297,10 +297,10 @@ Do **not** unconditionally mint a new id on refresh. Minting B while A is `in_fl
 - Reuse the token only for retries of that same post-tender payload (`expected_lock_version`, expected total, amount presented).
 - A new `TenderCash` (changed presented amount, or re-tender after `AbandonTender`) returns a **new** `completion_operation_id`.
 - After `TenderCash` succeeds, do not `POST tender` again unless the cashier is changing the presented amount. That requires `POST abandon_tender` (Return to sale) or Escape **before** `TenderCash` succeeded. Then a new `TenderCash` and a new token.
-- Stimulus sends `expected_total_cents` and `amount_presented_cents` from the **last tender / completion-pending render**, not a client-side recompute.
+- Stimulus sends `expected_total_cents` and `amount_presented_cents` from the **last tender / completion-pending render**, not a client-side recompute. Recovery on GET workspace uses **persisted** transaction + tender, not those browser fields.
 - Abandoned `in_flight` leases expire in 2 minutes (`PosOperation::LEASE_DURATION`). Do not reuse an old token after a new tender.
 
-If completion fails recoverably: keep the working transaction **and** the tender; show a completion error; offer retry complete with the **same** token. **Return to sale** is `POST abandon_tender`, then `SALE_ENTRY` with no working tender. Changing Cash presented after a failed complete: Return to sale, then `+` / Tender (new `TenderCash`, new token).
+If completion fails recoverably: keep the working transaction **and** the tender; show a completion error; offer retry complete with the **same** token. **Return to sale** is `POST abandon_tender`, then `SALE_ENTRY` with no working tender (`lock_version` advances only if a tender was removed). Changing Cash presented after a failed complete: Return to sale, then `+` / Tender (new `TenderCash`, new token).
 
 ### Lost complete response
 
@@ -318,7 +318,7 @@ GET workspace, no working transaction
 
 The browser may retain the transaction id it was completing (so a lost redirect can still request that receipt). The server must not infer a receipt from other completed sales in the Session.
 
-F9 / cancel is disabled while a `POST complete` is in flight. After a recoverable complete failure, cancel is allowed (`CancelTransaction`) if the basket has lines.
+F9 / cancel is disabled while a `POST complete` is in flight. After a recoverable complete failure, the workspace allows cancel if the basket has lines. `CancelTransaction` may still cancel an empty working transaction (Slice 3).
 
 Working-command in-flight guard: a second Enter must not fire `AddMerchandise` (or another mutation) before the first response refreshes `lock_version`.
 
@@ -384,9 +384,9 @@ Phase 5 has no discounts or price overrides, so unit price + tax class is the pr
 
 Same variant with a different price/tax context becomes a separate line.
 
-**Basket mutation, Return to sale, and Cancel invalidate working tenders.** `AddMerchandise`, `ChangeQuantity`, and `RemoveWorkingLine` clear existing working tenders in the same database transaction. **Return to sale** is `Pos::AbandonTender` (`POST abandon_tender`): lock the working transaction, require the transaction cashier, destroy the working tender, advance `lock_version`, render `SALE_ENTRY`. After that, GET workspace is `SALE_ENTRY` (no hidden tender). The cashier must re-enter `TENDER` to settle.
+**Basket mutation, Return to sale, and Cancel invalidate working tenders.** Share one helper (`clear_working_tenders!`): destroy working tenders only — do **not** `save!` the aggregate (basket commands persist via `refresh_totals!`). `AddMerchandise`, `ChangeQuantity`, and `RemoveWorkingLine` clear then mutate in the same database transaction. **Return to sale** is `Pos::AbandonTender` (`POST abandon_tender`): lock the working transaction, require the transaction cashier, destroy the working tender, advance `lock_version` **only if a tender was removed**, render `SALE_ENTRY`. After that, GET workspace is `SALE_ENTRY` (no hidden tender). The cashier must re-enter `TENDER` to settle.
 
-**`CancelTransaction` clears working tenders** in the same database transaction, under the working-transaction lock, before marking the transaction cancelled. Keep cancelled lines (minimal cancellation activity). Do not leave a cancelled row with a provisional Cash tender. Share the same clear-tender helper as basket mutation and `AbandonTender`. Completed tenders are never touched (`lock_working_transaction!` already forbids that).
+**`CancelTransaction` clears working tenders** in the same database transaction, under the working-transaction lock, before marking the transaction cancelled. Keep cancelled lines (minimal cancellation activity). Do not leave a cancelled row with a provisional Cash tender. Completed tenders are never touched (`lock_working_transaction!` already forbids that). The service **may** cancel an empty working transaction.
 
 Exit paths:
 
@@ -399,7 +399,7 @@ Complete        → tender becomes completed immutable fact
 
 Inventory shortage is a **completion** error (Phase 4 posts on complete, not on add-line). The scan path will not catch oversell.
 
-Cancel: explicit confirmation overlay (see keyboard map). Disabled when the working transaction has no lines. Escape / Don't cancel returns to the prior mode and focus. Scanner Enter must not confirm. Cancel from the recoverable completion-error screen (working + tender) uses this same `CancelTransaction` rule.
+Cancel: explicit confirmation overlay (see keyboard map). Slice 2 **disables the control** when the working transaction has no lines; that is operator UX, not a `CancelTransaction` invariant. Escape / Don't cancel returns to the prior mode and focus. Scanner Enter must not confirm. Cancel from the recoverable completion-error screen (working + tender) uses this same `CancelTransaction` rule.
 
 ---
 
@@ -430,9 +430,9 @@ A cashier can:
 4. Continue scanning without manually restoring focus.
 5. Scan the same compatible SKU again and increment the existing line.
 6. Change quantity and remove a working line using keyboard-only interaction (visible controls also exist).
-7. Cancel a sale that has lines with explicit confirmation that scanner Enter cannot submit (second F9 confirms; Enter ignored). Cancel is disabled on an empty basket. `CancelTransaction` discards any working tender before marking the sale cancelled.
+7. Cancel a sale that has lines with explicit confirmation that scanner Enter cannot submit (second F9 confirms; Enter ignored). Slice 2 disables Cancel on an empty basket; `CancelTransaction` may still cancel an empty working transaction. The service discards any working tender before marking the sale cancelled.
 8. Enter Cash presented; insufficient Cash stays in `TENDER`; valid settlement calls `TenderCash` then `CompleteTransaction` as two HTTP requests.
-9. Retry completion without calling `TenderCash` again; one receipt and one inventory posting. Refresh while working+tender restores a matching `in_flight`/`failed` `operation_id` rather than minting a second attempt.
+9. Retry completion without calling `TenderCash` again; one receipt and one inventory posting. Refresh while working+tender restores a matching `in_flight`/`failed` `operation_id` from **persisted** settlement rather than minting a second attempt.
 10. Refresh the workspace and resume the same working transaction (GET does not create another). Working + Cash tender restores completion-pending. No working transaction redirects to the enter gate — never to an inferred “latest” receipt.
 11. See a completion receipt/confirmation from completed facts at `GET /pos/transactions/:id/completed`, then continue to a fresh `SALE_ENTRY` via the **New sale** control. Enter on the receipt is a no-op (scanner-safe). A lost complete response or complete retry against an already-completed transaction routes to **that** id's receipt.
 12. Return to sale after a recoverable complete failure via `AbandonTender` (persisted tender is gone; GET workspace stays `SALE_ENTRY`).

@@ -95,10 +95,10 @@ Slice 1 answers the cash-accountability half without screens. Slice 2 is the cas
 | Outbox | No session-close or Z-finalize outbox events unless a concrete consumer appears. Audit and immutable snapshots are sufficient |
 | UI stack | Rails + Importmap + Turbo + Stimulus for the Register workspace. System/browser tests are required. Not installed until the workspace implementation PR. Contract: [register-workspace.md](register-workspace.md) |
 | Input modes (slice 2) | `SALE_ENTRY`, `QUANTITY`, `TENDER` are **ephemeral UI modes**, not persisted transaction states. Completion-pending after successful `TenderCash` is locked input, not a fourth named mode |
-| One working transaction | Partial unique index `UNIQUE (pos_session_id) WHERE status = 'working'`. `ResumeOrStartTransaction` is the service boundary. GET never creates a transaction |
+| One working transaction | Partial unique index `UNIQUE (pos_session_id) WHERE status = 'working'`. `StartTransaction` rejects a second working row. `ResumeOrStartTransaction` is the UI-safe boundary. GET never creates a transaction |
 | Rescan | Compatible SKU increments the existing line inside `AddMerchandise` |
-| Tender vs complete | Separate `POST tender` and `POST complete`. Completion retries must not call `TenderCash` again |
-| Basket vs tender | `AddMerchandise`, `ChangeQuantity`, `RemoveWorkingLine`, `AbandonTender`, and `CancelTransaction` clear working tenders in the same database transaction. Cancelled lines remain; cancelled rows must not keep a provisional Cash tender |
+| Tender vs complete | Separate `POST tender` and `POST complete`. Completion retries must not call `TenderCash` again. GET workspace recovery matches a completion operation from **persisted** working transaction + Cash tender |
+| Basket vs tender | Shared `clear_working_tenders!` (destroy only; no extra aggregate `save!`). `AddMerchandise`, `ChangeQuantity`, `RemoveWorkingLine`, `AbandonTender`, and `CancelTransaction` clear working tenders in the same database transaction. `AbandonTender` does not bump `lock_version` when there is no tender. Cancelled lines remain; cancelled rows must not keep a provisional Cash tender. Empty-basket cancel is a Slice 2 UI disable; the service may still cancel an empty working transaction |
 | Slice 2 receipt | On-screen completion receipt/confirmation from immutable completed facts. Print is Slice 3 |
 | Controllers (slices 2–3) | Call Phase 4/5 services only. No receipt allocation or inventory mutation in controllers or Stimulus |
 | Print (slice 3) | Render from immutable completed facts. Proposed path: browser print. Printer failure must not undo completion |
@@ -127,8 +127,8 @@ Authority: [register-workspace.md](register-workspace.md). Interaction: [registe
 - Persistent primary scan/input; keyboard-first ephemeral `SALE_ENTRY` / `QUANTITY` / `TENDER`
 - Rescan of a compatible SKU increments the existing line in `AddMerchandise`
 - `POST tender` then `POST complete` (not one combined endpoint); completion retry does not re-tender
-- Basket mutation, Return to sale (`AbandonTender`), and `CancelTransaction` clear working tenders; Cancel disabled on an empty basket
-- Domain (before Hotwire): unique working transaction; `ResumeOrStartTransaction`; `AddMerchandise` rescan merge; tender invalidation on basket/`AbandonTender`/`CancelTransaction`; `CancelTransaction` test with a Cash tender (tenders gone, status cancelled, expected Cash unchanged)
+- Basket mutation, Return to sale (`AbandonTender`), and `CancelTransaction` clear working tenders; Slice 2 disables Cancel on an empty basket (`CancelTransaction` may still cancel empty)
+- Domain (headless PR, no UI): unique working transaction + preflight; `StartTransaction` stays start-only; `ResumeOrStartTransaction`; `AddMerchandise` rescan merge; `clear_working_tenders!`; `AbandonTender`; `CancelTransaction` tender discard; `FindCompletionOperation` from persisted settlement (re-tender must not restore the old failed operation)
 - On-screen completion receipt/confirmation from completed facts; no print in this slice
 - Low-fidelity UX wireframes: [register-workspace-ux.md](register-workspace-ux.md) (drafted; review before Hotwire)
 
@@ -227,7 +227,7 @@ A headless scenario can:
 15. `CloseSession` receives only count; expected/variance are server-derived.
 16. Multi-session Z aggregates independent session snapshots (`closing_variance_cents_sum == SUM(session.closing_variance_cents)`) without treating them as one drawer.
 
-Slice 2 acceptance lives in [register-workspace.md](register-workspace.md) §9.
+Slice 2 acceptance lives in [register-workspace.md](register-workspace.md) §10.
 
 ---
 

@@ -797,7 +797,7 @@ Allow an open transaction to be cancelled.
 Cancellation:
 
 * requires explicit confirmation that scanner Enter cannot submit (second F9 confirms; Enter ignored);
-* is disabled when the working transaction has no lines;
+* Slice 2 disables the Cancel control when the working transaction has no lines (`CancelTransaction` may still cancel an empty working transaction);
 * clears any working tenders in the same database transaction before marking the sale cancelled (keep cancelled lines);
 * then `ResumeOrStartTransaction` so the cashier returns to `SALE_ENTRY`;
 * creates no completed commercial facts;
@@ -810,7 +810,7 @@ Preserve minimal cancellation activity where the transaction had meaningful work
 
 # 5.10 Cash tender UI
 
-Provide a focused Cash interface. `TenderCash` and `CompleteTransaction` are **two HTTP requests**. Rails issues `completion_operation_id` on a successful tender (Stimulus treats it as opaque). Refresh of completion-pending **restores** a matching `in_flight`/`failed` operation rather than minting a second attempt. Completion retries must not call `TenderCash` again ([register-workspace.md](phase5-cash-register/register-workspace.md) §6). Return to sale is `AbandonTender` (clears the persisted tender). A lost complete response or `POST complete` against an already-completed transaction opens **that** sale's immutable receipt by id.
+Provide a focused Cash interface. `TenderCash` and `CompleteTransaction` are **two HTTP requests**. Rails issues `completion_operation_id` on a successful tender (Stimulus treats it as opaque). Refresh of completion-pending **restores** a matching `in_flight`/`failed` operation from **persisted** settlement rather than minting a second attempt. Completion retries must not call `TenderCash` again ([register-workspace.md](phase5-cash-register/register-workspace.md) §6). Return to sale is `AbandonTender` (clears the persisted tender; no `lock_version` bump when there is none). A lost complete response or `POST complete` against an already-completed transaction opens **that** sale's immutable receipt by id.
 
 Example:
 
