@@ -1,6 +1,6 @@
 # CompletedPosOperation v1
 
-**Status:** Planning contract (Phase 4)
+**Status:** Implemented for Phase 4 Rails Cash sales. Later contract versions add Terminal/config provenance before standalone completion.
 
 **Authority:** Canonical shape of a completed POS commercial fact for Phase 4 Cash sales under Rails. Dual authority with normalized Core: [operation-and-core-facts.md](operation-and-core-facts.md) / [ADR-020](../../../adr/ADR-020-pos-operation-envelope-and-core-facts.md).
 

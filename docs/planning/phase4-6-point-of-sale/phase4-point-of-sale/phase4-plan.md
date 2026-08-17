@@ -1,6 +1,6 @@
 # Phase 4 — POS Transaction and Posting Foundation
 
-**Status:** Planning — **implementation-ready** once the `workstations` → `registers` rename slice completes and CompletedPosOperation v1 golden fixtures are reviewed
+**Status:** Implemented (headless Cash sale, completion kernel, receipt identity, inventory posting). Phase 5 cash/Z: [phase5-plan.md](../phase5-cash-register/phase5-plan.md).
 
 **Authority**
 
@@ -17,7 +17,7 @@
 
 Where this plan and `../spec.md` §4 disagree on completion semantics, tax representation, session columns, or operation identity, **prefer this document and its companions**. Update `../spec.md` when convenient so the multi-phase plan stays aligned.
 
-**Prerequisite / readiness gate:** Complete the `workstations` → `registers` rename slice ([register-identity.md](register-identity.md) §5 / ADR-021) and review v1 golden fixtures before POS period/session/transaction migrations. Semantic and schema locks in this packet are otherwise closed.
+The `workstations` → `registers` rename (ADR-021) and v1 golden fixtures are complete. Semantic and schema locks in this packet remain closed.
 
 Phase 4 proves that ShelfSense can construct, validate, complete, and authoritatively post one deterministic Cash sale without UI-specific or Rails-specific hidden state. It is an architectural and domain foundation, **not** a complete operational register.
 

@@ -17,13 +17,15 @@ This directory contains the project’s technical authority, development guidanc
 | [Phase 2.2 UX foundation](planning/phase2.2-ux-foundation/phase-2.2-ux-foundation.md) | Implemented administrative UX foundation (shell, products reference flow, Stores/Classes adoption) |
 | [Phase 3 inventory foundation](planning/phase3-inventory-foundation/phase-3-inventory-foundation.md) | Implemented physical/valuation inventory ledgers, adjustments, units, reconciliation |
 | [Inventory posting contract](planning/phase3-inventory-foundation/inventory-posting-contract.md) | Posting boundary later purchasing/POS/transfer workflows must use |
-| [Phase 4 POS plan](planning/phase4-6-point-of-sale/phase4-point-of-sale/phase4-plan.md) | Phase 4 scope, locked decisions, build order, and acceptance |
-| [Phase 4 POS schema](planning/phase4-6-point-of-sale/phase4-point-of-sale/phase4-schema.md) | Phase 4 table outline (minimal sessions; tax/receipt/operation locks) |
+| [Phase 4 POS plan](planning/phase4-6-point-of-sale/phase4-point-of-sale/phase4-plan.md) | Implemented Phase 4 scope, locked decisions, and acceptance |
+| [Phase 4 POS schema](planning/phase4-6-point-of-sale/phase4-point-of-sale/phase4-schema.md) | Implemented Phase 4 tables (minimal sessions; tax/receipt/operation locks) |
 | [CompletedPosOperation v1](planning/phase4-6-point-of-sale/phase4-point-of-sale/completed-pos-operation-v1.md) | Canonical completed POS operation contract and completion boundary |
 | [POS tax contract](planning/phase4-6-point-of-sale/phase4-point-of-sale/pos-tax-contract.md) | Store taxes, rules, calculation, and completed tax snapshots (ADR-019) |
 | [Receipt identity](planning/phase4-6-point-of-sale/phase4-point-of-sale/receipt-identity.md) | Compact `S…-R…-T…` transaction reference and receipt header forms (ADR-006) |
 | [Register identity](planning/phase4-6-point-of-sale/phase4-point-of-sale/register-identity.md) | Register vs Terminal; pre-Phase-4 `workstations`→`registers` rename (ADR-021) |
 | [POS operation and Core facts](planning/phase4-6-point-of-sale/phase4-point-of-sale/operation-and-core-facts.md) | Canonical envelope vs normalized Core dual authority (ADR-020) |
+| [Phase 5 cash register plan](planning/phase4-6-point-of-sale/phase5-cash-register/phase5-plan.md) | Phase 5 cash/Z (slice 1 locked) and register-UI slices |
+| [Phase 5 cash register schema](planning/phase4-6-point-of-sale/phase5-cash-register/phase5-schema.md) | Implemented session close snapshots and reporting-period Z aggregates |
 | [POS Phases 4–6 plan](planning/phase4-6-point-of-sale/spec.md) | Multi-phase POS sequencing (foundation → cash register → breadth) |
 | [UX conventions](ux-conventions.md) | Shared admin page anatomy, partials, currency boundaries, palette, and Hotwire deferral |
 | [Development guide](development.md) | Docker-only local setup, PostgreSQL configuration, application commands, and troubleshooting |

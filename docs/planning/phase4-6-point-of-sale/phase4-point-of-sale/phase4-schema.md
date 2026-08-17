@@ -1,6 +1,6 @@
 # Phase 4 — POS schema outline
 
-**Status:** Planning — schema constraints locked; do not migrate until the `workstations` → `registers` rename slice completes and [completed-pos-operation-v1.md](completed-pos-operation-v1.md) golden fixtures are reviewed ([phase4-plan.md](phase4-plan.md) readiness)
+**Status:** Implemented. Cash-accountability columns are specified in [phase5-schema.md](../phase5-cash-register/phase5-schema.md), not here.
 
 **Authority:** Field-level intent for Phase 4 POS tables. Prefer this document over conversational outlines in chat or preliminary-specs drafts. Cross-cutting rules remain in `AGENTS.md` and accepted ADRs. Tax configuration and completed tax rows follow [pos-tax-contract.md](pos-tax-contract.md) and [ADR-019](../../../adr/ADR-019-pos-sales-tax-model.md).
 
@@ -16,7 +16,7 @@ Companions: [Phase 4 plan](phase4-plan.md), [POS tax contract](pos-tax-contract.
 - `occurred_at` is the business event instant (UTC); `posted_at` / `created_at` are recording times; `business_date` is stored explicitly.
 - Draft/working state may be edited; completed commercial facts are immutable and corrected only by new facts later.
 - Optimistic locking via `lock_version` on mutable aggregate roots (`pos_sessions`, working `pos_transactions`, store tax config).
-- No Phase 5 Cash-accountability columns on sessions in this phase.
+- No Phase 5 Cash-accountability columns on sessions in this phase. Those columns are specified in [phase5-schema.md](../phase5-cash-register/phase5-schema.md).
 - No Phase 6 return/discount/approval columns required; leave room via `direction` and versioned operation envelopes rather than speculative null columns.
 
 ---
@@ -117,25 +117,16 @@ Invariants: `session.store_id` and `session.register_id` match the Register and 
 
 ### Explicitly deferred to Phase 5
 
-Do **not** add in Phase 4:
+Phase 4 does not add cash-accountability columns. Slice 1 of Phase 5 specifies and migrates them in [phase5-schema.md](../phase5-cash-register/phase5-schema.md):
 
 ```text
 opening_float_cents
-closing_count_cents
-expected_cash_cents
-variance_cents
-```
-
-When Phase 5 adds Cash accountability, prefer close-snapshot names so values are not mistaken for live cash authority:
-
-```text
-opening_float_cents              # if needed at open
-closing_expected_cash_cents      # derived snapshot at close
+closing_expected_cash_cents
 closing_count_cents
 closing_variance_cents
 ```
 
-`expected_cash_cents` must not look like a live authoritative counter.
+Do not add a live `expected_cash_cents` counter.
 
 ---
 

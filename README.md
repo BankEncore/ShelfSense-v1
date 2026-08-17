@@ -1,8 +1,8 @@
 # ShelfSense
 
-ShelfSense is an inventory, purchasing, customer-service, and point-of-sale system for independent bookstores. It is designed for one organization operating one or more stores, with a central organization server and store workstations that can continue ordinary checkout during temporary connectivity loss.
+ShelfSense is an inventory, purchasing, customer-service, and point-of-sale system for independent bookstores. It is designed for one organization operating one or more stores, with a central organization server and store Registers. A future standalone Terminal (ADR-021) may continue ordinary checkout during temporary connectivity loss.
 
-The project is in the planning and foundation stage. Phase 0 established the governing architecture decisions. A Ruby on Rails application foundation is now in place; Phase 1 business implementation has not yet begun. Phase 1 will deliver the minimum operable foundation needed to initialize and administer a store, authenticate users, authorize store access, configure workstations, and record audit events.
+Phases 0–4 are implemented. Phase 5 slice 1 (headless cash accountability and Z finalize) is locked. The next work is the cashier-facing register workspace and receipt/Z screens.
 
 ## Goals
 
@@ -70,11 +70,11 @@ CI prepares its PostgreSQL test database before running the Rails suite. See [Te
 
 ## Architecture at a glance
 
-ShelfSense uses a central-server/store-workstation topology:
+ShelfSense uses a central-server topology. The first POS client is Rails-native and online. Durable checkout identity is the **Register**; a concrete **Terminal** is deferred until standalone/offline POS (ADR-021).
 
 - The central server owns master data, configuration, users, permissions, purchasing, customer records, and consolidated projections.
-- Workstations cache the reference data required for checkout and originate local POS operations.
-- Ordinary sales may complete locally while disconnected and synchronize later.
+- A future Terminal caches the reference data required for checkout and originates completed POS operations for a Register.
+- Ordinary sales may later complete locally while disconnected and synchronize later.
 - Completed business facts remain immutable; corrections use reversals, compensating records, or explicit reconciliation.
 - UUIDv7 identifiers allow durable records to originate without a central sequence allocator.
 - Human-facing document numbers are separate from technical identifiers.
@@ -190,6 +190,22 @@ The Phase 3 deliverable is:
 
 Authoritative plan: [phase-3-inventory-foundation.md](docs/planning/phase3-inventory-foundation/phase-3-inventory-foundation.md). Contract: [inventory-posting-contract.md](docs/planning/phase3-inventory-foundation/inventory-posting-contract.md).
 
+### Phase 4: POS transaction and posting foundation
+
+Status: implemented (headless Cash sale, `CompletedPosOperation` v1, receipt identity, inventory posting, idempotent completion).
+
+Phase 4 proves that ShelfSense can construct, complete, and authoritatively post one deterministic Cash sale without a cashier UI.
+
+Authoritative plan: [phase4-plan.md](docs/planning/phase4-6-point-of-sale/phase4-point-of-sale/phase4-plan.md).
+
+### Phase 5: First operational cash register
+
+Status: in progress (slice 1 locked — headless cash accountability and Z finalize). Register workspace and receipt/Z screens follow.
+
+Phase 5 turns the Phase 4 completion path into a cashier-usable online Rails register. Opening float, session close snapshots, and finalized Z facts are locked; the register UI stack is not.
+
+Authoritative plan: [phase5-plan.md](docs/planning/phase4-6-point-of-sale/phase5-cash-register/phase5-plan.md). Schema: [phase5-schema.md](docs/planning/phase4-6-point-of-sale/phase5-cash-register/phase5-schema.md).
+
 ## Phase 1 authorization model
 
 Permissions are additive and supplied by roles:
@@ -225,6 +241,7 @@ Start with the [documentation index](docs/README.md). Key references include:
 - [Phase 1 plan](docs/planning/phase1-operational-foundation/phase1-plan.md), [schema](docs/planning/phase1-operational-foundation/phase1-schema.md), and [authorization contract](docs/planning/phase1-operational-foundation/phase1-authorization.md)
 - [Phase 2 plan](docs/planning/phase2-financial-classification-and-merchandise-foundation/phase2-plan.md), [schema](docs/planning/phase2-financial-classification-and-merchandise-foundation/phase-2-database-schema.md), and [authorization contract](docs/planning/phase2-financial-classification-and-merchandise-foundation/phase2-authorization.md)
 - [Phase 2.2 UX foundation](docs/planning/phase2.2-ux-foundation/phase-2.2-ux-foundation.md) and [UX conventions](docs/ux-conventions.md)
+- [Phase 4 POS plan](docs/planning/phase4-6-point-of-sale/phase4-point-of-sale/phase4-plan.md) and [Phase 5 cash register plan](docs/planning/phase4-6-point-of-sale/phase5-cash-register/phase5-plan.md)
 - [Development guide](docs/development.md)
 - [Testing and CI](docs/testing.md)
 - [GitHub work management](docs/github-workflow.md)

@@ -112,7 +112,8 @@ class PosWorkingCommandsTest < ActiveSupport::TestCase
       Pos::CloseSession.call(
         session: @context[:session],
         actor: other,
-        expected_lock_version: @context[:session].lock_version
+        expected_lock_version: @context[:session].lock_version,
+        closing_count_cents: 0
       )
     end
     assert @context[:session].reload.open?
@@ -186,8 +187,17 @@ class PosWorkingCommandsTest < ActiveSupport::TestCase
     assert_not @store.valid?
     assert_includes @store.errors[:base], "cannot deactivate while an open reporting period exists"
 
-    @context[:session].update!(status: "closed", closed_at: Time.current)
-    @context[:period].update!(status: "finalized", closed_at: Time.current)
+    Pos::CloseSession.call(
+      session: @context[:session],
+      actor: @actor,
+      expected_lock_version: @context[:session].lock_version,
+      closing_count_cents: 0
+    )
+    Pos::FinalizeReportingPeriod.call(
+      period: @context[:period],
+      actor: @actor,
+      expected_lock_version: @context[:period].lock_version
+    )
     @store.update!(active: false, deactivated_at: Time.current, deactivated_by: @actor)
 
     error = assert_raises(Pos::Error) do
@@ -197,8 +207,17 @@ class PosWorkingCommandsTest < ActiveSupport::TestCase
   end
 
   test "inactive register rejects POS commands" do
-    @context[:session].update!(status: "closed", closed_at: Time.current)
-    @context[:period].update!(status: "finalized", closed_at: Time.current)
+    Pos::CloseSession.call(
+      session: @context[:session],
+      actor: @actor,
+      expected_lock_version: @context[:session].lock_version,
+      closing_count_cents: 0
+    )
+    Pos::FinalizeReportingPeriod.call(
+      period: @context[:period],
+      actor: @actor,
+      expected_lock_version: @context[:period].lock_version
+    )
     @context[:register].update!(active: false, deactivated_at: Time.current, deactivated_by: @actor)
 
     error = assert_raises(Pos::Error) do
@@ -263,7 +282,12 @@ class PosWorkingCommandsTest < ActiveSupport::TestCase
     transaction = Pos::StartTransaction.call(session: @context[:session], actor: @actor)
     session = @context[:session]
     error = assert_raises(Pos::Error) do
-      Pos::CloseSession.call(session: session, actor: @actor, expected_lock_version: session.lock_version)
+      Pos::CloseSession.call(
+        session: session,
+        actor: @actor,
+        expected_lock_version: session.lock_version,
+        closing_count_cents: 0
+      )
     end
     assert_match(/working transaction/, error.message)
 
@@ -273,7 +297,12 @@ class PosWorkingCommandsTest < ActiveSupport::TestCase
       expected_lock_version: transaction.lock_version
     )
     session.reload
-    Pos::CloseSession.call(session: session, actor: @actor, expected_lock_version: session.lock_version)
+    Pos::CloseSession.call(
+      session: session,
+      actor: @actor,
+      expected_lock_version: session.lock_version,
+      closing_count_cents: 0
+    )
     assert session.reload.closed?
   end
 

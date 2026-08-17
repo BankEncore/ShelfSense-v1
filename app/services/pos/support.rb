@@ -26,6 +26,15 @@ module Pos
       end
     end
 
+    def parse_nonnegative_cents!(value, label)
+      cents = Integer(value)
+      raise Pos::Error, "#{label} must be a non-negative integer" if cents.negative?
+
+      cents
+    rescue ArgumentError, TypeError
+      raise Pos::Error, "#{label} must be a non-negative integer"
+    end
+
     def lock_working_transaction!(transaction, expected_lock_version)
       transaction.lock!
       raise Pos::Error, "transaction is not working" unless transaction.working?

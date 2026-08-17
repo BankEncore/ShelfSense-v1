@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_16_260000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_17_010000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -413,25 +413,51 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_16_260000) do
     t.date "business_date", null: false
     t.timestamptz "closed_at"
     t.timestamptz "created_at", null: false
+    t.uuid "finalized_by_user_id"
+    t.bigint "finalized_cash_payment_cents"
+    t.bigint "finalized_closing_count_cents_sum"
+    t.bigint "finalized_closing_expected_cash_cents_sum"
+    t.bigint "finalized_closing_variance_cents_sum"
+    t.bigint "finalized_opening_float_cents_sum"
+    t.integer "finalized_session_count"
+    t.bigint "finalized_subtotal_cents"
+    t.bigint "finalized_tax_cents"
+    t.bigint "finalized_total_cents"
+    t.integer "finalized_transaction_count"
     t.integer "lock_version", default: 0, null: false
     t.timestamptz "opened_at", null: false
     t.uuid "register_id", null: false
     t.string "status", null: false
     t.uuid "store_id", null: false
     t.timestamptz "updated_at", null: false
+    t.index ["finalized_by_user_id"], name: "index_pos_reporting_periods_on_finalized_by_user_id"
     t.index ["register_id"], name: "index_pos_reporting_periods_on_register_id"
     t.index ["register_id"], name: "index_pos_reporting_periods_one_open_per_register", unique: true, where: "((status)::text = 'open'::text)"
     t.index ["store_id"], name: "index_pos_reporting_periods_on_store_id"
-    t.check_constraint "status::text = 'open'::text AND closed_at IS NULL OR status::text = 'finalized'::text AND closed_at IS NOT NULL", name: "pos_reporting_periods_closed_at_matches_status"
+    t.check_constraint "finalized_cash_payment_cents IS NULL OR finalized_cash_payment_cents >= 0", name: "pos_reporting_periods_finalized_cash_payment_nonnegative"
+    t.check_constraint "finalized_closing_count_cents_sum IS NULL OR finalized_closing_count_cents_sum >= 0", name: "pos_reporting_periods_finalized_closing_count_sum_nonnegative"
+    t.check_constraint "finalized_closing_expected_cash_cents_sum IS NULL OR finalized_closing_expected_cash_cents_sum >= 0", name: "pos_reporting_periods_finalized_closing_expected_sum_nonnegativ"
+    t.check_constraint "finalized_closing_variance_cents_sum IS NULL OR finalized_closing_variance_cents_sum = (finalized_closing_count_cents_sum - finalized_closing_expected_cash_cents_sum)", name: "pos_reporting_periods_finalized_variance_matches_sums"
+    t.check_constraint "finalized_opening_float_cents_sum IS NULL OR finalized_opening_float_cents_sum >= 0", name: "pos_reporting_periods_finalized_opening_float_sum_nonnegative"
+    t.check_constraint "finalized_session_count IS NULL OR finalized_session_count >= 0", name: "pos_reporting_periods_finalized_session_count_nonnegative"
+    t.check_constraint "finalized_subtotal_cents IS NULL OR finalized_subtotal_cents >= 0", name: "pos_reporting_periods_finalized_subtotal_nonnegative"
+    t.check_constraint "finalized_tax_cents IS NULL OR finalized_tax_cents >= 0", name: "pos_reporting_periods_finalized_tax_nonnegative"
+    t.check_constraint "finalized_total_cents IS NULL OR finalized_total_cents >= 0", name: "pos_reporting_periods_finalized_total_nonnegative"
+    t.check_constraint "finalized_transaction_count IS NULL OR finalized_transaction_count >= 0", name: "pos_reporting_periods_finalized_transaction_count_nonnegative"
+    t.check_constraint "status::text = 'open'::text AND closed_at IS NULL AND finalized_by_user_id IS NULL AND finalized_transaction_count IS NULL AND finalized_subtotal_cents IS NULL AND finalized_tax_cents IS NULL AND finalized_total_cents IS NULL AND finalized_cash_payment_cents IS NULL AND finalized_session_count IS NULL AND finalized_opening_float_cents_sum IS NULL AND finalized_closing_expected_cash_cents_sum IS NULL AND finalized_closing_count_cents_sum IS NULL AND finalized_closing_variance_cents_sum IS NULL OR status::text = 'finalized'::text AND closed_at IS NOT NULL AND finalized_by_user_id IS NOT NULL AND finalized_transaction_count IS NOT NULL AND finalized_subtotal_cents IS NOT NULL AND finalized_tax_cents IS NOT NULL AND finalized_total_cents IS NOT NULL AND finalized_cash_payment_cents IS NOT NULL AND finalized_session_count IS NOT NULL AND finalized_opening_float_cents_sum IS NOT NULL AND finalized_closing_expected_cash_cents_sum IS NOT NULL AND finalized_closing_count_cents_sum IS NOT NULL AND finalized_closing_variance_cents_sum IS NOT NULL", name: "pos_reporting_periods_closed_at_matches_status"
     t.check_constraint "status::text = ANY (ARRAY['open'::character varying, 'finalized'::character varying]::text[])", name: "pos_reporting_periods_status_valid"
   end
 
   create_table "pos_sessions", id: :uuid, default: nil, force: :cascade do |t|
     t.uuid "cashier_user_id", null: false
     t.timestamptz "closed_at"
+    t.bigint "closing_count_cents"
+    t.bigint "closing_expected_cash_cents"
+    t.bigint "closing_variance_cents"
     t.timestamptz "created_at", null: false
     t.integer "lock_version", default: 0, null: false
     t.timestamptz "opened_at", null: false
+    t.bigint "opening_float_cents", default: 0, null: false
     t.uuid "register_id", null: false
     t.uuid "reporting_period_id", null: false
     t.string "status", null: false
@@ -442,7 +468,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_16_260000) do
     t.index ["register_id"], name: "index_pos_sessions_one_open_per_register", unique: true, where: "((status)::text = 'open'::text)"
     t.index ["reporting_period_id"], name: "index_pos_sessions_on_reporting_period_id"
     t.index ["store_id"], name: "index_pos_sessions_on_store_id"
-    t.check_constraint "status::text = 'open'::text AND closed_at IS NULL OR status::text = 'closed'::text AND closed_at IS NOT NULL", name: "pos_sessions_closed_at_matches_status"
+    t.check_constraint "closing_count_cents IS NULL OR closing_count_cents >= 0", name: "pos_sessions_closing_count_nonnegative"
+    t.check_constraint "closing_expected_cash_cents IS NULL OR closing_expected_cash_cents >= 0", name: "pos_sessions_closing_expected_nonnegative"
+    t.check_constraint "closing_variance_cents IS NULL OR closing_variance_cents = (closing_count_cents - closing_expected_cash_cents)", name: "pos_sessions_closing_variance_matches_count"
+    t.check_constraint "opening_float_cents >= 0", name: "pos_sessions_opening_float_nonnegative"
+    t.check_constraint "status::text = 'open'::text AND closed_at IS NULL AND closing_expected_cash_cents IS NULL AND closing_count_cents IS NULL AND closing_variance_cents IS NULL OR status::text = 'closed'::text AND closed_at IS NOT NULL AND closing_expected_cash_cents IS NOT NULL AND closing_count_cents IS NOT NULL AND closing_variance_cents IS NOT NULL", name: "pos_sessions_closed_at_matches_status"
     t.check_constraint "status::text = ANY (ARRAY['open'::character varying, 'closed'::character varying]::text[])", name: "pos_sessions_status_valid"
   end
 
@@ -807,6 +837,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_16_260000) do
   add_foreign_key "pos_operations", "stores"
   add_foreign_key "pos_reporting_periods", "registers"
   add_foreign_key "pos_reporting_periods", "stores"
+  add_foreign_key "pos_reporting_periods", "users", column: "finalized_by_user_id"
   add_foreign_key "pos_sessions", "pos_reporting_periods", column: "reporting_period_id"
   add_foreign_key "pos_sessions", "registers"
   add_foreign_key "pos_sessions", "stores"

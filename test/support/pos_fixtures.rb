@@ -29,10 +29,16 @@ module PosFixtures
     )
   end
 
-  def pos_open_context(store:, actor:, register: nil)
+  def pos_open_context(store:, actor:, register: nil, opening_float_cents: 0)
     register ||= Register.create!(store: store, register_number: (store.registers.maximum(:register_number) || 0) + 1, name: "Front")
     period = Pos::OpenReportingPeriod.call(store: store, register: register, actor: actor)
-    session = Pos::OpenSession.call(store: store, register: register, actor: actor, reporting_period: period)
+    session = Pos::OpenSession.call(
+      store: store,
+      register: register,
+      actor: actor,
+      reporting_period: period,
+      opening_float_cents: opening_float_cents
+    )
     { register: register, period: period, session: session }
   end
 
