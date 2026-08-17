@@ -17,7 +17,7 @@ Each frame annotates:
 | Annotation | Meaning |
 |---|---|
 | Focused element | Where the caret is. `[FOCUS]` in the drawing |
-| Selected line | Which basket row QUANTITY / Delete apply to. `>` in the drawing |
+| Selected line | Which basket row QUANTITY / `-` apply to. `>` in the drawing |
 | Next Enter | What Enter submits |
 | Escape | What Escape does |
 | Shortcuts | Keys that do something **on this frame** |
@@ -49,7 +49,7 @@ Frames 3–7 share this skeleton. Open gate (1–2) and the completed receipt (8
 +--------------------------------------+---------------------------+
 |  pos_feedback   fixed height — errors must not move the field    |
 |  pos_command    mode name + label + one primary field  [FOCUS]   |
-|  pos_actions    Quantity (*)  Tender (+)  Remove  Cancel (F9)    |
+|  pos_actions    Quantity (*)  Tender (+)  Remove (-)  Cancel (F9)|
 +------------------------------------------------------------------+
 |  pos_overlay   cancel confirmation only; absent unless open      |
 +------------------------------------------------------------------+
@@ -254,7 +254,7 @@ No manager takeover in Slice 2. If the store has only this occupied register, th
 |  [                                    ] [FOCUS]                  |
 |                                                                  |
 |  Quantity (*)          Tender (+)     (disabled)                 |
-|  Remove                Cancel (F9)    (disabled)                 |
+|  Remove (-)            Cancel (F9)    (disabled)                 |
 +------------------------------------------------------------------+
 ```
 
@@ -281,7 +281,7 @@ Quantity / Remove idle (no selected line). Tender idle (no merchandise). **Cance
 |  [                                    ] [FOCUS]                  |
 |                                                                  |
 |  Quantity (*)          Tender (+)                                |
-|  Remove                Cancel (F9)                               |
+|  Remove (-)            Cancel (F9)                               |
 +------------------------------------------------------------------+
 ```
 
@@ -291,14 +291,14 @@ Quantity / Remove idle (no selected line). Tender idle (no merchandise). **Cance
 | Selected line | Line returned by last `AddMerchandise` (here the pen). ArrowUp / ArrowDown move selection without leaving the field |
 | Next Enter | Non-empty identifier → `POST merchandise` (`AddMerchandise`). Empty Enter is a no-op. Digits alone are an identifier, not quantity |
 | Escape | Clear the field; stay `SALE_ENTRY` |
-| Shortcuts | `*` quantity (if a line is selected); `+` tender (if merchandise exists); Delete remove selected; F9 cancel overlay; arrows move selection |
-| Visible equivalents | **Quantity (\*)**, **Tender (+)**, **Remove**, **Cancel (F9)** |
+| Shortcuts | `*` quantity (if a line is selected); `+` tender (if merchandise exists); `-` remove selected; F9 cancel overlay; arrows move selection |
+| Visible equivalents | **Quantity (\*)**, **Tender (+)**, **Remove (-)**, **Cancel (F9)** |
 | Error location | `pos_feedback` in the reserved strip above the field (unknown identifier, unsupported merchandise, stale `lock_version`). Basket unchanged. Field coordinates do not change |
 | Turbo region(s) | Streams: `pos_basket`, `pos_totals`, `pos_feedback`, `pos_actions`; `lock_version` in `pos_command`. Focus stays in the field |
 
 Rescan of a compatible SKU increments that line in `AddMerchandise`; the response selects **that** line. Same SKU with a different price/tax context is a new line.
 
-`*` with no selected line is a no-op. `+` with no merchandise is a no-op. Delete with no selected line is a no-op.
+`*` with no selected line is a no-op. `+` with no merchandise is a no-op. `-` with no selected line is a no-op. Delete is native text editing in the command field.
 
 ### 3c. Unknown identifier (error)
 
@@ -336,7 +336,7 @@ Same chrome. Primary field label becomes **Quantity**. Browser state only; trans
 |  [ 2                                  ] [FOCUS]                  |
 |                                                                  |
 |  Quantity (*)          Tender (+)     (idle while in QUANTITY)   |
-|  Remove                Cancel (F9)                               |
+|  Remove (-)            Cancel (F9)                               |
 +------------------------------------------------------------------+
 ```
 
@@ -348,9 +348,9 @@ Pre-fill the selected line's current quantity so Enter without typing is a no-op
 | Selected line | Unchanged (the line QUANTITY applies to). Arrows do not change selection in this mode |
 | Next Enter | `POST quantity` (`ChangeQuantity`, absolute). Success → `SALE_ENTRY`, field cleared, that line still selected |
 | Escape | Abandon; no POST; `SALE_ENTRY`; restore scan label; keep selection |
-| Shortcuts | Enter, Escape, F9 (cancel overlay). `*` / `+` / Delete / arrows ignored while in QUANTITY |
+| Shortcuts | Enter, Escape, F9 (cancel overlay). `*` / `+` / `-` / arrows ignored while in QUANTITY |
 | Visible equivalents | Field itself is the confirm target; **Cancel (F9)** still visible. No separate “OK” required; a visible **Update quantity** next to the field is allowed |
-| Error location | `pos_feedback` in the reserved strip. Quantity `0` is invalid (do not remove from here — Escape, then Delete in `SALE_ENTRY`). Non-numeric: field error, stay QUANTITY. Field does not jump |
+| Error location | `pos_feedback` in the reserved strip. Quantity `0` is invalid (do not remove from here — Escape, then `-` in `SALE_ENTRY`). Non-numeric: field error, stay QUANTITY. Field does not jump |
 | Turbo region(s) | Success streams: `pos_basket`, `pos_totals`, `pos_feedback`, `pos_actions`, `pos_command` (back to scan label). Failure: `pos_feedback` only |
 
 Basket mutation clears any working tender (none expected in this mode).
@@ -381,17 +381,17 @@ Before `TenderCash` succeeds. Same chrome. Primary field label becomes **Cash pr
 |  [                                    ] [FOCUS]                  |
 |                                                                  |
 |  Quantity (*)          Tender (+)     (idle)                     |
-|  Remove                Cancel (F9)                               |
+|  Remove (-)            Cancel (F9)                               |
 +------------------------------------------------------------------+
 ```
 
 | Annotation | |
 |---|---|
 | Focused element | Cash presented |
-| Selected line | Last selected line remains visually selected but is inactive (no Delete / QUANTITY until Escape back to `SALE_ENTRY`) |
+| Selected line | Last selected line remains visually selected but is inactive (no `-` / QUANTITY until Escape back to `SALE_ENTRY`) |
 | Next Enter | `POST tender` only (`TenderCash`). Does **not** complete. On success → frame 6 (Stimulus then `POST complete`) |
 | Escape | Return to `SALE_ENTRY` without tendering; keep basket |
-| Shortcuts | Enter, Escape, F9. `*` / `+` / Delete / arrows ignored |
+| Shortcuts | Enter, Escape, F9. `*` / `+` / `-` / arrows ignored |
 | Visible equivalents | **Charge cash** / **Tender** next to the field; **Cancel (F9)** |
 | Error location | `pos_feedback` in the reserved strip |
 | Turbo region(s) | Success: streams (or morph) into frame 6 — `pos_totals` (change), `pos_command` (disabled), `pos_feedback`, hidden `completion_operation_id`. Failure: `pos_feedback`; field keeps the submitted string |
@@ -439,7 +439,7 @@ Not a fourth named mode. Working transaction **plus** Cash tender. Input locked.
 |  Cash presented (locked)                                         |
 |  [                                    ] (disabled)               |
 |                                                                  |
-|  Quantity (*)  Tender (+)  Remove      (disabled)                |
+|  Quantity (*)  Tender (+)  Remove (-)  (disabled)                |
 |  Cancel (F9)                           (disabled while in flight)|
 +------------------------------------------------------------------+
 ```
@@ -477,7 +477,7 @@ Same layout as 6a, with `pos_feedback` and controls re-enabled for retry / retur
 | Focused element | **Retry complete** |
 | Next Enter | `POST complete` with the **same** `completion_operation_id`, `expected_lock_version`, totals, and presented amount |
 | Escape | Does not silently dump to `SALE_ENTRY`. Use **Return to sale** (`POST abandon_tender`) |
-| Shortcuts | Enter = retry; F9 = cancel overlay. `*` / `+` / Delete ignored |
+| Shortcuts | Enter = retry; F9 = cancel overlay. `*` / `+` / `-` ignored |
 | Visible equivalents | **Retry complete**, **Return to sale**, **Cancel (F9)** |
 | Error location | `pos_feedback` in the reserved strip (inventory, tax, network, stale `lock_version`) |
 | Turbo region(s) | Retry success: full-page that transaction's receipt. Retry failure: `pos_feedback`. Return to sale: `POST abandon_tender` → `SALE_ENTRY` with no working tender. Cancel: overlay → `POST cancel` (`CancelTransaction` discards the tender, then `ResumeOrStartTransaction`) → empty `SALE_ENTRY` |
@@ -517,7 +517,7 @@ No caret in an input. Do not put `[FOCUS]` on a text field. Proposed: focus **Do
 | Selected line | Unchanged underneath; inactive |
 | Next Enter | **Ignored** (barcodes end in Enter) |
 | Escape | Abort overlay; restore prior mode and focus (scan / quantity / cash / retry) |
-| Shortcuts | F9 confirms cancel (`POST cancel`). Alphanumeric keys ignored. `*` / `+` / Delete ignored |
+| Shortcuts | F9 confirms cancel (`POST cancel`). Alphanumeric keys ignored. `*` / `+` / `-` ignored |
 | Visible equivalents | **Don't cancel (Esc)**, **Cancel sale (F9)** |
 | Error location | If `POST cancel` fails, close overlay, `pos_feedback` on the underlying frame, restore focus to primary |
 | Turbo region(s) | Overlay is Stimulus until confirm. Success: `CancelTransaction` discards working tenders, then full-page `SALE_ENTRY` after `ResumeOrStartTransaction`. Do not land on a prior receipt |
@@ -577,7 +577,7 @@ Do **not** default-focus **New sale**. Slice 2: **Enter does nothing** on this p
 | Selected line | n/a (completed lines are a summary, not a working selection) |
 | Next Enter | **No-op.** Does not `POST continue`. Scanner Enter cannot start a sale or drop a barcode |
 | Escape | no-op (do not cancel a completed sale) |
-| Shortcuts | No `*` / `+` / Delete / F9. New sale uses the visible control (optional dedicated non-Enter key) |
+| Shortcuts | No `*` / `+` / `-` / F9. New sale uses the visible control (optional dedicated non-Enter key) |
 | Visible equivalents | **New sale** (prominent). No print control |
 | Error location | If continue fails (session closed, occupancy): message on this page; do not create a working transaction on GET |
 | Turbo region(s) | Full page. Not a Turbo Frame inside the selling surface — a scan must not be interpretable as `AddMerchandise` |
@@ -604,12 +604,12 @@ Render from completed transaction facts (`transaction_reference`, total, Cash pr
 | Escape | Cancel overlay | Abort |
 | `*` | `SALE_ENTRY` only | Quantity (no-op if no selected line) |
 | `+` | `SALE_ENTRY` only | Tender (no-op if no merchandise) |
-| Delete | `SALE_ENTRY` only | Remove selected line |
+| `-` | `SALE_ENTRY` only | Remove selected line |
 | ArrowUp / ArrowDown | `SALE_ENTRY` only | Move selected line |
 | F9 | Selling surface, not in-flight complete, basket has lines | Open cancel overlay |
 | F9 | Cancel overlay | Confirm cancel |
 
-Intercept `*` and `+` on keydown in `SALE_ENTRY` so they never become identifier text. Do not intercept letter keys.
+Intercept `*`, `+`, and `-` on keydown in `SALE_ENTRY` so they never become identifier text. Do not intercept letter keys. Delete is native text editing.
 
 ---
 

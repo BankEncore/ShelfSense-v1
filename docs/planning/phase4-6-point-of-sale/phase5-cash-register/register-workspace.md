@@ -33,7 +33,7 @@ Slice 2 vs Slice 3 boundary
 ### Wireframe-validatable
 
 ```text
-* / + / Delete / F9 bindings
+* / + / - / F9 bindings
 header hierarchy
 line-table layout and selected-line styling
 where errors appear
@@ -334,14 +334,14 @@ One primary POS input. Autofocus on load. After every successful action and reco
 
 Quantity and tender **reuse that same primary field** with a changed label. The only overlay is **cancel confirmation**. Occupied-register deny lives on `GET enter`, not on the selling surface.
 
-Intercept `*` and `+` on keydown so they never become identifier text. Do not intercept letter keys such as `T`.
+Intercept `*`, `+`, and `-` on keydown so they never become identifier text. Do not intercept letter keys such as `T`. Delete is native text editing, not a line-removal shortcut.
 
-`*` with no selected line is a no-op (stay `SALE_ENTRY`). `+` with no merchandise is a no-op. QUANTITY with no selected line is not entered.
+`*` with no selected line is a no-op (stay `SALE_ENTRY`). `+` with no merchandise is a no-op. `-` with no selected line is a no-op. QUANTITY with no selected line is not entered.
 
 | Mode | Enter | Escape | Other |
 |---|---|---|---|
-| `SALE_ENTRY` | identifier → `AddMerchandise`. Empty Enter is a no-op. Digits alone are an identifier, not quantity | clear input; stay `SALE_ENTRY` | `*` → `QUANTITY` if a line is selected; `+` → `TENDER` if merchandise exists; Delete removes selected line |
-| `QUANTITY` | `ChangeQuantity` on selected line → `SALE_ENTRY` | abandon → `SALE_ENTRY` | quantity `0` is invalid (service requires positive); Delete is not used here — Escape then Delete in `SALE_ENTRY` |
+| `SALE_ENTRY` | identifier → `AddMerchandise`. Empty Enter is a no-op. Digits alone are an identifier, not quantity | clear input; stay `SALE_ENTRY` | `*` → `QUANTITY` if a line is selected; `+` → `TENDER` if merchandise exists; `-` removes selected line |
+| `QUANTITY` | `ChangeQuantity` on selected line → `SALE_ENTRY` | abandon → `SALE_ENTRY` | quantity `0` is invalid (service requires positive); `-` is not used here — Escape then `-` in `SALE_ENTRY` |
 | `TENDER` (before `TenderCash` succeeds) | `POST tender` only | → `SALE_ENTRY` | insufficient Cash: remain `TENDER` |
 | completion pending (`TenderCash` succeeded, including GET workspace restore) | not a fourth named mode; input locked until complete response | do not silently return to `SALE_ENTRY` | retry is `POST complete` only; **Return to sale** is `POST abandon_tender` |
 
@@ -353,14 +353,14 @@ Keyboard map (shortcuts; each has a visible control). Bindings are **wireframe-v
 | Escape | back out where the table allows; on cancel overlay, abort confirm |
 | `*` | `QUANTITY` (no-op if no selected line) |
 | `+` | `TENDER` (no-op if no merchandise) |
-| Delete | `RemoveWorkingLine` on the selected line in `SALE_ENTRY` |
+| `-` | `RemoveWorkingLine` on the selected line in `SALE_ENTRY` |
 | ArrowUp / ArrowDown | move selected line (in `SALE_ENTRY`) |
 | F9 | open cancel confirmation (disabled while `POST complete` is in flight, and while the basket has no lines) |
 | F9 again | confirm cancel (**not** Enter, **not** `Y` — barcodes may contain letters) |
 
 Cancel overlay: no text field (so a scan cannot type into it). Ignore Enter and alphanumeric keys. Visible Confirm (activates on second F9) and Don't cancel (Escape). Abort restores the prior mode and focus.
 
-Selected line defaults to the line **returned** by the last `AddMerchandise`, or the last changed line. After `RemoveWorkingLine`, select the previous remaining line, or none if the basket is empty. Arrow keys move selection. QUANTITY and Delete apply to the selected line.
+Selected line defaults to the line **returned** by the last `AddMerchandise`, or the last changed line. After `RemoveWorkingLine`, select the previous remaining line, or none if the basket is empty. Arrow keys move selection. QUANTITY and `-` apply to the selected line.
 
 ---
 

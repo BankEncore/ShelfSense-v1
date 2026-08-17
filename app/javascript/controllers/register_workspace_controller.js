@@ -81,7 +81,7 @@ export default class extends Controller {
     } else if (event.key === "+") {
       event.preventDefault()
       this.enterTender()
-    } else if (event.key === "Delete") {
+    } else if (event.key === "-") {
       event.preventDefault()
       this.removeSelected()
     } else if (event.key === "ArrowUp" || event.key === "ArrowDown") {

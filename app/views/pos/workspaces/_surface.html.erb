@@ -108,7 +108,7 @@
     <% else %>
       <button type="button" class="btn btn--secondary" data-action="register-workspace#enterQuantity" <%= "disabled" unless @selected_line && @ui_mode == "sale_entry" %>>Quantity (*)</button>
       <button type="button" class="btn btn--secondary" data-action="register-workspace#enterTender" <%= "disabled" unless merchandise_present && @ui_mode == "sale_entry" %>>Tender (+)</button>
-      <button type="button" class="btn btn--secondary" data-action="register-workspace#removeSelected" <%= "disabled" unless @selected_line && @ui_mode == "sale_entry" %>>Remove</button>
+      <button type="button" class="btn btn--secondary" data-action="register-workspace#removeSelected" <%= "disabled" unless @selected_line && @ui_mode == "sale_entry" %>>Remove (-)</button>
     <% end %>
     <button type="button"
             class="btn btn--danger"

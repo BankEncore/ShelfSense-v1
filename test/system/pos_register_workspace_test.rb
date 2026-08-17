@@ -53,6 +53,29 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     assert_no_text "Example Book"
   end
 
+  test "delete edits the identifier and minus removes the selected line" do
+    sign_in_admin
+    visit pos_register_enter_path(register_id: @register.id)
+    fill_in "Opening float", with: "0.00"
+    click_on "Open register"
+
+    assert_text "SALE ENTRY"
+    field = find("#pos-command-field")
+    field.fill_in with: "ABC"
+    field.send_keys :left, :left, :delete
+    assert_equal "AC", field.value
+
+    field.fill_in with: @variant.sku
+    field.send_keys :enter
+    assert_text "Example Book"
+    field = find("#pos-command-field")
+    assert_equal "", field.value
+    field.send_keys :delete
+    assert_text "Example Book"
+    field.send_keys "-"
+    assert_no_text "Example Book"
+  end
+
   test "empty basket disables cancel" do
     sign_in_admin
     visit pos_register_enter_path(register_id: @register.id)
