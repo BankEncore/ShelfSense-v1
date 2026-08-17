@@ -16,9 +16,10 @@ System tests live under `test/system/` and use Selenium with headless Chrome. Lo
 ```sh
 docker compose build
 ./dev/rails-docker bin/rails test:system
+./dev/rails-docker bin/ci
 ```
 
-`Dockerfile.dev` installs Chromium and chromedriver. Chrome runs as the `rails` user with `--no-sandbox`. The minimum viewport is `1280×720`.
+`Dockerfile.dev` installs Chromium and chromedriver and sets `SE_CHROMEDRIVER` so Selenium uses that binary instead of downloading Google Chrome (which is unavailable on Linux ARM64). `./dev/rails-docker` starts a throwaway `web` container for `test:system` and `bin/ci` even when the app server is already up, so those commands see the image packages rather than a stale server container. Rebuild after pulling Dockerfile changes: `docker compose build`. Chrome runs as the `rails` user with `--no-sandbox`. The minimum viewport is `1280×720`.
 
 CI runs system tests as a separate job after installing Chrome:
 

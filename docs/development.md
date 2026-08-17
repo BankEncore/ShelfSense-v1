@@ -135,9 +135,10 @@ Run the Rails test suite:
 ```sh
 ./dev/rails-docker bin/rails test
 ./dev/rails-docker bin/rails test:system
+./dev/rails-docker bin/ci
 ```
 
-System tests require Chromium in the development image. Rebuild after pulling Dockerfile changes: `docker compose build`.
+System tests and `bin/ci` start a throwaway `web` container so they use Chromium from the image even when `docker compose up` is already serving. Rebuild after pulling Dockerfile changes: `docker compose build`. If system tests still fail with “Linux arm64 is not supported yet by chrome”, the running image is stale — rebuild, then rerun `./dev/rails-docker bin/rails test:system`.
 
 Run the other checks enforced by CI:
 

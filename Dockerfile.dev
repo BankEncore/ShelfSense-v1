@@ -27,6 +27,7 @@ RUN apt-get update -qq && \
 
 ENV CHROME_BIN=/usr/bin/chromium
 ENV CHROMEDRIVER_PATH=/usr/bin/chromedriver
+ENV SE_CHROMEDRIVER=/usr/bin/chromedriver
 
 RUN groupadd --gid ${APP_GID} ${APP_USER} && \
     useradd --uid ${APP_UID} --gid ${APP_GID} --create-home ${APP_USER}
