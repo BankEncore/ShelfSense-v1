@@ -48,17 +48,33 @@ module Pos
     end
 
     def existing_or_open_period
-      PosReportingPeriod.open.find_by(register: @register) ||
-        Pos::OpenReportingPeriod.call(
-          store: @store,
-          register: @register,
-          actor: @actor,
-          business_date: @business_date
-        )
+      existing = PosReportingPeriod.open.find_by(register: @register)
+      if existing
+        require_matching_confirmed_date!(existing)
+        return existing
+      end
+
+      Pos::OpenReportingPeriod.call(
+        store: @store,
+        register: @register,
+        actor: @actor,
+        business_date: @business_date
+      )
     rescue Pos::Error => e
       raise unless e.message.match?(/already has an open reporting period/)
 
       nil
+    end
+
+    def require_matching_confirmed_date!(period)
+      return if @business_date.blank?
+
+      confirmed = @business_date.to_date
+      return if period.business_date == confirmed
+
+      raise Pos::Error, "this register is already open on business date #{period.business_date.iso8601}"
+    rescue ArgumentError, TypeError
+      raise Pos::Error, "business date must match the store calendar date"
     end
 
     def open_session(period)

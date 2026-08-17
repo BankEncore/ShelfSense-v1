@@ -126,7 +126,7 @@ Authority: [register-workspace.md](register-workspace.md). Interaction: [registe
 - At most one working transaction per Session; GET workspace is read-only (working + tender restores completion-pending; no working transaction → enter; never infer a receipt); `ResumeOrStartTransaction` on POST enter/continue/cancel; `AbandonTender` on Return to sale
 - Persistent primary scan/input; keyboard-first ephemeral `SALE_ENTRY` / `QUANTITY` / `TENDER`; F8 removes the selected line
 - Rescan of a compatible SKU increments the existing line in `AddMerchandise`
-- `POST tender` then `POST /pos/transactions/:id/complete`; unexpired `in_flight` does not auto-submit; completion retry does not re-tender
+- `POST tender` then `POST /pos/transactions/:id/complete`; unexpired `in_flight` does not auto-submit and exposes no Retry / Return to sale; completion retry does not re-tender
 - Basket mutation, Return to sale (`AbandonTender`), and `CancelTransaction` clear working tenders; Slice 2 disables Cancel on an empty basket (`CancelTransaction` may still cancel empty)
 - Domain: unique working transaction + preflight; `StartTransaction` stays start-only; `ResumeOrStartTransaction`; `AddMerchandise` rescan merge; `clear_working_tenders!`; `AbandonTender`; `CancelTransaction` tender discard; `FindCompletionOperation` from persisted settlement (newest `in_flight`, else newest `failed`)
 - On-screen completion receipt/confirmation from completed facts; no print in this slice

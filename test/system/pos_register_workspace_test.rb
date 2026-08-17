@@ -27,7 +27,7 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     field = find("#pos-command-field")
     field.fill_in with: @variant.sku
     field.send_keys :enter
-    assert_text "2"
+    assert_selector "tr.is-selected[data-quantity='2']"
     assert_text "SALE ENTRY"
 
     click_on "Tender (+)"
@@ -139,44 +139,91 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     assert_equal before, command_field_top
   end
 
-  test "refresh restores the in_flight operation id and return to sale clears the tender" do
+  test "in-flight mutation ignores tender remove and cancel" do
     open_register
     add_current_sku
-    transaction = PosTransaction.working.find_by!(register: @register)
-    Pos::TenderCash.call(
-      transaction: transaction,
-      actor: @actor,
-      expected_lock_version: transaction.lock_version,
-      amount_presented_cents: 2500
-    )
-    transaction.reload
-    operation_id = SecureRandom.uuid_v7
-    payload = Pos::CompleteTransaction.command_payload(
-      transaction: transaction,
-      operation_id: operation_id,
-      expected_lock_version: transaction.lock_version,
-      expected_total_cents: transaction.total_cents,
-      amount_presented_cents: 2500
-    )
-    Pos::OperationLease.begin!(
-      register_id: transaction.register_id,
-      operation_id: operation_id,
-      command_payload: payload,
-      store_id: transaction.store_id,
-      pos_transaction_id: transaction.id
-    )
+    page.execute_script(<<~JS)
+      const el = document.getElementById("pos_workspace")
+      const controller = window.Stimulus.getControllerForElementAndIdentifier(el, "register-workspace")
+      controller.beginFlight()
+      controller.enterTender()
+      controller.removeSelected()
+      controller.openOverlay()
+    JS
+    assert_button "Tender (+)", disabled: true
+    assert_button "Remove (F8)", disabled: true
+    assert_button "Cancel (F9)", disabled: true
+    assert_text "SALE ENTRY"
+    assert_no_text "CASH TENDER"
+    assert_no_text "Cancel this sale?"
+    assert_text "Example Book"
+  end
 
+  test "active in_flight completion has no recovery controls" do
+    open_register
+    add_current_sku
+    seed_in_flight_completion
     visit pos_register_workspace_path
     assert_text "Completion is still processing"
-    assert_selector "input[name='completion_operation_id'][value='#{operation_id}']", visible: false
+    assert_no_button "Retry complete"
+    assert_no_button "Return to sale"
+    assert_button "Cancel (F9)", disabled: true
+    assert_selector "input[name='completion_operation_id']", visible: false
     visit pos_register_workspace_path
-    assert_selector "input[name='completion_operation_id'][value='#{operation_id}']", visible: false
+    assert_text "Completion is still processing"
+    assert_no_button "Retry complete"
+  end
 
+  test "return to sale from a failed completion clears the tender" do
+    open_register
+    add_current_sku
+    shrink_current_sku(5)
+    click_on "Tender (+)"
+    field = find("#pos-command-field")
+    field.fill_in with: "50.00"
+    field.send_keys :enter
+    assert_text "Retry complete", wait: 10
     click_on "Return to sale"
     assert_text "SALE ENTRY"
     assert_text "Example Book"
     assert_no_text "CHANGE"
-    assert_equal 0, transaction.reload.pos_tenders.count
+    assert_equal 0, PosTransaction.working.find_by!(register: @register).pos_tenders.count
+  end
+
+  test "transport failure on merchandise reloads the workspace" do
+    open_register
+    add_current_sku
+    page.execute_script(<<~JS)
+      const el = document.getElementById("pos_workspace")
+      const controller = window.Stimulus.getControllerForElementAndIdentifier(el, "register-workspace")
+      controller.beginFlight()
+      const form = el.querySelector("[data-register-workspace-target='merchandiseForm']")
+      form.dispatchEvent(new CustomEvent("turbo:submit-end", { bubbles: true, detail: { success: false } }))
+    JS
+    assert_text "SALE ENTRY"
+    assert_text "Example Book"
+  end
+
+  test "transport failure on complete keeps the same operation and offers retry" do
+    open_register
+    add_current_sku
+    shrink_current_sku(5)
+    click_on "Tender (+)"
+    field = find("#pos-command-field")
+    field.fill_in with: "50.00"
+    field.send_keys :enter
+    assert_text "Retry complete", wait: 10
+    operation_id = find("input[name='completion_operation_id']", visible: :hidden).value
+    page.execute_script(<<~JS)
+      const el = document.getElementById("pos_workspace")
+      const controller = window.Stimulus.getControllerForElementAndIdentifier(el, "register-workspace")
+      controller.beginFlight()
+      const form = el.querySelector("[data-register-workspace-target='completeForm']")
+      form.dispatchEvent(new CustomEvent("turbo:submit-end", { bubbles: true, detail: { success: false } }))
+    JS
+    assert_text "Connection lost"
+    assert_text "Retry complete"
+    assert_equal operation_id, find("input[name='completion_operation_id']", visible: :hidden).value
   end
 
   test "retry complete after inventory failure does not re-tender" do
@@ -226,6 +273,33 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
 
   def command_field_top
     page.evaluate_script("document.getElementById('pos-command-field').getBoundingClientRect().top")
+  end
+
+  def seed_in_flight_completion
+    transaction = PosTransaction.working.find_by!(register: @register)
+    Pos::TenderCash.call(
+      transaction: transaction,
+      actor: @actor,
+      expected_lock_version: transaction.lock_version,
+      amount_presented_cents: 2500
+    )
+    transaction.reload
+    operation_id = SecureRandom.uuid_v7
+    payload = Pos::CompleteTransaction.command_payload(
+      transaction: transaction,
+      operation_id: operation_id,
+      expected_lock_version: transaction.lock_version,
+      expected_total_cents: transaction.total_cents,
+      amount_presented_cents: 2500
+    )
+    Pos::OperationLease.begin!(
+      register_id: transaction.register_id,
+      operation_id: operation_id,
+      command_payload: payload,
+      store_id: transaction.store_id,
+      pos_transaction_id: transaction.id
+    )
+    operation_id
   end
 
   def shrink_current_sku(quantity)

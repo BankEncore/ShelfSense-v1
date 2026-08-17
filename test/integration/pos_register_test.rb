@@ -34,7 +34,7 @@ class PosRegisterTest < ActionDispatch::IntegrationTest
   end
 
   test "post enter then workspace sale tender and complete" do
-    post pos_register_enter_path, params: { register_id: @register.id, opening_float: "50.00" }
+    post pos_register_enter_path, params: enter_params(opening_float: "50.00")
     assert_redirected_to pos_register_workspace_path
     follow_redirect!
     assert_response :success
@@ -94,7 +94,7 @@ class PosRegisterTest < ActionDispatch::IntegrationTest
     assert_match "is open for", response.body
     assert_select "input[type='submit'][value='Open register'][disabled]"
 
-    post pos_register_enter_path, params: { register_id: @register.id, opening_float: "0.00" }
+    post pos_register_enter_path, params: enter_params
     assert_response :unprocessable_content
     assert_equal 1, PosSession.open.where(register: @register).count
     assert_equal @actor.id, PosSession.open.find_by!(register: @register).cashier_user_id
@@ -151,7 +151,7 @@ class PosRegisterTest < ActionDispatch::IntegrationTest
   end
 
   test "abandon tender and cancel clear working tenders" do
-    post pos_register_enter_path, params: { register_id: @register.id, opening_float: "0.00" }
+    post pos_register_enter_path, params: enter_params
     transaction = PosTransaction.working.find_by!(register: @register)
     post pos_register_merchandise_path, params: { identifier: @variant.sku, lock_version: transaction.lock_version }
     transaction.reload
@@ -171,14 +171,14 @@ class PosRegisterTest < ActionDispatch::IntegrationTest
   end
 
   test "completed receipt is not found while working" do
-    post pos_register_enter_path, params: { register_id: @register.id, opening_float: "0.00" }
+    post pos_register_enter_path, params: enter_params
     transaction = PosTransaction.working.find_by!(register: @register)
     get pos_completed_transaction_path(transaction)
     assert_response :not_found
   end
 
   test "complete retry of an already completed transaction shows that receipt" do
-    post pos_register_enter_path, params: { register_id: @register.id, opening_float: "0.00" }
+    post pos_register_enter_path, params: enter_params
     transaction = PosTransaction.working.find_by!(register: @register)
     post pos_register_merchandise_path, params: { identifier: @variant.sku, lock_version: transaction.lock_version }
     transaction.reload
@@ -204,7 +204,7 @@ class PosRegisterTest < ActionDispatch::IntegrationTest
   end
 
   test "complete does not redirect to enter when the working transaction is gone" do
-    post pos_register_enter_path, params: { register_id: @register.id, opening_float: "0.00" }
+    post pos_register_enter_path, params: enter_params
     transaction = PosTransaction.working.find_by!(register: @register)
     post pos_register_merchandise_path, params: { identifier: @variant.sku, lock_version: transaction.lock_version }
     transaction.reload
@@ -232,7 +232,7 @@ class PosRegisterTest < ActionDispatch::IntegrationTest
   end
 
   test "invalid quantity stays in quantity and invalid cash stays in tender" do
-    post pos_register_enter_path, params: { register_id: @register.id, opening_float: "0.00" }
+    post pos_register_enter_path, params: enter_params
     transaction = PosTransaction.working.find_by!(register: @register)
     post pos_register_merchandise_path, params: { identifier: @variant.sku, lock_version: transaction.lock_version }
     transaction.reload
@@ -262,7 +262,7 @@ class PosRegisterTest < ActionDispatch::IntegrationTest
   end
 
   test "unexpired in_flight completion does not auto submit" do
-    post pos_register_enter_path, params: { register_id: @register.id, opening_float: "0.00" }
+    post pos_register_enter_path, params: enter_params
     transaction = PosTransaction.working.find_by!(register: @register)
     post pos_register_merchandise_path, params: { identifier: @variant.sku, lock_version: transaction.lock_version }
     transaction.reload
@@ -288,6 +288,29 @@ class PosRegisterTest < ActionDispatch::IntegrationTest
     assert_match "Completion is still processing", response.body
     assert_select "[data-register-workspace-auto-complete-value='false']"
     assert_select "input[name='completion_operation_id'][value='#{operation_id}']"
+    assert_select "[data-register-workspace-target='retry']", count: 0
+    assert_select "[data-register-workspace-target='abandonButton']", count: 0
+    assert_select "[data-register-workspace-target='clientRecovery'][hidden]"
+    assert_select "button[data-register-workspace-target='cancelButton'][disabled]"
+  end
+
+  test "opening a new period requires a confirmed business date" do
+    post pos_register_enter_path, params: { register_id: @register.id, opening_float: "0.00" }
+    assert_response :unprocessable_content
+    assert_match(/business date confirmation is required/, response.body)
+    assert_equal 0, PosReportingPeriod.where(register: @register).count
+  end
+
+  test "enter rejects a confirmed date that does not match an already open period" do
+    Pos::OpenReportingPeriod.call(store: @store, register: @register, actor: @actor)
+    post pos_register_enter_path, params: {
+      register_id: @register.id,
+      opening_float: "0.00",
+      confirmed_business_date: (BusinessDate.for_store(@store) - 1.day).iso8601
+    }
+    assert_response :unprocessable_content
+    assert_match(/already open on business date/, response.body)
+    assert_equal 0, PosSession.where(register: @register).count
   end
 
   test "confirmed business date is rejected after the calendar boundary" do
@@ -311,7 +334,7 @@ class PosRegisterTest < ActionDispatch::IntegrationTest
   end
 
   test "completed receipt is scoped to the current store" do
-    post pos_register_enter_path, params: { register_id: @register.id, opening_float: "0.00" }
+    post pos_register_enter_path, params: enter_params
     transaction = PosTransaction.working.find_by!(register: @register)
     post pos_register_merchandise_path, params: { identifier: @variant.sku, lock_version: transaction.lock_version }
     transaction.reload
@@ -340,7 +363,7 @@ class PosRegisterTest < ActionDispatch::IntegrationTest
   end
 
   test "complete retry after inventory failure does not re-tender" do
-    post pos_register_enter_path, params: { register_id: @register.id, opening_float: "0.00" }
+    post pos_register_enter_path, params: enter_params
     transaction = PosTransaction.working.find_by!(register: @register)
     post pos_register_merchandise_path, params: { identifier: @variant.sku, lock_version: transaction.lock_version }
     transaction.reload
@@ -384,5 +407,13 @@ class PosRegisterTest < ActionDispatch::IntegrationTest
 
   def sign_in_as(username)
     post session_path, params: { session: { username: username, password: "correct-horse-battery" } }
+  end
+
+  def enter_params(opening_float: "0.00")
+    {
+      register_id: @register.id,
+      opening_float: opening_float,
+      confirmed_business_date: BusinessDate.for_store(@store).iso8601
+    }
   end
 end

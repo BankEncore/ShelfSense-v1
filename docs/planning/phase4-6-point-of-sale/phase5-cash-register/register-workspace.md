@@ -111,8 +111,11 @@ Register has no open Session:
   use the existing open period if one exists
     (do not re-confirm a date; use the period's business_date)
   otherwise open a period for BusinessDate.for_store(...) (confirm; no override).
-    POST the displayed date as `confirmed_business_date`. `EnterRegister` passes it to
-    `OpenReportingPeriod`. If the store calendar date has changed since GET, reject and re-render.
+    POST the displayed date as `confirmed_business_date` (required at the enter HTTP
+    boundary when no period exists). `EnterRegister` passes it to `OpenReportingPeriod`
+    only when creating a period. If the store calendar date has changed since GET, reject
+    and re-render. If another request opened a period first, the confirmed date must match
+    that period's `business_date` or the gate re-renders.
   then open Session (opening float required, integer cents >= 0, zero allowed)
 ```
 
@@ -294,8 +297,9 @@ GET workspace while working + tender (refresh)
        (newest in_flight, else newest failed; recompute CanonicalJson.hash with that row’s id as operation_id)
        → restore that operation_id
        → pending (no row yet): auto-complete
-       → failed or expired in_flight: Retry complete, no auto-submit
-       → unexpired in_flight: “Completion is still processing”; do not immediately POST again
+       → failed or expired in_flight: Retry complete, Return to sale, Cancel
+       → unexpired in_flight: “Completion is still processing”; no Retry, no Return to sale,
+         Cancel disabled; do not immediately POST again
   → no matching completion operation
        → mint a new completion_operation_id
   → transaction already completed

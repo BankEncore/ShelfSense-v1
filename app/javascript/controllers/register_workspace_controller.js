@@ -21,15 +21,19 @@ export default class extends Controller {
     "dontCancel",
     "confirmCancel",
     "retry",
+    "abandonButton",
     "quantityButton",
     "tenderButton",
     "removeButton",
-    "cancelButton"
+    "cancelButton",
+    "feedback",
+    "clientRecovery"
   ]
 
   static values = {
     mode: String,
-    autoComplete: Boolean
+    autoComplete: Boolean,
+    workspaceUrl: String
   }
 
   connect() {
@@ -38,6 +42,7 @@ export default class extends Controller {
       this.submitComplete()
       return
     }
+    this.enableReadyActions()
     this.restoreFocus()
   }
 
@@ -106,6 +111,12 @@ export default class extends Controller {
     }
   }
 
+  onSubmitEnd(event) {
+    if (event.detail?.success) return
+    if (!this.inFlight) return
+    this.recoverFromTransportFailure(event.target)
+  }
+
   submitMode() {
     if (this.inFlight) return
     if (this.modeValue === "sale_entry") this.submitMerchandise()
@@ -145,6 +156,7 @@ export default class extends Controller {
   }
 
   enterQuantity() {
+    if (this.inFlight) return
     if (this.modeValue !== "sale_entry" || !this.selectedRow()) return
     const row = this.selectedRow()
     this.setMode("quantity", "QUANTITY")
@@ -162,6 +174,7 @@ export default class extends Controller {
   }
 
   enterTender() {
+    if (this.inFlight) return
     if (this.modeValue !== "sale_entry") return
     if (!this.element.querySelector(".pos-lines tbody tr")) return
     this.setMode("tender", "CASH TENDER")
@@ -178,6 +191,7 @@ export default class extends Controller {
   }
 
   removeSelected() {
+    if (this.inFlight) return
     if (this.modeValue !== "sale_entry" || !this.selectedRow()) return
     this.syncSelectedLine()
     this.beginFlight()
@@ -185,21 +199,19 @@ export default class extends Controller {
   }
 
   escape() {
+    if (this.inFlight) return
     if (this.modeValue === "quantity" || this.modeValue === "tender") {
       this.setMode("sale_entry", "SALE ENTRY")
       this.setFieldLabel("Scan or identifier")
       this.fieldTarget.inputMode = "text"
       this.fieldTarget.value = ""
-      const hasSelection = Boolean(this.selectedRow())
-      const hasLines = Boolean(this.element.querySelector(".pos-lines tbody tr"))
-      this.setActionEnabled("quantityButton", hasSelection)
-      this.setActionEnabled("tenderButton", hasLines)
-      this.setActionEnabled("removeButton", hasSelection)
+      this.enableReadyActions()
       this.fieldTarget.focus()
     }
   }
 
   openOverlay() {
+    if (this.inFlight) return
     const cancel = this.hasCancelButtonTarget ? this.cancelButtonTarget : this.element.querySelector(".pos-actions .btn--danger")
     if (!cancel || cancel.disabled) return
     this.overlayTarget.hidden = false
@@ -220,6 +232,7 @@ export default class extends Controller {
   }
 
   moveSelection(delta) {
+    if (this.inFlight) return
     const rows = Array.from(this.element.querySelectorAll(".pos-lines tbody tr"))
     if (rows.length === 0) return
     const current = rows.findIndex((row) => row.classList.contains("is-selected"))
@@ -251,10 +264,62 @@ export default class extends Controller {
   beginFlight() {
     this.inFlight = true
     if (this.hasFieldTarget) this.fieldTarget.disabled = true
+    this.disableMutationControls()
+  }
+
+  disableMutationControls() {
+    ["quantityButton", "tenderButton", "removeButton", "cancelButton", "retry", "abandonButton"].forEach((name) => {
+      this.setActionEnabled(name, false)
+    })
+  }
+
+  enableReadyActions() {
+    if (this.modeValue === "sale_entry") {
+      const hasSelection = Boolean(this.selectedRow())
+      const hasLines = Boolean(this.element.querySelector(".pos-lines tbody tr"))
+      this.setActionEnabled("quantityButton", hasSelection)
+      this.setActionEnabled("tenderButton", hasLines)
+      this.setActionEnabled("removeButton", hasSelection)
+      this.setActionEnabled("cancelButton", hasLines)
+      return
+    }
+    if (this.modeValue === "completion_failed") {
+      this.setActionEnabled("cancelButton", true)
+      this.setActionEnabled("retry", true)
+      this.setActionEnabled("abandonButton", true)
+    }
+  }
+
+  recoverFromTransportFailure(form) {
+    if (this.hasCompleteFormTarget && form && (form === this.completeFormTarget || this.completeFormTarget.contains(form))) {
+      this.recoverCompleteTransport()
+      return
+    }
+    if (this.workspaceUrlValue) {
+      window.location.assign(this.workspaceUrlValue)
+    }
+  }
+
+  recoverCompleteTransport() {
+    this.inFlight = false
+    if (this.hasFeedbackTarget) {
+      this.feedbackTarget.textContent = "Connection lost. Retry complete does not take Cash again."
+      this.feedbackTarget.setAttribute("role", "alert")
+    }
+    if (this.hasRetryTarget) {
+      this.retryTarget.disabled = false
+      this.retryTarget.focus()
+      return
+    }
+    if (this.hasClientRecoveryTarget) {
+      this.clientRecoveryTarget.hidden = false
+      const button = this.clientRecoveryTarget.querySelector("button")
+      if (button) button.focus()
+    }
   }
 
   restoreFocus() {
-    if (this.hasRetryTarget && (this.modeValue === "completion_failed" || (this.modeValue === "completion_pending" && !this.autoCompleteValue))) {
+    if (this.hasRetryTarget && this.modeValue === "completion_failed") {
       this.retryTarget.focus()
       return
     }

@@ -11,6 +11,12 @@ module Pos
 
     def create
       @register = active_registers.find(params.require(:register_id))
+      gate = Pos::OpenGate.for(store: current_store, register: @register, actor: current_user)
+      if gate.opening_new_period? && params[:confirmed_business_date].blank?
+        fail_enter("business date confirmation is required")
+        return
+      end
+
       float_cents = parse_opening_float
       result = Pos::EnterRegister.call(
         store: current_store,
@@ -46,6 +52,7 @@ module Pos
     def fail_enter(message)
       @registers = active_registers
       @gate = @register && Pos::OpenGate.for(store: current_store, register: @register, actor: current_user)
+      @opening_float = params[:opening_float]
       flash.now[:alert] = message
       render :show, status: :unprocessable_content
     end

@@ -103,6 +103,21 @@ class PosEnterRegisterTest < ActiveSupport::TestCase
     assert_equal confirmed, result.session.reporting_period.business_date
   end
 
+  test "rejects a confirmed date that does not match an already open period" do
+    Pos::OpenReportingPeriod.call(store: @store, register: @register, actor: @actor)
+    error = assert_raises(Pos::Error) do
+      Pos::EnterRegister.call(
+        store: @store,
+        register: @register,
+        actor: @actor,
+        opening_float_cents: 0,
+        business_date: BusinessDate.for_store(@store) - 1.day
+      )
+    end
+    assert_match(/already open on business date/, error.message)
+    assert_equal 0, PosSession.where(register: @register).count
+  end
+
   test "open gate is occupied for a different cashier" do
     Pos::EnterRegister.call(
       store: @store,

@@ -3,16 +3,10 @@
   tender = @tender || @transaction.pos_tenders.find_by(tender_type: "cash")
   selected_id = @selected_line&.id
   locked = %w[completion_pending completion_failed].include?(@ui_mode)
-  basket_empty = lines.none?
-  merchandise_present = lines.any?
-  cancel_enabled = merchandise_present && @ui_mode != "completion_pending"
   leftover = @session_record.reporting_period.business_date != BusinessDate.for_store(current_store)
   amount_due = @transaction.total_cents
   change_cents = tender&.change_cents
-  completion_recovery = @ui_mode == "completion_failed" || (@ui_mode == "completion_pending" && !@auto_complete)
-  quantity_enabled = @selected_line && @ui_mode == "sale_entry"
-  tender_enabled = merchandise_present && @ui_mode == "sale_entry"
-  remove_enabled = @selected_line && @ui_mode == "sale_entry"
+  completion_recovery = @ui_mode == "completion_failed"
   command_inputmode =
     if @ui_mode == "quantity"
       "numeric"
@@ -38,7 +32,8 @@
      data-controller="register-workspace"
      data-register-workspace-mode-value="<%= @ui_mode %>"
      data-register-workspace-auto-complete-value="<%= @auto_complete ? "true" : "false" %>"
-     data-action="keydown@document->register-workspace#onKeydown">
+     data-register-workspace-workspace-url-value="<%= pos_register_workspace_path %>"
+     data-action="keydown@document->register-workspace#onKeydown turbo:submit-end->register-workspace#onSubmitEnd">
   <div data-register-workspace-target="chrome">
     <header class="pos-header">
       <div class="pos-header__row">
@@ -95,7 +90,7 @@
       </aside>
     </div>
 
-    <div id="pos_feedback" class="pos-feedback" role="<%= @feedback.present? ? "alert" : "status" %>" aria-live="<%= @feedback.present? ? "assertive" : "polite" %>">
+    <div id="pos_feedback" class="pos-feedback" data-register-workspace-target="feedback" role="<%= @feedback.present? ? "alert" : "status" %>" aria-live="<%= @feedback.present? ? "assertive" : "polite" %>">
       <% if @ui_mode == "completion_pending" && @feedback.blank? %>
         Completing sale…
       <% elsif @feedback.present? %>
@@ -122,17 +117,24 @@
     <div id="pos_actions" class="pos-actions">
       <% if completion_recovery %>
         <button type="button" class="btn" data-action="register-workspace#submitComplete" data-register-workspace-target="retry" autofocus>Retry complete</button>
-        <%= button_to "Return to sale", pos_register_abandon_tender_path, method: :post, params: { lock_version: @transaction.lock_version }, class: "btn btn--secondary" %>
+        <%= button_to "Return to sale", pos_register_abandon_tender_path, method: :post,
+              params: { lock_version: @transaction.lock_version },
+              class: "btn btn--secondary",
+              form: { data: { turbo: true } },
+              data: { register_workspace_target: "abandonButton" } %>
       <% else %>
-        <button type="button" class="btn btn--secondary" data-action="register-workspace#enterQuantity" data-register-workspace-target="quantityButton" <%= "disabled" unless quantity_enabled %>>Quantity (*)</button>
-        <button type="button" class="btn btn--secondary" data-action="register-workspace#enterTender" data-register-workspace-target="tenderButton" <%= "disabled" unless tender_enabled %>>Tender (+)</button>
-        <button type="button" class="btn btn--secondary" data-action="register-workspace#removeSelected" data-register-workspace-target="removeButton" <%= "disabled" unless remove_enabled %>>Remove (F8)</button>
+        <button type="button" class="btn btn--secondary" data-action="register-workspace#enterQuantity" data-register-workspace-target="quantityButton" disabled>Quantity (*)</button>
+        <button type="button" class="btn btn--secondary" data-action="register-workspace#enterTender" data-register-workspace-target="tenderButton" disabled>Tender (+)</button>
+        <button type="button" class="btn btn--secondary" data-action="register-workspace#removeSelected" data-register-workspace-target="removeButton" disabled>Remove (F8)</button>
       <% end %>
+      <div data-register-workspace-target="clientRecovery" hidden>
+        <button type="button" class="btn" data-action="register-workspace#submitComplete">Retry complete</button>
+      </div>
       <button type="button"
               class="btn btn--danger"
               data-action="register-workspace#openOverlay"
               data-register-workspace-target="cancelButton"
-              <%= "disabled" unless cancel_enabled %>>
+              disabled>
         Cancel (F9)
       </button>
     </div>

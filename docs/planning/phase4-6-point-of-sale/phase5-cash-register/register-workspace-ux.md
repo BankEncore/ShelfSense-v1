@@ -451,7 +451,7 @@ Not a fourth named mode. Working transaction **plus** Cash tender. Input locked.
 | Next Enter | Ignored while `POST complete` is in flight |
 | Escape | Does **not** return to `SALE_ENTRY` |
 | Shortcuts | None while in flight. F9 disabled |
-| Visible equivalents | None active until a response |
+| Visible equivalents | None active until a response. Unexpired `in_flight` on refresh: “Completion is still processing”; no Retry, no Return to sale, Cancel disabled |
 | Error location | n/a until failure |
 | Turbo region(s) | Success: **full-page** redirect to `GET /pos/transactions/:id/completed`. GET workspace refresh while still working+tender re-renders this frame and **restores** a matching `in_flight`/`failed` `completion_operation_id` if one exists; mints only if complete was never started. If that transaction is already completed: redirect to **that** id's receipt |
 
