@@ -34,7 +34,7 @@ module Pos
           amount_presented_cents: @amount_presented_cents,
           change_cents: change
         )
-        transaction.save!
+        transaction.update!(updated_at: Time.current)
         tender
       end
     end

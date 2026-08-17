@@ -1,0 +1,403 @@
+# frozen_string_literal: true
+
+module Pos
+  class CompleteTransaction
+    Result = Struct.new(:transaction, :operation, :replayed, keyword_init: true)
+
+    def self.call(**attrs)
+      new(**attrs).call
+    end
+
+    def initialize(transaction:, actor:, operation_id:, expected_lock_version:, expected_total_cents:, amount_presented_cents:)
+      @transaction = transaction
+      @actor = actor
+      @operation_id = operation_id
+      @expected_lock_version = expected_lock_version.to_i
+      @expected_total_cents = expected_total_cents.to_i
+      @amount_presented_cents = amount_presented_cents.to_i
+    end
+
+    def call
+      lease = nil
+      Pos::Support.authorize!(@actor, @transaction.store)
+
+      lease = Pos::OperationLease.begin!(
+        register_id: @transaction.register_id,
+        operation_id: @operation_id,
+        command_payload: command_payload(@transaction),
+        store_id: @transaction.store_id,
+        pos_transaction_id: @transaction.id
+      )
+      return replay_result(lease.operation) if lease.replayed
+
+      complete_commercially!(@transaction, lease.operation)
+    rescue Pos::Denied => e
+      record_rejection_audit!(e.message, outcome: "denied")
+      fail_in_flight_lease!(lease)
+      raise
+    rescue Pos::PayloadMismatch, OperationLease::Error
+      raise
+    rescue StandardError => e
+      fail_in_flight_lease!(lease)
+      record_rejection_audit!(e.message, outcome: "failed")
+      raise wrap_error(e)
+    end
+
+    private
+
+    def command_payload(transaction)
+      {
+        "transaction_id" => transaction.id.to_s,
+        "operation_id" => @operation_id.to_s,
+        "expected_lock_version" => @expected_lock_version,
+        "expected_total_cents" => @expected_total_cents,
+        "amount_presented_cents" => @amount_presented_cents
+      }
+    end
+
+    def complete_commercially!(transaction, operation)
+      result = nil
+      PosTransaction.transaction do
+        operation = PosOperation.lock.find(operation.id)
+        if operation.status == "completed"
+          result = replay_result(operation)
+          next result
+        end
+        raise OperationLease::Error, "completion lease is not in flight" unless operation.status == "in_flight"
+
+        transaction = PosTransaction.lock.find(transaction.id)
+        if transaction.completed?
+          raise Pos::Error, "transaction is already completed"
+        end
+
+        Pos::Support.authorize!(@actor, transaction.store)
+        raise Pos::Error, "transaction is not working" unless transaction.working?
+        if transaction.lock_version != @expected_lock_version
+          raise Pos::StaleObject, "stale lock_version"
+        end
+
+        validate_context!(transaction)
+        freeze_lines!(transaction)
+        Pos::Support.refresh_totals!(transaction)
+        if transaction.total_cents != @expected_total_cents
+          raise Pos::Error, "expected total does not match amount due"
+        end
+        settle_cash!(transaction)
+
+        completion_time = Time.current
+        business_date = transaction.reporting_period.business_date
+        receipt = allocate_receipt!(transaction)
+        facts = build_facts!(
+          transaction: transaction,
+          operation_id: operation.id,
+          completion_time: completion_time,
+          business_date: business_date,
+          receipt: receipt
+        )
+
+        persist_completed_transaction!(transaction, facts, completion_time, business_date)
+        post_inventory!(transaction, completion_time, business_date, operation.id)
+        persist_completed_operation!(operation, transaction, facts, completion_time)
+        record_success_audit!(transaction, operation, facts)
+        record_completion_outbox!(transaction, operation, facts, completion_time)
+
+        result = Result.new(transaction: transaction.reload, operation: operation.reload, replayed: false)
+      end
+      result
+    end
+
+    def validate_context!(transaction)
+      session = transaction.pos_session
+      period = transaction.reporting_period
+      raise Pos::Error, "session is not open" unless session.open?
+      raise Pos::Error, "reporting period is not open" unless period.open?
+      raise Pos::Error, "register does not match session" unless transaction.register_id == session.register_id
+      raise Pos::Error, "register does not match reporting period" unless transaction.register_id == period.register_id
+      raise Pos::Error, "reporting period does not match session" unless transaction.reporting_period_id == session.reporting_period_id
+      raise Pos::Error, "store does not match register" unless transaction.store_id == transaction.register.store_id
+      raise Pos::Error, "transaction has no merchandise" if transaction.pos_transaction_lines.none?
+    end
+
+    def freeze_lines!(transaction)
+      transaction.pos_transaction_lines.lock.each do |line|
+        variant = line.product_variant
+        raise Pos::Error, "merchandise is not sellable" unless variant.sellable?
+        raise Pos::Error, "individually tracked merchandise is not supported" unless variant.derived_inventory_tracking == "quantity"
+        raise Pos::Error, "regular price is required" if line.selling_unit_price_cents.nil?
+
+        line.recalc_extended!
+        result = Pos::Tax::Calculate.call(
+          store: transaction.store,
+          tax_class: line.tax_class,
+          taxable_basis_cents: line.extended_selling_amount_cents
+        )
+        line.line_tax_cents = result.tax_cents
+        line.line_total_cents = line.extended_selling_amount_cents + line.line_tax_cents
+        line.tax_class_code_snapshot = line.tax_class.code
+        line.merchandise_snapshot = {
+          "sku" => variant.sku,
+          "description" => variant.product.name,
+          "tax_class_code" => line.tax_class.code
+        }
+        line.save!
+        line.pos_line_tax_components.delete_all
+        result.determinations.each do |determination|
+          line.pos_line_tax_components.create!(
+            store_tax_id: determination.store_tax_id,
+            store_tax_code_snapshot: determination.store_tax_code,
+            store_tax_name_snapshot: determination.store_tax_name,
+            rate_percent: determination.rate_percent,
+            applies: determination.applies,
+            taxable_basis_cents: determination.taxable_basis_cents,
+            tax_cents: determination.tax_cents,
+            calculation_order: determination.calculation_order
+          )
+        end
+      end
+    rescue Pos::Tax::UnresolvedApplicability => e
+      raise Pos::Error, e.message
+    end
+
+    def settle_cash!(transaction)
+      tenders = transaction.pos_tenders.to_a
+      raise Pos::Error, "cash tender is required" unless tenders.size == 1
+
+      tender = tenders.first
+      raise Pos::Error, "cash tender is required" unless tender.tender_type == "cash"
+      if tender.amount_presented_cents != @amount_presented_cents
+        raise Pos::Error, "presented amount does not match the cash tender"
+      end
+      if @amount_presented_cents < transaction.total_cents
+        raise Pos::Error, "presented amount is less than amount due"
+      end
+
+      tender.update!(
+        amount_cents: transaction.total_cents,
+        change_cents: @amount_presented_cents - transaction.total_cents
+      )
+    end
+
+    def allocate_receipt!(transaction)
+      register = Register.lock.find(transaction.register_id)
+      sequence = register.receipt_sequence + 1
+      register.update!(receipt_sequence: sequence)
+      store_number = transaction.store.store_number
+      register_number = register.register_number
+      {
+        sequence: sequence,
+        store_number: store_number,
+        register_number: register_number,
+        reference: ReceiptIdentity.reference(
+          store_number: store_number,
+          register_number: register_number,
+          receipt_sequence: sequence
+        )
+      }
+    end
+
+    def build_facts!(transaction:, operation_id:, completion_time:, business_date:, receipt:)
+      envelope = {
+        "schema_version" => 1,
+        "operation" => {
+          "operation_id" => operation_id.to_s,
+          "fact_type" => PosOperation::FACT_TYPE
+        },
+        "origin" => {
+          "store_id" => transaction.store_id.to_s,
+          "register_id" => transaction.register_id.to_s,
+          "pos_session_id" => transaction.pos_session_id.to_s,
+          "reporting_period_id" => transaction.reporting_period_id.to_s,
+          "performed_by_user_id" => transaction.cashier_user_id.to_s
+        },
+        "receipt" => {
+          "sequence" => receipt.fetch(:sequence),
+          "store_number" => receipt.fetch(:store_number),
+          "register_number" => receipt.fetch(:register_number),
+          "reference" => receipt.fetch(:reference)
+        },
+        "transaction" => {
+          "transaction_id" => transaction.id.to_s,
+          "currency_code" => transaction.currency_code,
+          "occurred_at" => completion_time.utc.iso8601(6),
+          "business_date" => business_date.iso8601,
+          "subtotal_cents" => transaction.subtotal_cents,
+          "tax_cents" => transaction.tax_cents,
+          "total_cents" => transaction.total_cents
+        },
+        "lines" => transaction.pos_transaction_lines.reload.map { |line| envelope_line(line) },
+        "tenders" => transaction.pos_tenders.reload.map { |tender| envelope_tender(tender) }
+      }
+      facts = CompletedTransactionFacts.new(envelope)
+      facts.verify!
+      facts
+    end
+
+    def envelope_line(line)
+      {
+        "line_id" => line.id.to_s,
+        "line_number" => line.line_number,
+        "direction" => line.direction,
+        "product_variant_id" => line.product_variant_id.to_s,
+        "quantity" => line.quantity,
+        "reference_unit_price_cents" => line.reference_unit_price_cents,
+        "selling_unit_price_cents" => line.selling_unit_price_cents,
+        "extended_selling_amount_cents" => line.extended_selling_amount_cents,
+        "line_tax_cents" => line.line_tax_cents,
+        "line_total_cents" => line.line_total_cents,
+        "tax_class_id" => line.tax_class_id.to_s,
+        "tax_class_code" => line.tax_class_code_snapshot,
+        "merchandise_snapshot" => line.merchandise_snapshot,
+        "tax_components" => line.pos_line_tax_components.order(:calculation_order, :store_tax_code_snapshot, :id).map do |component|
+          {
+            "store_tax_id" => component.store_tax_id.to_s,
+            "store_tax_code" => component.store_tax_code_snapshot,
+            "store_tax_name" => component.store_tax_name_snapshot,
+            "rate_percent" => format("%.3f", component.rate_percent),
+            "applies" => component.applies,
+            "taxable_basis_cents" => component.taxable_basis_cents,
+            "tax_cents" => component.tax_cents,
+            "calculation_order" => component.calculation_order
+          }
+        end
+      }
+    end
+
+    def envelope_tender(tender)
+      {
+        "tender_id" => tender.id.to_s,
+        "tender_type" => tender.tender_type,
+        "direction" => tender.direction,
+        "amount_cents" => tender.amount_cents,
+        "amount_presented_cents" => tender.amount_presented_cents,
+        "change_cents" => tender.change_cents
+      }
+    end
+
+    def persist_completed_transaction!(transaction, facts, completion_time, business_date)
+      raise Pos::Error, "business date must match the reporting period" unless business_date == transaction.reporting_period.business_date
+
+      transaction.update!(
+        status: "completed",
+        occurred_at: completion_time,
+        completed_at: completion_time,
+        business_date: business_date,
+        receipt_sequence: facts.receipt_sequence,
+        store_number_snapshot: facts.store_number,
+        register_number_snapshot: facts.register_number,
+        transaction_reference: facts.transaction_reference
+      )
+    end
+
+    def post_inventory!(transaction, completion_time, business_date, correlation_id)
+      transaction.pos_transaction_lines.each do |line|
+        Inventory::PostSale.call(
+          line: line,
+          occurred_at: completion_time,
+          business_date: business_date,
+          actor: @actor,
+          correlation_id: correlation_id
+        )
+      end
+    end
+
+    def persist_completed_operation!(operation, transaction, facts, completion_time)
+      posted_at = Time.current
+      operation.update!(
+        status: "completed",
+        fact_type: PosOperation::FACT_TYPE,
+        schema_version: 1,
+        pos_transaction_id: transaction.id,
+        store_id: transaction.store_id,
+        register_id: transaction.register_id,
+        envelope: facts.envelope,
+        envelope_hash: facts.envelope_hash,
+        originated_at: completion_time,
+        received_at: posted_at,
+        posted_at: posted_at,
+        lease_expires_at: nil,
+        producer_client: "rails",
+        producer_version: Rails.application.config.x.application_version
+      )
+    end
+
+    def record_success_audit!(transaction, operation, facts)
+      Audit::Recorder.record!(
+        action: "pos.transaction_completed",
+        outcome: "succeeded",
+        actor_user: @actor,
+        actor_label: @actor.display_name,
+        store: transaction.store,
+        register: transaction.register,
+        subject: transaction,
+        correlation_id: operation.id,
+        after_values: {
+          receipt_sequence: facts.receipt_sequence,
+          transaction_reference: facts.transaction_reference,
+          total_cents: transaction.total_cents
+        },
+        metadata: {
+          operation_id: operation.id,
+          envelope_hash: facts.envelope_hash
+        }
+      )
+    end
+
+    def record_completion_outbox!(transaction, operation, facts, completion_time)
+      Outbox::Recorder.record!(
+        event_type: "pos.transaction_completed",
+        aggregate: transaction,
+        correlation_id: operation.id,
+        occurred_at: completion_time,
+        payload: {
+          operation_id: operation.id,
+          transaction_id: transaction.id,
+          store_id: transaction.store_id,
+          register_id: transaction.register_id,
+          receipt_sequence: facts.receipt_sequence,
+          transaction_reference: facts.transaction_reference
+        }
+      )
+    end
+
+    def record_rejection_audit!(message, outcome:)
+      transaction = @transaction
+      return if transaction.nil?
+
+      Audit::Recorder.record!(
+        action: "pos.transaction_completion_rejected",
+        outcome: outcome,
+        actor_user: @actor,
+        actor_label: @actor.display_name,
+        store: transaction.store,
+        register: transaction.register,
+        subject: transaction,
+        reason_text: message,
+        metadata: { operation_id: @operation_id }
+      )
+    end
+
+    def fail_in_flight_lease!(lease)
+      return if lease.nil? || lease.replayed
+
+      PosOperation.transaction do
+        operation = PosOperation.lock.find_by(id: lease.operation.id)
+        next unless operation&.status == "in_flight"
+
+        OperationLease.fail!(operation)
+      end
+    end
+
+    def replay_result(operation)
+      Result.new(transaction: operation.pos_transaction, operation: operation.reload, replayed: true)
+    end
+
+    def wrap_error(error)
+      case error
+      when Pos::Error, Pos::StaleObject, Pos::Denied
+        error
+      else
+        Pos::Error.new(error.message)
+      end
+    end
+  end
+end

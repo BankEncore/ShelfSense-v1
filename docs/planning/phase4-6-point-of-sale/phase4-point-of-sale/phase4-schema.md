@@ -439,3 +439,15 @@ Before writing POS migrations:
 - [x] Session table confirmed **without** Cash close columns  
 
 Then migrate in dependency order: rename slice → `store_taxes` / `store_tax_rules` → periods (with `register_id`) → sessions → transactions → lines → tax components → tenders → operations.
+
+## 16. Permissions
+
+| Permission | scope_type | Seeded on |
+|---|---|---|
+| `store_taxes.view` | either | `store_manager` |
+| `store_taxes.create` | either | `store_manager` |
+| `store_taxes.update` | either | `store_manager` |
+| `store_taxes.deactivate` | either | `store_manager` |
+| `pos.transact` | either | `associate`, `store_manager` |
+
+`system_administrator` receives the entire catalog. `pos.transact` authorizes open period/session, working commands, complete, and cancel. Store Tax admin HTML is authorized with `store_taxes.*`.

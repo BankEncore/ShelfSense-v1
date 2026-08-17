@@ -35,4 +35,18 @@ module PosFixtures
     session = Pos::OpenSession.call(store: store, register: register, actor: actor, reporting_period: period)
     { register: register, period: period, session: session }
   end
+
+  def open_quantity_stock(store:, variant:, actor:, quantity:, unit_cost_cents: 100)
+    Inventory::AdjustmentReasons.seed!
+    Inventory::PostAdjustment.call(
+      store: store,
+      product_variant: variant,
+      adjustment_reason: AdjustmentReason.find_by!(code: "opening_inventory"),
+      quantity_delta: quantity,
+      actor: actor,
+      source_id: SecureRandom.uuid_v7,
+      idempotency_key: SecureRandom.uuid_v7,
+      acquisition_unit_cost_cents: unit_cost_cents
+    )
+  end
 end

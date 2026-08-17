@@ -229,7 +229,7 @@ Implement the minimum context required by every POS operation:
 ```text
 store_id
 register_id
-session_id
+pos_session_id
 performed_by
 occurred_at
 business_date
