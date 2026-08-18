@@ -86,6 +86,18 @@ module PosHelper
     format_money_cents(cents)
   end
 
+  def pos_line_controlled?(line)
+    line.price_overridden? || line.manually_discounted? || line.tax_class_overridden?
+  end
+
+  def pos_line_control_flags(line)
+    flags = []
+    flags << "Override" if line.price_overridden?
+    flags << "Discount" if line.manually_discounted?
+    flags << "Tax Class" if line.tax_class_overridden?
+    flags.join(" · ")
+  end
+
   def pos_mode_label(mode)
     {
       "sale_entry" => "SALE ENTRY",

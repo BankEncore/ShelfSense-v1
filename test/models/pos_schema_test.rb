@@ -169,6 +169,21 @@ class PosSchemaTest < ActiveSupport::TestCase
     assert Role.find_by!(key: "store_manager").permissions.exists?(key: "pos.transact")
   end
 
+  test "controlled-action permissions are seeded by role" do
+    associate = Role.find_by!(key: "associate")
+    manager = Role.find_by!(key: "store_manager")
+    %w[price_override line_discount tax_class_override].each do |action|
+      assert Permission.exists?(key: "pos.#{action}.perform")
+      assert Permission.exists?(key: "pos.#{action}.approve")
+      assert associate.permissions.exists?(key: "pos.#{action}.perform")
+      assert_not associate.permissions.exists?(key: "pos.#{action}.approve")
+      assert manager.permissions.exists?(key: "pos.#{action}.perform")
+      assert manager.permissions.exists?(key: "pos.#{action}.approve")
+    end
+    assert_not Permission.exists?(key: "pos.unlinked_return.perform")
+    assert_not Permission.exists?(key: "pos.post_void.perform")
+  end
+
   test "pos.manage_tender_types is seeded for system administrator only" do
     assert Permission.exists?(key: "pos.manage_tender_types")
     assert Role.find_by!(key: "system_administrator").permissions.exists?(key: "pos.manage_tender_types")
@@ -255,7 +270,27 @@ class PosSchemaTest < ActiveSupport::TestCase
     end
   end
 
+  test "pos_controlled_actions timestamps are timestamptz" do
+    %w[created_at updated_at executed_at].each do |column|
+      assert_equal "timestamp with time zone", postgres_type("pos_controlled_actions", column), column
+    end
+  end
+
   private
+
+  def postgres_type(table, column)
+    PosControlledAction.connection.select_value(
+      "SELECT format_type(a.atttypid, a.atttypmod)
+       FROM pg_attribute a
+       JOIN pg_class c ON c.oid = a.attrelid
+       JOIN pg_namespace n ON n.oid = c.relnamespace
+       WHERE n.nspname = 'public'
+         AND c.relname = #{PosControlledAction.connection.quote(table)}
+         AND a.attname = #{PosControlledAction.connection.quote(column)}
+         AND a.attnum > 0
+         AND NOT a.attisdropped"
+    )
+  end
 
   def open_period
     PosReportingPeriod.create!(

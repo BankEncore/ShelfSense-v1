@@ -11,8 +11,34 @@
     <div><dt>Reference</dt><dd><%= format_money_cents(line.reference_unit_price_cents) %></dd></div>
     <div><dt>Selling</dt><dd><%= format_money_cents(line.selling_unit_price_cents) %></dd></div>
     <div><dt>Extended</dt><dd><%= format_money_cents(line.extended_selling_amount_cents) %></dd></div>
+    <% if line.manually_discounted? %>
+      <div><dt>Discount</dt><dd><%= format_money_cents(line.manual_discount_cents) %> (<%= number_with_precision(line.manual_discount_basis_points / 100.0, precision: 2) %>%)</dd></div>
+    <% end %>
+    <div><dt>Net</dt><dd><%= format_money_cents(line.net_merchandise_amount_cents) %></dd></div>
     <div><dt>Tax</dt><dd><%= format_money_cents(line.line_tax_cents) %></dd></div>
+    <% if line.default_tax_class_name_snapshot.present? %>
+      <div><dt>Default Tax Class</dt><dd><%= line.default_tax_class_name_snapshot %></dd></div>
+    <% end %>
+    <% if line.tax_class_name_snapshot.present? %>
+      <div><dt>Applied Tax Class</dt><dd><%= line.tax_class_name_snapshot %></dd></div>
+    <% end %>
   </dl>
+  <% line.pos_controlled_actions.each do |action| %>
+    <section class="pos-history__control" aria-label="<%= action.action_type.tr('_', ' ') %>">
+      <h3><%= action.action_type.tr("_", " ") %></h3>
+      <dl class="pos-history__line-facts">
+        <div><dt>Performed by</dt><dd><%= action.performed_by_name_snapshot %></dd></div>
+        <% if action.approved_by_name_snapshot.present? %>
+          <div><dt>Approved by</dt><dd><%= action.approved_by_name_snapshot %></dd></div>
+        <% end %>
+        <div><dt>Reason</dt><dd><%= action.reason_name_snapshot %></dd></div>
+        <% if action.reason_note.present? %>
+          <div><dt>Note</dt><dd><%= action.reason_note %></dd></div>
+        <% end %>
+        <div><dt>Policy</dt><dd><%= action.policy_result.tr("_", " ") %></dd></div>
+      </dl>
+    </section>
+  <% end %>
   <% components = pos_applicable_tax_components(line) %>
   <% if components.any? %>
     <details class="pos-history__tax">

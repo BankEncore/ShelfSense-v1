@@ -121,9 +121,15 @@ module Pos
         reference_unit_price_cents: price_cents,
         selling_unit_price_cents: price_cents,
         tax_class: variant.tax_class,
-        tax_class_code_snapshot: variant.tax_class.code
+        tax_class_code_snapshot: variant.tax_class.code,
+        tax_class_name_snapshot: variant.tax_class.name,
+        default_tax_class: variant.tax_class,
+        default_tax_class_code_snapshot: variant.tax_class.code,
+        default_tax_class_name_snapshot: variant.tax_class.name,
+        manual_discount_cents: 0
       )
       line.extended_selling_amount_cents = line.selling_unit_price_cents * line.quantity
+      line.net_merchandise_amount_cents = line.extended_selling_amount_cents
       Pos::Support.apply_provisional_tax!(line)
       line.save!
       line
@@ -134,6 +140,9 @@ module Pos
         line.inventory_unit_id.nil? &&
           line.product_variant_id == variant.id &&
           line.direction == "sale" &&
+          line.pos_controlled_actions.none? &&
+          line.selling_unit_price_cents == line.reference_unit_price_cents &&
+          (line.default_tax_class_id.blank? || line.tax_class_id == line.default_tax_class_id) &&
           line.selling_unit_price_cents == variant.regular_price_cents &&
           line.tax_class_id == variant.tax_class_id
       end

@@ -4,7 +4,7 @@
 
 **Authority:** Cross-cutting completed-operation shape for the Phase 6 MVP. Dual authority with normalized Core remains [ADR-020](../../../adr/ADR-020-pos-operation-envelope-and-core-facts.md) / [operation-and-core-facts.md](../phase4-point-of-sale/operation-and-core-facts.md). Commercial base is [CompletedPosOperation v1](../phase4-point-of-sale/completed-pos-operation-v1.md).
 
-Companions: [phase6-plan.md](phase6-plan.md), [merchandise-breadth.md](merchandise-breadth.md), [tender-breadth.md](tender-breadth.md), [transaction-history.md](transaction-history.md). Tax: [pos-tax-contract.md](../phase4-point-of-sale/pos-tax-contract.md). Cash/Z: [phase5-plan.md](../phase5-cash-register/phase5-plan.md).
+Companions: [phase6-plan.md](phase6-plan.md), [merchandise-breadth.md](merchandise-breadth.md), [tender-breadth.md](tender-breadth.md), [transaction-history.md](transaction-history.md), [controlled-actions.md](controlled-actions.md). Tax: [pos-tax-contract.md](../phase4-point-of-sale/pos-tax-contract.md). Cash/Z: [phase5-plan.md](../phase5-cash-register/phase5-plan.md).
 
 This slice does **not** implement capabilities. It locks meaning so 6.1–6.7 do not each invent a new completion shape. Do not add unused Core columns here ([AGENTS.md](../../../../AGENTS.md) §10). Columns appear in the owning slice.
 
@@ -99,6 +99,7 @@ CompletedPosOperation
 │   ├── occurred_at
 │   ├── business_date
 │   ├── subtotal_cents                # unsigned; Phase 4/5 sale-only meaning; §5
+│   ├── discount_cents                # unsigned; Σ manual line discounts; 6.4
 │   ├── tax_cents                     # unsigned; Phase 4/5 sale-only meaning; §5
 │   ├── total_cents                   # unsigned settlement amount (v1 meaning kept)
 │   └── signed_net_cents              # signed; §5
@@ -126,12 +127,16 @@ CompletedPosOperation
 │   ├── change_cents                  # Cash payment only; omit otherwise
 │   └── external_reference            # omit when not captured
 │
-├── controlled_actions[]              # omit when empty; executed facts only
+├── controlled_actions[]              # omit when empty; executed facts only; 6.4
 │   ├── action
-│   ├── performer_user_id
-│   ├── approver_user_id              # omit when direct
-│   ├── reason                        # structured identity; optional note
-│   └── policy_context                # result + version snapshot; 6.4
+│   ├── subject.line_id
+│   ├── performed_by_user_id / performed_by_name
+│   ├── approved_by_user_id / approved_by_name  # omit when direct
+│   ├── reason.code / reason.name (/ note when other)
+│   ├── policy_context.result / version
+│   ├── material_values
+│   ├── fingerprint
+│   └── executed_at
 │
 └── corrections                       # omit when none
     ├── original_transaction_id       # linked return source txn and/or post-void source
@@ -157,8 +162,9 @@ Exact JSON key set for override, discount, return_price_adjustment, controlled_a
 | `quantity` | Positive integer. Individually tracked lines are `1`. |
 | `reference_unit_price_cents` | Price before override. |
 | `selling_unit_price_cents` | Price after override, before line discount. |
-| `extended_selling_amount_cents` | Positive magnitude (`selling × quantity` before discount; 6.4 defines discount interaction). |
-| Tax Class | Applied Tax Class used for determination. Default equals merchandise Tax Class until 6.4 override. Preserve both default and applied once override exists. |
+| `extended_selling_amount_cents` | Positive magnitude (`selling × quantity` before discount). |
+| `manual_discount_cents` / net | 6.4: net = extended − discount; tax uses net. |
+| Tax Class | Applied Tax Class used for determination. Default is the ProductVariant Tax Class at add; preserve both once 6.4D override exists. |
 | `tax_components[]` | Every active Store Tax determination, including `applies = false`. |
 | `original_transaction_line_id` | Linked return only. Unlinked returns omit it. |
 | `return_price_adjustment` | Unlinked-return commercial valuation fact (§4.2). Omit on sales and linked returns. |
@@ -198,12 +204,12 @@ Approval explains who authorized it. This block is the commercial pricing fact: 
 SUM(payments) − SUM(refunds) = signed_net_cents
 ```
 
-Exact settlement is required to complete. 6.2 enforces:
+Exact settlement is required to complete. [tender-breadth.md](tender-breadth.md) / [controlled-actions.md](controlled-actions.md):
 
 ```text
-signed_net_cents > 0  → payment tenders only
-signed_net_cents < 0  → refund tenders only
-signed_net_cents = 0  → no tender
+signed_net_cents > 0  → payment tenders only; exact SUM(payments) = signed_net
+signed_net_cents < 0  → refund tenders only (6.5)
+signed_net_cents = 0  → no tender (6.4C sale-only zero-net; 6.5 mixed)
 ```
 
 ---
@@ -340,7 +346,7 @@ expected = opening_float_cents
 
 ## 9. Z snapshots
 
-Already-finalized periods stay immutable. Live Session/Z **previews** and new-period snapshots must represent each slice’s facts truthfully (§5.1). 6.7 consolidates additive `finalized_*` columns and presentation; owning slices (6.2 tenders, 6.5 returns/Cash refunds) change calculations first.
+Already-finalized periods stay immutable. Live Session/Z **previews** and new-period snapshots must represent each slice’s facts truthfully (§5.1). 6.7 consolidates additive `finalized_*` columns and presentation; owning slices (6.2 tenders, 6.4 discounts, 6.5 returns/Cash refunds) change calculations first.
 
 Existing Phase 5 fields keep their sale-only / Cash-payment meanings until the owning slice replaces the **calculation** (not the historical column meaning on already-finalized rows):
 
@@ -418,7 +424,7 @@ return_price_adjustment
 post_void
 ```
 
-Permission keys: 6.1–6.3 keep `pos.transact` only. Perform/approve keys arrive in 6.4. Z finalize stays on `pos.transact` until a later controlled-action decision (Phase 5 intentionally left this broad).
+Permission keys: 6.1–6.3 keep `pos.transact` only. Perform/approve keys for `price_override`, `line_discount`, and `tax_class_override` arrive in 6.4 ([controlled-actions.md](controlled-actions.md)). Z finalize stays on `pos.transact` until a later controlled-action decision (Phase 5 intentionally left this broad). Reason is material to the 6.4 fingerprint. `unlinked_return` / `return_price_adjustment` / `post_void` remain reserved, not seeded.
 
 ---
 

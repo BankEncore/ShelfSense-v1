@@ -9,6 +9,7 @@
   <dl class="pos-z__facts">
     <div><dt>Transactions</dt><dd><%= @period.finalized_transaction_count %></dd></div>
     <div><dt>Subtotal</dt><dd><%= format_money_cents(@period.finalized_subtotal_cents) %></dd></div>
+    <div><dt>Discount</dt><dd><%= pos_optional_money_cents(@period.finalized_discount_cents) %></dd></div>
     <div><dt>Tax</dt><dd><%= format_money_cents(@period.finalized_tax_cents) %></dd></div>
     <div><dt>Total</dt><dd><%= format_money_cents(@period.finalized_total_cents) %></dd></div>
     <div><dt>Cash payments</dt><dd><%= format_money_cents(@period.finalized_cash_payment_cents) %></dd></div>

@@ -86,6 +86,36 @@
       "envelope_fixture": "cash_sale.json",
       "same_command_payload_hash": true,
       "same_envelope_hash": true
+    },
+    {
+      "id": "10_tax_after_10_percent_of_1999",
+      "extended_selling_amount_cents": 1799,
+      "quantity": 1,
+      "expected_line_tax_cents": 90,
+      "note": "10% of 1999 = 199.9 → 200; net 1799; 1799 × 5.000% = 89.95 → 90",
+      "components": [
+        { "store_tax_code": "state_illinois", "rate_percent": "5.000", "applies": true, "taxable_basis_cents": 1799, "tax_cents": 90, "calculation_order": 1 }
+      ]
+    },
+    {
+      "id": "11_tax_after_10_percent_of_2000",
+      "extended_selling_amount_cents": 1800,
+      "quantity": 1,
+      "expected_line_tax_cents": 90,
+      "note": "10% of 2000 = 200; net 1800; 1800 × 5.000% = 90",
+      "components": [
+        { "store_tax_code": "state_illinois", "rate_percent": "5.000", "applies": true, "taxable_basis_cents": 1800, "tax_cents": 90, "calculation_order": 1 }
+      ]
+    },
+    {
+      "id": "12_tax_after_100_percent_discount",
+      "extended_selling_amount_cents": 0,
+      "quantity": 1,
+      "expected_line_tax_cents": 0,
+      "note": "100% discount; tax basis is net 0",
+      "components": [
+        { "store_tax_code": "state_illinois", "rate_percent": "5.000", "applies": true, "taxable_basis_cents": 0, "tax_cents": 0, "calculation_order": 1 }
+      ]
     }
   ]
 }

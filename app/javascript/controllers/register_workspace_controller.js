@@ -7,6 +7,7 @@ export default class extends Controller {
     "modeLabel",
     "chrome",
     "overlay",
+    "controlOverlay",
     "completeForm",
     "tenderForm",
     "removeTenderForm",
@@ -14,6 +15,7 @@ export default class extends Controller {
     "quantityForm",
     "removeForm",
     "cancelForm",
+    "controlForm",
     "identifierInput",
     "quantityInput",
     "presentedInput",
@@ -25,11 +27,41 @@ export default class extends Controller {
     "removeTenderInput",
     "quantityLineInput",
     "removeLineInput",
+    "controlLineInput",
+    "controlActionInput",
+    "controlOperationInput",
+    "controlReasonInput",
+    "controlNoteInput",
+    "controlPriceInput",
+    "controlDiscountInput",
+    "controlTaxInput",
+    "controlApproverUserInput",
+    "controlApproverPasswordInput",
+    "controlTitle",
+    "controlLineLabel",
+    "controlPriceWrap",
+    "controlDiscountWrap",
+    "controlTaxWrap",
+    "controlPriceField",
+    "controlDiscountField",
+    "controlTaxField",
+    "controlReasonField",
+    "controlNoteWrap",
+    "controlNoteField",
+    "controlApproverWrap",
+    "approverUsername",
+    "approverPassword",
+    "controlCancel",
+    "controlApply",
+    "controlRemove",
     "dontCancel",
     "confirmCancel",
     "retry",
     "abandonButton",
     "quantityButton",
+    "overrideButton",
+    "discountButton",
+    "taxClassButton",
     "tenderButton",
     "removeButton",
     "cancelButton",
@@ -41,11 +73,19 @@ export default class extends Controller {
     mode: String,
     autoComplete: Boolean,
     workspaceUrl: String,
-    tenderTypes: Array
+    tenderTypes: Array,
+    policies: Object,
+    reasons: Object
   }
 
   connect() {
     this.inFlight = false
+    this.bindFunctionKeyCapture()
+    if (this.hasControlReasonFieldTarget) {
+      this.controlReasonFieldTarget.addEventListener("change", () => {
+        this.toggleHidden(this.hasControlNoteWrapTarget && this.controlNoteWrapTarget, this.controlReasonFieldTarget.value !== "other")
+      })
+    }
     if (this.autoCompleteValue) {
       this.submitComplete()
       return
@@ -54,50 +94,63 @@ export default class extends Controller {
     this.restoreFocus()
   }
 
+  disconnect() {
+    this.unbindFunctionKeyCapture()
+  }
+
   onKeydown(event) {
-    if (this.overlayOpen()) {
-      if (event.key === "Tab") {
+    const functionKey = this.functionKey(event)
+    const key = functionKey || event.key
+    if (this.claimedFunctionKey(functionKey)) this.claimFunctionKey(event)
+
+    if (this.controlOverlayOpen()) {
+      this.onControlOverlayKeydown(event, key)
+      return
+    }
+
+    if (this.cancelOverlayOpen()) {
+      if (key === "Tab") {
         this.trapOverlayTab(event)
         return
       }
       event.preventDefault()
-      if (event.key === "Escape") this.closeOverlay()
-      if (event.key === "F9") this.confirmCancel()
+      if (key === "Escape") this.closeOverlay()
+      if (key === "F9") this.confirmCancel()
       return
     }
 
     if (this.inFlight || this.modeValue === "completion_pending") {
-      if (event.key === "Enter" && this.isActionableControl(event.target)) return
-      if (event.key === "Enter" || event.key === "F9") event.preventDefault()
+      if (key === "Enter" && this.isActionableControl(event.target)) return
+      if (key === "Enter" || key === "F9") event.preventDefault()
       return
     }
 
     if (this.modeValue === "completion_failed") {
-      if (event.key === "Enter") {
+      if (key === "Enter") {
         if (this.isActionableControl(event.target)) return
         event.preventDefault()
         this.submitComplete()
       }
-      if (event.key === "F9") {
+      if (key === "F9") {
         event.preventDefault()
         this.openOverlay()
       }
-      if (event.key === "Escape") event.preventDefault()
+      if (key === "Escape") event.preventDefault()
       return
     }
 
-    if (event.key === "Enter") {
+    if (key === "Enter") {
       if (this.isActionableControl(event.target)) return
       event.preventDefault()
       this.submitMode()
       return
     }
-    if (event.key === "Escape") {
+    if (key === "Escape") {
       event.preventDefault()
       this.escape()
       return
     }
-    if (event.key === "F9") {
+    if (key === "F9") {
       event.preventDefault()
       this.openOverlay()
       return
@@ -105,29 +158,72 @@ export default class extends Controller {
     if (this.modeValue !== "sale_entry" && this.modeValue !== "tender") return
 
     if (this.modeValue === "tender") {
-      if (event.key === "F2") {
+      if (key === "F2") {
         event.preventDefault()
         this.cycleTenderType()
-      } else if (event.key === "F8") {
+      } else if (key === "F8") {
         event.preventDefault()
         this.removeLastTender()
       }
       return
     }
 
-    if (event.key === "*") {
+    if (key === "*") {
       event.preventDefault()
       this.enterQuantity()
-    } else if (event.key === "+") {
+    } else if (key === "+") {
       event.preventDefault()
       this.enterTender()
-    } else if (event.key === "F8") {
+    } else if (key === "F5") {
+      event.preventDefault()
+      this.openPriceOverride()
+    } else if (key === "F6") {
+      event.preventDefault()
+      this.openLineDiscount()
+    } else if (key === "F7") {
+      event.preventDefault()
+      this.openTaxClassOverride()
+    } else if (key === "F8") {
       event.preventDefault()
       this.removeSelected()
-    } else if (event.key === "ArrowUp" || event.key === "ArrowDown") {
+    } else if (key === "ArrowUp" || key === "ArrowDown") {
       event.preventDefault()
-      this.moveSelection(event.key === "ArrowUp" ? -1 : 1)
+      this.moveSelection(key === "ArrowUp" ? -1 : 1)
     }
+  }
+
+  suppressBrowserFunctionKeys(event) {
+    if (this.claimedFunctionKey(this.functionKey(event))) this.claimFunctionKey(event)
+  }
+
+  onControlOverlayKeydown(event, key = this.functionKey(event) || event.key) {
+    if (key === "Tab") {
+      this.trapControlOverlayTab(event)
+      return
+    }
+    if (key === "Escape") {
+      event.preventDefault()
+      this.closeControlOverlay()
+      return
+    }
+    if (key === "F9") {
+      event.preventDefault()
+      return
+    }
+    if (key !== "Enter") return
+
+    const target = event.target
+    if (this.hasApproverUsernameTarget && target === this.approverUsernameTarget) {
+      event.preventDefault()
+      return
+    }
+    if (this.hasApproverPasswordTarget && target === this.approverPasswordTarget) {
+      event.preventDefault()
+      if (this.approverPasswordTarget.value.trim() !== "") this.submitControlApply()
+      return
+    }
+    if (this.isActionableControl(target)) return
+    event.preventDefault()
   }
 
   onSubmitEnd(event) {
@@ -181,7 +277,7 @@ export default class extends Controller {
   enterQuantity() {
     if (this.inFlight) return
     if (this.modeValue !== "sale_entry" || !this.selectedRow()) return
-    if (this.selectedUnitLine()) return
+    if (this.selectedUnitLine() || this.selectedQuantityBlocked()) return
     const row = this.selectedRow()
     this.setMode("quantity", "QUANTITY")
     const description = row.dataset.description || "Selected line"
@@ -191,6 +287,9 @@ export default class extends Controller {
     this.fieldTarget.inputMode = "numeric"
     this.fieldTarget.value = quantity
     this.setActionEnabled("quantityButton", false)
+    this.setActionEnabled("overrideButton", false)
+    this.setActionEnabled("discountButton", false)
+    this.setActionEnabled("taxClassButton", false)
     this.setActionEnabled("tenderButton", false)
     this.setActionEnabled("removeButton", false)
     this.fieldTarget.focus()
@@ -210,6 +309,9 @@ export default class extends Controller {
     this.fieldTarget.inputMode = "decimal"
     this.fieldTarget.value = ""
     this.setActionEnabled("quantityButton", false)
+    this.setActionEnabled("overrideButton", false)
+    this.setActionEnabled("discountButton", false)
+    this.setActionEnabled("taxClassButton", false)
     this.setActionEnabled("tenderButton", false)
     this.setActionEnabled("removeButton", false)
     this.fieldTarget.focus()
@@ -298,7 +400,7 @@ export default class extends Controller {
   }
 
   openOverlay() {
-    if (this.inFlight) return
+    if (this.inFlight || this.controlOverlayOpen()) return
     const cancel = this.hasCancelButtonTarget ? this.cancelButtonTarget : this.element.querySelector(".pos-actions .btn--danger")
     if (!cancel || cancel.disabled) return
     this.overlayTarget.hidden = false
@@ -310,6 +412,109 @@ export default class extends Controller {
     this.overlayTarget.hidden = true
     if (this.hasChromeTarget) this.chromeTarget.inert = false
     this.restoreFocus()
+  }
+
+  openPriceOverride() {
+    this.openControlOverlay("price_override", "Price override")
+  }
+
+  openLineDiscount() {
+    this.openControlOverlay("line_discount", "Line discount")
+  }
+
+  openTaxClassOverride() {
+    this.openControlOverlay("tax_class_override", "Tax Class override")
+  }
+
+  openControlOverlay(actionType, title) {
+    if (this.inFlight) return
+    if (this.modeValue !== "sale_entry") return
+    if (this.policyFor(actionType) === "prohibited") return
+    const row = this.selectedRow()
+    if (!row || !this.hasControlOverlayTarget) return
+
+    this.currentControlAction = actionType
+    if (this.hasControlTitleTarget) this.controlTitleTarget.textContent = title
+    if (this.hasControlLineLabelTarget) this.controlLineLabelTarget.textContent = row.dataset.description || "Selected line"
+    this.toggleHidden(this.hasControlPriceWrapTarget && this.controlPriceWrapTarget, actionType !== "price_override")
+    this.toggleHidden(this.hasControlDiscountWrapTarget && this.controlDiscountWrapTarget, actionType !== "line_discount")
+    this.toggleHidden(this.hasControlTaxWrapTarget && this.controlTaxWrapTarget, actionType !== "tax_class_override")
+    if (this.hasControlPriceFieldTarget) this.controlPriceFieldTarget.value = ""
+    if (this.hasControlDiscountFieldTarget) this.controlDiscountFieldTarget.value = ""
+    if (actionType === "price_override" && this.hasControlPriceFieldTarget) {
+      this.controlPriceFieldTarget.value = this.formatCents(row.dataset.sellingCents)
+    }
+    if (actionType === "line_discount" && this.hasControlDiscountFieldTarget) {
+      this.controlDiscountFieldTarget.value = row.dataset.discountBp ? this.formatCents(row.dataset.discountBp) : ""
+    }
+    if (actionType === "tax_class_override" && this.hasControlTaxFieldTarget && row.dataset.taxClassId) {
+      this.controlTaxFieldTarget.value = row.dataset.taxClassId
+    }
+    this.populateReasons(actionType)
+    this.toggleHidden(this.hasControlNoteWrapTarget && this.controlNoteWrapTarget, true)
+    if (this.hasControlNoteFieldTarget) this.controlNoteFieldTarget.value = ""
+    const needsApprover = this.policyFor(actionType) === "approval_required"
+    this.toggleHidden(this.hasControlApproverWrapTarget && this.controlApproverWrapTarget, !needsApprover)
+    if (this.hasApproverUsernameTarget) this.approverUsernameTarget.value = ""
+    if (this.hasApproverPasswordTarget) this.approverPasswordTarget.value = ""
+    const hasExisting = this.lineHasAction(row, actionType)
+    if (this.hasControlRemoveTarget) this.controlRemoveTarget.hidden = !hasExisting
+
+    this.controlOverlayTarget.hidden = false
+    if (this.hasChromeTarget) this.chromeTarget.inert = true
+    this.focusControlOverlay()
+  }
+
+  closeControlOverlay() {
+    if (!this.hasControlOverlayTarget) return
+    this.controlOverlayTarget.hidden = true
+    if (this.hasChromeTarget) this.chromeTarget.inert = false
+    this.restoreFocus()
+  }
+
+  submitControlApply() {
+    if (this.inFlight || !this.hasControlFormTarget) return
+    this.fillControlForm("apply")
+    this.beginFlight()
+    this.controlFormTarget.requestSubmit()
+  }
+
+  submitControlRemove() {
+    if (this.inFlight || !this.hasControlFormTarget) return
+    this.fillControlForm("remove")
+    this.beginFlight()
+    this.controlFormTarget.requestSubmit()
+  }
+
+  fillControlForm(operation) {
+    this.syncSelectedLine()
+    const action = this.currentControlAction
+    const applying = operation === "apply"
+    if (this.hasControlActionInputTarget) this.controlActionInputTarget.value = action || ""
+    if (this.hasControlOperationInputTarget) this.controlOperationInputTarget.value = operation
+    if (this.hasControlReasonInputTarget) this.controlReasonInputTarget.value = this.hasControlReasonFieldTarget ? this.controlReasonFieldTarget.value : ""
+    if (this.hasControlNoteInputTarget) this.controlNoteInputTarget.value = this.hasControlNoteFieldTarget ? this.controlNoteFieldTarget.value.trim() : ""
+    if (this.hasControlPriceInputTarget) {
+      this.controlPriceInputTarget.value = applying && action === "price_override" && this.hasControlPriceFieldTarget
+        ? this.controlPriceFieldTarget.value.trim()
+        : ""
+    }
+    if (this.hasControlDiscountInputTarget) {
+      this.controlDiscountInputTarget.value = applying && action === "line_discount" && this.hasControlDiscountFieldTarget
+        ? this.controlDiscountFieldTarget.value.trim()
+        : ""
+    }
+    if (this.hasControlTaxInputTarget) {
+      this.controlTaxInputTarget.value = applying && action === "tax_class_override" && this.hasControlTaxFieldTarget
+        ? this.controlTaxFieldTarget.value
+        : ""
+    }
+    if (this.hasControlApproverUserInputTarget) {
+      this.controlApproverUserInputTarget.value = this.hasApproverUsernameTarget ? this.approverUsernameTarget.value.trim() : ""
+    }
+    if (this.hasControlApproverPasswordInputTarget) {
+      this.controlApproverPasswordInputTarget.value = this.hasApproverPasswordTarget ? this.approverPasswordTarget.value : ""
+    }
   }
 
   confirmCancel() {
@@ -334,7 +539,15 @@ export default class extends Controller {
   }
 
   overlayOpen() {
+    return this.cancelOverlayOpen() || this.controlOverlayOpen()
+  }
+
+  cancelOverlayOpen() {
     return this.hasOverlayTarget && !this.overlayTarget.hidden
+  }
+
+  controlOverlayOpen() {
+    return this.hasControlOverlayTarget && !this.controlOverlayTarget.hidden
   }
 
   selectedRow() {
@@ -352,6 +565,7 @@ export default class extends Controller {
     const id = row.dataset.lineId
     if (this.hasQuantityLineInputTarget) this.quantityLineInputTarget.value = id
     if (this.hasRemoveLineInputTarget) this.removeLineInputTarget.value = id
+    if (this.hasControlLineInputTarget) this.controlLineInputTarget.value = id
   }
 
   beginFlight() {
@@ -362,7 +576,7 @@ export default class extends Controller {
   }
 
   disableMutationControls() {
-    ["quantityButton", "tenderButton", "removeButton", "cancelButton", "retry", "abandonButton"].forEach((name) => {
+    ["quantityButton", "overrideButton", "discountButton", "taxClassButton", "tenderButton", "removeButton", "cancelButton", "retry", "abandonButton"].forEach((name) => {
       this.setActionEnabled(name, false)
     })
   }
@@ -371,7 +585,11 @@ export default class extends Controller {
     if (this.modeValue === "sale_entry") {
       const hasSelection = Boolean(this.selectedRow())
       const hasLines = Boolean(this.element.querySelector(".pos-lines tbody tr"))
-      this.setActionEnabled("quantityButton", hasSelection && !this.selectedUnitLine())
+      const quantityOk = hasSelection && !this.selectedUnitLine() && !this.selectedQuantityBlocked()
+      this.setActionEnabled("quantityButton", quantityOk)
+      this.setActionEnabled("overrideButton", hasSelection && this.policyFor("price_override") !== "prohibited")
+      this.setActionEnabled("discountButton", hasSelection && this.policyFor("line_discount") !== "prohibited")
+      this.setActionEnabled("taxClassButton", hasSelection && this.policyFor("tax_class_override") !== "prohibited")
       this.setActionEnabled("tenderButton", hasLines)
       this.setActionEnabled("removeButton", hasSelection)
       this.setActionEnabled("cancelButton", hasLines)
@@ -463,5 +681,127 @@ export default class extends Controller {
 
   overlayControls() {
     return [this.dontCancelTarget, this.confirmCancelTarget].filter(Boolean)
+  }
+
+  trapControlOverlayTab(event) {
+    const controls = this.controlOverlayControls()
+    if (controls.length === 0) return
+    event.preventDefault()
+    const current = controls.indexOf(document.activeElement)
+    let next = current
+    if (event.shiftKey) {
+      next = current <= 0 ? controls.length - 1 : current - 1
+    } else {
+      next = current === controls.length - 1 || current < 0 ? 0 : current + 1
+    }
+    controls[next].focus()
+  }
+
+  controlOverlayControls() {
+    if (!this.hasControlOverlayTarget) return []
+    return Array.from(this.controlOverlayTarget.querySelectorAll("input, select, button")).filter((el) => {
+      if (el.disabled || el.hidden) return false
+      return !el.closest("[hidden]")
+    })
+  }
+
+  focusControlOverlay() {
+    const first = this.controlOverlayControls()[0]
+    if (first) first.focus()
+  }
+
+  populateReasons(actionType) {
+    if (!this.hasControlReasonFieldTarget) return
+    const catalog = (this.reasonsValue || {})[actionType] || {}
+    this.controlReasonFieldTarget.replaceChildren()
+    const blank = document.createElement("option")
+    blank.value = ""
+    blank.textContent = "Reason"
+    this.controlReasonFieldTarget.append(blank)
+    Object.entries(catalog).forEach(([code, name]) => {
+      const option = document.createElement("option")
+      option.value = code
+      option.textContent = name
+      this.controlReasonFieldTarget.append(option)
+    })
+    this.toggleHidden(this.hasControlNoteWrapTarget && this.controlNoteWrapTarget, true)
+    if (this.hasControlNoteFieldTarget) this.controlNoteFieldTarget.value = ""
+  }
+
+  bindFunctionKeyCapture() {
+    if (this.functionKeyListenersBound) return
+    this.functionKeyListenersBound = true
+    this.onWindowKeydown = (event) => this.onKeydown(event)
+    this.onWindowKeyup = (event) => this.suppressBrowserFunctionKeys(event)
+    this.onWorkspacePointerDown = () => this.requestFunctionKeyLock()
+    window.addEventListener("keydown", this.onWindowKeydown, true)
+    window.addEventListener("keyup", this.onWindowKeyup, true)
+    this.element.addEventListener("pointerdown", this.onWorkspacePointerDown)
+    this.requestFunctionKeyLock()
+  }
+
+  unbindFunctionKeyCapture() {
+    if (!this.functionKeyListenersBound) return
+    this.functionKeyListenersBound = false
+    window.removeEventListener("keydown", this.onWindowKeydown, true)
+    window.removeEventListener("keyup", this.onWindowKeyup, true)
+    this.element.removeEventListener("pointerdown", this.onWorkspacePointerDown)
+    this.releaseFunctionKeyLock()
+  }
+
+  requestFunctionKeyLock() {
+    const keyboard = navigator.keyboard
+    if (!keyboard || typeof keyboard.lock !== "function") return
+    keyboard.lock(["F2", "F5", "F6", "F7", "F8", "F9"]).catch(() => {})
+  }
+
+  releaseFunctionKeyLock() {
+    const keyboard = navigator.keyboard
+    if (!keyboard || typeof keyboard.unlock !== "function") return
+    keyboard.unlock()
+  }
+
+  functionKey(event) {
+    if (typeof event.key === "string" && /^F\d{1,2}$/i.test(event.key)) return event.key.toUpperCase()
+    if (typeof event.code === "string" && /^F\d{1,2}$/i.test(event.code)) return event.code.toUpperCase()
+    return null
+  }
+
+  claimedFunctionKey(key) {
+    return key === "F2" || key === "F5" || key === "F6" || key === "F7" || key === "F8" || key === "F9"
+  }
+
+  claimFunctionKey(event) {
+    event.preventDefault()
+    if (typeof event.stopImmediatePropagation === "function") event.stopImmediatePropagation()
+  }
+
+  policyFor(actionType) {
+    const policies = this.policiesValue || {}
+    return policies[actionType] || "prohibited"
+  }
+
+  selectedQuantityBlocked() {
+    const row = this.selectedRow()
+    return Boolean(row && (row.dataset.priceOverridden === "true" || row.dataset.discounted === "true"))
+  }
+
+  lineHasAction(row, actionType) {
+    if (actionType === "price_override") return row.dataset.priceOverridden === "true"
+    if (actionType === "line_discount") return row.dataset.discounted === "true"
+    if (actionType === "tax_class_override") return row.dataset.taxOverridden === "true"
+    return false
+  }
+
+  formatCents(cents) {
+    const value = Number(cents || 0)
+    const dollars = Math.trunc(value / 100)
+    const remainder = Math.abs(value % 100).toString().padStart(2, "0")
+    return `${dollars}.${remainder}`
+  }
+
+  toggleHidden(element, hidden) {
+    if (!element) return
+    element.hidden = hidden
   }
 }

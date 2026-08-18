@@ -8,8 +8,10 @@ class PosTransactionLine < ApplicationRecord
   belongs_to :pos_transaction
   belongs_to :product_variant
   belongs_to :tax_class
+  belongs_to :default_tax_class, class_name: "TaxClass", optional: true
   belongs_to :inventory_unit, optional: true
   has_many :pos_line_tax_components, dependent: :destroy
+  has_many :pos_controlled_actions, dependent: :destroy
 
   validates :line_number, :direction, :quantity, :reference_unit_price_cents, :selling_unit_price_cents,
             :extended_selling_amount_cents, :tax_class_code_snapshot, presence: true
@@ -23,9 +25,32 @@ class PosTransactionLine < ApplicationRecord
     inventory_unit_id.present?
   end
 
+  def price_overridden?
+    selling_unit_price_cents != reference_unit_price_cents
+  end
+
+  def manually_discounted?
+    manual_discount_basis_points.present?
+  end
+
+  def tax_class_overridden?
+    default_tax_class_id.present? && tax_class_id != default_tax_class_id
+  end
+
   def recalc_extended!
     self.extended_selling_amount_cents = selling_unit_price_cents * quantity
-    self.line_total_cents = extended_selling_amount_cents + line_tax_cents
+    self.manual_discount_cents ||= 0
+    if manual_discount_basis_points.present?
+      self.manual_discount_cents = Pos::LineDiscount.amount_cents(
+        selling_unit_price_cents: selling_unit_price_cents,
+        quantity: quantity,
+        basis_points: manual_discount_basis_points
+      )
+    else
+      self.manual_discount_cents = 0
+    end
+    self.net_merchandise_amount_cents = extended_selling_amount_cents - manual_discount_cents
+    self.line_total_cents = net_merchandise_amount_cents + line_tax_cents
   end
 
   def readonly?

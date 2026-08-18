@@ -108,6 +108,23 @@ module PosFixtures
     user
   end
 
+  def pos_store_manager(store:, assigned_by:, username:)
+    user = User.create!(
+      username: username,
+      display_name: username,
+      password: "correct-horse-battery",
+      password_confirmation: "correct-horse-battery"
+    )
+    RoleAssignment.create!(
+      user: user,
+      role: Role.find_by!(key: "store_manager"),
+      store: store,
+      assigned_by: assigned_by,
+      effective_at: Time.current
+    )
+    user
+  end
+
   def insert_completed_transaction!(
     session:,
     receipt_sequence:,

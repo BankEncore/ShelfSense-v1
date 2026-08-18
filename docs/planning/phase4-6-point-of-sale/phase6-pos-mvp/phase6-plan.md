@@ -1,6 +1,6 @@
 # Phase 6 — Operational POS MVP
 
-**Status:** Slice 6.0 contract locked ([mvp-contract.md](mvp-contract.md)). Slice 6.1 merchandise breadth implemented ([merchandise-breadth.md](merchandise-breadth.md)). Slice 6.2 tender breadth implemented ([tender-breadth.md](tender-breadth.md)). Slice 6.3 transaction history implemented ([transaction-history.md](transaction-history.md)).
+**Status:** Slice 6.0 contract locked ([mvp-contract.md](mvp-contract.md)). Slice 6.1 merchandise breadth implemented ([merchandise-breadth.md](merchandise-breadth.md)). Slice 6.2 tender breadth implemented ([tender-breadth.md](tender-breadth.md)). Slice 6.3 transaction history implemented ([transaction-history.md](transaction-history.md)). Slice 6.4 controlled actions implemented ([controlled-actions.md](controlled-actions.md)).
 
 **Authority**
 
@@ -10,6 +10,7 @@
 | [Merchandise breadth](merchandise-breadth.md) | Slice 6.1: Used/individual and non-inventory sales |
 | [Tender breadth](tender-breadth.md) | Slice 6.2: Cash/Card/Check/Other settlement |
 | [Transaction history](transaction-history.md) | Slice 6.3: completed lookup, detail, reprint |
+| [Controlled actions](controlled-actions.md) | Slice 6.4: price override, line discount, Tax Class override |
 | [Phase 4 plan](../phase4-point-of-sale/phase4-plan.md) | Completion, receipt allocation, inventory posting |
 | [CompletedPosOperation v1](../phase4-point-of-sale/completed-pos-operation-v1.md) | Commercial base; v2 is additive |
 | [POS tax contract](../phase4-point-of-sale/pos-tax-contract.md) | Tax Class / Store Tax; linked-return reversal ([§10](../phase4-point-of-sale/pos-tax-contract.md)) |
@@ -109,7 +110,7 @@ Write the detailed implementation contract for slices 6.2–6.7 immediately befo
 | **6.1** | Merchandise breadth | Used/individual + non-inventory sales | **Implemented.** Quantity-tracked Cash Standard path unchanged |
 | **6.2** | Tender breadth | Card, Check, admin-created Other, mixed tender | **Implemented.** All-Cash sale remains Phase 5-equivalent; Session/Z shows Card/Check/Other |
 | **6.3** | Transaction history | Lookup, detail, receipt reprint | **Implemented.** Sale workspace does not depend on history |
-| **6.4** | Controlled pricing/actions | Approval framework, price override, line discount, Tax Class override | Ordinary path stays `direct` unless policy requires a second actor |
+| **6.4** | Controlled pricing/actions | Approval framework, price override, line discount, Tax Class override | **Implemented.** Ordinary path stays `direct` unless policy requires a second actor |
 | **6.5** | Returns | Linked, unlinked, price adjustment, mixed sale/return | Sale-only baskets still complete the same way; Session/Z is direction-aware |
 | **6.6** | Post-void | Controlled whole-transaction correction | Entry is from history; sale path untouched |
 | **6.7** | MVP closeout | Receipts, Z/tender reporting polish, audit/history UX, regression | Additive snapshots; already-finalized periods stay immutable |
@@ -167,23 +168,17 @@ Make completed commercial history retrievable before returns need it.
 - Immediate completion and historical lookup are separate screens that share print rendering.
 - UI may later attach Return items / Post-void on detail; 6.3 does not render those actions.
 
-### 6.4 — Controlled actions and pricing
+### 6.4 — Controlled actions and pricing (implemented)
 
-Highest architectural-risk slice after returns. Implement the minimal policy/approval primitive before price override, line discount, and Tax Class override.
+Authority: [controlled-actions.md](controlled-actions.md).
 
-```text
-direct
-approval_required
-prohibited
-```
+Permission-tier policy (`phase6_permission_tier_v1`): `direct` / `approval_required` / `prohibited`. No policy configuration table. No persisted pending approvals. The cashier remains Session owner. Approval binds to the exact request (including `reason_code`), not manager mode.
 
-MVP catalog (only actions this phase uses): `price_override`, `line_discount`, `tax_class_override`, `unlinked_return`, `return_price_adjustment`, `post_void`. Do not build a workflow engine. Do not persist pending approval requests; persist the executed approval/audit fact. The cashier remains Session owner. Approval binds to the exact request, not “manager mode.”
+- **6.4A/B:** foundation + price override. Reference preserved; selling changes. Scanner-safe second-actor overlay.
+- **6.4C:** percentage line discount; tax on net merchandise; `signed net = 0` completes with no tender.
+- **6.4D:** Tax Class override is selection among valid classes (default = ProductVariant Tax Class at add). Never cashier-entered rates. Purchaser exemption stays out.
 
-- Price override preserves reference and selling unit prices.
-- Line discount is percentage-only; it does not rewrite selling price. Transaction-wide discounts are out.
-- Tax Class override is selection among valid Tax Classes, never cashier-entered rates. Purchaser exemption stays out.
-
-Perform/approve permission keys arrive in this slice. Z finalize stays on `pos.transact` until a later controlled-action decision.
+Perform/approve permission keys arrive in this slice. Z finalize stays on `pos.transact` until a later controlled-action decision. Unused catalog identifiers (`unlinked_return`, `return_price_adjustment`, `post_void`) are reserved, not seeded.
 
 ### 6.5 — Returns and exchanges
 

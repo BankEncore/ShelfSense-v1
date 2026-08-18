@@ -91,6 +91,7 @@ module Pos
         validate_context!(transaction)
         freeze_lines!(transaction)
         Pos::Support.refresh_totals!(transaction)
+        Pos::CompletedTransactionIntegrity.verify!(transaction)
         if transaction.total_cents != @expected_total_cents
           raise Pos::Error, "expected total does not match amount due"
         end
@@ -146,11 +147,17 @@ module Pos
         result = Pos::Tax::Calculate.call(
           store: transaction.store,
           tax_class: line.tax_class,
-          taxable_basis_cents: line.extended_selling_amount_cents
+          taxable_basis_cents: line.net_merchandise_amount_cents
         )
         line.line_tax_cents = result.tax_cents
-        line.line_total_cents = line.extended_selling_amount_cents + line.line_tax_cents
+        line.line_total_cents = line.net_merchandise_amount_cents + line.line_tax_cents
         line.tax_class_code_snapshot = line.tax_class.code
+        line.tax_class_name_snapshot ||= line.tax_class.name
+        if line.default_tax_class_id.present?
+          default_class = line.default_tax_class || TaxClass.find(line.default_tax_class_id)
+          line.default_tax_class_code_snapshot ||= default_class.code
+          line.default_tax_class_name_snapshot ||= default_class.name
+        end
         line.merchandise_snapshot = merchandise_snapshot_for(variant, line, unit)
         line.save!
         line.pos_line_tax_components.delete_all
@@ -209,6 +216,11 @@ module Pos
 
     def settle_tenders!(transaction)
       tenders = transaction.pos_tenders.ordered.to_a
+      if transaction.total_cents.zero?
+        raise Pos::Error, "zero-net sales cannot have tenders" if tenders.any?
+        return
+      end
+
       raise Pos::Error, "tender is required" if tenders.empty?
       raise Pos::Error, "refund tenders are not supported" if tenders.any? { |tender| tender.direction != "payment" }
 
@@ -287,6 +299,9 @@ module Pos
         "lines" => transaction.pos_transaction_lines.reload.map { |line| envelope_line(line) },
         "tenders" => transaction.pos_tenders.ordered.map { |tender| envelope_tender(tender) }
       }
+      envelope["transaction"]["discount_cents"] = transaction.discount_cents unless transaction.discount_cents.zero?
+      actions = transaction.pos_controlled_actions.order(:executed_at, :id).map { |action| envelope_controlled_action(action) }
+      envelope["controlled_actions"] = actions if actions.any?
       facts = CompletedTransactionFacts.new(envelope)
       facts.verify!
       facts
@@ -321,6 +336,56 @@ module Pos
         end
       }
       payload["inventory_unit_id"] = line.inventory_unit_id.to_s if line.inventory_unit_id.present?
+      if line.price_overridden?
+        unit_variance = line.selling_unit_price_cents - line.reference_unit_price_cents
+        payload["override"] = {
+          "reference_unit_price_cents" => line.reference_unit_price_cents,
+          "selling_unit_price_cents" => line.selling_unit_price_cents,
+          "unit_variance_cents" => unit_variance,
+          "line_variance_cents" => unit_variance * line.quantity
+        }
+      end
+      if line.manually_discounted?
+        payload["discount"] = {
+          "source" => "manual",
+          "method" => "percentage",
+          "basis_points" => line.manual_discount_basis_points,
+          "discount_cents" => line.manual_discount_cents,
+          "net_merchandise_amount_cents" => line.net_merchandise_amount_cents
+        }
+      end
+      if line.default_tax_class_id.present?
+        payload["default_tax_class_id"] = line.default_tax_class_id.to_s
+        payload["default_tax_class_code"] = line.default_tax_class_code_snapshot
+        payload["default_tax_class_name"] = line.default_tax_class_name_snapshot
+      end
+      payload["tax_class_name"] = line.tax_class_name_snapshot if line.tax_class_name_snapshot.present?
+      payload
+    end
+
+    def envelope_controlled_action(action)
+      payload = {
+        "action" => action.action_type,
+        "subject" => { "line_id" => action.pos_transaction_line_id.to_s },
+        "performed_by_user_id" => action.performed_by_user_id.to_s,
+        "performed_by_name" => action.performed_by_name_snapshot,
+        "reason" => {
+          "code" => action.reason_code,
+          "name" => action.reason_name_snapshot
+        },
+        "policy_context" => {
+          "result" => action.policy_result,
+          "version" => action.policy_version
+        },
+        "material_values" => action.material_values,
+        "fingerprint" => action.action_fingerprint,
+        "executed_at" => action.executed_at.utc.iso8601(6)
+      }
+      payload["reason"]["note"] = action.reason_note if action.reason_note.present?
+      if action.approved_by_user_id.present?
+        payload["approved_by_user_id"] = action.approved_by_user_id.to_s
+        payload["approved_by_name"] = action.approved_by_name_snapshot
+      end
       payload
     end
 

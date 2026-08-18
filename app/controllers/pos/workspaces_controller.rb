@@ -72,6 +72,28 @@ module Pos
       end
     end
 
+    def controlled_action
+      rescue_workspace(error_mode: "sale_entry") do
+        line = find_line!
+        @selected_line = Pos::ExecuteControlledAction.call(
+          transaction: @transaction,
+          line: line,
+          actor: current_user,
+          expected_lock_version: expected_lock_version,
+          action_type: params.require(:action_type),
+          operation: params.require(:operation),
+          reason_code: params[:reason_code],
+          reason_note: params[:reason_note],
+          **controlled_action_commercial_attrs,
+          approver_username: params[:approver_username],
+          approver_password: params[:approver_password]
+        )
+        @transaction.reload
+        @ui_mode = "sale_entry"
+        respond_workspace
+      end
+    end
+
     def abandon_tender
       rescue_workspace(error_mode: "derive") do
         Pos::AbandonTender.call(
@@ -221,13 +243,19 @@ module Pos
 
     def prepare_view_state
       @period = @session_record.reporting_period
-      @lines = @transaction.pos_transaction_lines.includes(:inventory_unit, product_variant: [ :product, :merchandise_condition ])
+      @lines = @transaction.pos_transaction_lines.includes(:inventory_unit, :pos_controlled_actions, product_variant: [ :product, :merchandise_condition ])
       @tenders = @transaction.pos_tenders.ordered.to_a
       @tender = @tenders.find(&:cash?)
       @remaining_due_cents = Pos::Support.remaining_due_cents(@transaction)
       @cashier_tender_types = TenderType.cashier_selectable.to_a
       @selected_tender_type = resolve_selected_tender_type
       @selected_line ||= default_selected_line
+      @tax_classes = TaxClass.active.order(:code)
+      @control_policies = {
+        "price_override" => Pos::ControlledActionPolicy.result(user: current_user, store: current_store, action_type: "price_override").to_s,
+        "line_discount" => Pos::ControlledActionPolicy.result(user: current_user, store: current_store, action_type: "line_discount").to_s,
+        "tax_class_override" => Pos::ControlledActionPolicy.result(user: current_user, store: current_store, action_type: "tax_class_override").to_s
+      }
       @feedback ||= nil
       @command_value ||= nil
       if Pos::Support.exact_settlement?(@transaction)
@@ -319,6 +347,36 @@ module Pos
       return if error_mode == "derive"
 
       @ui_mode = error_mode
+    end
+
+    def controlled_action_commercial_attrs
+      return {} if params[:operation].to_s == "remove"
+
+      case params[:action_type].to_s
+      when "price_override"
+        { selling_unit_price_cents: parse_optional_cents(params[:selling_price]) }
+      when "line_discount"
+        { discount_basis_points: parse_discount_basis_points }
+      when "tax_class_override"
+        { tax_class_id: params[:tax_class_id] }
+      else
+        {}
+      end
+    end
+
+    def parse_optional_cents(value)
+      return if value.blank?
+
+      Money::ParseCents.call(value)
+    end
+
+    def parse_discount_basis_points
+      return parse_optional_cents(params[:discount_percent]) if params[:discount_percent].present?
+      return if params[:discount_basis_points].blank?
+
+      Integer(params[:discount_basis_points])
+    rescue ArgumentError, TypeError
+      raise Pos::Error, "discount must be between 1 and 10000 basis points"
     end
 
     def expected_lock_version

@@ -112,6 +112,57 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     assert_no_text "Example Book"
   end
 
+  test "enter in approver username does not apply an override" do
+    pos_transacting_user(store: @store, assigned_by: @actor, username: "clerk_scan")
+    pos_store_manager(store: @store, assigned_by: @actor, username: "mgr_scan")
+    visit new_session_path
+    fill_in "session_username", with: "clerk_scan"
+    fill_in "session_password", with: "correct-horse-battery"
+    find_field("session_password").send_keys :enter
+    assert_text "Signed in successfully"
+    visit pos_register_enter_path(register_id: @register.id)
+    fill_in "Opening float", with: "0.00"
+    click_on "Open register"
+    assert_text "SALE ENTRY"
+    add_current_sku
+
+    click_on "Price override (F5)"
+    assert_selector "#pos_control_overlay", visible: true
+    fill_in "Selling price", with: "15.00"
+    select "Damaged", from: "Reason"
+    username = find("#pos-approver-username")
+    username.fill_in with: "mgr_scan"
+    username.send_keys :enter
+
+    assert_selector "#pos_control_overlay", visible: true
+    assert_equal "pos-approver-username", page.evaluate_script("document.activeElement && document.activeElement.id")
+    line = PosTransaction.working.find_by!(register: @register).pos_transaction_lines.first
+    assert_equal line.reference_unit_price_cents, line.selling_unit_price_cents
+  end
+
+  test "f5 f6 and f7 open controlled-action overlays" do
+    open_register
+    add_current_sku
+
+    send_keys :f5
+    assert_selector "#pos_control_overlay", visible: true
+    assert_selector "#pos-control-title", text: "Price override"
+    send_keys :escape
+    assert_no_selector "#pos_control_overlay", visible: true
+
+    send_keys :f6
+    assert_selector "#pos_control_overlay", visible: true
+    assert_selector "#pos-control-title", text: "Line discount"
+    send_keys :escape
+    assert_no_selector "#pos_control_overlay", visible: true
+
+    send_keys :f7
+    assert_selector "#pos_control_overlay", visible: true
+    assert_selector "#pos-control-title", text: "Tax Class override"
+    send_keys :escape
+    assert_no_selector "#pos_control_overlay", visible: true
+  end
+
   test "empty basket disables cancel" do
     open_register
     assert_button "Cancel (F9)", disabled: true

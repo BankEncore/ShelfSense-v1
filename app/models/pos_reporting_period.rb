@@ -30,6 +30,7 @@ class PosReportingPeriod < ApplicationRecord
             :finalized_cash_payment_cents, :finalized_opening_float_cents_sum,
             :finalized_closing_expected_cash_cents_sum, :finalized_closing_count_cents_sum,
             :finalized_card_payment_cents, :finalized_check_payment_cents, :finalized_other_payment_cents,
+            :finalized_discount_cents,
             numericality: { only_integer: true, greater_than_or_equal_to: 0 }, allow_nil: true
   validates :finalized_closing_variance_cents_sum, numericality: { only_integer: true }, allow_nil: true
   validate :store_matches_register
@@ -67,6 +68,9 @@ class PosReportingPeriod < ApplicationRecord
     if %w[finalized_card_payment_cents finalized_check_payment_cents finalized_other_payment_cents].any? { |attribute| !self[attribute].nil? }
       errors.add(:base, "tender category snapshots must be blank while the period is open")
     end
+    return if finalized_discount_cents.nil?
+
+    errors.add(:finalized_discount_cents, "must be blank while the period is open")
   end
 
   def finalized_snapshots_match_status

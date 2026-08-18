@@ -10,6 +10,7 @@
   <dl class="pos-close__facts">
     <div><dt>Transactions</dt><dd><%= @totals.completed_transaction_count %></dd></div>
     <div><dt>Subtotal</dt><dd><%= format_money_cents(@totals.subtotal_cents) %></dd></div>
+    <div><dt>Discount</dt><dd><%= format_money_cents(@totals.discount_cents) %></dd></div>
     <div><dt>Tax</dt><dd><%= format_money_cents(@totals.tax_cents) %></dd></div>
     <div><dt>Sales total</dt><dd><%= format_money_cents(@totals.total_cents) %></dd></div>
     <div><dt>Cash payments</dt><dd><%= format_money_cents(@totals.cash_tender_cents) %></dd></div>

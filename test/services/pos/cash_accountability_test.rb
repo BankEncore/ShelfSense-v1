@@ -182,6 +182,7 @@ class PosCashAccountabilityTest < ActiveSupport::TestCase
     assert_equal @actor.id, period.finalized_by_user_id
     assert_equal 1, period.finalized_transaction_count
     assert_equal 1999, period.finalized_subtotal_cents
+    assert_equal 0, period.finalized_discount_cents
     assert_equal 100, period.finalized_tax_cents
     assert_equal 2099, period.finalized_total_cents
     assert_equal 2099, period.finalized_cash_payment_cents
@@ -233,6 +234,7 @@ class PosCashAccountabilityTest < ActiveSupport::TestCase
     assert_equal @actor.id, period.finalized_by_user_id
     assert_equal 0, period.finalized_transaction_count
     assert_equal 0, period.finalized_subtotal_cents
+    assert_equal 0, period.finalized_discount_cents
     assert_equal 0, period.finalized_tax_cents
     assert_equal 0, period.finalized_total_cents
     assert_equal 0, period.finalized_cash_payment_cents

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_18_130000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_18_162000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -362,6 +362,37 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_18_130000) do
     t.check_constraint "scope_type::text = ANY (ARRAY['global'::character varying::text, 'store'::character varying::text, 'either'::character varying::text])", name: "permissions_scope_type_valid"
   end
 
+  create_table "pos_controlled_actions", id: :uuid, default: nil, force: :cascade do |t|
+    t.string "action_fingerprint", null: false
+    t.string "action_type", null: false
+    t.string "approved_by_name_snapshot"
+    t.uuid "approved_by_user_id"
+    t.timestamptz "created_at", null: false
+    t.timestamptz "executed_at", null: false
+    t.string "fingerprint_schema_version", null: false
+    t.jsonb "material_values", default: {}, null: false
+    t.string "performed_by_name_snapshot", null: false
+    t.uuid "performed_by_user_id", null: false
+    t.string "policy_result", null: false
+    t.string "policy_version", null: false
+    t.uuid "pos_transaction_id", null: false
+    t.uuid "pos_transaction_line_id"
+    t.string "reason_code", null: false
+    t.string "reason_name_snapshot", null: false
+    t.text "reason_note"
+    t.timestamptz "updated_at", null: false
+    t.index ["approved_by_user_id"], name: "index_pos_controlled_actions_on_approved_by_user_id"
+    t.index ["performed_by_user_id"], name: "index_pos_controlled_actions_on_performed_by_user_id"
+    t.index ["pos_transaction_id"], name: "index_pos_controlled_actions_on_pos_transaction_id"
+    t.index ["pos_transaction_line_id", "action_type"], name: "index_pos_controlled_actions_effective_line", unique: true, where: "(pos_transaction_line_id IS NOT NULL)"
+    t.index ["pos_transaction_line_id"], name: "index_pos_controlled_actions_on_pos_transaction_line_id"
+    t.check_constraint "action_type::text = ANY (ARRAY['price_override'::character varying, 'line_discount'::character varying, 'tax_class_override'::character varying]::text[])", name: "pos_controlled_actions_type_valid"
+    t.check_constraint "approved_by_user_id IS NULL OR approved_by_user_id <> performed_by_user_id", name: "pos_controlled_actions_approver_not_performer"
+    t.check_constraint "policy_result::text = 'approval_required'::text AND approved_by_user_id IS NOT NULL AND approved_by_name_snapshot IS NOT NULL OR policy_result::text = 'direct'::text AND approved_by_user_id IS NULL AND approved_by_name_snapshot IS NULL", name: "pos_controlled_actions_approver_matches_policy"
+    t.check_constraint "policy_result::text = ANY (ARRAY['direct'::character varying, 'approval_required'::character varying]::text[])", name: "pos_controlled_actions_policy_valid"
+    t.check_constraint "pos_transaction_line_id IS NOT NULL", name: "pos_controlled_actions_line_present"
+  end
+
   create_table "pos_line_tax_components", id: :uuid, default: nil, force: :cascade do |t|
     t.boolean "applies", null: false
     t.integer "calculation_order", null: false
@@ -420,6 +451,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_18_130000) do
     t.bigint "finalized_closing_count_cents_sum"
     t.bigint "finalized_closing_expected_cash_cents_sum"
     t.bigint "finalized_closing_variance_cents_sum"
+    t.bigint "finalized_discount_cents"
     t.bigint "finalized_opening_float_cents_sum"
     t.bigint "finalized_other_payment_cents"
     t.integer "finalized_session_count"
@@ -443,6 +475,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_18_130000) do
     t.check_constraint "finalized_closing_count_cents_sum IS NULL OR finalized_closing_count_cents_sum >= 0", name: "pos_reporting_periods_finalized_closing_count_sum_nonnegative"
     t.check_constraint "finalized_closing_expected_cash_cents_sum IS NULL OR finalized_closing_expected_cash_cents_sum >= 0", name: "pos_reporting_periods_finalized_closing_expected_sum_nonnegativ"
     t.check_constraint "finalized_closing_variance_cents_sum IS NULL OR finalized_closing_variance_cents_sum = (finalized_closing_count_cents_sum - finalized_closing_expected_cash_cents_sum)", name: "pos_reporting_periods_finalized_variance_matches_sums"
+    t.check_constraint "finalized_discount_cents IS NULL OR finalized_discount_cents >= 0", name: "pos_reporting_periods_finalized_discount_nonnegative"
     t.check_constraint "finalized_opening_float_cents_sum IS NULL OR finalized_opening_float_cents_sum >= 0", name: "pos_reporting_periods_finalized_opening_float_sum_nonnegative"
     t.check_constraint "finalized_other_payment_cents IS NULL OR finalized_other_payment_cents >= 0", name: "pos_reporting_periods_finalized_other_payment_nonnegative"
     t.check_constraint "finalized_session_count IS NULL OR finalized_session_count >= 0", name: "pos_reporting_periods_finalized_session_count_nonnegative"
@@ -509,13 +542,19 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_18_130000) do
 
   create_table "pos_transaction_lines", id: :uuid, default: nil, force: :cascade do |t|
     t.timestamptz "created_at", null: false
+    t.string "default_tax_class_code_snapshot"
+    t.uuid "default_tax_class_id"
+    t.string "default_tax_class_name_snapshot"
     t.string "direction", null: false
     t.bigint "extended_selling_amount_cents", null: false
     t.uuid "inventory_unit_id"
     t.integer "line_number", null: false
     t.bigint "line_tax_cents", default: 0, null: false
     t.bigint "line_total_cents", default: 0, null: false
+    t.integer "manual_discount_basis_points"
+    t.bigint "manual_discount_cents", default: 0, null: false
     t.jsonb "merchandise_snapshot"
+    t.bigint "net_merchandise_amount_cents", null: false
     t.uuid "pos_transaction_id", null: false
     t.uuid "product_variant_id", null: false
     t.integer "quantity", null: false
@@ -523,13 +562,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_18_130000) do
     t.bigint "selling_unit_price_cents", null: false
     t.string "tax_class_code_snapshot", null: false
     t.uuid "tax_class_id", null: false
+    t.string "tax_class_name_snapshot"
     t.timestamptz "updated_at", null: false
+    t.index ["default_tax_class_id"], name: "index_pos_transaction_lines_on_default_tax_class_id"
     t.index ["inventory_unit_id"], name: "index_pos_transaction_lines_on_inventory_unit_id"
     t.index ["pos_transaction_id", "line_number"], name: "idx_on_pos_transaction_id_line_number_00590a67d2", unique: true
     t.index ["product_variant_id"], name: "index_pos_transaction_lines_on_product_variant_id"
     t.index ["tax_class_id"], name: "index_pos_transaction_lines_on_tax_class_id"
     t.check_constraint "direction::text = 'sale'::text", name: "pos_transaction_lines_direction_valid"
     t.check_constraint "inventory_unit_id IS NULL OR quantity = 1", name: "pos_transaction_lines_unit_quantity_one"
+    t.check_constraint "manual_discount_basis_points IS NULL OR manual_discount_basis_points >= 1 AND manual_discount_basis_points <= 10000", name: "pos_transaction_lines_discount_bp_range"
+    t.check_constraint "manual_discount_cents >= 0", name: "pos_transaction_lines_discount_nonnegative"
+    t.check_constraint "net_merchandise_amount_cents = (extended_selling_amount_cents - manual_discount_cents)", name: "pos_transaction_lines_net_matches_extended_minus_discount"
     t.check_constraint "quantity > 0", name: "pos_transaction_lines_quantity_positive"
   end
 
@@ -541,6 +585,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_18_130000) do
     t.timestamptz "completed_at"
     t.timestamptz "created_at", null: false
     t.string "currency_code", limit: 3, null: false
+    t.bigint "discount_cents", default: 0, null: false
     t.integer "lock_version", default: 0, null: false
     t.timestamptz "occurred_at"
     t.uuid "pos_session_id", null: false
@@ -868,6 +913,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_18_130000) do
   add_foreign_key "merchandise_categories", "merchandise_classes", column: "default_merchandise_class_id"
   add_foreign_key "merchandise_classes", "departments", column: "default_standard_department_id"
   add_foreign_key "merchandise_classes", "departments", column: "default_used_department_id"
+  add_foreign_key "pos_controlled_actions", "pos_transaction_lines"
+  add_foreign_key "pos_controlled_actions", "pos_transactions"
+  add_foreign_key "pos_controlled_actions", "users", column: "approved_by_user_id"
+  add_foreign_key "pos_controlled_actions", "users", column: "performed_by_user_id"
   add_foreign_key "pos_line_tax_components", "pos_transaction_lines"
   add_foreign_key "pos_line_tax_components", "store_taxes"
   add_foreign_key "pos_operations", "pos_transactions"
@@ -886,6 +935,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_18_130000) do
   add_foreign_key "pos_transaction_lines", "pos_transactions"
   add_foreign_key "pos_transaction_lines", "product_variants"
   add_foreign_key "pos_transaction_lines", "tax_classes"
+  add_foreign_key "pos_transaction_lines", "tax_classes", column: "default_tax_class_id"
   add_foreign_key "pos_transactions", "pos_reporting_periods", column: "reporting_period_id"
   add_foreign_key "pos_transactions", "pos_sessions"
   add_foreign_key "pos_transactions", "registers"

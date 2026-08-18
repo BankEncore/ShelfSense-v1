@@ -480,6 +480,132 @@ class PosRegisterTest < ActionDispatch::IntegrationTest
     assert_equal 1, OutboxMessage.where(event_type: "pos.transaction_completed").count
   end
 
+  test "workspace exposes controlled-action overlay and direct price override" do
+    post pos_register_enter_path, params: enter_params
+    follow_redirect!
+    transaction = PosTransaction.working.find_by!(register: @register)
+    post pos_register_merchandise_path, params: { identifier: @variant.sku, lock_version: transaction.lock_version }
+    assert_response :success
+    assert_select "button", text: "Price override (F5)"
+    assert_select "button", text: "Discount (F6)"
+    assert_select "button", text: "Tax Class (F7)"
+    assert_select "#pos_control_overlay"
+    assert_select "#pos-approver-username"
+    assert_select "#pos-approver-password"
+    refute_includes response.body, "Return (F"
+    refute_includes response.body, "Post-void"
+
+    line = transaction.reload.pos_transaction_lines.first
+    post pos_register_controlled_action_path, params: {
+      lock_version: transaction.lock_version,
+      line_id: line.id,
+      action_type: "price_override",
+      operation: "apply",
+      reason_code: "shelf_price_mismatch",
+      selling_price: "15.00"
+    }
+    assert_response :success
+    line.reload
+    assert_equal 1500, line.selling_unit_price_cents
+    assert_equal 1999, line.reference_unit_price_cents
+    assert_match "Override", response.body
+  end
+
+  test "associate override stays on the workspace and requires a manager password" do
+    associate = pos_transacting_user(store: @store, assigned_by: @actor, username: "clerk_ui")
+    pos_store_manager(store: @store, assigned_by: @actor, username: "mgr_ui")
+    delete session_path
+    sign_in_as("clerk_ui")
+
+    post pos_register_enter_path, params: enter_params
+    follow_redirect!
+    transaction = PosTransaction.working.find_by!(register: @register)
+    post pos_register_merchandise_path, params: { identifier: @variant.sku, lock_version: transaction.lock_version }
+    line = transaction.reload.pos_transaction_lines.first
+
+    post pos_register_controlled_action_path, params: {
+      lock_version: transaction.lock_version,
+      line_id: line.id,
+      action_type: "price_override",
+      operation: "apply",
+      reason_code: "damaged",
+      selling_price: "15.00"
+    }
+    assert_response :success
+    assert_equal 1999, line.reload.selling_unit_price_cents
+    assert_match(/approver credentials/, response.body)
+    assert_equal associate.id, User.find_by!(username: "clerk_ui").id
+
+    post pos_register_controlled_action_path, params: {
+      lock_version: transaction.reload.lock_version,
+      line_id: line.id,
+      action_type: "price_override",
+      operation: "apply",
+      reason_code: "damaged",
+      selling_price: "15.00",
+      approver_username: "mgr_ui",
+      approver_password: "correct-horse-battery"
+    }
+    assert_response :success
+    assert_equal 1500, line.reload.selling_unit_price_cents
+    assert_equal associate.id, transaction.reload.cashier_user_id
+    assert_response :success
+  end
+
+  test "discount apply ignores a leftover malformed selling_price" do
+    post pos_register_enter_path, params: enter_params
+    follow_redirect!
+    transaction = PosTransaction.working.find_by!(register: @register)
+    post pos_register_merchandise_path, params: { identifier: @variant.sku, lock_version: transaction.lock_version }
+    line = transaction.reload.pos_transaction_lines.first
+
+    post pos_register_controlled_action_path, params: {
+      lock_version: transaction.lock_version,
+      line_id: line.id,
+      action_type: "line_discount",
+      operation: "apply",
+      reason_code: "damaged",
+      selling_price: "abc",
+      discount_percent: "10.00"
+    }
+    assert_response :success
+    refute_match(/not a valid amount/, response.body)
+    assert_equal 1000, line.reload.manual_discount_basis_points
+    assert_equal 1999, line.selling_unit_price_cents
+  end
+
+  test "controlled-action remove ignores leftover commercial values" do
+    post pos_register_enter_path, params: enter_params
+    follow_redirect!
+    transaction = PosTransaction.working.find_by!(register: @register)
+    post pos_register_merchandise_path, params: { identifier: @variant.sku, lock_version: transaction.lock_version }
+    line = transaction.reload.pos_transaction_lines.first
+    post pos_register_controlled_action_path, params: {
+      lock_version: transaction.lock_version,
+      line_id: line.id,
+      action_type: "price_override",
+      operation: "apply",
+      reason_code: "damaged",
+      selling_price: "15.00"
+    }
+    assert_equal 1500, line.reload.selling_unit_price_cents
+
+    post pos_register_controlled_action_path, params: {
+      lock_version: transaction.reload.lock_version,
+      line_id: line.id,
+      action_type: "price_override",
+      operation: "remove",
+      selling_price: "abc",
+      discount_percent: "not-a-number",
+      tax_class_id: "nope"
+    }
+    assert_response :success
+    refute_match(/not a valid amount/, response.body)
+    line.reload
+    assert_equal line.reference_unit_price_cents, line.selling_unit_price_cents
+    assert_equal 0, line.pos_controlled_actions.count
+  end
+
   private
 
   def sign_in_as(username)
