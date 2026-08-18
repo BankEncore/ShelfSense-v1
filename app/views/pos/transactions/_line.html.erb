@@ -1,0 +1,30 @@
+<article class="pos-history__line">
+  <div class="pos-history__line-main">
+    <span><%= line.line_number %></span>
+    <span><%= line.direction %></span>
+    <span><%= line.quantity %></span>
+    <span><%= pos_history_line_description(line) %></span>
+    <span class="numeric"><%= format_money_cents(line.line_total_cents) %></span>
+  </div>
+  <dl class="pos-history__line-facts">
+    <div><dt>SKU</dt><dd><%= line.merchandise_snapshot.is_a?(Hash) ? line.merchandise_snapshot["sku"] : "" %></dd></div>
+    <div><dt>Reference</dt><dd><%= format_money_cents(line.reference_unit_price_cents) %></dd></div>
+    <div><dt>Selling</dt><dd><%= format_money_cents(line.selling_unit_price_cents) %></dd></div>
+    <div><dt>Extended</dt><dd><%= format_money_cents(line.extended_selling_amount_cents) %></dd></div>
+    <div><dt>Tax</dt><dd><%= format_money_cents(line.line_tax_cents) %></dd></div>
+  </dl>
+  <% components = pos_applicable_tax_components(line) %>
+  <% if components.any? %>
+    <details class="pos-history__tax">
+      <summary>Tax detail</summary>
+      <% components.each do |component| %>
+        <div>
+          <%= component.store_tax_name_snapshot %>
+          Rate <%= number_with_precision(component.rate_percent, precision: 3) %>%
+          Taxable <%= format_money_cents(component.taxable_basis_cents) %>
+          Tax <%= format_money_cents(component.tax_cents) %>
+        </div>
+      <% end %>
+    </details>
+  <% end %>
+</article>

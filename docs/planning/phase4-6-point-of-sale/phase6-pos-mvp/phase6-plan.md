@@ -1,6 +1,6 @@
 # Phase 6 — Operational POS MVP
 
-**Status:** Slice 6.0 contract locked ([mvp-contract.md](mvp-contract.md)). Slice 6.1 merchandise breadth implemented ([merchandise-breadth.md](merchandise-breadth.md)). Slice 6.2 tender-breadth contract locked ([tender-breadth.md](tender-breadth.md)).
+**Status:** Slice 6.0 contract locked ([mvp-contract.md](mvp-contract.md)). Slice 6.1 merchandise breadth implemented ([merchandise-breadth.md](merchandise-breadth.md)). Slice 6.2 tender breadth implemented ([tender-breadth.md](tender-breadth.md)). Slice 6.3 transaction history implemented ([transaction-history.md](transaction-history.md)).
 
 **Authority**
 
@@ -9,6 +9,7 @@
 | [MVP contract](mvp-contract.md) | Slice 6.0: CompletedPosOperation v2 and cross-cutting locks |
 | [Merchandise breadth](merchandise-breadth.md) | Slice 6.1: Used/individual and non-inventory sales |
 | [Tender breadth](tender-breadth.md) | Slice 6.2: Cash/Card/Check/Other settlement |
+| [Transaction history](transaction-history.md) | Slice 6.3: completed lookup, detail, reprint |
 | [Phase 4 plan](../phase4-point-of-sale/phase4-plan.md) | Completion, receipt allocation, inventory posting |
 | [CompletedPosOperation v1](../phase4-point-of-sale/completed-pos-operation-v1.md) | Commercial base; v2 is additive |
 | [POS tax contract](../phase4-point-of-sale/pos-tax-contract.md) | Tax Class / Store Tax; linked-return reversal ([§10](../phase4-point-of-sale/pos-tax-contract.md)) |
@@ -107,7 +108,7 @@ Write the detailed implementation contract for slices 6.2–6.7 immediately befo
 | **6.0** | MVP contract | Lock Phase 6 invariants and completed-operation shape | Docs only; no behavior change |
 | **6.1** | Merchandise breadth | Used/individual + non-inventory sales | **Implemented.** Quantity-tracked Cash Standard path unchanged |
 | **6.2** | Tender breadth | Card, Check, admin-created Other, mixed tender | **Implemented.** All-Cash sale remains Phase 5-equivalent; Session/Z shows Card/Check/Other |
-| **6.3** | Transaction history | Lookup, detail, receipt reprint | Sale workspace does not depend on history |
+| **6.3** | Transaction history | Lookup, detail, receipt reprint | **Implemented.** Sale workspace does not depend on history |
 | **6.4** | Controlled pricing/actions | Approval framework, price override, line discount, Tax Class override | Ordinary path stays `direct` unless policy requires a second actor |
 | **6.5** | Returns | Linked, unlinked, price adjustment, mixed sale/return | Sale-only baskets still complete the same way; Session/Z is direction-aware |
 | **6.6** | Post-void | Controlled whole-transaction correction | Entry is from history; sale path untouched |
@@ -153,14 +154,18 @@ One settlement redesign, not three unrelated tender implementations.
 
 **6.2E merge gate:** ordinary all-Cash behavior remains exactly equivalent to Phase 5.
 
-### 6.3 — Completed transaction history
+### 6.3 — Completed transaction history (implemented)
+
+Authority: [transaction-history.md](transaction-history.md).
 
 Make completed commercial history retrievable before returns need it.
 
-- Search: exact receipt reference, Store/Register/transaction number, recent, date, Register. Not a reporting query builder.
-- Detail: immutable completed facts (lines, tenders, totals, snapshots).
-- Reprint: same completed snapshots as the original receipt. No new receipt number, no `printed_at` mutation, no live Product/price/tax.
-- UI may reserve positions for Return items / Post-void; those actions appear in 6.5 / 6.6.
+- Search: exact receipt reference (sufficient lookup), Register + `receipt_sequence`, exact `business_date`, recent. Not a reporting query builder.
+- Authorized by `pos.transact` at the current Store, not original-cashier ownership. No open Session required.
+- Detail: immutable completed facts (lines, tenders, totals, snapshots), including `cashier_name_snapshot`.
+- Reprint: same completed snapshots as the original receipt, visibly marked **REPRINT**. No new receipt number, no commercial mutation, no live Product/price/tax.
+- Immediate completion and historical lookup are separate screens that share print rendering.
+- UI may later attach Return items / Post-void on detail; 6.3 does not render those actions.
 
 ### 6.4 — Controlled actions and pricing
 

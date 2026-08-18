@@ -81,6 +81,7 @@ Rails.application.routes.draw do
   end
 
   namespace :pos do
+    resources :transactions, only: %i[index show]
     get "register/enter", to: "enters#show", as: :register_enter
     post "register/enter", to: "enters#create"
     get "register", to: "workspaces#show", as: :register_workspace

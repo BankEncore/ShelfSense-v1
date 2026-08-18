@@ -265,7 +265,8 @@ module Pos
           "register_id" => transaction.register_id.to_s,
           "pos_session_id" => transaction.pos_session_id.to_s,
           "reporting_period_id" => transaction.reporting_period_id.to_s,
-          "performed_by_user_id" => transaction.cashier_user_id.to_s
+          "performed_by_user_id" => transaction.cashier_user_id.to_s,
+          "performed_by_name" => @actor.display_name
         },
         "receipt" => {
           "sequence" => receipt.fetch(:sequence),
@@ -352,7 +353,8 @@ module Pos
         receipt_sequence: facts.receipt_sequence,
         store_number_snapshot: facts.store_number,
         register_number_snapshot: facts.register_number,
-        transaction_reference: facts.transaction_reference
+        transaction_reference: facts.transaction_reference,
+        cashier_name_snapshot: @actor.display_name
       )
     end
 

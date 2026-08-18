@@ -52,6 +52,7 @@
         <span>Store  <%= current_store.admin_label %></span>
         <span>Register  <%= @register.register_number %></span>
         <span><%= current_user.display_name %></span>
+        <%= link_to "Transactions", pos_transactions_path, class: "pos-header__link" %>
       </div>
       <div class="pos-header__date <%= "pos-date-emphasis" if leftover %>">
         Business date  <%= @session_record.reporting_period.business_date.iso8601 %>

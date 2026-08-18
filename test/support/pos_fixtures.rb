@@ -107,4 +107,42 @@ module PosFixtures
     )
     user
   end
+
+  def insert_completed_transaction!(
+    session:,
+    receipt_sequence:,
+    completed_at:,
+    business_date: nil,
+    cashier_name: "Jane Smith",
+    cashier_user: nil,
+    total_cents: 2099
+  )
+    store = session.store
+    register = session.register
+    business_date ||= session.reporting_period.business_date
+    PosTransaction.create!(
+      store: store,
+      register: register,
+      pos_session: session,
+      reporting_period: session.reporting_period,
+      cashier_user: cashier_user || session.cashier_user,
+      cashier_name_snapshot: cashier_name,
+      status: "completed",
+      currency_code: "USD",
+      occurred_at: completed_at,
+      completed_at: completed_at,
+      business_date: business_date,
+      receipt_sequence: receipt_sequence,
+      store_number_snapshot: store.store_number,
+      register_number_snapshot: register.register_number,
+      transaction_reference: Pos::ReceiptIdentity.reference(
+        store_number: store.store_number,
+        register_number: register.register_number,
+        receipt_sequence: receipt_sequence
+      ),
+      subtotal_cents: total_cents,
+      tax_cents: 0,
+      total_cents: total_cents
+    )
+  end
 end

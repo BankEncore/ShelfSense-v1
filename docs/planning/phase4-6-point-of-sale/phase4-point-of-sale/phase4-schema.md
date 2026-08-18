@@ -142,6 +142,7 @@ One row for working and completed (or cancelled) commercial state.
 | `pos_session_id` | uuid | FK, null: false |
 | `reporting_period_id` | uuid | FK, null: false (denormalized for query convenience; must match session) |
 | `cashier_user_id` | uuid | FK, null: false |
+| `cashier_name_snapshot` | string | nullable; 6.3 display name at completion. Null on legacy rows → history shows “Not captured”. Not part of `pos_transactions_status_null_rules`. |
 | `status` | string | `working`, `completed`, `cancelled` (exact enum locked in migration) |
 | `currency_code` | string(3) | null: false |
 | `occurred_at` | timestamptz | null while working; set at completion (not provisional) |

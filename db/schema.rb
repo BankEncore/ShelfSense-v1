@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_18_021000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_18_130000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -536,6 +536,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_18_021000) do
   create_table "pos_transactions", id: :uuid, default: nil, force: :cascade do |t|
     t.date "business_date"
     t.timestamptz "cancelled_at"
+    t.string "cashier_name_snapshot"
     t.uuid "cashier_user_id", null: false
     t.timestamptz "completed_at"
     t.timestamptz "created_at", null: false
@@ -560,6 +561,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_18_021000) do
     t.index ["pos_session_id"], name: "index_pos_transactions_one_working_per_session", unique: true, where: "((status)::text = 'working'::text)"
     t.index ["register_id"], name: "index_pos_transactions_on_register_id"
     t.index ["reporting_period_id"], name: "index_pos_transactions_on_reporting_period_id"
+    t.index ["store_id", "business_date", "completed_at", "id"], name: "index_pos_transactions_completed_business_date", order: { completed_at: :desc, id: :desc }, where: "((status)::text = 'completed'::text)"
+    t.index ["store_id", "completed_at", "id"], name: "index_pos_transactions_completed_recent", order: { completed_at: :desc, id: :desc }, where: "((status)::text = 'completed'::text)"
     t.index ["store_id", "register_id", "receipt_sequence"], name: "index_pos_transactions_receipt_identity", unique: true, where: "(receipt_sequence IS NOT NULL)"
     t.index ["store_id"], name: "index_pos_transactions_on_store_id"
     t.index ["transaction_reference"], name: "index_pos_transactions_on_transaction_reference", unique: true, where: "(transaction_reference IS NOT NULL)"
