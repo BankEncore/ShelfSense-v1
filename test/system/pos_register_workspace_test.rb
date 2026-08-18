@@ -52,13 +52,17 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     add_current_sku
     click_on "Tender (+)"
     assert_text "CASH TENDER"
+    assert_no_selector "[data-register-workspace-target='referenceWrap']", visible: true
     send_keys :f2
     assert_selector "[data-register-workspace-target='fieldLabel']", text: /External Card/
+    assert_selector "[data-register-workspace-target='referenceWrap']", visible: true
+    assert_field "Reference"
     field = find("#pos-command-field")
     field.fill_in with: "10.00"
     field.send_keys :enter
     assert_selector ".pos-totals", text: "External Card"
     assert_text "Amount due"
+    assert_equal "pos-command-field", page.evaluate_script("document.activeElement && document.activeElement.id")
     click_on "Return to sale"
     assert_text "SALE ENTRY"
     assert_no_selector ".pos-totals", text: "External Card"

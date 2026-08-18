@@ -271,7 +271,7 @@ POST complete (
   → GET /pos/transactions/:id/completed
 ```
 
-F2 cycles **active** identities (Cash, Card, Check, then active Other). Other appears only when an active Other identity exists. Remaining due and working tenders (by `tender_number`, snapshot names) render in `pos_totals`. Enter adds the selected tender. Remaining `> 0` stays TENDER. Remaining `= 0` → completion-pending + auto-complete.
+F2 cycles **active** identities (Cash, Card, Check, then active Other). Other appears only when an active Other identity exists. Cycling to a type whose reference policy is optional or required shows the Reference field **before** the tender is added; Cash hides it. Remaining due and working tenders (by `tender_number`, snapshot names) render in `pos_totals`. Enter adds the selected tender (amount from the primary field, reference from the visible field when captured). Remaining `> 0` stays TENDER. Remaining `= 0` → completion-pending + auto-complete.
 
 Escape before any tender: SALE_ENTRY. After tenders: Escape is a no-op; Return to sale is `AbandonTender`; F8 removes the last working tender.
 

@@ -20,6 +20,8 @@ export default class extends Controller {
     "tenderTypeInput",
     "referenceInput",
     "referenceField",
+    "referenceWrap",
+    "referenceLabel",
     "removeTenderInput",
     "quantityLineInput",
     "removeLineInput",
@@ -41,7 +43,8 @@ export default class extends Controller {
     workspaceUrl: String,
     tenderTypeIds: String,
     tenderTypeNames: String,
-    tenderTypeCash: String
+    tenderTypeCash: String,
+    tenderTypeReference: String
   }
 
   connect() {
@@ -164,8 +167,9 @@ export default class extends Controller {
     const value = this.fieldTarget.value.trim()
     if (!value) return
     this.presentedInputTarget.value = value
-    if (this.hasReferenceFieldTarget && this.hasReferenceInputTarget) {
-      this.referenceInputTarget.value = this.referenceFieldTarget.value.trim()
+    if (this.hasReferenceInputTarget) {
+      const capture = this.hasReferenceWrapTarget && !this.referenceWrapTarget.hidden && this.hasReferenceFieldTarget
+      this.referenceInputTarget.value = capture ? this.referenceFieldTarget.value.trim() : ""
     }
     this.beginFlight()
     this.tenderFormTarget.requestSubmit()
@@ -239,10 +243,12 @@ export default class extends Controller {
     if (this.hasTenderTypeInputTarget) this.tenderTypeInputTarget.value = ids[safeIndex]
     const cash = cashFlags[safeIndex] === "1"
     const name = names[safeIndex] || (cash ? "Cash" : "Tender")
+    const policy = this.tenderTypeReferenceList()[safeIndex] || "omitted"
     this.setMode("tender", cash ? "CASH TENDER" : "TENDER")
     const due = this.element.querySelector(".pos-totals__due")
     const dueText = due ? due.textContent.trim() : "Amount due"
     this.setFieldLabel(cash ? `${dueText}. Cash presented` : `${dueText}. ${name} amount`)
+    this.toggleReferenceField(cash, policy)
   }
 
   cashTenderIndex() {
@@ -263,6 +269,20 @@ export default class extends Controller {
     return (this.tenderTypeCashValue || "").split(",")
   }
 
+  tenderTypeReferenceList() {
+    return (this.tenderTypeReferenceValue || "").split(",")
+  }
+
+  toggleReferenceField(cash, policy) {
+    if (!this.hasReferenceWrapTarget) return
+    const show = this.modeValue === "tender" && !cash && policy !== "omitted"
+    this.referenceWrapTarget.hidden = !show
+    if (this.hasReferenceLabelTarget) {
+      this.referenceLabelTarget.textContent = policy === "required" ? "Reference (required)" : "Reference"
+    }
+    if (!show && this.hasReferenceFieldTarget) this.referenceFieldTarget.value = ""
+  }
+
   removeLastTender() {
     if (this.inFlight) return
     if (!this.hasRemoveTenderFormTarget || !this.hasRemoveTenderInputTarget) return
@@ -278,6 +298,7 @@ export default class extends Controller {
       this.setFieldLabel("Scan or identifier")
       this.fieldTarget.inputMode = "text"
       this.fieldTarget.value = ""
+      this.toggleReferenceField(true, "omitted")
       this.enableReadyActions()
       this.fieldTarget.focus()
       return
@@ -288,6 +309,7 @@ export default class extends Controller {
       this.setFieldLabel("Scan or identifier")
       this.fieldTarget.inputMode = "text"
       this.fieldTarget.value = ""
+      this.toggleReferenceField(true, "omitted")
       this.enableReadyActions()
       this.fieldTarget.focus()
     }
@@ -352,8 +374,9 @@ export default class extends Controller {
 
   beginFlight() {
     this.inFlight = true
-    if (this.hasFieldTarget) this.fieldTarget.disabled = true
     this.disableMutationControls()
+    if (this.hasReferenceFieldTarget) this.referenceFieldTarget.disabled = true
+    if (this.hasFieldTarget) this.fieldTarget.disabled = true
   }
 
   disableMutationControls() {
@@ -415,6 +438,10 @@ export default class extends Controller {
     if (!this.hasFieldTarget) return
     if (this.fieldTarget.disabled) return
     this.fieldTarget.focus()
+    requestAnimationFrame(() => {
+      if (!this.hasFieldTarget || this.fieldTarget.disabled) return
+      this.fieldTarget.focus()
+    })
   }
 
   setMode(mode, heading) {
