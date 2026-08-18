@@ -153,6 +153,11 @@ module Pos
         line.line_total_cents = line.net_merchandise_amount_cents + line.line_tax_cents
         line.tax_class_code_snapshot = line.tax_class.code
         line.tax_class_name_snapshot ||= line.tax_class.name
+        if line.default_tax_class_id.present?
+          default_class = line.default_tax_class || TaxClass.find(line.default_tax_class_id)
+          line.default_tax_class_code_snapshot ||= default_class.code
+          line.default_tax_class_name_snapshot ||= default_class.name
+        end
         line.merchandise_snapshot = merchandise_snapshot_for(variant, line, unit)
         line.save!
         line.pos_line_tax_components.delete_all

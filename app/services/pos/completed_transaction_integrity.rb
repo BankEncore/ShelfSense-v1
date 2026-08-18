@@ -39,7 +39,24 @@ module Pos
     end
 
     def verify_fingerprint!(line, action)
-      material = case action.action_type
+      material = reconstructed_material(line, action)
+      stored = Idempotency::CanonicalJson.normalize(action.material_values)
+      expected_material = Idempotency::CanonicalJson.normalize(material)
+      raise Pos::Error, "controlled action material values do not match" unless stored == expected_material
+
+      expected = Pos::ControlledActionFingerprint.call(
+        action_type: action.action_type,
+        transaction_id: line.pos_transaction_id,
+        line_id: line.id,
+        material_values: material,
+        reason_code: action.reason_code,
+        reason_note: action.reason_note
+      )
+      raise Pos::Error, "controlled action fingerprint does not match" unless expected == action.action_fingerprint
+    end
+
+    def reconstructed_material(line, action)
+      case action.action_type
       when "price_override"
         {
           "reference_unit_price_cents" => line.reference_unit_price_cents,
@@ -59,15 +76,6 @@ module Pos
           "requested_tax_class_id" => line.tax_class_id.to_s
         }
       end
-      expected = Pos::ControlledActionFingerprint.call(
-        action_type: action.action_type,
-        transaction_id: line.pos_transaction_id,
-        line_id: line.id,
-        material_values: material,
-        reason_code: action.reason_code,
-        reason_note: action.reason_note
-      )
-      raise Pos::Error, "controlled action fingerprint does not match" unless expected == action.action_fingerprint
     end
   end
 end

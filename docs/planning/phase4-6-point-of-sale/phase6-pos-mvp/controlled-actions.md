@@ -152,6 +152,7 @@ Currently **effective** executed fact on a working/completed/cancelled transacti
 | `action_fingerprint` | SHA-256 of canonical JSON |
 | `material_values` | jsonb; commercial fields used in the fingerprint |
 | `executed_at` | timestamptz |
+| `created_at` / `updated_at` | timestamptz |
 
 Unique `(pos_transaction_line_id, action_type)` where `pos_transaction_line_id IS NOT NULL`.
 
@@ -224,7 +225,7 @@ Changing `reason_code` (or the `other` note) after approval is a different reque
 
 ## 8. Completion integrity
 
-Refuse completion unless Core and effective facts agree, **then** recompute each fingerprint from actual Core + stored material reason and compare to `action_fingerprint`:
+Refuse completion unless Core and effective facts agree, **then** require stored `material_values` to equal the commercial fields reconstructed from Core, **then** recompute each fingerprint from actual Core + stored material reason and compare to `action_fingerprint`:
 
 ```text
 selling != reference  ↔  effective price_override
@@ -232,7 +233,7 @@ manual_discount_basis_points present  ↔  effective line_discount
 tax_class_id != default_tax_class_id  ↔  effective tax_class_override
 ```
 
-Old v2 envelopes without `controlled_actions` / `override` / `discount` / default Tax Class keys remain valid. If those keys are present, they must be well-formed. Do not bump `schema_version`.
+Old v2 envelopes without `controlled_actions` / `override` / `discount` / default Tax Class keys remain valid. If those keys are present, they must be well-formed. A present `controlled_actions[]` entry requires subject line identity, reason, policy result and version, material values, executed time, performer name, fingerprint, and approver name when `approval_required`. Do not bump `schema_version`.
 
 ---
 
@@ -345,7 +346,7 @@ tax_class_name_snapshot
 
 **Default is the ProductVariant Tax Class at add time.** Later live variant Tax Class changes do not rewrite the working line’s default.
 
-Backfill `default_* = applied` where deterministically possible. Do **not** add these columns to `pos_transactions_status_null_rules`.
+Backfill historically reliable applied identity onto default: `default_tax_class_id = tax_class_id` and `default_tax_class_code_snapshot = tax_class_code_snapshot`. Leave `default_tax_class_name_snapshot` and `tax_class_name_snapshot` NULL on already-completed or cancelled lines — Tax Class names are mutable and were never snapshotted. Working lines may copy the current Tax Class name because they have not completed. New completions snapshot names normally. Do **not** add these columns to `pos_transactions_status_null_rules`.
 
 Apply: cashier selects another **active** Tax Class for which every **active** Store Tax has a resolved rule (existing `UnresolvedApplicability`). Recalculate every Store Tax determination. No cashier-entered rates, component toggles, exemption checkboxes, or synthetic nontaxable class.
 

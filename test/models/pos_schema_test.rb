@@ -270,7 +270,27 @@ class PosSchemaTest < ActiveSupport::TestCase
     end
   end
 
+  test "pos_controlled_actions timestamps are timestamptz" do
+    %w[created_at updated_at executed_at].each do |column|
+      assert_equal "timestamp with time zone", postgres_type("pos_controlled_actions", column), column
+    end
+  end
+
   private
+
+  def postgres_type(table, column)
+    PosControlledAction.connection.select_value(
+      "SELECT format_type(a.atttypid, a.atttypmod)
+       FROM pg_attribute a
+       JOIN pg_class c ON c.oid = a.attrelid
+       JOIN pg_namespace n ON n.oid = c.relnamespace
+       WHERE n.nspname = 'public'
+         AND c.relname = #{PosControlledAction.connection.quote(table)}
+         AND a.attname = #{PosControlledAction.connection.quote(column)}
+         AND a.attnum > 0
+         AND NOT a.attisdropped"
+    )
+  end
 
   def open_period
     PosReportingPeriod.create!(

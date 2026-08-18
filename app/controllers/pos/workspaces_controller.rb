@@ -84,9 +84,7 @@ module Pos
           operation: params.require(:operation),
           reason_code: params[:reason_code],
           reason_note: params[:reason_note],
-          selling_unit_price_cents: parse_optional_cents(params[:selling_price]),
-          discount_basis_points: parse_discount_basis_points,
-          tax_class_id: params[:tax_class_id],
+          **controlled_action_commercial_attrs,
           approver_username: params[:approver_username],
           approver_password: params[:approver_password]
         )
@@ -349,6 +347,21 @@ module Pos
       return if error_mode == "derive"
 
       @ui_mode = error_mode
+    end
+
+    def controlled_action_commercial_attrs
+      return {} if params[:operation].to_s == "remove"
+
+      case params[:action_type].to_s
+      when "price_override"
+        { selling_unit_price_cents: parse_optional_cents(params[:selling_price]) }
+      when "line_discount"
+        { discount_basis_points: parse_discount_basis_points }
+      when "tax_class_override"
+        { tax_class_id: params[:tax_class_id] }
+      else
+        {}
+      end
     end
 
     def parse_optional_cents(value)

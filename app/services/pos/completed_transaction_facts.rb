@@ -91,19 +91,33 @@ module Pos
     end
 
     def verify_controlled_actions!
+      return unless @envelope.key?("controlled_actions")
+
       actions = @envelope["controlled_actions"]
-      return unless actions.is_a?(Array)
+      raise Pos::Error, "completed envelope controlled_actions is invalid" unless actions.is_a?(Array)
 
       actions.each do |action|
         raise Pos::Error, "completed envelope controlled action is invalid" unless action.is_a?(Hash)
-        %w[action performed_by_user_id performed_by_name fingerprint].each do |key|
+        %w[action performed_by_user_id performed_by_name fingerprint executed_at].each do |key|
           raise Pos::Error, "completed envelope is missing #{key}" if action[key].blank?
         end
-        result = action.dig("policy_context", "result")
+        subject = action["subject"]
+        raise Pos::Error, "completed envelope is missing subject line_id" unless subject.is_a?(Hash) && subject["line_id"].present?
+        reason = action["reason"]
+        raise Pos::Error, "completed envelope is missing reason" unless reason.is_a?(Hash)
+        raise Pos::Error, "completed envelope is missing reason code" if reason["code"].blank?
+        raise Pos::Error, "completed envelope is missing reason name" if reason["name"].blank?
+        policy = action["policy_context"]
+        raise Pos::Error, "completed envelope is missing policy_context" unless policy.is_a?(Hash)
+        result = policy["result"]
         raise Pos::Error, "completed envelope policy result is invalid" unless %w[direct approval_required].include?(result)
+        raise Pos::Error, "completed envelope is missing policy version" if policy["version"].blank?
+        material = action["material_values"]
+        raise Pos::Error, "completed envelope is missing material_values" unless material.is_a?(Hash) && material.any?
         if result == "approval_required"
           raise Pos::Error, "completed envelope is missing approved_by_user_id" if action["approved_by_user_id"].blank?
-        elsif action.key?("approved_by_user_id")
+          raise Pos::Error, "completed envelope is missing approved_by_name" if action["approved_by_name"].blank?
+        elsif action.key?("approved_by_user_id") || action.key?("approved_by_name")
           raise Pos::Error, "direct controlled action cannot include approved_by"
         end
       end

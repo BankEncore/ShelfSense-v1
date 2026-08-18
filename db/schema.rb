@@ -367,7 +367,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_18_162000) do
     t.string "action_type", null: false
     t.string "approved_by_name_snapshot"
     t.uuid "approved_by_user_id"
-    t.datetime "created_at", null: false
+    t.timestamptz "created_at", null: false
     t.timestamptz "executed_at", null: false
     t.string "fingerprint_schema_version", null: false
     t.jsonb "material_values", default: {}, null: false
@@ -380,7 +380,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_18_162000) do
     t.string "reason_code", null: false
     t.string "reason_name_snapshot", null: false
     t.text "reason_note"
-    t.datetime "updated_at", null: false
+    t.timestamptz "updated_at", null: false
     t.index ["approved_by_user_id"], name: "index_pos_controlled_actions_on_approved_by_user_id"
     t.index ["performed_by_user_id"], name: "index_pos_controlled_actions_on_performed_by_user_id"
     t.index ["pos_transaction_id"], name: "index_pos_controlled_actions_on_pos_transaction_id"

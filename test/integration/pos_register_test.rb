@@ -552,6 +552,60 @@ class PosRegisterTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "discount apply ignores a leftover malformed selling_price" do
+    post pos_register_enter_path, params: enter_params
+    follow_redirect!
+    transaction = PosTransaction.working.find_by!(register: @register)
+    post pos_register_merchandise_path, params: { identifier: @variant.sku, lock_version: transaction.lock_version }
+    line = transaction.reload.pos_transaction_lines.first
+
+    post pos_register_controlled_action_path, params: {
+      lock_version: transaction.lock_version,
+      line_id: line.id,
+      action_type: "line_discount",
+      operation: "apply",
+      reason_code: "damaged",
+      selling_price: "abc",
+      discount_percent: "10.00"
+    }
+    assert_response :success
+    refute_match(/not a valid amount/, response.body)
+    assert_equal 1000, line.reload.manual_discount_basis_points
+    assert_equal 1999, line.selling_unit_price_cents
+  end
+
+  test "controlled-action remove ignores leftover commercial values" do
+    post pos_register_enter_path, params: enter_params
+    follow_redirect!
+    transaction = PosTransaction.working.find_by!(register: @register)
+    post pos_register_merchandise_path, params: { identifier: @variant.sku, lock_version: transaction.lock_version }
+    line = transaction.reload.pos_transaction_lines.first
+    post pos_register_controlled_action_path, params: {
+      lock_version: transaction.lock_version,
+      line_id: line.id,
+      action_type: "price_override",
+      operation: "apply",
+      reason_code: "damaged",
+      selling_price: "15.00"
+    }
+    assert_equal 1500, line.reload.selling_unit_price_cents
+
+    post pos_register_controlled_action_path, params: {
+      lock_version: transaction.reload.lock_version,
+      line_id: line.id,
+      action_type: "price_override",
+      operation: "remove",
+      selling_price: "abc",
+      discount_percent: "not-a-number",
+      tax_class_id: "nope"
+    }
+    assert_response :success
+    refute_match(/not a valid amount/, response.body)
+    line.reload
+    assert_equal line.reference_unit_price_cents, line.selling_unit_price_cents
+    assert_equal 0, line.pos_controlled_actions.count
+  end
+
   private
 
   def sign_in_as(username)

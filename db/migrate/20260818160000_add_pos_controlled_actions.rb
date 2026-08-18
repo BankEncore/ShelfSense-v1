@@ -19,7 +19,8 @@ class AddPosControlledActions < ActiveRecord::Migration[8.1]
       t.string :action_fingerprint, null: false
       t.jsonb :material_values, null: false, default: {}
       t.timestamptz :executed_at, null: false
-      t.timestamps
+      t.timestamptz :created_at, null: false
+      t.timestamptz :updated_at, null: false
     end
 
     add_index :pos_controlled_actions, %i[pos_transaction_line_id action_type],

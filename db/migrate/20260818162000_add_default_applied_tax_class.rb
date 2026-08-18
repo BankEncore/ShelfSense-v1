@@ -8,14 +8,23 @@ class AddDefaultAppliedTaxClass < ActiveRecord::Migration[8.1]
     add_column :pos_transaction_lines, :tax_class_name_snapshot, :string
 
     execute <<~SQL
+      UPDATE pos_transaction_lines
+      SET default_tax_class_id = tax_class_id,
+          default_tax_class_code_snapshot = tax_class_code_snapshot
+      WHERE default_tax_class_id IS NULL
+    SQL
+
+    # Working lines have not completed, so current Tax Class names are acceptable.
+    # Completed and cancelled names stay NULL: Tax Class names are mutable and were
+    # never snapshotted historically.
+    execute <<~SQL
       UPDATE pos_transaction_lines AS l
-      SET default_tax_class_id = l.tax_class_id,
-          default_tax_class_code_snapshot = l.tax_class_code_snapshot,
-          default_tax_class_name_snapshot = t.name,
+      SET default_tax_class_name_snapshot = t.name,
           tax_class_name_snapshot = t.name
-      FROM tax_classes AS t
+      FROM tax_classes AS t, pos_transactions AS tx
       WHERE t.id = l.tax_class_id
-        AND l.default_tax_class_id IS NULL
+        AND tx.id = l.pos_transaction_id
+        AND tx.status = 'working'
     SQL
   end
 

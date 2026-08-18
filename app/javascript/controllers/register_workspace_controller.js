@@ -439,6 +439,8 @@ export default class extends Controller {
     this.toggleHidden(this.hasControlPriceWrapTarget && this.controlPriceWrapTarget, actionType !== "price_override")
     this.toggleHidden(this.hasControlDiscountWrapTarget && this.controlDiscountWrapTarget, actionType !== "line_discount")
     this.toggleHidden(this.hasControlTaxWrapTarget && this.controlTaxWrapTarget, actionType !== "tax_class_override")
+    if (this.hasControlPriceFieldTarget) this.controlPriceFieldTarget.value = ""
+    if (this.hasControlDiscountFieldTarget) this.controlDiscountFieldTarget.value = ""
     if (actionType === "price_override" && this.hasControlPriceFieldTarget) {
       this.controlPriceFieldTarget.value = this.formatCents(row.dataset.sellingCents)
     }
@@ -486,13 +488,27 @@ export default class extends Controller {
 
   fillControlForm(operation) {
     this.syncSelectedLine()
-    if (this.hasControlActionInputTarget) this.controlActionInputTarget.value = this.currentControlAction || ""
+    const action = this.currentControlAction
+    const applying = operation === "apply"
+    if (this.hasControlActionInputTarget) this.controlActionInputTarget.value = action || ""
     if (this.hasControlOperationInputTarget) this.controlOperationInputTarget.value = operation
     if (this.hasControlReasonInputTarget) this.controlReasonInputTarget.value = this.hasControlReasonFieldTarget ? this.controlReasonFieldTarget.value : ""
     if (this.hasControlNoteInputTarget) this.controlNoteInputTarget.value = this.hasControlNoteFieldTarget ? this.controlNoteFieldTarget.value.trim() : ""
-    if (this.hasControlPriceInputTarget) this.controlPriceInputTarget.value = this.hasControlPriceFieldTarget ? this.controlPriceFieldTarget.value.trim() : ""
-    if (this.hasControlDiscountInputTarget) this.controlDiscountInputTarget.value = this.hasControlDiscountFieldTarget ? this.controlDiscountFieldTarget.value.trim() : ""
-    if (this.hasControlTaxInputTarget) this.controlTaxInputTarget.value = this.hasControlTaxFieldTarget ? this.controlTaxFieldTarget.value : ""
+    if (this.hasControlPriceInputTarget) {
+      this.controlPriceInputTarget.value = applying && action === "price_override" && this.hasControlPriceFieldTarget
+        ? this.controlPriceFieldTarget.value.trim()
+        : ""
+    }
+    if (this.hasControlDiscountInputTarget) {
+      this.controlDiscountInputTarget.value = applying && action === "line_discount" && this.hasControlDiscountFieldTarget
+        ? this.controlDiscountFieldTarget.value.trim()
+        : ""
+    }
+    if (this.hasControlTaxInputTarget) {
+      this.controlTaxInputTarget.value = applying && action === "tax_class_override" && this.hasControlTaxFieldTarget
+        ? this.controlTaxFieldTarget.value
+        : ""
+    }
     if (this.hasControlApproverUserInputTarget) {
       this.controlApproverUserInputTarget.value = this.hasApproverUsernameTarget ? this.approverUsernameTarget.value.trim() : ""
     }

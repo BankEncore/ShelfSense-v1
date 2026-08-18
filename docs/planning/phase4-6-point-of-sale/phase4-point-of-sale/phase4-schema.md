@@ -235,7 +235,7 @@ Optional keys may be added in later operation versions without expanding the rel
 
 ### 8.2 `pos_controlled_actions` (6.4)
 
-Currently effective executed controlled-action fact. See [controlled-actions.md](../phase6-pos-mvp/controlled-actions.md). Unique `(pos_transaction_line_id, action_type)` where the line is present. Child of `pos_transactions`; readonly when the parent is commercially immutable. `audit_events` remain the activity log.
+Currently effective executed controlled-action fact. See [controlled-actions.md](../phase6-pos-mvp/controlled-actions.md). Unique `(pos_transaction_line_id, action_type)` where the line is present. Child of `pos_transactions`; readonly when the parent is commercially immutable. `executed_at`, `created_at`, and `updated_at` are timestamptz. `audit_events` remain the activity log.
 
 ---
 

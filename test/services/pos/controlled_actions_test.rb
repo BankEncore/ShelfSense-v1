@@ -431,6 +431,113 @@ class PosControlledActionsTest < ActiveSupport::TestCase
     refute payload.key?("controlled_actions")
   end
 
+  test "completion refuses stored material_values that do not match Core" do
+    transaction, line = start_sale(@manager)
+    apply_action(
+      transaction, line, @manager,
+      action_type: "price_override",
+      operation: "apply",
+      reason_code: "damaged",
+      selling_unit_price_cents: 1500
+    )
+    action = line.pos_controlled_actions.find_by!(action_type: "price_override")
+    action.update_columns(material_values: action.material_values.merge("requested_selling_unit_price_cents" => 500))
+    tender!(transaction.reload, @manager)
+
+    error = assert_raises(Pos::Error) { complete!(transaction.reload, @manager) }
+    assert_match(/material values/, error.message)
+  end
+
+  test "verify requires the complete 6.4 controlled_actions shape when present" do
+    payload = completed_override_envelope
+    Pos::CompletedTransactionFacts.new(payload).verify!
+
+    missing_subject = payload.deep_dup
+    missing_subject["controlled_actions"].first.delete("subject")
+    error = assert_raises(Pos::Error) { Pos::CompletedTransactionFacts.new(missing_subject).verify! }
+    assert_match(/subject line_id/, error.message)
+
+    missing_reason = payload.deep_dup
+    missing_reason["controlled_actions"].first.delete("reason")
+    error = assert_raises(Pos::Error) { Pos::CompletedTransactionFacts.new(missing_reason).verify! }
+    assert_match(/reason/, error.message)
+
+    missing_version = payload.deep_dup
+    missing_version["controlled_actions"].first["policy_context"].delete("version")
+    error = assert_raises(Pos::Error) { Pos::CompletedTransactionFacts.new(missing_version).verify! }
+    assert_match(/policy version/, error.message)
+
+    missing_material = payload.deep_dup
+    missing_material["controlled_actions"].first.delete("material_values")
+    error = assert_raises(Pos::Error) { Pos::CompletedTransactionFacts.new(missing_material).verify! }
+    assert_match(/material_values/, error.message)
+
+    missing_executed = payload.deep_dup
+    missing_executed["controlled_actions"].first.delete("executed_at")
+    error = assert_raises(Pos::Error) { Pos::CompletedTransactionFacts.new(missing_executed).verify! }
+    assert_match(/executed_at/, error.message)
+  end
+
+  test "verify requires approver name when a controlled action needed approval" do
+    transaction, line = start_sale(@associate)
+    apply_action(
+      transaction, line, @associate,
+      action_type: "price_override",
+      operation: "apply",
+      reason_code: "damaged",
+      selling_unit_price_cents: 1500,
+      approver_username: "mgr64",
+      approver_password: "correct-horse-battery"
+    )
+    tender!(transaction.reload, @associate)
+    payload = complete!(transaction.reload, @associate).operation.envelope.deep_dup
+    Pos::CompletedTransactionFacts.new(payload).verify!
+
+    payload["controlled_actions"].first.delete("approved_by_name")
+    error = assert_raises(Pos::Error) { Pos::CompletedTransactionFacts.new(payload).verify! }
+    assert_match(/approved_by_name/, error.message)
+  end
+
+  test "tax class name backfill does not copy live names onto completed lines" do
+    transaction, completed_line = start_sale(@manager)
+    tender!(transaction, @manager)
+    complete!(transaction.reload, @manager)
+    _working_transaction, working_line = start_sale(@manager)
+
+    PosTransactionLine.where(id: [ completed_line.id, working_line.id ]).update_all(
+      default_tax_class_id: nil,
+      default_tax_class_code_snapshot: nil,
+      default_tax_class_name_snapshot: nil,
+      tax_class_name_snapshot: nil
+    )
+    @book.update_columns(name: "Books — Physical")
+
+    ActiveRecord::Base.connection.execute(<<~SQL)
+      UPDATE pos_transaction_lines
+      SET default_tax_class_id = tax_class_id,
+          default_tax_class_code_snapshot = tax_class_code_snapshot
+      WHERE default_tax_class_id IS NULL
+    SQL
+    ActiveRecord::Base.connection.execute(<<~SQL)
+      UPDATE pos_transaction_lines AS l
+      SET default_tax_class_name_snapshot = t.name,
+          tax_class_name_snapshot = t.name
+      FROM tax_classes AS t, pos_transactions AS tx
+      WHERE t.id = l.tax_class_id
+        AND tx.id = l.pos_transaction_id
+        AND tx.status = 'working'
+    SQL
+
+    completed_line.reload
+    working_line.reload
+    assert_equal @book.id, completed_line.default_tax_class_id
+    assert_equal "physical_book", completed_line.default_tax_class_code_snapshot
+    assert_nil completed_line.default_tax_class_name_snapshot
+    assert_nil completed_line.tax_class_name_snapshot
+    assert_equal "Books — Physical", working_line.default_tax_class_name_snapshot
+    assert_equal "Books — Physical", working_line.tax_class_name_snapshot
+  end
+
   private
 
   def start_sale(actor)
@@ -475,5 +582,18 @@ class PosControlledActionsTest < ActiveSupport::TestCase
       expected_lock_version: transaction.lock_version,
       expected_total_cents: transaction.total_cents
     )
+  end
+
+  def completed_override_envelope
+    transaction, line = start_sale(@manager)
+    apply_action(
+      transaction, line, @manager,
+      action_type: "price_override",
+      operation: "apply",
+      reason_code: "damaged",
+      selling_unit_price_cents: 1500
+    )
+    tender!(transaction.reload, @manager)
+    complete!(transaction.reload, @manager).operation.envelope.deep_dup
   end
 end
