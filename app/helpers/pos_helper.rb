@@ -29,6 +29,14 @@ module PosHelper
     transaction.cashier_name_snapshot.presence || "Not captured"
   end
 
+  def pos_history_line_description(line)
+    snapshot = line.merchandise_snapshot
+    return "Description not captured" unless snapshot.is_a?(Hash)
+    return "Description not captured" if snapshot["description"].blank?
+
+    pos_snapshot_line_description(snapshot)
+  end
+
   def pos_tender_summary(transaction)
     transaction.pos_tenders.sort_by(&:tender_number).map(&:tender_name).join(" + ")
   end

@@ -173,6 +173,42 @@ class PosTransactionHistoryTest < ActionDispatch::IntegrationTest
     assert_select "option[value='#{other_register.id}']"
   end
 
+  test "history does not substitute live product names when the merchandise snapshot is missing" do
+    transaction = complete_cash_sale!
+    line = transaction.pos_transaction_lines.first
+    PosTransactionLine.where(id: line.id).update_all(merchandise_snapshot: {})
+    @variant.product.update!(name: "Live Catalog Name After History")
+
+    get pos_transaction_path(transaction)
+    assert_response :success
+    assert_match "Description not captured", response.body
+    refute_match "Live Catalog Name After History", response.body
+    refute_match "Example Book", response.body
+    assert_select ".pos-receipt__print", text: /Description unavailable/
+  end
+
+  test "history register link resumes the bound session when the cashier has several open" do
+    other_register = Register.create!(store: @store, register_number: 2, name: "Back")
+    pos_open_context(store: @store, actor: @actor, register: other_register)
+    assert_equal 2, PosSession.open.where(store: @store, cashier_user: @actor).count
+
+    get pos_transactions_path
+    assert_response :success
+    assert_select "a[href='#{pos_register_enter_path}']", text: "Register"
+
+    post pos_register_enter_path, params: {
+      register_id: other_register.id,
+      opening_float: "0.00",
+      confirmed_business_date: @context[:period].business_date.iso8601
+    }
+    assert_equal other_register.id.to_s, session[:pos_register_id].to_s
+
+    get pos_transactions_path
+    assert_response :success
+    assert_select "a[href='#{pos_register_workspace_path(register_id: other_register.id)}']", text: "Register"
+    assert_select "a[href='#{pos_register_workspace_path(register_id: @register.id)}']", text: "Register", count: 0
+  end
+
   private
 
   def sign_in_as(username)

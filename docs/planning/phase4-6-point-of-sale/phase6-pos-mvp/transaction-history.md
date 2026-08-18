@@ -18,6 +18,7 @@ exact receipt reference is a sufficient lookup
 search date means business_date
 cashier_name_snapshot on new completions; null displays "Not captured"
 history never rebinds session[:pos_register_id]
+history Register resume is deterministic (bound Session, else exactly one, else enter)
 immediate completion and historical lookup are separate screens
 reprint is marked REPRINT, keeps original identity, creates no commercial state
 history renders Core snapshots; it does not parse the envelope
@@ -182,7 +183,7 @@ Header from receipt snapshots (`store_number_snapshot`, `register_number_snapsho
 
 Lines from Core + `merchandise_snapshot`: line number, `direction` (always `sale` in 6.3), quantity, description, SKU, Used `condition_code` / `unit_identifier` when present, reference unit price, selling unit price, extended, line tax, line total.
 
-Do **not** join live Product / InventoryUnit / MerchandiseCondition for historical description.
+Do **not** join live Product / InventoryUnit / MerchandiseCondition for historical description. Absent or blank snapshot description displays `Description not captured`; never substitute today’s Product name.
 
 Default tax: line tax + transaction tax. Collapsed details: stored `PosLineTaxComponent` rows where `applies` is true (name, rate, taxable basis, tax). Omit non-applicable determinations.
 
@@ -205,7 +206,7 @@ No reprint table. No reprint audit in 6.3 (`window.print` stays client-side).
 - Application nav (next to Register): `pos.transact` + current store — lookup without opening a Session.
 - Register workspace header: Transactions. Does not cancel or complete a working basket.
 - Immediate completion actions may include Transactions (POS layout has no application nav).
-- History pages: Store, signed-in user, Transactions, Register (workspace if *this* cashier has an open Session at the current Store, else enter). No New sale / Close register / scan field.
+- History pages: Store, signed-in user, Transactions, Register. Register resumes the bound Register when `session[:pos_register_id]` has an open Session owned by this cashier; otherwise the cashier’s sole open Session at this Store; otherwise enter. No New sale / Close register / scan field. Multiple open Sessions never pick an arbitrary Register.
 
 History stays under `/pos` with the POS importmap. No 6.3 keyboard shortcut (6.7). Do not add Hotwire to admin chrome.
 
@@ -252,11 +253,13 @@ Envelope remains durable provenance. Required history behavior uses normalized C
 7. Historical detail shows line, unit, tax, tender, cashier, timing, receipt, and total facts from completed snapshots.
 8. History remains materially unchanged after live Product / Tender / User changes; Used unit identity survives unit removal.
 9. Null `cashier_name_snapshot` displays `Not captured`, not the live user name.
-10. Historical print uses the original receipt identity and a visible **REPRINT** marker; customer print omits external tender references.
-11. Reprint creates no commercial / inventory / tender / receipt-sequence effects.
-12. Historical show does not set `session[:pos_register_id]`.
-13. 6.5 can later attach Return items to historical line IDs without redesigning this surface.
-14. Phase 5/6.1/6.2 checkout and close/Z remain green.
+10. Absent or blank `merchandise_snapshot` description displays `Description not captured`, never the live Product name.
+11. Historical print uses the original receipt identity and a visible **REPRINT** marker; customer print omits external tender references.
+12. Reprint creates no commercial / inventory / tender / receipt-sequence effects.
+13. Historical show does not set `session[:pos_register_id]`.
+14. History Register resumes the bound open Session when present; the cashier’s sole open Session otherwise; enter when several Sessions are open and none is bound.
+15. 6.5 can later attach Return items to historical line IDs without redesigning this surface.
+16. Phase 5/6.1/6.2 checkout and close/Z remain green.
 
 ---
 
