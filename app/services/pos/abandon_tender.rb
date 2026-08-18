@@ -20,7 +20,7 @@ module Pos
       PosTransaction.transaction do
         transaction = Pos::Support.lock_working_transaction!(@transaction, @expected_lock_version)
         if Pos::Support.clear_working_tenders!(transaction)
-          transaction.update!(updated_at: Time.current)
+          Pos::Support.touch_working_transaction!(transaction)
         end
         transaction
       end

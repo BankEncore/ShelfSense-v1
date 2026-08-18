@@ -29,7 +29,7 @@ Each frame annotates:
 
 In-flight (any mutating POST waiting): primary field disabled; a second Enter must not queue another mutation.
 
-Hidden fields (not drawn): `lock_version`; on completion-pending, `completion_operation_id`, `expected_total_cents`, `amount_presented_cents`. Stimulus does not recompute those.
+Hidden fields (not drawn): `lock_version`; on completion-pending, `completion_operation_id`, `expected_total_cents`. Stimulus does not recompute those.
 
 ---
 

@@ -22,21 +22,39 @@ module Pos
       PosTransaction.transaction do
         transaction = Pos::Support.lock_working_transaction!(@transaction, @expected_lock_version)
         raise Pos::Error, "transaction has no merchandise" if transaction.pos_transaction_lines.none?
-        if @amount_presented_cents < transaction.total_cents
+
+        cash_type = Pos::Support.cash_tender_type
+        raise Pos::Error, "Cash is not available" unless cash_type.active?
+
+        existing = transaction.pos_tenders.cash.first
+        remaining = Pos::Support.remaining_due_cents(transaction, except: existing)
+        raise Pos::Error, "no remaining amount due" if remaining <= 0
+
+        if remaining == transaction.total_cents && @amount_presented_cents < remaining
           raise Pos::Error, "presented amount is less than amount due"
         end
 
-        applied = transaction.total_cents
-        change = @amount_presented_cents - applied
-        Pos::Support.clear_working_tenders!(transaction)
-        tender = transaction.pos_tenders.create!(
-          tender_type: "cash",
+        if @amount_presented_cents >= remaining
+          applied = remaining
+          change = @amount_presented_cents - applied
+        else
+          applied = @amount_presented_cents
+          change = 0
+        end
+
+        tender = existing || transaction.pos_tenders.new(
           direction: "payment",
+          tender_number: Pos::Support.next_tender_number(transaction)
+        )
+        Pos::Support.snapshot_tender_identity!(tender, cash_type)
+        tender.assign_attributes(
           amount_cents: applied,
           amount_presented_cents: @amount_presented_cents,
-          change_cents: change
+          change_cents: change,
+          external_reference: nil
         )
-        transaction.update!(updated_at: Time.current)
+        tender.save!
+        Pos::Support.touch_working_transaction!(transaction)
         tender
       end
     end

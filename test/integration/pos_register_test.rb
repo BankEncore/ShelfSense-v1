@@ -85,6 +85,83 @@ class PosRegisterTest < ActionDispatch::IntegrationTest
     refute_equal transaction.id, PosTransaction.working.find_by!(pos_session: transaction.pos_session).id
   end
 
+  test "workspace serializes cashier tender identities as JSON including names with pipes" do
+    card = TenderType.find_by!(code: "card")
+    cash = TenderType.find_by!(code: "cash")
+    card.update!(name: "Credit | Debit")
+    voucher = TenderType.create!(
+      code: "voucher",
+      name: "Voucher",
+      behavioral_category: "other",
+      external_reference_policy: "omitted",
+      active: true
+    )
+    campus = TenderType.create!(
+      code: "campus_charge",
+      name: "Campus Charge",
+      behavioral_category: "other",
+      external_reference_policy: "required",
+      active: true
+    )
+
+    post pos_register_enter_path, params: enter_params(opening_float: "50.00")
+    follow_redirect!
+    transaction = PosTransaction.working.find_by!(register: @register)
+    post pos_register_merchandise_path, params: { identifier: @variant.sku, lock_version: transaction.lock_version }
+    assert_response :success
+
+    payload = JSON.parse(css_select("#pos_workspace").first["data-register-workspace-tender-types-value"])
+    by_id = payload.index_by { |row| row.fetch("id") }
+    assert_equal "Credit | Debit", by_id.fetch(card.id.to_s).fetch("name")
+    assert_equal "card", by_id.fetch(card.id.to_s).fetch("category")
+    assert_equal "optional", by_id.fetch(card.id.to_s).fetch("reference_policy")
+    assert_equal "omitted", by_id.fetch(cash.id.to_s).fetch("reference_policy")
+    assert_equal "omitted", by_id.fetch(voucher.id.to_s).fetch("reference_policy")
+    assert_equal "required", by_id.fetch(campus.id.to_s).fetch("reference_policy")
+    assert_equal %w[cash card check other other], payload.map { |row| row.fetch("category") }
+  end
+
+  test "workspace can take Card then Cash and complete" do
+    post pos_register_enter_path, params: enter_params(opening_float: "50.00")
+    follow_redirect!
+    transaction = PosTransaction.working.find_by!(register: @register)
+    post pos_register_merchandise_path, params: { identifier: @variant.sku, lock_version: transaction.lock_version }
+    transaction.reload
+    card = TenderType.find_by!(code: "card")
+    post pos_register_tender_path, params: {
+      amount_presented: "10.00",
+      tender_type_id: card.id,
+      external_reference: "AUTH-9",
+      lock_version: transaction.lock_version
+    }
+    assert_response :success
+    assert_match "External Card", response.body
+    assert_match "Amount due", response.body
+    transaction.reload
+    cash = TenderType.find_by!(code: "cash")
+    post pos_register_tender_path, params: {
+      amount_presented: "25.00",
+      tender_type_id: cash.id,
+      lock_version: transaction.lock_version
+    }
+    assert_response :success
+    assert_match "CHANGE", response.body
+    transaction.reload
+    operation_id = css_select("input[name='completion_operation_id']").first["value"]
+    post pos_transaction_complete_path(transaction), params: {
+      completion_operation_id: operation_id,
+      lock_version: transaction.lock_version,
+      expected_total_cents: transaction.total_cents
+    }
+    assert_redirected_to pos_completed_transaction_path(transaction)
+    follow_redirect!
+    assert_match "External Card", response.body
+    assert_match "AUTH-9", response.body
+    assert_select ".pos-receipt__print", text: /AUTH-9/, count: 0
+    completed = transaction.reload
+    assert_equal %w[card cash], completed.pos_tenders.ordered.map(&:behavioral_category)
+  end
+
   test "occupied register is denied on get and post enter" do
     Pos::EnterRegister.call(store: @store, register: @register, actor: @actor, opening_float_cents: 0)
     other = pos_transacting_user(store: @store, assigned_by: @actor, username: "clerk_pos")
@@ -218,8 +295,7 @@ class PosRegisterTest < ActionDispatch::IntegrationTest
       actor: @actor,
       operation_id: operation_id,
       expected_lock_version: transaction.lock_version,
-      expected_total_cents: transaction.total_cents,
-      amount_presented_cents: 2500
+      expected_total_cents: transaction.total_cents
     )
     post pos_transaction_complete_path(transaction), params: {
       completion_operation_id: operation_id,
@@ -275,8 +351,7 @@ class PosRegisterTest < ActionDispatch::IntegrationTest
       transaction: transaction,
       operation_id: operation_id,
       expected_lock_version: transaction.lock_version,
-      expected_total_cents: transaction.total_cents,
-      amount_presented_cents: 2500
+      expected_total_cents: transaction.total_cents
     )
     Pos::OperationLease.begin!(
       register_id: transaction.register_id,

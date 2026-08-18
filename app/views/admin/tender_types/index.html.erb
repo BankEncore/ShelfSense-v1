@@ -1,0 +1,21 @@
+<% content_for :title, "Tender types" %>
+
+<%= render "shared/breadcrumbs", crumbs: [
+  { name: "Home", path: root_path },
+  { name: "Tender types" }
+] %>
+
+<%= render "shared/page_header",
+      title: "Tender types",
+      actions: link_to("New Other tender", new_admin_tender_type_path, class: "btn") %>
+
+<% rows = @tender_types.map { |type|
+     [
+       link_to(type.code, admin_tender_type_path(type)),
+       type.name,
+       type.behavioral_category.humanize,
+       type.external_reference_policy.humanize,
+       configuration_status_badge(type.active?)
+     ]
+   } %>
+<%= render "shared/data_table", headers: ["Code", "Name", "Category", "Reference", "Status"], rows: rows %>

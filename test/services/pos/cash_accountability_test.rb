@@ -185,6 +185,9 @@ class PosCashAccountabilityTest < ActiveSupport::TestCase
     assert_equal 100, period.finalized_tax_cents
     assert_equal 2099, period.finalized_total_cents
     assert_equal 2099, period.finalized_cash_payment_cents
+    assert_equal 0, period.finalized_card_payment_cents
+    assert_equal 0, period.finalized_check_payment_cents
+    assert_equal 0, period.finalized_other_payment_cents
     assert_equal 1, period.finalized_session_count
     assert_equal 10_000, period.finalized_opening_float_cents_sum
     assert_equal 12_099, period.finalized_closing_expected_cash_cents_sum
@@ -233,6 +236,9 @@ class PosCashAccountabilityTest < ActiveSupport::TestCase
     assert_equal 0, period.finalized_tax_cents
     assert_equal 0, period.finalized_total_cents
     assert_equal 0, period.finalized_cash_payment_cents
+    assert_equal 0, period.finalized_card_payment_cents
+    assert_equal 0, period.finalized_check_payment_cents
+    assert_equal 0, period.finalized_other_payment_cents
     assert_equal 0, period.finalized_session_count
     assert_equal 0, period.finalized_opening_float_cents_sum
     assert_equal 0, period.finalized_closing_expected_cash_cents_sum
@@ -553,8 +559,7 @@ class PosCashAccountabilityTest < ActiveSupport::TestCase
       actor: @actor,
       operation_id: SecureRandom.uuid_v7,
       expected_lock_version: transaction.lock_version,
-      expected_total_cents: transaction.total_cents,
-      amount_presented_cents: amount_presented_cents
+      expected_total_cents: transaction.total_cents
     )
   end
 end

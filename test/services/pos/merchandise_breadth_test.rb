@@ -316,8 +316,7 @@ class PosMerchandiseBreadthTest < ActiveSupport::TestCase
       actor: @actor,
       operation_id: operation_id,
       expected_lock_version: transaction.lock_version,
-      expected_total_cents: transaction.total_cents,
-      amount_presented_cents: amount_presented_cents
+      expected_total_cents: transaction.total_cents
     )
   end
 end

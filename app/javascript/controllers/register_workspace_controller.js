@@ -9,6 +9,7 @@ export default class extends Controller {
     "overlay",
     "completeForm",
     "tenderForm",
+    "removeTenderForm",
     "merchandiseForm",
     "quantityForm",
     "removeForm",
@@ -16,6 +17,12 @@ export default class extends Controller {
     "identifierInput",
     "quantityInput",
     "presentedInput",
+    "tenderTypeInput",
+    "referenceInput",
+    "referenceField",
+    "referenceWrap",
+    "referenceLabel",
+    "removeTenderInput",
     "quantityLineInput",
     "removeLineInput",
     "dontCancel",
@@ -33,7 +40,8 @@ export default class extends Controller {
   static values = {
     mode: String,
     autoComplete: Boolean,
-    workspaceUrl: String
+    workspaceUrl: String,
+    tenderTypes: Array
   }
 
   connect() {
@@ -94,7 +102,18 @@ export default class extends Controller {
       this.openOverlay()
       return
     }
-    if (this.modeValue !== "sale_entry") return
+    if (this.modeValue !== "sale_entry" && this.modeValue !== "tender") return
+
+    if (this.modeValue === "tender") {
+      if (event.key === "F2") {
+        event.preventDefault()
+        this.cycleTenderType()
+      } else if (event.key === "F8") {
+        event.preventDefault()
+        this.removeLastTender()
+      }
+      return
+    }
 
     if (event.key === "*") {
       event.preventDefault()
@@ -145,6 +164,10 @@ export default class extends Controller {
     const value = this.fieldTarget.value.trim()
     if (!value) return
     this.presentedInputTarget.value = value
+    if (this.hasReferenceInputTarget) {
+      const capture = this.hasReferenceWrapTarget && !this.referenceWrapTarget.hidden && this.hasReferenceFieldTarget
+      this.referenceInputTarget.value = capture ? this.referenceFieldTarget.value.trim() : ""
+    }
     this.beginFlight()
     this.tenderFormTarget.requestSubmit()
   }
@@ -179,6 +202,7 @@ export default class extends Controller {
     if (this.modeValue !== "sale_entry") return
     if (!this.element.querySelector(".pos-lines tbody tr")) return
     this.setMode("tender", "CASH TENDER")
+    this.selectTenderType(this.cashTenderIndex())
     const due = this.element.querySelector(".pos-totals__due")
     const dueText = due ? due.textContent.trim() : "Amount due"
     this.setFieldLabel(`${dueText}. Cash presented`)
@@ -199,13 +223,75 @@ export default class extends Controller {
     this.removeFormTarget.requestSubmit()
   }
 
+  cycleTenderType() {
+    const types = this.cashierTenderTypes()
+    if (types.length === 0) return
+    const current = this.hasTenderTypeInputTarget ? this.tenderTypeInputTarget.value : types[0].id
+    const index = Math.max(0, types.findIndex((type) => type.id === current))
+    this.selectTenderType((index + 1) % types.length)
+  }
+
+  selectTenderType(index) {
+    const types = this.cashierTenderTypes()
+    if (types.length === 0) return
+    const safeIndex = ((index % types.length) + types.length) % types.length
+    const type = types[safeIndex]
+    if (this.hasTenderTypeInputTarget) this.tenderTypeInputTarget.value = type.id
+    const cash = type.category === "cash"
+    const name = type.name || (cash ? "Cash" : "Tender")
+    this.setMode("tender", cash ? "CASH TENDER" : "TENDER")
+    const due = this.element.querySelector(".pos-totals__due")
+    const dueText = due ? due.textContent.trim() : "Amount due"
+    this.setFieldLabel(cash ? `${dueText}. Cash presented` : `${dueText}. ${name} amount`)
+    this.toggleReferenceField(type.reference_policy)
+  }
+
+  cashTenderIndex() {
+    const index = this.cashierTenderTypes().findIndex((type) => type.category === "cash")
+    return index >= 0 ? index : 0
+  }
+
+  cashierTenderTypes() {
+    return Array.isArray(this.tenderTypesValue) ? this.tenderTypesValue : []
+  }
+
+  toggleReferenceField(policy) {
+    if (!this.hasReferenceWrapTarget) return
+    const show = this.modeValue === "tender" && policy !== "omitted"
+    this.referenceWrapTarget.hidden = !show
+    if (show && this.hasReferenceLabelTarget) {
+      this.referenceLabelTarget.textContent = policy === "required" ? "Reference (required)" : "Reference (optional)"
+    }
+    if (!show && this.hasReferenceFieldTarget) this.referenceFieldTarget.value = ""
+  }
+
+  removeLastTender() {
+    if (this.inFlight) return
+    if (!this.hasRemoveTenderFormTarget || !this.hasRemoveTenderInputTarget) return
+    if (!this.removeTenderInputTarget.value) return
+    this.beginFlight()
+    this.removeTenderFormTarget.requestSubmit()
+  }
+
   escape() {
     if (this.inFlight) return
-    if (this.modeValue === "quantity" || this.modeValue === "tender") {
+    if (this.modeValue === "quantity") {
       this.setMode("sale_entry", "SALE ENTRY")
       this.setFieldLabel("Scan or identifier")
       this.fieldTarget.inputMode = "text"
       this.fieldTarget.value = ""
+      this.toggleReferenceField("omitted")
+      this.enableReadyActions()
+      this.fieldTarget.focus()
+      return
+    }
+    if (this.modeValue === "tender") {
+      if (this.hasRemoveTenderInputTarget && this.removeTenderInputTarget.value) return
+      this.setMode("sale_entry", "SALE ENTRY")
+      this.setFieldLabel("Scan or identifier")
+      this.fieldTarget.inputMode = "text"
+      this.fieldTarget.value = ""
+      this.toggleReferenceField("omitted")
       this.enableReadyActions()
       this.fieldTarget.focus()
     }
@@ -270,8 +356,9 @@ export default class extends Controller {
 
   beginFlight() {
     this.inFlight = true
-    if (this.hasFieldTarget) this.fieldTarget.disabled = true
     this.disableMutationControls()
+    if (this.hasReferenceFieldTarget) this.referenceFieldTarget.disabled = true
+    if (this.hasFieldTarget) this.fieldTarget.disabled = true
   }
 
   disableMutationControls() {
@@ -333,6 +420,10 @@ export default class extends Controller {
     if (!this.hasFieldTarget) return
     if (this.fieldTarget.disabled) return
     this.fieldTarget.focus()
+    requestAnimationFrame(() => {
+      if (!this.hasFieldTarget || this.fieldTarget.disabled) return
+      this.fieldTarget.focus()
+    })
   }
 
   setMode(mode, heading) {

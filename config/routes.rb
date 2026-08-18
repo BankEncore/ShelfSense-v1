@@ -74,6 +74,9 @@ Rails.application.routes.draw do
     resources :adjustment_reasons do
       member { post :reactivate }
     end
+    resources :tender_types do
+      member { post :reactivate }
+    end
     resource :inventory_reconciliation, only: %i[show], controller: "inventory_reconciliations"
   end
 
@@ -87,6 +90,7 @@ Rails.application.routes.draw do
     post "register/abandon_tender", to: "workspaces#abandon_tender"
     post "register/cancel", to: "workspaces#cancel"
     post "register/tender", to: "workspaces#tender"
+    post "register/remove_tender", to: "workspaces#remove_tender"
     post "register/continue", to: "workspaces#continue"
     post "transactions/:transaction_id/complete", to: "workspaces#complete", as: :transaction_complete
     get "transactions/:id/completed", to: "completed_transactions#show", as: :completed_transaction

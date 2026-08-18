@@ -230,8 +230,7 @@ class PosWorkspaceInvariantsTest < ActiveSupport::TestCase
         actor: @actor,
         operation_id: first_id,
         expected_lock_version: transaction.lock_version,
-        expected_total_cents: transaction.total_cents,
-        amount_presented_cents: 2500
+        expected_total_cents: transaction.total_cents
       )
     end
     assert_equal first_id, Pos::FindCompletionOperation.call(transaction: transaction.reload, actor: @actor).id
@@ -258,8 +257,7 @@ class PosWorkspaceInvariantsTest < ActiveSupport::TestCase
         actor: @actor,
         operation_id: second_id,
         expected_lock_version: transaction.lock_version,
-        expected_total_cents: transaction.total_cents,
-        amount_presented_cents: 2500
+        expected_total_cents: transaction.total_cents
       )
     end
     found = Pos::FindCompletionOperation.call(transaction: transaction.reload, actor: @actor)
@@ -276,8 +274,7 @@ class PosWorkspaceInvariantsTest < ActiveSupport::TestCase
         actor: @actor,
         operation_id: older_failed,
         expected_lock_version: transaction.lock_version,
-        expected_total_cents: transaction.total_cents,
-        amount_presented_cents: 2500
+        expected_total_cents: transaction.total_cents
       )
     end
     newer_failed = SecureRandom.uuid_v7
@@ -287,8 +284,7 @@ class PosWorkspaceInvariantsTest < ActiveSupport::TestCase
         actor: @actor,
         operation_id: newer_failed,
         expected_lock_version: transaction.lock_version,
-        expected_total_cents: transaction.total_cents,
-        amount_presented_cents: 2500
+        expected_total_cents: transaction.total_cents
       )
     end
     assert_equal newer_failed, Pos::FindCompletionOperation.call(transaction: transaction.reload, actor: @actor).id
@@ -298,8 +294,7 @@ class PosWorkspaceInvariantsTest < ActiveSupport::TestCase
       transaction: transaction,
       operation_id: in_flight_id,
       expected_lock_version: transaction.lock_version,
-      expected_total_cents: transaction.total_cents,
-      amount_presented_cents: transaction.pos_tenders.find_by!(tender_type: "cash").amount_presented_cents
+      expected_total_cents: transaction.total_cents
     )
     Pos::OperationLease.begin!(
       register_id: transaction.register_id,
@@ -313,7 +308,7 @@ class PosWorkspaceInvariantsTest < ActiveSupport::TestCase
     assert_equal "in_flight", found.status
   end
 
-  test "find completion operation is denied to a second cashier and nil without a cash tender" do
+  test "find completion operation is denied to a second cashier and nil without exact settlement" do
     transaction = Pos::StartTransaction.call(session: @context[:session], actor: @actor)
     assert_nil Pos::FindCompletionOperation.call(transaction: transaction, actor: @actor)
 
@@ -350,8 +345,7 @@ class PosWorkspaceInvariantsTest < ActiveSupport::TestCase
       actor: @actor,
       operation_id: SecureRandom.uuid_v7,
       expected_lock_version: transaction.lock_version,
-      expected_total_cents: transaction.total_cents,
-      amount_presented_cents: transaction.pos_tenders.first.amount_presented_cents
+      expected_total_cents: transaction.total_cents
     )
   end
 end

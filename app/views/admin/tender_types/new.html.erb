@@ -1,0 +1,10 @@
+<% content_for :title, "New Other tender" %>
+
+<%= render "shared/breadcrumbs", crumbs: [
+  { name: "Home", path: root_path },
+  { name: "Tender types", path: admin_tender_types_path },
+  { name: "New" }
+] %>
+
+<h1>New Other tender</h1>
+<%= render "form", tender_type: @tender_type %>

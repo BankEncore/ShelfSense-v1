@@ -27,10 +27,19 @@ module Pos
     end
 
     def cash_tender_cents
-      PosTender.joins(:pos_transaction)
-               .where(pos_transactions: { pos_session_id: @session.id, status: "completed" })
-               .where(tender_type: "cash", direction: "payment")
-               .sum(:amount_cents)
+      category_payment_cents("cash")
+    end
+
+    def card_tender_cents
+      category_payment_cents("card")
+    end
+
+    def check_tender_cents
+      category_payment_cents("check")
+    end
+
+    def other_tender_cents
+      category_payment_cents("other")
     end
 
     def expected_cash_cents
@@ -48,6 +57,13 @@ module Pos
     end
 
     private
+
+    def category_payment_cents(category)
+      PosTender.joins(:pos_transaction)
+               .where(pos_transactions: { pos_session_id: @session.id, status: "completed" })
+               .where(behavioral_category: category, direction: "payment")
+               .sum(:amount_cents)
+    end
 
     def completed_transactions
       @session.pos_transactions.completed

@@ -47,6 +47,12 @@ module PosHelper
     Pos::ReceiptIdentity.pad(register.register_number, 2)
   end
 
+  def pos_optional_money_cents(cents)
+    return "not captured" if cents.nil?
+
+    format_money_cents(cents)
+  end
+
   def pos_mode_label(mode)
     {
       "sale_entry" => "SALE ENTRY",

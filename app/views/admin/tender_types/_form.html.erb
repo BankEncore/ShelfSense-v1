@@ -1,0 +1,24 @@
+<%= form_with model: [:admin, tender_type], class: "form" do |form| %>
+  <%= render "shared/form_errors", record: tender_type %>
+  <%= form.hidden_field :lock_version %>
+  <% unless tender_type.persisted? %>
+    <div class="form-field"><%= form.label :code %><%= form.text_field :code %></div>
+  <% end %>
+  <div class="form-field"><%= form.label :name %><%= form.text_field :name %></div>
+  <% unless tender_type.cash? %>
+    <div class="form-field">
+      <%= form.label :external_reference_policy, "Reference policy" %>
+      <%= form.select :external_reference_policy, TenderType::REFERENCE_POLICIES.map { |policy| [policy.humanize, policy] } %>
+    </div>
+    <% if tender_type.persisted? %>
+      <div class="form-field">
+        <%= form.check_box :active %>
+        <%= form.label :active, "Active" %>
+      </div>
+    <% end %>
+  <% end %>
+  <div class="actions">
+    <%= form.submit class: "btn" %>
+    <%= link_to "Cancel", tender_type.persisted? ? admin_tender_type_path(tender_type) : admin_tender_types_path, class: "btn btn--ghost" %>
+  </div>
+<% end %>

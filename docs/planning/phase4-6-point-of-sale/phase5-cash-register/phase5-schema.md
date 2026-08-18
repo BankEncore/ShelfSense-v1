@@ -13,7 +13,7 @@ Companions: [Phase 5 plan](phase5-plan.md), [Phase 4 schema](../phase4-point-of-
 - Money is signed-capable integer `_cents`. Opening float, expected, and count are `>= 0`. Variance may be negative.
 - Close and finalize persist **snapshots**. Do not add live cash counters.
 - Open session: closing snapshots NULL. Closed session: closing snapshots NOT NULL.
-- Open period: all `finalized_*` fields and `finalized_by_user_id` NULL. Finalized period: those fields NOT NULL.
+- Open period: Phase 5 `finalized_*` snapshot fields and `finalized_by_user_id` NULL. Finalized period: those Phase 5 fields NOT NULL. 6.2 category columns may remain NULL on already-finalized rows (“not captured”).
 - `NULL` means **not yet frozen**. Zero is a legitimate finalized result.
 - Closed sessions and finalized periods are immutable in application code (`readonly?`) and by CHECK pairing.
 - Calculation produces the close/Z snapshot. After close/finalize, the snapshot is authority; do not treat a later recomputation as a replacement.
@@ -74,6 +74,16 @@ Z cash columns are **sums of independent session custody intervals**. They do no
 | `finalized_tax_cents` | bigint | null while open; sum of completed `tax_cents` |
 | `finalized_total_cents` | bigint | null while open; sum of completed `total_cents` |
 | `finalized_cash_payment_cents` | bigint | null while open; sum of completed cash payment `amount_cents` |
+
+### Tender-category additions (6.2)
+
+Nullable additive columns, **not** part of `closed_at_matches_status`. NULL on a finalized Z means “not captured” (pre-6.2). New finalize writes `0` when the category had no tenders.
+
+| Column | Type | Notes |
+|---|---|---|
+| `finalized_card_payment_cents` | bigint | null while open or on pre-6.2 finalized rows; `>= 0` when captured |
+| `finalized_check_payment_cents` | bigint | same |
+| `finalized_other_payment_cents` | bigint | same |
 
 ### Session-custody aggregates (from closed session snapshots)
 

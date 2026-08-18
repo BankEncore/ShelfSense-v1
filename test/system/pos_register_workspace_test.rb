@@ -47,6 +47,50 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     assert_no_text "Example Book"
   end
 
+  test "cashier can take Card then Cash and return to sale abandons working tenders" do
+    open_register
+    add_current_sku
+    click_on "Tender (+)"
+    assert_text "CASH TENDER"
+    assert_no_selector "[data-register-workspace-target='referenceWrap']", visible: true
+    send_keys :f2
+    assert_selector "[data-register-workspace-target='fieldLabel']", text: /External Card/
+    assert_selector "[data-register-workspace-target='referenceWrap']", visible: true
+    assert_field "Reference (optional)"
+    field = find("#pos-command-field")
+    field.fill_in with: "10.00"
+    field.send_keys :enter
+    assert_selector ".pos-totals", text: "External Card"
+    assert_text "Amount due"
+    assert_equal "pos-command-field", page.evaluate_script("document.activeElement && document.activeElement.id")
+    click_on "Return to sale"
+    assert_text "SALE ENTRY"
+    assert_no_selector ".pos-totals", text: "External Card"
+
+    click_on "Tender (+)"
+    send_keys :f2
+    assert_selector "[data-register-workspace-target='fieldLabel']", text: /External Card/
+    field = find("#pos-command-field")
+    field.fill_in with: "10.00"
+    field.send_keys :enter
+    assert_selector ".pos-totals", text: "External Card"
+    assert_text "Amount due"
+    field = find("#pos-command-field")
+    field.send_keys :f2
+    field.send_keys :f2
+    assert_selector "[data-register-workspace-target='fieldLabel']", text: /Cash presented/
+    field = find("#pos-command-field")
+    field.fill_in with: "50.00"
+    field.send_keys :enter
+    send_keys :enter
+
+    assert_text "Sale complete", wait: 10
+    assert_text "External Card"
+    assert_text "Cash"
+    completed = PosTransaction.completed.find_by!(register: @register)
+    assert_equal %w[card cash], completed.pos_tenders.ordered.map(&:behavioral_category)
+  end
+
   test "delete and hyphen edit the identifier and f8 removes the selected line" do
     open_register
     field = find("#pos-command-field")
@@ -335,8 +379,7 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
       transaction: transaction,
       operation_id: operation_id,
       expected_lock_version: transaction.lock_version,
-      expected_total_cents: transaction.total_cents,
-      amount_presented_cents: 2500
+      expected_total_cents: transaction.total_cents
     )
     Pos::OperationLease.begin!(
       register_id: transaction.register_id,

@@ -55,6 +55,7 @@ module Installation
         system_user = create_system_user!
         Authorization::PermissionCatalog.seed!(granted_by: system_user)
         Inventory::AdjustmentReasons.seed!
+        Pos::TenderTypes.seed!
 
         Audit::Recorder.record!(
           action: "installation.started",

@@ -27,12 +27,19 @@ module Pos
     end
 
     def cash_payment_cents
-      snapshot_or(:finalized_cash_payment_cents) do
-        PosTender.joins(:pos_transaction)
-                 .where(pos_transactions: { reporting_period_id: @period.id, status: "completed" })
-                 .where(tender_type: "cash", direction: "payment")
-                 .sum(:amount_cents)
-      end
+      snapshot_or(:finalized_cash_payment_cents) { category_payment_cents("cash") }
+    end
+
+    def card_payment_cents
+      snapshot_or(:finalized_card_payment_cents) { category_payment_cents("card") }
+    end
+
+    def check_payment_cents
+      snapshot_or(:finalized_check_payment_cents) { category_payment_cents("check") }
+    end
+
+    def other_payment_cents
+      snapshot_or(:finalized_other_payment_cents) { category_payment_cents("other") }
     end
 
     def session_count
@@ -62,6 +69,9 @@ module Pos
         finalized_tax_cents: tax_cents,
         finalized_total_cents: total_cents,
         finalized_cash_payment_cents: cash_payment_cents,
+        finalized_card_payment_cents: card_payment_cents,
+        finalized_check_payment_cents: check_payment_cents,
+        finalized_other_payment_cents: other_payment_cents,
         finalized_session_count: session_count,
         finalized_opening_float_cents_sum: opening_float_cents_sum,
         finalized_closing_expected_cash_cents_sum: closing_expected_cash_cents_sum,
@@ -76,6 +86,13 @@ module Pos
       return @period.public_send(column) if @period.finalized?
 
       yield
+    end
+
+    def category_payment_cents(category)
+      PosTender.joins(:pos_transaction)
+               .where(pos_transactions: { reporting_period_id: @period.id, status: "completed" })
+               .where(behavioral_category: category, direction: "payment")
+               .sum(:amount_cents)
     end
 
     def completed_transactions
