@@ -85,6 +85,42 @@ class PosRegisterTest < ActionDispatch::IntegrationTest
     refute_equal transaction.id, PosTransaction.working.find_by!(pos_session: transaction.pos_session).id
   end
 
+  test "workspace serializes cashier tender identities as JSON including names with pipes" do
+    card = TenderType.find_by!(code: "card")
+    cash = TenderType.find_by!(code: "cash")
+    card.update!(name: "Credit | Debit")
+    voucher = TenderType.create!(
+      code: "voucher",
+      name: "Voucher",
+      behavioral_category: "other",
+      external_reference_policy: "omitted",
+      active: true
+    )
+    campus = TenderType.create!(
+      code: "campus_charge",
+      name: "Campus Charge",
+      behavioral_category: "other",
+      external_reference_policy: "required",
+      active: true
+    )
+
+    post pos_register_enter_path, params: enter_params(opening_float: "50.00")
+    follow_redirect!
+    transaction = PosTransaction.working.find_by!(register: @register)
+    post pos_register_merchandise_path, params: { identifier: @variant.sku, lock_version: transaction.lock_version }
+    assert_response :success
+
+    payload = JSON.parse(css_select("#pos_workspace").first["data-register-workspace-tender-types-value"])
+    by_id = payload.index_by { |row| row.fetch("id") }
+    assert_equal "Credit | Debit", by_id.fetch(card.id.to_s).fetch("name")
+    assert_equal "card", by_id.fetch(card.id.to_s).fetch("category")
+    assert_equal "optional", by_id.fetch(card.id.to_s).fetch("reference_policy")
+    assert_equal "omitted", by_id.fetch(cash.id.to_s).fetch("reference_policy")
+    assert_equal "omitted", by_id.fetch(voucher.id.to_s).fetch("reference_policy")
+    assert_equal "required", by_id.fetch(campus.id.to_s).fetch("reference_policy")
+    assert_equal %w[cash card check other other], payload.map { |row| row.fetch("category") }
+  end
+
   test "workspace can take Card then Cash and complete" do
     post pos_register_enter_path, params: enter_params(opening_float: "50.00")
     follow_redirect!

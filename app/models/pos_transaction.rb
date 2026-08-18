@@ -9,7 +9,7 @@ class PosTransaction < ApplicationRecord
   belongs_to :reporting_period, class_name: "PosReportingPeriod"
   belongs_to :cashier_user, class_name: "User"
   has_many :pos_transaction_lines, -> { order(:line_number) }, dependent: :destroy
-    has_many :pos_tenders, -> { ordered }, dependent: :destroy
+  has_many :pos_tenders, -> { ordered }, dependent: :destroy
   has_many :pos_operations, dependent: :restrict_with_exception
 
   validates :status, :currency_code, presence: true

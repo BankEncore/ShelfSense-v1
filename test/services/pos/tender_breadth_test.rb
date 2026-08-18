@@ -252,6 +252,79 @@ class PosTenderBreadthTest < ActiveSupport::TestCase
     assert_equal 0, transaction.reload.pos_tenders.count
   end
 
+  test "Check-only completion snapshots Check and does not change expected Cash" do
+    transaction = start_sale
+    add_check!(transaction, amount_cents: transaction.total_cents)
+    envelope = Pos::CompleteTransaction.call(
+      transaction: transaction.reload,
+      actor: @actor,
+      operation_id: SecureRandom.uuid_v7,
+      expected_lock_version: transaction.lock_version,
+      expected_total_cents: transaction.total_cents
+    ).operation.envelope
+
+    tenders = envelope.fetch("tenders")
+    assert_equal 1, tenders.size
+    check = tenders.first
+    assert_equal "check", check.fetch("behavioral_category")
+    assert_equal "check", check.fetch("tender_type")
+    assert_equal "Check", check.fetch("tender_name")
+    assert_equal transaction.total_cents, check.fetch("amount_cents")
+    refute check.key?("amount_presented_cents")
+    refute check.key?("change_cents")
+    assert_equal "Check", transaction.reload.pos_tenders.ordered.first.tender_name
+
+    totals = Pos::SessionTotals.for(@context[:session].reload)
+    assert_equal transaction.total_cents, totals.check_tender_cents
+    assert_equal 0, totals.cash_tender_cents
+    assert_equal 10_000, totals.expected_cash_cents
+  end
+
+  test "Other-only completion snapshots required reference and does not change expected Cash" do
+    other = TenderType.create!(
+      code: "campus_charge",
+      name: "Campus Charge",
+      behavioral_category: "other",
+      external_reference_policy: "required",
+      active: true
+    )
+    transaction = start_sale
+    Pos::AddTender.call(
+      transaction: transaction,
+      actor: @actor,
+      expected_lock_version: transaction.lock_version,
+      tender_type: other,
+      amount_cents: transaction.total_cents,
+      external_reference: "PO-42"
+    )
+    envelope = Pos::CompleteTransaction.call(
+      transaction: transaction.reload,
+      actor: @actor,
+      operation_id: SecureRandom.uuid_v7,
+      expected_lock_version: transaction.lock_version,
+      expected_total_cents: transaction.total_cents
+    ).operation.envelope
+
+    tenders = envelope.fetch("tenders")
+    assert_equal 1, tenders.size
+    other_tender = tenders.first
+    assert_equal "other", other_tender.fetch("behavioral_category")
+    assert_equal "campus_charge", other_tender.fetch("tender_type")
+    assert_equal "Campus Charge", other_tender.fetch("tender_name")
+    assert_equal "PO-42", other_tender.fetch("external_reference")
+    assert_equal transaction.total_cents, other_tender.fetch("amount_cents")
+    persisted = transaction.reload.pos_tenders.ordered.first
+    assert_equal "campus_charge", persisted.tender_type
+    assert_equal "Campus Charge", persisted.tender_name
+    assert_equal "other", persisted.behavioral_category
+    assert_equal "PO-42", persisted.external_reference
+
+    totals = Pos::SessionTotals.for(@context[:session].reload)
+    assert_equal transaction.total_cents, totals.other_tender_cents
+    assert_equal 0, totals.cash_tender_cents
+    assert_equal 10_000, totals.expected_cash_cents
+  end
+
   test "FindCompletionOperation restores a token for exact mixed settlement without presented in the command" do
     transaction = start_sale
     add_card!(transaction, amount_cents: transaction.total_cents)

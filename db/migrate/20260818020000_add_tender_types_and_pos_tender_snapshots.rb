@@ -88,6 +88,8 @@ class AddTenderTypesAndPosTenderSnapshots < ActiveRecord::Migration[8.1]
   end
 
   def down
+    # Restores tender_type IN ('cash'). Only supported before non-Cash pos_tenders exist.
+    # Do not delete or transform completed Card/Check/Other facts to make rollback succeed.
     remove_check_constraint :pos_tenders, name: "pos_tenders_cash_presented_matches"
     remove_check_constraint :pos_tenders, name: "pos_tenders_amount_nonnegative"
     remove_check_constraint :pos_tenders, name: "pos_tenders_category_valid"

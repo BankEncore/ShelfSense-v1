@@ -41,10 +41,7 @@ export default class extends Controller {
     mode: String,
     autoComplete: Boolean,
     workspaceUrl: String,
-    tenderTypeIds: String,
-    tenderTypeNames: String,
-    tenderTypeCash: String,
-    tenderTypeReference: String
+    tenderTypes: Array
   }
 
   connect() {
@@ -227,58 +224,43 @@ export default class extends Controller {
   }
 
   cycleTenderType() {
-    const ids = this.tenderTypeList()
-    if (ids.length === 0) return
-    const current = this.hasTenderTypeInputTarget ? this.tenderTypeInputTarget.value : ids[0]
-    const index = Math.max(0, ids.indexOf(current))
-    this.selectTenderType((index + 1) % ids.length)
+    const types = this.cashierTenderTypes()
+    if (types.length === 0) return
+    const current = this.hasTenderTypeInputTarget ? this.tenderTypeInputTarget.value : types[0].id
+    const index = Math.max(0, types.findIndex((type) => type.id === current))
+    this.selectTenderType((index + 1) % types.length)
   }
 
   selectTenderType(index) {
-    const ids = this.tenderTypeList()
-    const names = this.tenderTypeNameList()
-    const cashFlags = this.tenderTypeCashList()
-    if (ids.length === 0) return
-    const safeIndex = ((index % ids.length) + ids.length) % ids.length
-    if (this.hasTenderTypeInputTarget) this.tenderTypeInputTarget.value = ids[safeIndex]
-    const cash = cashFlags[safeIndex] === "1"
-    const name = names[safeIndex] || (cash ? "Cash" : "Tender")
-    const policy = this.tenderTypeReferenceList()[safeIndex] || "omitted"
+    const types = this.cashierTenderTypes()
+    if (types.length === 0) return
+    const safeIndex = ((index % types.length) + types.length) % types.length
+    const type = types[safeIndex]
+    if (this.hasTenderTypeInputTarget) this.tenderTypeInputTarget.value = type.id
+    const cash = type.category === "cash"
+    const name = type.name || (cash ? "Cash" : "Tender")
     this.setMode("tender", cash ? "CASH TENDER" : "TENDER")
     const due = this.element.querySelector(".pos-totals__due")
     const dueText = due ? due.textContent.trim() : "Amount due"
     this.setFieldLabel(cash ? `${dueText}. Cash presented` : `${dueText}. ${name} amount`)
-    this.toggleReferenceField(cash, policy)
+    this.toggleReferenceField(type.reference_policy)
   }
 
   cashTenderIndex() {
-    const cashFlags = this.tenderTypeCashList()
-    const index = cashFlags.indexOf("1")
+    const index = this.cashierTenderTypes().findIndex((type) => type.category === "cash")
     return index >= 0 ? index : 0
   }
 
-  tenderTypeList() {
-    return (this.tenderTypeIdsValue || "").split(",").filter(Boolean)
+  cashierTenderTypes() {
+    return Array.isArray(this.tenderTypesValue) ? this.tenderTypesValue : []
   }
 
-  tenderTypeNameList() {
-    return (this.tenderTypeNamesValue || "").split("|")
-  }
-
-  tenderTypeCashList() {
-    return (this.tenderTypeCashValue || "").split(",")
-  }
-
-  tenderTypeReferenceList() {
-    return (this.tenderTypeReferenceValue || "").split(",")
-  }
-
-  toggleReferenceField(cash, policy) {
+  toggleReferenceField(policy) {
     if (!this.hasReferenceWrapTarget) return
-    const show = this.modeValue === "tender" && !cash && policy !== "omitted"
+    const show = this.modeValue === "tender" && policy !== "omitted"
     this.referenceWrapTarget.hidden = !show
-    if (this.hasReferenceLabelTarget) {
-      this.referenceLabelTarget.textContent = policy === "required" ? "Reference (required)" : "Reference"
+    if (show && this.hasReferenceLabelTarget) {
+      this.referenceLabelTarget.textContent = policy === "required" ? "Reference (required)" : "Reference (optional)"
     }
     if (!show && this.hasReferenceFieldTarget) this.referenceFieldTarget.value = ""
   }
@@ -298,7 +280,7 @@ export default class extends Controller {
       this.setFieldLabel("Scan or identifier")
       this.fieldTarget.inputMode = "text"
       this.fieldTarget.value = ""
-      this.toggleReferenceField(true, "omitted")
+      this.toggleReferenceField("omitted")
       this.enableReadyActions()
       this.fieldTarget.focus()
       return
@@ -309,7 +291,7 @@ export default class extends Controller {
       this.setFieldLabel("Scan or identifier")
       this.fieldTarget.inputMode = "text"
       this.fieldTarget.value = ""
-      this.toggleReferenceField(true, "omitted")
+      this.toggleReferenceField("omitted")
       this.enableReadyActions()
       this.fieldTarget.focus()
     }

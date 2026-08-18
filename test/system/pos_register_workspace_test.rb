@@ -56,7 +56,7 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     send_keys :f2
     assert_selector "[data-register-workspace-target='fieldLabel']", text: /External Card/
     assert_selector "[data-register-workspace-target='referenceWrap']", visible: true
-    assert_field "Reference"
+    assert_field "Reference (optional)"
     field = find("#pos-command-field")
     field.fill_in with: "10.00"
     field.send_keys :enter

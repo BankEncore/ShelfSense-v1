@@ -203,7 +203,7 @@ POST quantity        → ChangeQuantity; clear working tenders
 POST remove          → RemoveWorkingLine; clear working tenders
 POST tender
   → selected identity defaults to Cash (`TenderCash`); F2 cycles active types
-  → Card/Check/Other: `AddTender` (applied amount, optional/required reference)
+  → Card/Check/Other: `AddTender` (applied amount; reference omitted, optional, or required per identity)
   → Cash remaining due excludes the existing Cash row; replace Cash in place
   → remaining > 0 stays TENDER; remaining = 0 mints completion_operation_id
   → do not complete on this POST
@@ -271,7 +271,7 @@ POST complete (
   → GET /pos/transactions/:id/completed
 ```
 
-F2 cycles **active** identities (Cash, Card, Check, then active Other). Other appears only when an active Other identity exists. Cycling to a type whose reference policy is optional or required shows the Reference field **before** the tender is added; Cash hides it. Remaining due and working tenders (by `tender_number`, snapshot names) render in `pos_totals`. Enter adds the selected tender (amount from the primary field, reference from the visible field when captured). Remaining `> 0` stays TENDER. Remaining `= 0` → completion-pending + auto-complete.
+F2 cycles **active** identities (Cash, Card, Check, then active Other). Other appears only when an active Other identity exists. The workspace passes those identities to Stimulus as one JSON array (`id`, `name`, `category`, `reference_policy`) so display names may contain commas or pipes without desynchronizing the submitted `tender_type_id`. The Reference field follows `external_reference_policy` **before** the tender is added: `omitted` hides it, `optional` shows `Reference (optional)`, `required` shows `Reference (required)`. Remaining due and working tenders (by `tender_number`, snapshot names) render in `pos_totals`. Enter adds the selected tender (amount from the primary field, reference from the visible field when captured). Remaining `> 0` stays TENDER. Remaining `= 0` → completion-pending + auto-complete.
 
 Escape before any tender: SALE_ENTRY. After tenders: Escape is a no-op; Return to sale is `AbandonTender`; F8 removes the last working tender.
 

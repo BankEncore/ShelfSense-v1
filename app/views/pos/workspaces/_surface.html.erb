@@ -44,10 +44,7 @@
      data-register-workspace-mode-value="<%= @ui_mode %>"
      data-register-workspace-auto-complete-value="<%= @auto_complete ? "true" : "false" %>"
      data-register-workspace-workspace-url-value="<%= pos_register_workspace_path %>"
-     data-register-workspace-tender-type-ids-value="<%= (@cashier_tender_types || []).map { |type| type.id.to_s }.join(",") %>"
-     data-register-workspace-tender-type-names-value="<%= (@cashier_tender_types || []).map(&:name).join("|") %>"
-     data-register-workspace-tender-type-cash-value="<%= (@cashier_tender_types || []).map { |type| type.cash? ? "1" : "0" }.join(",") %>"
-     data-register-workspace-tender-type-reference-value="<%= (@cashier_tender_types || []).map(&:external_reference_policy).join(",") %>"
+     data-register-workspace-tender-types-value="<%= h((@cashier_tender_types || []).map(&:cashier_payload).to_json) %>"
      data-action="keydown@document->register-workspace#onKeydown turbo:submit-end->register-workspace#onSubmitEnd">
   <div data-register-workspace-target="chrome">
     <header class="pos-header">
@@ -135,7 +132,7 @@
              <%= "autofocus" unless locked || @ui_mode == "completion_failed" || completion_recovery %>>
       <div data-register-workspace-target="referenceWrap" <%= "hidden" unless show_reference %>>
         <label for="pos-reference-field" data-register-workspace-target="referenceLabel">
-          <%= selected_tender_type&.reference_required? ? "Reference (required)" : "Reference" %>
+          <%= selected_tender_type&.reference_field_label || "Reference" %>
         </label>
         <input id="pos-reference-field"
                class="pos-command__field"

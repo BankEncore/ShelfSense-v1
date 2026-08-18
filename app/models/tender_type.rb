@@ -49,6 +49,23 @@ class TenderType < ApplicationRecord
     external_reference_policy != "omitted"
   end
 
+  def reference_field_label
+    case external_reference_policy
+    when "required" then "Reference (required)"
+    when "optional" then "Reference (optional)"
+    else "Reference"
+    end
+  end
+
+  def cashier_payload
+    {
+      id: id.to_s,
+      name: name,
+      category: behavioral_category,
+      reference_policy: external_reference_policy
+    }
+  end
+
   def reactivation_blockers
     []
   end

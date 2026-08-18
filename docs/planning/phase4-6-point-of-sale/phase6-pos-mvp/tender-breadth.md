@@ -254,6 +254,8 @@ Only after 6.2D. Extend [register-workspace.md](../phase5-cash-register/register
 
 - `+` still enters TENDER; default identity **Cash** (Phase 5 keyboard: amount → Enter → `TenderCash` → auto-complete when Cash closes the sale).
 - Cycle among **active** types (F2). Other appears only when an active Other identity exists.
+- Cashier identities are one JSON array (`id`, `name`, `category`, `reference_policy`), not delimiter-separated strings.
+- Reference field: `omitted` hidden; `optional` labeled `Reference (optional)`; `required` labeled `Reference (required)`. The server remains authoritative.
 - Remaining due and working tender list (by `tender_number`, snapshot names) in `pos_totals`.
 - Enter adds the selected tender. Remaining `> 0` stays TENDER. Remaining `= 0` → completion-pending + existing auto-complete.
 - Escape before any tender: SALE_ENTRY. After tenders: Return to sale is still `AbandonTender`.
@@ -307,3 +309,11 @@ seeded dummy Other identities
 new perform/approve keys
 changing CloseSession expected-Cash formula
 ```
+
+---
+
+## 11. Rollout
+
+Already-initialized databases need `./dev/rails-docker bin/rails shelfsense:seed_permissions` so `pos.manage_tender_types` exists and is granted to `system_administrator`. `db:migrate` alone does not add the permission or grant.
+
+Schema rollback of `20260818020000_add_tender_types_and_pos_tender_snapshots` is only supported **before non-Cash tender facts exist**. The `down` path restores `tender_type IN ('cash')`, which cannot represent completed Card, Check, or Other rows. Do not delete or transform that history to make `db:rollback` succeed.
