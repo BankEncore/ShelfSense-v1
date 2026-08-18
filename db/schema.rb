@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_18_010000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_18_021000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -414,11 +414,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_18_010000) do
     t.timestamptz "closed_at"
     t.timestamptz "created_at", null: false
     t.uuid "finalized_by_user_id"
+    t.bigint "finalized_card_payment_cents"
     t.bigint "finalized_cash_payment_cents"
+    t.bigint "finalized_check_payment_cents"
     t.bigint "finalized_closing_count_cents_sum"
     t.bigint "finalized_closing_expected_cash_cents_sum"
     t.bigint "finalized_closing_variance_cents_sum"
     t.bigint "finalized_opening_float_cents_sum"
+    t.bigint "finalized_other_payment_cents"
     t.integer "finalized_session_count"
     t.bigint "finalized_subtotal_cents"
     t.bigint "finalized_tax_cents"
@@ -434,11 +437,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_18_010000) do
     t.index ["register_id"], name: "index_pos_reporting_periods_on_register_id"
     t.index ["register_id"], name: "index_pos_reporting_periods_one_open_per_register", unique: true, where: "((status)::text = 'open'::text)"
     t.index ["store_id"], name: "index_pos_reporting_periods_on_store_id"
+    t.check_constraint "finalized_card_payment_cents IS NULL OR finalized_card_payment_cents >= 0", name: "pos_reporting_periods_finalized_card_payment_nonnegative"
     t.check_constraint "finalized_cash_payment_cents IS NULL OR finalized_cash_payment_cents >= 0", name: "pos_reporting_periods_finalized_cash_payment_nonnegative"
+    t.check_constraint "finalized_check_payment_cents IS NULL OR finalized_check_payment_cents >= 0", name: "pos_reporting_periods_finalized_check_payment_nonnegative"
     t.check_constraint "finalized_closing_count_cents_sum IS NULL OR finalized_closing_count_cents_sum >= 0", name: "pos_reporting_periods_finalized_closing_count_sum_nonnegative"
     t.check_constraint "finalized_closing_expected_cash_cents_sum IS NULL OR finalized_closing_expected_cash_cents_sum >= 0", name: "pos_reporting_periods_finalized_closing_expected_sum_nonnegativ"
     t.check_constraint "finalized_closing_variance_cents_sum IS NULL OR finalized_closing_variance_cents_sum = (finalized_closing_count_cents_sum - finalized_closing_expected_cash_cents_sum)", name: "pos_reporting_periods_finalized_variance_matches_sums"
     t.check_constraint "finalized_opening_float_cents_sum IS NULL OR finalized_opening_float_cents_sum >= 0", name: "pos_reporting_periods_finalized_opening_float_sum_nonnegative"
+    t.check_constraint "finalized_other_payment_cents IS NULL OR finalized_other_payment_cents >= 0", name: "pos_reporting_periods_finalized_other_payment_nonnegative"
     t.check_constraint "finalized_session_count IS NULL OR finalized_session_count >= 0", name: "pos_reporting_periods_finalized_session_count_nonnegative"
     t.check_constraint "finalized_subtotal_cents IS NULL OR finalized_subtotal_cents >= 0", name: "pos_reporting_periods_finalized_subtotal_nonnegative"
     t.check_constraint "finalized_tax_cents IS NULL OR finalized_tax_cents >= 0", name: "pos_reporting_periods_finalized_tax_nonnegative"
@@ -478,17 +484,27 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_18_010000) do
 
   create_table "pos_tenders", id: :uuid, default: nil, force: :cascade do |t|
     t.bigint "amount_cents", null: false
-    t.bigint "amount_presented_cents", null: false
-    t.bigint "change_cents", default: 0, null: false
+    t.bigint "amount_presented_cents"
+    t.string "behavioral_category", null: false
+    t.bigint "change_cents"
     t.timestamptz "created_at", null: false
     t.string "direction", null: false
+    t.text "external_reference"
     t.uuid "pos_transaction_id", null: false
+    t.string "tender_name", null: false
+    t.integer "tender_number", null: false
     t.string "tender_type", null: false
+    t.uuid "tender_type_id", null: false
     t.timestamptz "updated_at", null: false
+    t.index ["pos_transaction_id", "tender_number"], name: "index_pos_tenders_on_transaction_and_number", unique: true
     t.index ["pos_transaction_id"], name: "index_pos_tenders_on_pos_transaction_id"
-    t.check_constraint "amount_cents >= 0 AND amount_presented_cents >= 0 AND change_cents >= 0", name: "pos_tenders_nonnegative"
+    t.index ["pos_transaction_id"], name: "index_pos_tenders_one_cash_payment", unique: true, where: "(((behavioral_category)::text = 'cash'::text) AND ((direction)::text = 'payment'::text))"
+    t.index ["tender_type_id"], name: "index_pos_tenders_on_tender_type_id"
+    t.check_constraint "amount_cents >= 0", name: "pos_tenders_amount_nonnegative"
+    t.check_constraint "behavioral_category::text = 'cash'::text AND amount_presented_cents IS NOT NULL AND change_cents IS NOT NULL AND amount_presented_cents >= 0 AND change_cents >= 0 AND amount_presented_cents = (amount_cents + change_cents) OR (behavioral_category::text = ANY (ARRAY['card'::character varying, 'check'::character varying, 'other'::character varying]::text[])) AND amount_presented_cents IS NULL AND change_cents IS NULL", name: "pos_tenders_cash_presented_matches"
+    t.check_constraint "behavioral_category::text = ANY (ARRAY['cash'::character varying, 'card'::character varying, 'check'::character varying, 'other'::character varying]::text[])", name: "pos_tenders_category_valid"
     t.check_constraint "direction::text = 'payment'::text", name: "pos_tenders_direction_valid"
-    t.check_constraint "tender_type::text = 'cash'::text", name: "pos_tenders_type_valid"
+    t.check_constraint "tender_number >= 1", name: "pos_tenders_number_positive"
   end
 
   create_table "pos_transaction_lines", id: :uuid, default: nil, force: :cascade do |t|
@@ -755,6 +771,21 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_18_010000) do
     t.check_constraint "code::text ~ '^[a-z0-9]+(_[a-z0-9]+)*$'::text", name: "tax_classes_code_format"
   end
 
+  create_table "tender_types", id: :uuid, default: nil, force: :cascade do |t|
+    t.boolean "active", default: true, null: false
+    t.string "behavioral_category", null: false
+    t.string "code", null: false
+    t.timestamptz "created_at", null: false
+    t.string "external_reference_policy", null: false
+    t.integer "lock_version", default: 0, null: false
+    t.string "name", null: false
+    t.boolean "system_protected", default: false, null: false
+    t.timestamptz "updated_at", null: false
+    t.index ["code"], name: "index_tender_types_on_code", unique: true
+    t.check_constraint "behavioral_category::text = ANY (ARRAY['cash'::character varying, 'card'::character varying, 'check'::character varying, 'other'::character varying]::text[])", name: "tender_types_category_valid"
+    t.check_constraint "external_reference_policy::text = ANY (ARRAY['omitted'::character varying, 'optional'::character varying, 'required'::character varying]::text[])", name: "tender_types_reference_policy_valid"
+  end
+
   create_table "user_sessions", id: :uuid, default: nil, force: :cascade do |t|
     t.timestamptz "created_at", null: false
     t.timestamptz "expires_at", null: false
@@ -847,6 +878,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_18_010000) do
   add_foreign_key "pos_sessions", "stores"
   add_foreign_key "pos_sessions", "users", column: "cashier_user_id"
   add_foreign_key "pos_tenders", "pos_transactions"
+  add_foreign_key "pos_tenders", "tender_types", on_delete: :restrict
   add_foreign_key "pos_transaction_lines", "inventory_units", on_delete: :restrict
   add_foreign_key "pos_transaction_lines", "pos_transactions"
   add_foreign_key "pos_transaction_lines", "product_variants"

@@ -229,7 +229,7 @@ GET /pos/sessions/:id/closed
 
 Session must be closed. Authorization remains current Store, `pos.transact`, and Session cashier.
 
-Only now expose opening float, Cash payments, expected closing Cash, counted Cash, and variance. Cash-close fields are read from persisted `closing_*` columns. Do not recompute expected Cash after close.
+Only now expose opening float, Cash / Card / Check / Other payments, expected closing Cash, counted Cash, and variance. Cash-close fields are read from persisted `closing_*` columns. Do not recompute expected Cash after close. Card/Check/Other payments are live sums of completed payment tenders in that session.
 
 Commercial totals may be exposed through `Pos::SessionTotals` (optional `total_cents` helper). Do not calculate business totals in the controller.
 
@@ -294,6 +294,8 @@ Finalized by Alex Rivera
 Store and Register numbers come from the period's Store/Register identity. Finalized-at uses the Store IANA zone.
 
 Render persisted `finalized_*` commercial and Session-custody snapshots only. After finalization, the Z page must not re-query live transaction/session facts as its reporting authority.
+
+Card / Check / Other payment columns (`finalized_card_payment_cents`, `finalized_check_payment_cents`, `finalized_other_payment_cents`) are additive. They are written on **new** finalize only. NULL on an already-finalized Z means “not captured” (pre-6.2). New all-Cash finalize writes `0` for unused categories. Do not add these columns to the Phase 5 `closed_at_matches_status` pairing.
 
 Session-custody wording reflects independent Session custody intervals (sums), not one drawer's values.
 

@@ -1,0 +1,96 @@
+{
+  "schema_version": 2,
+  "operation": {
+    "operation_id": "01920000-0000-7000-8000-000000000001",
+    "fact_type": "pos.transaction_completed"
+  },
+  "origin": {
+    "store_id": "01920000-0000-7000-8000-000000000010",
+    "register_id": "01920000-0000-7000-8000-000000000020",
+    "pos_session_id": "01920000-0000-7000-8000-000000000030",
+    "reporting_period_id": "01920000-0000-7000-8000-000000000040",
+    "performed_by_user_id": "01920000-0000-7000-8000-000000000050"
+  },
+  "receipt": {
+    "sequence": 18427,
+    "store_number": 3,
+    "register_number": 2,
+    "reference": "S003-R02-T0018427"
+  },
+  "transaction": {
+    "transaction_id": "01920000-0000-7000-8000-000000000100",
+    "currency_code": "USD",
+    "occurred_at": "2026-08-16T18:04:22Z",
+    "business_date": "2026-08-16",
+    "subtotal_cents": 1999,
+    "tax_cents": 105,
+    "total_cents": 2104,
+    "signed_net_cents": 2104
+  },
+  "lines": [
+    {
+      "line_id": "01920000-0000-7000-8000-000000000200",
+      "line_number": 1,
+      "direction": "sale",
+      "product_variant_id": "01920000-0000-7000-8000-000000000300",
+      "quantity": 1,
+      "reference_unit_price_cents": 1999,
+      "selling_unit_price_cents": 1999,
+      "extended_selling_amount_cents": 1999,
+      "line_tax_cents": 105,
+      "line_total_cents": 2104,
+      "tax_class_id": "01920000-0000-7000-8000-000000000400",
+      "tax_class_code": "physical_book",
+      "merchandise_snapshot": {
+        "sku": "2210000000001",
+        "description": "Example Book",
+        "tax_class_code": "physical_book"
+      },
+      "tax_components": [
+        {
+          "store_tax_id": "01920000-0000-7000-8000-000000000500",
+          "store_tax_code": "state_illinois",
+          "store_tax_name": "Illinois State",
+          "rate_percent": "5.000",
+          "applies": true,
+          "taxable_basis_cents": 1999,
+          "tax_cents": 100,
+          "calculation_order": 1
+        },
+        {
+          "store_tax_id": "01920000-0000-7000-8000-000000000510",
+          "store_tax_code": "county_cook",
+          "store_tax_name": "Cook County",
+          "rate_percent": "0.250",
+          "applies": true,
+          "taxable_basis_cents": 1999,
+          "tax_cents": 5,
+          "calculation_order": 2
+        },
+        {
+          "store_tax_id": "01920000-0000-7000-8000-000000000520",
+          "store_tax_code": "local_schaumburg_prepared_food",
+          "store_tax_name": "Schaumburg Prepared Food",
+          "rate_percent": "2.000",
+          "applies": false,
+          "taxable_basis_cents": 0,
+          "tax_cents": 0,
+          "calculation_order": 3
+        }
+      ]
+    }
+  ],
+  "tenders": [
+    {
+      "tender_id": "01920000-0000-7000-8000-000000000600",
+      "tender_number": 1,
+      "tender_type": "cash",
+      "tender_name": "Cash",
+      "behavioral_category": "cash",
+      "direction": "payment",
+      "amount_cents": 2104,
+      "amount_presented_cents": 2500,
+      "change_cents": 396
+    }
+  ]
+}

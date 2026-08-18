@@ -1,12 +1,17 @@
 <%
   lines = @lines || @transaction.pos_transaction_lines.includes(:inventory_unit, product_variant: [ :product, :merchandise_condition ])
-  tender = @tender || @transaction.pos_tenders.find_by(tender_type: "cash")
+  tenders = @tenders || @transaction.pos_tenders.ordered.to_a
+  tender = @tender || tenders.find(&:cash?)
+  selected_tender_type = @selected_tender_type || tenders && Pos::Support.cash_tender_type
+  remaining_due_cents = @remaining_due_cents
+  remaining_due_cents = Pos::Support.remaining_due_cents(@transaction) if remaining_due_cents.nil?
   selected_id = @selected_line&.id
   locked = %w[completion_pending completion_failed].include?(@ui_mode)
   leftover = @session_record.reporting_period.business_date != BusinessDate.for_store(current_store)
-  amount_due = @transaction.total_cents
+  amount_due = remaining_due_cents
   change_cents = tender&.change_cents
   completion_recovery = @ui_mode == "completion_failed"
+  cash_selected = selected_tender_type&.cash?
   command_inputmode =
     if @ui_mode == "quantity"
       "numeric"
@@ -19,12 +24,17 @@
     if @ui_mode == "quantity" && @selected_line
       "#{pos_line_description(@selected_line)} · Current quantity #{@selected_line.quantity}"
     elsif @ui_mode == "tender"
-      "Amount due #{format_money_cents(amount_due)}. Cash presented"
+      if cash_selected
+        "Amount due #{format_money_cents(amount_due)}. Cash presented"
+      else
+        "Remaining #{format_money_cents(amount_due)}. #{selected_tender_type&.name} amount"
+      end
     elsif locked
-      "Cash presented (locked)"
+      "Tender (locked)"
     else
       "Scan or identifier"
     end
+  tender_mode_label = cash_selected || locked ? "CASH TENDER" : "TENDER"
 %>
 
 <div id="pos_workspace"
@@ -33,6 +43,9 @@
      data-register-workspace-mode-value="<%= @ui_mode %>"
      data-register-workspace-auto-complete-value="<%= @auto_complete ? "true" : "false" %>"
      data-register-workspace-workspace-url-value="<%= pos_register_workspace_path %>"
+     data-register-workspace-tender-type-ids-value="<%= (@cashier_tender_types || []).map { |type| type.id.to_s }.join(",") %>"
+     data-register-workspace-tender-type-names-value="<%= (@cashier_tender_types || []).map(&:name).join("|") %>"
+     data-register-workspace-tender-type-cash-value="<%= (@cashier_tender_types || []).map { |type| type.cash? ? "1" : "0" }.join(",") %>"
      data-action="keydown@document->register-workspace#onKeydown turbo:submit-end->register-workspace#onSubmitEnd">
   <div data-register-workspace-target="chrome">
     <header class="pos-header">
@@ -82,9 +95,14 @@
         <div>Subtotal  <%= format_money_cents(@transaction.subtotal_cents) %></div>
         <div>Tax  <%= format_money_cents(@transaction.tax_cents) %></div>
         <div>Total  <%= format_money_cents(@transaction.total_cents) %></div>
-        <% if tender %>
-          <div>Cash presented  <%= format_money_cents(tender.amount_presented_cents) %></div>
-          <div class="pos-totals__change">CHANGE  <%= format_money_cents(change_cents) %></div>
+        <% tenders.each do |working_tender| %>
+          <div><%= working_tender.tender_name %>  <%= format_money_cents(working_tender.amount_cents) %></div>
+        <% end %>
+        <% if Pos::Support.exact_settlement?(@transaction) %>
+          <% if tender %>
+            <div>Cash presented  <%= format_money_cents(tender.amount_presented_cents) %></div>
+            <div class="pos-totals__change">CHANGE  <%= format_money_cents(change_cents) %></div>
+          <% end %>
         <% else %>
           <div class="pos-totals__due">Amount due  <%= format_money_cents(amount_due) %></div>
         <% end %>
@@ -103,7 +121,7 @@
     </div>
 
     <div id="pos_command" class="pos-command">
-      <div class="pos-command__mode" data-register-workspace-target="modeLabel"><%= pos_mode_label(@ui_mode) %></div>
+      <div class="pos-command__mode" data-register-workspace-target="modeLabel"><%= @ui_mode == "sale_entry" || @ui_mode == "quantity" ? pos_mode_label(@ui_mode) : tender_mode_label %></div>
       <label for="pos-command-field" data-register-workspace-target="fieldLabel"><%= command_label %></label>
       <input id="pos-command-field"
              class="pos-command__field"
@@ -113,6 +131,13 @@
              autocomplete="off"
              <%= "disabled" if locked || @ui_mode == "completion_pending" %>
              <%= "autofocus" unless locked || @ui_mode == "completion_failed" || completion_recovery %>>
+      <% if @ui_mode == "tender" && !cash_selected %>
+        <label for="pos-reference-field">Reference</label>
+        <input id="pos-reference-field"
+               class="pos-command__field"
+               data-register-workspace-target="referenceField"
+               autocomplete="off">
+      <% end %>
     </div>
 
     <div id="pos_actions" class="pos-actions">
@@ -127,6 +152,13 @@
         <button type="button" class="btn btn--secondary" data-action="register-workspace#enterQuantity" data-register-workspace-target="quantityButton" disabled>Quantity (*)</button>
         <button type="button" class="btn btn--secondary" data-action="register-workspace#enterTender" data-register-workspace-target="tenderButton" disabled>Tender (+)</button>
         <button type="button" class="btn btn--secondary" data-action="register-workspace#removeSelected" data-register-workspace-target="removeButton" disabled>Remove (F8)</button>
+        <% if @ui_mode == "tender" && tenders.any? %>
+          <%= button_to "Return to sale", pos_register_abandon_tender_path, method: :post,
+                params: { lock_version: @transaction.lock_version },
+                class: "btn btn--secondary",
+                form: { data: { turbo: true } },
+                data: { register_workspace_target: "abandonButton" } %>
+        <% end %>
       <% end %>
       <div data-register-workspace-target="clientRecovery" hidden>
         <button type="button" class="btn" data-action="register-workspace#submitComplete">Retry complete</button>
@@ -138,7 +170,7 @@
               disabled>
         Cancel (F9)
       </button>
-      <% if @ui_mode == "sale_entry" && lines.empty? && tender.blank? %>
+      <% if @ui_mode == "sale_entry" && lines.empty? && tenders.empty? %>
         <%= button_to "Close register", pos_register_close_path, method: :post,
               params: { session_id: @session_record.id }, class: "btn btn--secondary" %>
       <% end %>
@@ -164,13 +196,19 @@
     <%= form_with url: pos_register_tender_path, method: :post, html: { class: "pos-hidden", data: { register_workspace_target: "tenderForm", turbo: true } } do %>
       <%= hidden_field_tag :lock_version, @transaction.lock_version %>
       <%= hidden_field_tag :amount_presented, "", data: { register_workspace_target: "presentedInput" } %>
+      <%= hidden_field_tag :tender_type_id, selected_tender_type&.id, data: { register_workspace_target: "tenderTypeInput" } %>
+      <%= hidden_field_tag :external_reference, "", data: { register_workspace_target: "referenceInput" } %>
+    <% end %>
+
+    <%= form_with url: pos_register_remove_tender_path, method: :post, html: { class: "pos-hidden", data: { register_workspace_target: "removeTenderForm", turbo: true } } do %>
+      <%= hidden_field_tag :lock_version, @transaction.lock_version %>
+      <%= hidden_field_tag :tender_id, tenders.last&.id, data: { register_workspace_target: "removeTenderInput" } %>
     <% end %>
 
     <%= form_with url: pos_transaction_complete_path(@transaction), method: :post, html: { class: "pos-hidden", data: { register_workspace_target: "completeForm", turbo: true } } do %>
       <%= hidden_field_tag :lock_version, @transaction.lock_version %>
       <%= hidden_field_tag :completion_operation_id, @completion_operation_id %>
       <%= hidden_field_tag :expected_total_cents, @transaction.total_cents %>
-      <%= hidden_field_tag :amount_presented_cents, tender&.amount_presented_cents %>
     <% end %>
 
     <%= form_with url: pos_register_cancel_path, method: :post, html: { class: "pos-hidden", data: { register_workspace_target: "cancelForm", turbo: true } } do %>

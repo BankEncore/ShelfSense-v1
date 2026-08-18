@@ -13,6 +13,9 @@
     <div><dt>Tax</dt><dd><%= format_money_cents(@totals.tax_cents) %></dd></div>
     <div><dt>Sales total</dt><dd><%= format_money_cents(@totals.total_cents) %></dd></div>
     <div><dt>Cash payments</dt><dd><%= format_money_cents(@totals.cash_tender_cents) %></dd></div>
+    <div><dt>Card payments</dt><dd><%= format_money_cents(@totals.card_tender_cents) %></dd></div>
+    <div><dt>Check payments</dt><dd><%= format_money_cents(@totals.check_tender_cents) %></dd></div>
+    <div><dt>Other payments</dt><dd><%= format_money_cents(@totals.other_tender_cents) %></dd></div>
     <div><dt>Opening float</dt><dd><%= format_money_cents(@session_record.opening_float_cents) %></dd></div>
     <div><dt>Expected closing Cash</dt><dd><%= format_money_cents(@session_record.closing_expected_cash_cents) %></dd></div>
     <div><dt>Counted Cash</dt><dd><%= format_money_cents(@session_record.closing_count_cents) %></dd></div>

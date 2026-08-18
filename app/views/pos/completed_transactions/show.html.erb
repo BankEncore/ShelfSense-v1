@@ -16,8 +16,15 @@
 
     <dl class="pos-receipt__totals">
       <div><dt>Total</dt><dd><%= format_money_cents(@transaction.total_cents) %></dd></div>
-      <div><dt>Cash presented</dt><dd><%= format_money_cents(@tender&.amount_presented_cents) %></dd></div>
-      <div><dt>Change</dt><dd><%= format_money_cents(@tender&.change_cents) %></dd></div>
+      <% @tenders.each do |tender| %>
+        <div><dt><%= tender.tender_name %></dt><dd><%= format_money_cents(tender.amount_cents) %></dd></div>
+        <% if tender.cash? %>
+          <div><dt>Cash presented</dt><dd><%= format_money_cents(tender.amount_presented_cents) %></dd></div>
+          <div><dt>Change</dt><dd><%= format_money_cents(tender.change_cents) %></dd></div>
+        <% elsif tender.external_reference.present? %>
+          <div><dt>Reference</dt><dd><%= tender.external_reference %></dd></div>
+        <% end %>
+      <% end %>
     </dl>
 
     <ul class="pos-receipt__lines">
@@ -57,8 +64,13 @@
       <div><dt>Subtotal</dt><dd><%= format_money_cents(@transaction.subtotal_cents) %></dd></div>
       <div><dt>Tax</dt><dd><%= format_money_cents(@transaction.tax_cents) %></dd></div>
       <div><dt>Total</dt><dd><%= format_money_cents(@transaction.total_cents) %></dd></div>
-      <div><dt>Cash presented</dt><dd><%= format_money_cents(@tender&.amount_presented_cents) %></dd></div>
-      <div><dt>Change</dt><dd><%= format_money_cents(@tender&.change_cents) %></dd></div>
+      <% @tenders.each do |tender| %>
+        <div><dt><%= tender.tender_name %></dt><dd><%= format_money_cents(tender.amount_cents) %></dd></div>
+        <% if tender.cash? %>
+          <div><dt>Cash presented</dt><dd><%= format_money_cents(tender.amount_presented_cents) %></dd></div>
+          <div><dt>Change</dt><dd><%= format_money_cents(tender.change_cents) %></dd></div>
+        <% end %>
+      <% end %>
     </dl>
   </section>
 

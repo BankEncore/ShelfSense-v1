@@ -50,9 +50,41 @@ module Pos
 
       signed_net = @envelope.fetch("transaction")["signed_net_cents"]
       raise Pos::Error, "completed envelope is missing signed_net_cents" unless signed_net.is_a?(Integer)
+      verify_tenders!
     end
 
     private
+
+    V2_TENDER_KEYS = %w[behavioral_category tender_name tender_number].freeze
+
+    def verify_tenders!
+      tenders = @envelope["tenders"]
+      return unless tenders.is_a?(Array)
+      return unless tenders.any? { |tender| v2_tender_shape?(tender) }
+
+      tenders.each do |tender|
+        raise Pos::Error, "completed envelope tender is missing 6.2 keys" unless v2_tender_shape?(tender)
+        V2_TENDER_KEYS.each do |key|
+          raise Pos::Error, "completed envelope is missing #{key}" if tender[key].blank? && tender[key] != 0
+        end
+        raise Pos::Error, "completed envelope tender_number is invalid" unless positive_integer?(tender["tender_number"])
+        category = tender["behavioral_category"]
+        raise Pos::Error, "completed envelope behavioral_category is invalid" unless TenderType::CATEGORIES.include?(category)
+        if category == "cash"
+          raise Pos::Error, "completed envelope is missing Cash presented" unless tender["amount_presented_cents"].is_a?(Integer)
+          raise Pos::Error, "completed envelope is missing Cash change" unless tender["change_cents"].is_a?(Integer)
+        else
+          raise Pos::Error, "presented is only for Cash" if tender.key?("amount_presented_cents")
+          raise Pos::Error, "change is only for Cash" if tender.key?("change_cents")
+        end
+      end
+    end
+
+    def v2_tender_shape?(tender)
+      return false unless tender.is_a?(Hash)
+
+      V2_TENDER_KEYS.any? { |key| tender.key?(key) }
+    end
 
     def positive_integer?(value)
       value.is_a?(Integer) && value.positive?

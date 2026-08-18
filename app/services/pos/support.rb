@@ -59,6 +59,52 @@ module Pos
       true
     end
 
+    def cash_tender_type
+      TenderType.find_by!(code: "cash")
+    end
+
+    def applied_payment_cents(transaction, except: nil)
+      scope = transaction.pos_tenders.payments
+      scope = scope.where.not(id: except.id) if except
+      scope.sum(:amount_cents)
+    end
+
+    def remaining_due_cents(transaction, except: nil)
+      transaction.total_cents - applied_payment_cents(transaction, except: except)
+    end
+
+    def exact_settlement?(transaction)
+      tenders = transaction.pos_tenders.to_a
+      tenders.any? && tenders.sum(&:amount_cents) == transaction.total_cents
+    end
+
+    def snapshot_tender_identity!(tender, type)
+      tender.configured_tender_type = type
+      tender.tender_type = type.code
+      tender.tender_name = type.name
+      tender.behavioral_category = type.behavioral_category
+    end
+
+    def next_tender_number(transaction)
+      (transaction.pos_tenders.maximum(:tender_number) || 0) + 1
+    end
+
+    def renumber_tenders!(transaction)
+      tenders = transaction.pos_tenders.ordered.to_a
+      return if tenders.empty?
+
+      tenders.each_with_index do |tender, index|
+        tender.update_columns(tender_number: index + 1_000)
+      end
+      tenders.each_with_index do |tender, index|
+        tender.update_columns(tender_number: index + 1)
+      end
+    end
+
+    def touch_working_transaction!(transaction)
+      transaction.update!(updated_at: Time.current)
+    end
+
     def parse_nonnegative_cents!(value, label)
       cents = Integer(value)
       raise Pos::Error, "#{label} must be a non-negative integer" if cents.negative?

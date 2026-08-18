@@ -1,0 +1,6 @@
+{
+  "transaction_id": "01920000-0000-7000-8000-000000000100",
+  "operation_id": "01920000-0000-7000-8000-000000000001",
+  "expected_lock_version": 3,
+  "expected_total_cents": 2104
+}

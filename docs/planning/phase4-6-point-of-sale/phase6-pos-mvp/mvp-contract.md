@@ -4,7 +4,7 @@
 
 **Authority:** Cross-cutting completed-operation shape for the Phase 6 MVP. Dual authority with normalized Core remains [ADR-020](../../../adr/ADR-020-pos-operation-envelope-and-core-facts.md) / [operation-and-core-facts.md](../phase4-point-of-sale/operation-and-core-facts.md). Commercial base is [CompletedPosOperation v1](../phase4-point-of-sale/completed-pos-operation-v1.md).
 
-Companions: [phase6-plan.md](phase6-plan.md), [merchandise-breadth.md](merchandise-breadth.md). Tax: [pos-tax-contract.md](../phase4-point-of-sale/pos-tax-contract.md). Cash/Z: [phase5-plan.md](../phase5-cash-register/phase5-plan.md).
+Companions: [phase6-plan.md](phase6-plan.md), [merchandise-breadth.md](merchandise-breadth.md), [tender-breadth.md](tender-breadth.md). Tax: [pos-tax-contract.md](../phase4-point-of-sale/pos-tax-contract.md). Cash/Z: [phase5-plan.md](../phase5-cash-register/phase5-plan.md).
 
 This slice does **not** implement capabilities. It locks meaning so 6.1–6.7 do not each invent a new completion shape. Do not add unused Core columns here ([AGENTS.md](../../../../AGENTS.md) §10). Columns appear in the owning slice.
 
@@ -114,8 +114,10 @@ CompletedPosOperation
 │
 ├── tenders[]
 │   ├── tender_id
-│   ├── tender_type                   # configured identity (cash, card, check, …)
-│   ├── behavioral_category           # cash | card | check | other
+│   ├── tender_number                 # dense 1..N; 6.2
+│   ├── tender_type                   # identity code snapshot
+│   ├── tender_name                   # display-name snapshot; 6.2
+│   ├── behavioral_category           # cash | card | check | other; 6.2
 │   ├── direction                     # payment | refund
 │   ├── amount_cents                  # applied; positive magnitude
 │   ├── amount_presented_cents        # Cash payment only; omit otherwise
@@ -183,8 +185,12 @@ Approval explains who authorized it. This block is the commercial pricing fact: 
 |---|---|
 | `amount_cents` | Applied amount; positive. |
 | `direction` | `payment` (funds in) or `refund` (funds out). |
+| `tender_number` | Dense `1..N` per transaction (6.2). Do not order by timestamp or UUID. |
+| `tender_name` | Display-name snapshot at add/replace (6.2). Later config renames do not rewrite it. |
 | Cash presented / change | Only on Cash **payment** tenders. Not on refunds. Not on Card/Check/Other. |
 | External reference | Optional or required per tender configuration (6.2). Stored on the completed tender; customer print may omit it (§14). |
+
+6.1 schema-2 envelopes omit `behavioral_category`, `tender_name`, and `tender_number`. New 6.2+ completions include them. Verification must accept both shapes.
 
 ```text
 SUM(payments) − SUM(refunds) = signed_net_cents

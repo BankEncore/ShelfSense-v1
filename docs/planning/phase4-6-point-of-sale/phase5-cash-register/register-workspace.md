@@ -201,9 +201,20 @@ GET workspace
 POST merchandise     → AddMerchandise; clear working tenders
 POST quantity        → ChangeQuantity; clear working tenders
 POST remove          → RemoveWorkingLine; clear working tenders
+POST tender
+  → selected identity defaults to Cash (`TenderCash`); F2 cycles active types
+  → Card/Check/Other: `AddTender` (applied amount, optional/required reference)
+  → Cash remaining due excludes the existing Cash row; replace Cash in place
+  → remaining > 0 stays TENDER; remaining = 0 mints completion_operation_id
+  → do not complete on this POST
+  → every tender add/replace/remove advances `lock_version`
+
+POST register/remove_tender
+  → RemoveWorkingTender; dense-renumber; TENDER if tenders remain else SALE_ENTRY
+
 POST abandon_tender
   → Pos::AbandonTender (lock working transaction; require transaction cashier;
-    destroy working tender; advance lock_version only if a tender was removed)
+    destroy all working tenders; advance lock_version only if a tender was removed)
   → render SALE_ENTRY
 POST cancel
   → workspace UI: only when the working transaction has at least one line
@@ -215,12 +226,6 @@ POST cancel
        (keep cancelled lines)
   → ResumeOrStartTransaction
   → redirect workspace (SALE_ENTRY)
-
-POST tender
-  → TenderCash
-  → return change_cents, lock_version, expected_total_cents, amount_presented_cents,
-    completion_operation_id (SecureRandom.uuid_v7)
-  → do not complete
 
 POST /pos/transactions/:transaction_id/complete
   → load that transaction for the current store (not “the session’s working row”)
@@ -248,24 +253,27 @@ Direct unauthorized requests must fail, including a second cashier operating ano
 
 ## 6. Tender vs complete (blocker)
 
-`TenderCash` destroys/recreates the Cash tender and advances `lock_version`. `CompleteTransaction` includes that post-tender `expected_lock_version` in its idempotency command hash. Re-running `TenderCash` on a completion retry changes the hash and raises `PayloadMismatch`.
+`TenderCash` replaces the Cash tender **in place** (same `id` / `tender_number`) and advances `lock_version`. `AddTender` / `RemoveWorkingTender` also advance `lock_version`. `CompleteTransaction` command hash is `transaction_id`, `operation_id`, `expected_lock_version`, `expected_total_cents` — presented lives on the Cash row, not the command. Re-running `TenderCash` on a completion retry changes `lock_version` and raises `PayloadMismatch`.
 
-Ordinary cashier Enter in `TENDER`:
+Ordinary cashier Enter in `TENDER` (Phase 5 all-Cash path unchanged):
 
 ```text
 disable input
-POST tender (expected_lock_version = v5)
-  → change + lock_version = v6
-  → completion_operation_id = A   (Rails: SecureRandom.uuid_v7)
+POST tender (Cash; expected_lock_version = v5)
+  → applied + change + lock_version = v6
+  → completion_operation_id = A   (Rails: SecureRandom.uuid_v7) when remaining = 0
 POST complete (
     /pos/transactions/:transaction_id/complete
     operation_id = A,
     expected_lock_version = v6,
-    expected_total_cents from the tender response,
-    amount_presented_cents from the tender response
+    expected_total_cents from the tender response
   )
   → GET /pos/transactions/:id/completed
 ```
+
+F2 cycles **active** identities (Cash, Card, Check, then active Other). Other appears only when an active Other identity exists. Remaining due and working tenders (by `tender_number`, snapshot names) render in `pos_totals`. Enter adds the selected tender. Remaining `> 0` stays TENDER. Remaining `= 0` → completion-pending + auto-complete.
+
+Escape before any tender: SALE_ENTRY. After tenders: Escape is a no-op; Return to sale is `AbandonTender`; F8 removes the last working tender.
 
 Completion retry:
 
@@ -289,10 +297,10 @@ POST tender succeeds
      (mint only; CompleteTransaction has not run yet)
 POST complete
   → operation_id = that token, unchanged on retries
-GET workspace while working + tender (refresh)
+GET workspace while working + exact settlement (refresh)
   → FindCompletionOperation against persisted settlement
-       (transaction.lock_version, transaction.total_cents,
-        Cash tender amount_presented_cents — not browser-supplied values)
+       (transaction.lock_version, transaction.total_cents —
+        not browser-supplied values; presented is not in the command hash)
   → matching in_flight or failed pos.complete_transaction
        (newest in_flight, else newest failed; recompute CanonicalJson.hash with that row’s id as operation_id)
        → restore that operation_id
@@ -308,10 +316,10 @@ GET workspace while working + tender (refresh)
 
 Do **not** unconditionally mint a new id on refresh. Minting B while A is `in_flight` is a second completion attempt for the same sale.
 
-- Reuse the token only for retries of that same post-tender payload (`expected_lock_version`, expected total, amount presented).
-- A new `TenderCash` (changed presented amount, or re-tender after `AbandonTender`) returns a **new** `completion_operation_id`.
-- After `TenderCash` succeeds, do not `POST tender` again unless the cashier is changing the presented amount. That requires `POST abandon_tender` (Return to sale) or Escape **before** `TenderCash` succeeded. Then a new `TenderCash` and a new token.
-- Stimulus sends `expected_total_cents` and `amount_presented_cents` from the **last tender / completion-pending render**, not a client-side recompute. Recovery on GET workspace uses **persisted** transaction + tender, not those browser fields.
+- Reuse the token only for retries of that same post-tender payload (`expected_lock_version`, expected total).
+- A new `TenderCash` or `AddTender` (changed settlement, or re-tender after `AbandonTender`) returns a **new** `completion_operation_id`.
+- After exact settlement succeeds, do not `POST tender` again unless the cashier is changing tenders. That requires `POST abandon_tender` (Return to sale) or F8 / remove. Then a new tender and a new token.
+- Stimulus sends `expected_total_cents` from the **last exact-settlement / completion-pending render**, not a client-side recompute. Recovery on GET workspace uses **persisted** transaction + tenders, not those browser fields.
 - Abandoned `in_flight` leases expire in 2 minutes (`PosOperation::LEASE_DURATION`). Do not reuse an old token after a new tender.
 
 If completion fails recoverably: keep the working transaction **and** the tender; show a completion error; offer retry complete with the **same** token. **Return to sale** is `POST abandon_tender`, then `SALE_ENTRY` with no working tender (`lock_version` advances only if a tender was removed). Changing Cash presented after a failed complete: Return to sale, then `+` / Tender (new `TenderCash`, new token).
@@ -321,7 +329,7 @@ If completion fails recoverably: keep the working transaction **and** the tender
 Phase 4 already prevents a second commercial effect. Recovery must reference **that** transaction, not “latest completed in this Session”:
 
 ```text
-working transaction + Cash tender  → completion-pending (restore operation_id per above)
+working transaction + exact settlement  → completion-pending (restore operation_id per above)
 POST complete / retry for an already-completed transaction
   → GET /pos/transactions/:id/completed for that id (transaction-scoped complete; never infer via the working-row lookup)
 GET /pos/transactions/:id/completed
@@ -336,7 +344,7 @@ F9 / cancel is disabled while a `POST complete` is in flight. After a recoverabl
 
 Working-command in-flight guard: a second Enter must not fire `AddMerchandise` (or another mutation) before the first response refreshes `lock_version`.
 
-Presented amount less than amount due: `TenderCash` rejects; remain in `TENDER`; preserve/edit the amount; focus the primary amount input. No split tender in Phase 5.
+Presented amount less than amount due on an all-Cash sale: `TenderCash` rejects; remain in `TENDER`; preserve/edit the amount; focus the primary amount input. Mixed settlement: non-cash cannot exceed remaining due; Cash may overpay only when it closes the remainder.
 
 ---
 

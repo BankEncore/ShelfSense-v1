@@ -1,0 +1,27 @@
+<% content_for :title, @tender_type.name %>
+
+<%= render "shared/breadcrumbs", crumbs: [
+  { name: "Home", path: root_path },
+  { name: "Tender types", path: admin_tender_types_path },
+  { name: @tender_type.code }
+] %>
+
+<% actions = [configuration_status_badge(@tender_type.active?)] %>
+<% actions << link_to("Edit", edit_admin_tender_type_path(@tender_type), class: "btn btn--secondary") %>
+<% unless @tender_type.system_protected? %>
+  <% if @tender_type.active? %>
+    <% actions << button_to("Deactivate", admin_tender_type_path(@tender_type), method: :delete, class: "btn btn--danger") %>
+  <% else %>
+    <% actions << button_to("Reactivate", reactivate_admin_tender_type_path(@tender_type), method: :post, params: { lock_version: @tender_type.lock_version }, class: "btn") %>
+  <% end %>
+<% end %>
+
+<%= render "shared/page_header", title: @tender_type.name, subtitle: @tender_type.code, actions: safe_join(actions, " ") %>
+
+<section class="section surface">
+  <%= render "shared/definition_list", rows: [
+        ["Category", @tender_type.behavioral_category.humanize],
+        ["Reference policy", @tender_type.external_reference_policy.humanize],
+        ["System identity", @tender_type.system_protected? ? "Yes" : "No"]
+      ] %>
+</section>

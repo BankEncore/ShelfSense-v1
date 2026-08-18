@@ -99,18 +99,47 @@ module Pos
 
     def tender
       rescue_workspace(error_mode: "tender") do
-        presented = Money::ParseCents.call(params[:amount_presented])
-        raise Pos::Error, "cash presented is required" if presented.nil?
+        type = selected_tender_type_from_params
+        if type.cash?
+          presented = Money::ParseCents.call(params[:amount_presented])
+          raise Pos::Error, "cash presented is required" if presented.nil?
 
-        Pos::TenderCash.call(
+          Pos::TenderCash.call(
+            transaction: @transaction,
+            actor: current_user,
+            expected_lock_version: expected_lock_version,
+            amount_presented_cents: presented
+          )
+        else
+          amount = Money::ParseCents.call(params[:amount_presented])
+          raise Pos::Error, "tender amount is required" if amount.nil?
+
+          Pos::AddTender.call(
+            transaction: @transaction,
+            actor: current_user,
+            expected_lock_version: expected_lock_version,
+            tender_type: type,
+            amount_cents: amount,
+            external_reference: params[:external_reference]
+          )
+        end
+        @transaction.reload
+        apply_post_tender_view!
+        respond_workspace
+      end
+    end
+
+    def remove_tender
+      rescue_workspace(error_mode: "tender") do
+        tender = @transaction.pos_tenders.find(params.require(:tender_id))
+        Pos::RemoveWorkingTender.call(
           transaction: @transaction,
           actor: current_user,
           expected_lock_version: expected_lock_version,
-          amount_presented_cents: presented
+          tender: tender
         )
         @transaction.reload
-        mint_or_restore_completion!
-        @ui_mode = "completion_pending"
+        @ui_mode = @transaction.pos_tenders.any? ? "tender" : "sale_entry"
         respond_workspace
       end
     end
@@ -128,8 +157,7 @@ module Pos
           actor: current_user,
           operation_id: params.require(:completion_operation_id),
           expected_lock_version: expected_lock_version,
-          expected_total_cents: params.require(:expected_total_cents),
-          amount_presented_cents: params.require(:amount_presented_cents)
+          expected_total_cents: params.require(:expected_total_cents)
         )
         redirect_to pos_completed_transaction_path(result.transaction)
       end
@@ -194,13 +222,20 @@ module Pos
     def prepare_view_state
       @period = @session_record.reporting_period
       @lines = @transaction.pos_transaction_lines.includes(:inventory_unit, product_variant: [ :product, :merchandise_condition ])
-      @tender = @transaction.pos_tenders.find_by(tender_type: "cash")
+      @tenders = @transaction.pos_tenders.ordered.to_a
+      @tender = @tenders.find(&:cash?)
+      @remaining_due_cents = Pos::Support.remaining_due_cents(@transaction)
+      @cashier_tender_types = TenderType.cashier_selectable.to_a
+      @selected_tender_type = resolve_selected_tender_type
       @selected_line ||= default_selected_line
       @feedback ||= nil
       @command_value ||= nil
-      if @tender
+      if Pos::Support.exact_settlement?(@transaction)
         mint_or_restore_completion!
         apply_completion_view_state
+      elsif @tenders.any?
+        @ui_mode ||= "tender"
+        @auto_complete = false
       else
         @ui_mode ||= "sale_entry"
         @auto_complete = false
@@ -280,7 +315,7 @@ module Pos
     end
 
     def apply_error_mode(error_mode)
-      return if @transaction.pos_tenders.where(tender_type: "cash").exists?
+      return if Pos::Support.exact_settlement?(@transaction)
       return if error_mode == "derive"
 
       @ui_mode = error_mode
@@ -305,6 +340,30 @@ module Pos
       return if index.nil? || index.zero?
 
       lines[index - 1]
+    end
+
+    def apply_post_tender_view!
+      if Pos::Support.exact_settlement?(@transaction)
+        mint_or_restore_completion!
+        @ui_mode = "completion_pending"
+      else
+        @ui_mode = "tender"
+        @auto_complete = false
+      end
+    end
+
+    def selected_tender_type_from_params
+      id = params[:tender_type_id].presence
+      return Pos::Support.cash_tender_type if id.blank?
+
+      TenderType.cashier_selectable.find_by(id: id) || raise(Pos::Error, "tender is not available")
+    end
+
+    def resolve_selected_tender_type
+      id = params[:tender_type_id].presence
+      (@cashier_tender_types.find { |type| type.id.to_s == id.to_s }) ||
+        @cashier_tender_types.find(&:cash?) ||
+        @cashier_tender_types.first
     end
   end
 end

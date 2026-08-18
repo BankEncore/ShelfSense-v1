@@ -59,6 +59,9 @@
             <% if effective_permissions.include?("inventory.view") %>
               <%= link_to "Inventory", admin_inventory_balances_path %>
             <% end %>
+            <% if effective_permissions.include?("pos.manage_tender_types") %>
+              <%= link_to "Tender types", admin_tender_types_path %>
+            <% end %>
             <% if effective_permissions.include?("inventory.manage_adjustment_reasons") %>
               <%= link_to "Adjustment reasons", admin_adjustment_reasons_path %>
             <% end %>

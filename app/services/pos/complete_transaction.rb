@@ -8,23 +8,21 @@ module Pos
       new(**attrs).call
     end
 
-    def self.command_payload(transaction:, operation_id:, expected_lock_version:, expected_total_cents:, amount_presented_cents:)
+    def self.command_payload(transaction:, operation_id:, expected_lock_version:, expected_total_cents:)
       {
         "transaction_id" => transaction.id.to_s,
         "operation_id" => operation_id.to_s,
         "expected_lock_version" => expected_lock_version.to_i,
-        "expected_total_cents" => expected_total_cents.to_i,
-        "amount_presented_cents" => amount_presented_cents.to_i
+        "expected_total_cents" => expected_total_cents.to_i
       }
     end
 
-    def initialize(transaction:, actor:, operation_id:, expected_lock_version:, expected_total_cents:, amount_presented_cents:)
+    def initialize(transaction:, actor:, operation_id:, expected_lock_version:, expected_total_cents:)
       @transaction = transaction
       @actor = actor
       @operation_id = operation_id
       @expected_lock_version = expected_lock_version.to_i
       @expected_total_cents = expected_total_cents.to_i
-      @amount_presented_cents = amount_presented_cents.to_i
     end
 
     def call
@@ -63,8 +61,7 @@ module Pos
         transaction: transaction,
         operation_id: @operation_id,
         expected_lock_version: @expected_lock_version,
-        expected_total_cents: @expected_total_cents,
-        amount_presented_cents: @amount_presented_cents
+        expected_total_cents: @expected_total_cents
       )
     end
 
@@ -97,7 +94,7 @@ module Pos
         if transaction.total_cents != @expected_total_cents
           raise Pos::Error, "expected total does not match amount due"
         end
-        settle_cash!(transaction)
+        settle_tenders!(transaction)
 
         completion_time = Time.current
         business_date = transaction.reporting_period.business_date
@@ -210,23 +207,32 @@ module Pos
       )
     end
 
-    def settle_cash!(transaction)
-      tenders = transaction.pos_tenders.to_a
-      raise Pos::Error, "cash tender is required" unless tenders.size == 1
+    def settle_tenders!(transaction)
+      tenders = transaction.pos_tenders.ordered.to_a
+      raise Pos::Error, "tender is required" if tenders.empty?
+      raise Pos::Error, "refund tenders are not supported" if tenders.any? { |tender| tender.direction != "payment" }
 
-      tender = tenders.first
-      raise Pos::Error, "cash tender is required" unless tender.tender_type == "cash"
-      if tender.amount_presented_cents != @amount_presented_cents
-        raise Pos::Error, "presented amount does not match the cash tender"
-      end
-      if @amount_presented_cents < transaction.total_cents
-        raise Pos::Error, "presented amount is less than amount due"
+      cash = tenders.find(&:cash?)
+      non_cash = tenders.reject(&:cash?)
+      non_cash_applied = non_cash.sum(&:amount_cents)
+
+      if cash
+        remaining = transaction.total_cents - non_cash_applied
+        raise Pos::Error, "tenders exceed amount due" if remaining.negative?
+        if cash.amount_presented_cents < remaining
+          raise Pos::Error, "presented amount is less than amount due"
+        end
+
+        cash.update!(
+          amount_cents: remaining,
+          change_cents: cash.amount_presented_cents - remaining
+        )
+      elsif non_cash_applied != transaction.total_cents
+        raise Pos::Error, "tenders must equal amount due"
       end
 
-      tender.update!(
-        amount_cents: transaction.total_cents,
-        change_cents: @amount_presented_cents - transaction.total_cents
-      )
+      applied = transaction.pos_tenders.sum(:amount_cents)
+      raise Pos::Error, "tenders must equal amount due" unless applied == transaction.total_cents
     end
 
     def allocate_receipt!(transaction)
@@ -278,7 +284,7 @@ module Pos
           "signed_net_cents" => transaction.total_cents
         },
         "lines" => transaction.pos_transaction_lines.reload.map { |line| envelope_line(line) },
-        "tenders" => transaction.pos_tenders.reload.map { |tender| envelope_tender(tender) }
+        "tenders" => transaction.pos_tenders.ordered.map { |tender| envelope_tender(tender) }
       }
       facts = CompletedTransactionFacts.new(envelope)
       facts.verify!
@@ -318,14 +324,21 @@ module Pos
     end
 
     def envelope_tender(tender)
-      {
+      payload = {
         "tender_id" => tender.id.to_s,
+        "tender_number" => tender.tender_number,
         "tender_type" => tender.tender_type,
+        "tender_name" => tender.tender_name,
+        "behavioral_category" => tender.behavioral_category,
         "direction" => tender.direction,
-        "amount_cents" => tender.amount_cents,
-        "amount_presented_cents" => tender.amount_presented_cents,
-        "change_cents" => tender.change_cents
+        "amount_cents" => tender.amount_cents
       }
+      if tender.cash?
+        payload["amount_presented_cents"] = tender.amount_presented_cents
+        payload["change_cents"] = tender.change_cents
+      end
+      payload["external_reference"] = tender.external_reference if tender.external_reference.present?
+      payload
     end
 
     def persist_completed_transaction!(transaction, facts, completion_time, business_date)

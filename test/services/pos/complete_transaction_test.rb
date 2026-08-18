@@ -43,8 +43,7 @@ class PosCompleteTransactionTest < ActiveSupport::TestCase
       actor: @actor,
       operation_id: operation_id,
       expected_lock_version: @transaction.lock_version,
-      expected_total_cents: @transaction.total_cents,
-      amount_presented_cents: 2500
+      expected_total_cents: @transaction.total_cents
     )
 
     transaction = result.transaction
@@ -131,7 +130,7 @@ class PosCompleteTransactionTest < ActiveSupport::TestCase
 
     error = assert_raises(Pos::Error) do
       Pos::CompleteTransaction.call(
-        **complete_args(operation_id: operation_id, amount_presented_cents: @transaction.total_cents)
+        **complete_args(operation_id: operation_id)
       )
     end
     assert_match(/insufficient|below zero/i, error.message)
@@ -148,7 +147,7 @@ class PosCompleteTransactionTest < ActiveSupport::TestCase
     operation_id = SecureRandom.uuid_v7
     Pos::CompleteTransaction.call(**complete_args(operation_id: operation_id))
     assert_raises(Pos::PayloadMismatch) do
-      Pos::CompleteTransaction.call(**complete_args(operation_id: operation_id, amount_presented_cents: 9999))
+      Pos::CompleteTransaction.call(**complete_args(operation_id: operation_id, expected_total_cents: @transaction.total_cents + 1))
     end
     assert_equal "completed", PosOperation.find(operation_id).status
     assert_equal 1, OutboxMessage.where(event_type: "pos.transaction_completed").count
@@ -227,8 +226,7 @@ class PosCompleteTransactionTest < ActiveSupport::TestCase
         actor: @actor,
         operation_id: operation_id,
         expected_lock_version: other_transaction.lock_version,
-        expected_total_cents: other_transaction.total_cents,
-        amount_presented_cents: 2500
+        expected_total_cents: other_transaction.total_cents
       )
     end
     assert_match(/another register/, error.message)
@@ -270,7 +268,7 @@ class PosCompleteTransactionTest < ActiveSupport::TestCase
 
     assert_raises(ActiveRecord::ReadOnlyRecord) { transaction.update!(subtotal_cents: 1) }
     assert_raises(ActiveRecord::ReadOnlyRecord) { line.update!(quantity: 2) }
-    assert_raises(ActiveRecord::ReadOnlyRecord) { tender.update!(change_cents: 0) }
+    assert_raises(ActiveRecord::ReadOnlyRecord) { tender.update!(tender_name: "Tampered") }
     assert_raises(ActiveRecord::ReadOnlyRecord) { component.update!(tax_cents: 0) }
     assert_raises(ActiveRecord::ReadOnlyRecord) { result.operation.update!(producer_client: "tampered") }
   end
@@ -290,6 +288,12 @@ class PosCompleteTransactionTest < ActiveSupport::TestCase
     assert_equal 1999, line.fetch("selling_unit_price_cents")
     assert line.fetch("tax_components").any? { |component| component.fetch("applies") }
     assert_equal "cash", envelope.fetch("tenders").first.fetch("tender_type")
+    tender = envelope.fetch("tenders").first
+    assert_equal 1, tender.fetch("tender_number")
+    assert_equal "Cash", tender.fetch("tender_name")
+    assert_equal "cash", tender.fetch("behavioral_category")
+    assert_equal 2500, tender.fetch("amount_presented_cents")
+    refute tender.key?("external_reference")
     assert_equal 1, InventoryLedgerEntry.where(source_type: "PosTransactionLine").count
     assert_equal 1, InventoryValuationEntry.where(source_type: "PosTransactionLine").count
     assert_equal 1, OutboxMessage.where(event_type: "pos.transaction_completed").count
@@ -297,14 +301,13 @@ class PosCompleteTransactionTest < ActiveSupport::TestCase
 
   private
 
-  def complete_args(operation_id: SecureRandom.uuid_v7, actor: @actor, expected_total_cents: @transaction.total_cents, amount_presented_cents: 2500)
+  def complete_args(operation_id: SecureRandom.uuid_v7, actor: @actor, expected_total_cents: @transaction.total_cents)
     {
       transaction: @transaction,
       actor: actor,
       operation_id: operation_id,
       expected_lock_version: @transaction.lock_version,
-      expected_total_cents: expected_total_cents,
-      amount_presented_cents: amount_presented_cents
+      expected_total_cents: expected_total_cents
     }
   end
 end

@@ -53,8 +53,7 @@ class Pos::ConcurrencyTest < ActiveSupport::TestCase
             actor: User.find(actor_id),
             operation_id: SecureRandom.uuid_v7,
             expected_lock_version: lock_version,
-            expected_total_cents: total,
-            amount_presented_cents: 2500
+            expected_total_cents: total
           )
         rescue StandardError => e
           errors[i] = e
@@ -91,8 +90,7 @@ class Pos::ConcurrencyTest < ActiveSupport::TestCase
             actor: User.find(actor_id),
             operation_id: SecureRandom.uuid_v7,
             expected_lock_version: job[:transaction].lock_version,
-            expected_total_cents: job[:transaction].total_cents,
-            amount_presented_cents: 2500
+            expected_total_cents: job[:transaction].total_cents
           )
         rescue StandardError => e
           errors[i] = e
@@ -224,8 +222,7 @@ class Pos::ConcurrencyTest < ActiveSupport::TestCase
       "transaction_id" => SecureRandom.uuid_v7,
       "operation_id" => operation_id,
       "expected_lock_version" => 0,
-      "expected_total_cents" => 100,
-      "amount_presented_cents" => 100
+      "expected_total_cents" => 100
     }
     results = Array.new(2)
     errors = Array.new(2)
@@ -356,8 +353,7 @@ class Pos::ConcurrencyTest < ActiveSupport::TestCase
             actor: User.find(actor_id),
             operation_id: SecureRandom.uuid_v7,
             expected_lock_version: ready_sale[:transaction].lock_version,
-            expected_total_cents: ready_sale[:transaction].total_cents,
-            amount_presented_cents: 2500
+            expected_total_cents: ready_sale[:transaction].total_cents
           )
         rescue StandardError => e
           complete_error = e

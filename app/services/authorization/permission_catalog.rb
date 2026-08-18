@@ -82,7 +82,8 @@ module Authorization
       { key: "store_taxes.create", group_key: "store_taxes", name: "Create store taxes", scope_type: "either" },
       { key: "store_taxes.update", group_key: "store_taxes", name: "Update store taxes", scope_type: "either" },
       { key: "store_taxes.deactivate", group_key: "store_taxes", name: "Deactivate store taxes", scope_type: "either" },
-      { key: "pos.transact", group_key: "pos", name: "Operate POS transactions", scope_type: "either" }
+      { key: "pos.transact", group_key: "pos", name: "Operate POS transactions", scope_type: "either" },
+      { key: "pos.manage_tender_types", group_key: "pos", name: "Manage tender types", scope_type: "global" }
     ].freeze
 
     PERMISSIONS = (PHASE1_PERMISSIONS + PHASE2_PERMISSIONS + PHASE3_PERMISSIONS + PHASE4_PERMISSIONS).freeze

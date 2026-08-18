@@ -59,6 +59,46 @@ class PosGoldenFixturesTest < ActiveSupport::TestCase
     Pos::CompletedTransactionFacts.new(payload).verify!
   end
 
+  test "CompleteTransactionCommand v2 omits presented and matches committed fixtures" do
+    payload = JSON.parse(File.read(FIXTURES.join("complete_transaction_command_v2.json")))
+    expected_canonical = File.read(FIXTURES.join("complete_transaction_command_v2.canonical.json"))
+    expected_hash = File.read(FIXTURES.join("complete_transaction_command_v2.sha256")).strip
+
+    assert_equal expected_canonical, Idempotency::CanonicalJson.dump(payload)
+    assert_equal expected_hash, Idempotency::CanonicalJson.hash(payload)
+    refute payload.key?("amount_presented_cents")
+  end
+
+  test "CompletedPosOperation v2 6.2 cash snapshots include tender_number name and category" do
+    payload = JSON.parse(File.read(FIXTURES.join("completed_pos_operation_v2/cash_sale_snapshots.json")))
+    expected_canonical = File.read(FIXTURES.join("completed_pos_operation_v2/cash_sale_snapshots.canonical.json"))
+    expected_hash = File.read(FIXTURES.join("completed_pos_operation_v2/cash_sale_snapshots.sha256")).strip
+
+    assert_equal expected_canonical, Idempotency::CanonicalJson.dump(payload)
+    assert_equal expected_hash, Idempotency::CanonicalJson.hash(payload)
+    tender = payload.fetch("tenders").first
+    assert_equal 1, tender.fetch("tender_number")
+    assert_equal "Cash", tender.fetch("tender_name")
+    assert_equal "cash", tender.fetch("behavioral_category")
+    Pos::CompletedTransactionFacts.new(payload).verify!
+  end
+
+  test "CompletedPosOperation v2 mixed Card and Cash omits presented on non-cash" do
+    payload = JSON.parse(File.read(FIXTURES.join("completed_pos_operation_v2/mixed_card_cash.json")))
+    expected_canonical = File.read(FIXTURES.join("completed_pos_operation_v2/mixed_card_cash.canonical.json"))
+    expected_hash = File.read(FIXTURES.join("completed_pos_operation_v2/mixed_card_cash.sha256")).strip
+
+    assert_equal expected_canonical, Idempotency::CanonicalJson.dump(payload)
+    assert_equal expected_hash, Idempotency::CanonicalJson.hash(payload)
+    card, cash = payload.fetch("tenders")
+    assert_equal "card", card.fetch("behavioral_category")
+    refute card.key?("amount_presented_cents")
+    refute card.key?("change_cents")
+    assert_equal "cash", cash.fetch("behavioral_category")
+    assert_equal 1500, cash.fetch("amount_presented_cents")
+    Pos::CompletedTransactionFacts.new(payload).verify!
+  end
+
   test "tax golden cases compute half-up independently and include non-applicable rows" do
     catalog = JSON.parse(File.read(FIXTURES.join("tax_cases.json")))
     catalog.fetch("cases").each do |tax_case|

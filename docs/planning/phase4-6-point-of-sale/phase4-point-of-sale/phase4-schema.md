@@ -257,14 +257,35 @@ Do **not** use abstract `tax_component_id`, treatment enums, or `rate_basis_poin
 |---|---|---|
 | `id` | uuid | PK, UUIDv7 |
 | `pos_transaction_id` | uuid | FK, null: false |
-| `tender_type` | string | Phase 4: `cash` |
-| `direction` | string | Phase 4: `payment` |
+| `tender_type_id` | uuid | FK → `tender_types`; 6.2 |
+| `tender_number` | integer | dense `1..N` per transaction; 6.2 |
+| `tender_type` | string | identity **code snapshot** |
+| `tender_name` | string | display-name snapshot; 6.2 |
+| `behavioral_category` | string | `cash \| card \| check \| other` snapshot; 6.2 |
+| `direction` | string | 6.2: `payment` only |
 | `amount_cents` | bigint | positive magnitude (amount applied) |
-| `amount_presented_cents` | bigint | Cash presented |
-| `change_cents` | bigint | positive; not a separate refund tender |
+| `amount_presented_cents` | bigint | Cash payment only; null otherwise |
+| `change_cents` | bigint | Cash payment only; null otherwise; not a separate refund tender |
+| `external_reference` | text | nullable; 6.2 |
 | `created_at` / `updated_at` | timestamptz | |
 
-Phase 4: one Cash payment tender per completed sale is sufficient.
+Phase 4/5/6.1: one Cash payment tender per completed sale is sufficient. 6.2: at most one Cash **payment** (partial unique index on `pos_transaction_id` where `behavioral_category = 'cash' AND direction = 'payment'`). Multiple non-cash rows are allowed.
+
+### `tender_types` (6.2)
+
+Centrally mastered identities. UUIDv7 (`create_uuid_table`). Seed protected `cash` (Cash), `card` (External Card), and `check` (Check). Admins create Other identities (`behavioral_category` forced to `other`). See [tender-breadth.md](../phase6-pos-mvp/tender-breadth.md).
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | uuid | PK, UUIDv7 |
+| `code` | string | unique normalized machine code |
+| `name` | string | live display name; tenders snapshot this at add/replace |
+| `behavioral_category` | string | `cash \| card \| check \| other` |
+| `active` | boolean | cashier-selectable when true; Cash cannot be deactivated |
+| `external_reference_policy` | string | `omitted \| optional \| required`; Cash is `omitted` |
+| `system_protected` | boolean | true for seeded Cash/Card/Check; cannot delete or recategorize |
+| `lock_version` | integer | optimistic locking |
+| `created_at` / `updated_at` | timestamptz | |
 
 ---
 

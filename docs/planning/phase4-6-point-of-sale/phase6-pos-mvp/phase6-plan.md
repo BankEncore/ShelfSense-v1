@@ -1,6 +1,6 @@
 # Phase 6 — Operational POS MVP
 
-**Status:** Slice 6.0 contract locked ([mvp-contract.md](mvp-contract.md)). Slice 6.1 merchandise breadth implemented ([merchandise-breadth.md](merchandise-breadth.md)).
+**Status:** Slice 6.0 contract locked ([mvp-contract.md](mvp-contract.md)). Slice 6.1 merchandise breadth implemented ([merchandise-breadth.md](merchandise-breadth.md)). Slice 6.2 tender-breadth contract locked ([tender-breadth.md](tender-breadth.md)).
 
 **Authority**
 
@@ -8,6 +8,7 @@
 |---|---|
 | [MVP contract](mvp-contract.md) | Slice 6.0: CompletedPosOperation v2 and cross-cutting locks |
 | [Merchandise breadth](merchandise-breadth.md) | Slice 6.1: Used/individual and non-inventory sales |
+| [Tender breadth](tender-breadth.md) | Slice 6.2: Cash/Card/Check/Other settlement |
 | [Phase 4 plan](../phase4-point-of-sale/phase4-plan.md) | Completion, receipt allocation, inventory posting |
 | [CompletedPosOperation v1](../phase4-point-of-sale/completed-pos-operation-v1.md) | Commercial base; v2 is additive |
 | [POS tax contract](../phase4-point-of-sale/pos-tax-contract.md) | Tax Class / Store Tax; linked-return reversal ([§10](../phase4-point-of-sale/pos-tax-contract.md)) |
@@ -105,7 +106,7 @@ Write the detailed implementation contract for slices 6.2–6.7 immediately befo
 |---|---|---|---|
 | **6.0** | MVP contract | Lock Phase 6 invariants and completed-operation shape | Docs only; no behavior change |
 | **6.1** | Merchandise breadth | Used/individual + non-inventory sales | **Implemented.** Quantity-tracked Cash Standard path unchanged |
-| **6.2** | Tender breadth | Card, Check, configured Other, mixed tender | All-Cash sale remains Phase 5-equivalent; Session/Z shows the new tender categories |
+| **6.2** | Tender breadth | Card, Check, admin-created Other, mixed tender | **Implemented.** All-Cash sale remains Phase 5-equivalent; Session/Z shows Card/Check/Other |
 | **6.3** | Transaction history | Lookup, detail, receipt reprint | Sale workspace does not depend on history |
 | **6.4** | Controlled pricing/actions | Approval framework, price override, line discount, Tax Class override | Ordinary path stays `direct` unless policy requires a second actor |
 | **6.5** | Returns | Linked, unlinked, price adjustment, mixed sale/return | Sale-only baskets still complete the same way; Session/Z is direction-aware |
@@ -136,17 +137,19 @@ non-inventory Standard
 
 Open ring is out. Unknown Used intake, buyback, transfers, and `reserved` are out.
 
-### 6.2 — Tender breadth
+### 6.2 — Tender breadth (implemented)
+
+Authority: [tender-breadth.md](tender-breadth.md).
 
 One settlement redesign, not three unrelated tender implementations.
 
-- Configure usable tender identities around behavioral categories: Cash, Card, Check, Other.
-- Other is configured identities (Purchase Order, Campus Charge, Voucher), not free-typed cashier text.
+- Seed protected system identities Cash, Card, and Check. Admins create genuine Other identities. Do not seed dummy Other codes.
+- Other is configured identities, not free-typed cashier text.
 - External Card: cashier processes outside ShelfSense, then records the tender. No processor, authorization status, or automatic reversal.
-- Mixed tender accumulator; completion requires exact settlement (`SUM(payments) − SUM(refunds) = signed net`).
-- Cash retains presented / applied / change.
+- Mixed tender accumulator; completion requires exact settlement (`SUM(payments) − SUM(refunds) = signed net`). 6.2 is payment-only; refunds wait for 6.5.
+- Cash retains presented / applied / change. Replacement remaining due excludes the existing Cash row.
 - Until Cash refunds exist, expected Cash stays the Phase 5 formula.
-- Session/Z must show basic Card / Check / Other tender totals when those tenders become completable. Do not wait for 6.7.
+- Session/Z must show basic Card / Check / Other tender totals **before** those tenders are cashier-completable. Do not wait for 6.7.
 
 **6.2E merge gate:** ordinary all-Cash behavior remains exactly equivalent to Phase 5.
 

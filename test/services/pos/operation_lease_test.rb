@@ -13,8 +13,7 @@ class Pos::OperationLeaseTest < ActiveSupport::TestCase
       "transaction_id" => SecureRandom.uuid_v7,
       "operation_id" => @operation_id,
       "expected_lock_version" => 0,
-      "expected_total_cents" => 100,
-      "amount_presented_cents" => 100
+      "expected_total_cents" => 100
     }
   end
 
