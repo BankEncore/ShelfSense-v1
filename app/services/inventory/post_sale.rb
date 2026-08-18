@@ -69,14 +69,14 @@ module Inventory
     def post_individual!
       variant = @line.product_variant
       store = @line.pos_transaction.store
-      unit = InventoryUnit.lock.find(@line.inventory_unit_id)
+      balance = Balances.lock_or_create!(store: store, product_variant: variant)
+      unit = lock_inventory_unit!
       raise Error, "unit must be on hand" unless unit.on_hand?
       raise Error, "unit store mismatch" unless unit.store_id == store.id
       raise Error, "unit variant mismatch" unless unit.product_variant_id == variant.id
 
       quantity_delta = -1
       carrying_value_cents = unit.carrying_value_cents
-      balance = Balances.lock_or_create!(store: store, product_variant: variant)
       effects = deplete_specific_identification(balance, carrying_value_cents)
       apply_negative_stock_policy!(effects)
 
@@ -90,6 +90,12 @@ module Inventory
         effects: effects,
         valuation_method: "specific_identification"
       )
+    end
+
+    def lock_inventory_unit!
+      InventoryUnit.lock.find(@line.inventory_unit_id)
+    rescue ActiveRecord::RecordNotFound
+      raise Error, "unit must be on hand"
     end
 
     def persist_effects!(store:, variant:, inventory_unit:, quantity_delta:, effects:, valuation_method:)

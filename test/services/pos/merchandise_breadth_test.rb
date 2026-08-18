@@ -138,6 +138,8 @@ class PosMerchandiseBreadthTest < ActiveSupport::TestCase
     assert_equal(-1, sale.quantity_delta)
     assert_equal @unit.id, sale.inventory_unit_id
     assert_equal 0, InventoryLedgerEntry.where(source_type: "PosTransactionLine", source_id: service_line.id).count
+    assert_equal 0, InventoryValuationEntry.where(source_type: "PosTransactionLine", source_id: service_line.id).count
+    assert_nil InventoryBalance.find_by(store: @store, product_variant: @non_inventory)
     assert_equal 0, InventoryLedgerEntry.where(source_type: "PosTransactionLine", source_id: standard_line.id, inventory_unit_id: nil).where.not(quantity_delta: -2).count
     assert_equal(-2, InventoryLedgerEntry.find_by!(source_type: "PosTransactionLine", source_id: standard_line.id).quantity_delta)
     assert_equal 2, OutboxMessage.where(event_type: "inventory.sale_posted").count
@@ -199,6 +201,75 @@ class PosMerchandiseBreadthTest < ActiveSupport::TestCase
     assert @unit.reload.removed?
     assert_equal 1, InventoryLedgerEntry.where(source_type: "PosTransactionLine", inventory_unit_id: @unit.id).count
     assert_equal 1, OutboxMessage.where(event_type: "inventory.sale_posted").count
+  end
+
+  test "unit regular price takes precedence over the variant regular price" do
+    variant, unit = pos_on_hand_unit(
+      store: @store,
+      actor: @actor,
+      tax_class: @tax,
+      name: "Priced Used Book",
+      regular_price_cents: 900
+    )
+    assert_equal 1200, variant.regular_price_cents
+    assert_equal 900, unit.regular_price_cents
+
+    transaction = Pos::StartTransaction.call(session: @context[:session], actor: @actor)
+    line = Pos::AddMerchandise.call(
+      transaction: transaction,
+      actor: @actor,
+      expected_lock_version: transaction.lock_version,
+      identifier: unit.unit_identifier
+    )
+
+    assert_equal 900, line.selling_unit_price_cents
+    assert_equal 900, line.reference_unit_price_cents
+  end
+
+  test "rejects a used unit that belongs to another store" do
+    other = Store.create!(
+      store_number: (@store.store_number || 1) + 50,
+      code: "east_#{SecureRandom.hex(3)}",
+      name: "East Store",
+      timezone: "America/New_York",
+      country_code: "US"
+    )
+    _variant, unit = pos_on_hand_unit(store: other, actor: @actor, tax_class: @tax, name: "East Used Book")
+    transaction = Pos::StartTransaction.call(session: @context[:session], actor: @actor)
+    error = assert_raises(Pos::Error) do
+      Pos::AddMerchandise.call(
+        transaction: transaction,
+        actor: @actor,
+        expected_lock_version: transaction.lock_version,
+        identifier: unit.unit_identifier
+      )
+    end
+    assert_match(/not at this store/, error.message)
+    assert_equal 0, transaction.reload.pos_transaction_lines.count
+  end
+
+  test "rejects an already-removed unit at scan" do
+    Inventory::PostAdjustment.call(
+      store: @store,
+      product_variant: @used_variant,
+      adjustment_reason: AdjustmentReason.find_by!(code: "shrinkage"),
+      quantity_delta: -1,
+      actor: @actor,
+      source_id: SecureRandom.uuid_v7,
+      idempotency_key: SecureRandom.uuid_v7,
+      unit_identifier: @unit.unit_identifier
+    )
+    transaction = Pos::StartTransaction.call(session: @context[:session], actor: @actor)
+    error = assert_raises(Pos::Error) do
+      Pos::AddMerchandise.call(
+        transaction: transaction,
+        actor: @actor,
+        expected_lock_version: transaction.lock_version,
+        identifier: @unit.unit_identifier
+      )
+    end
+    assert_match(/not on hand/, error.message)
+    assert_equal 0, transaction.reload.pos_transaction_lines.count
   end
 
   private

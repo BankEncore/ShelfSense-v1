@@ -179,7 +179,7 @@ module Pos
         raise Pos::Error, "inventory unit is required" if line.inventory_unit_id.blank?
         raise Pos::Error, "quantity must be 1 for individually tracked merchandise" unless line.quantity == 1
 
-        unit = InventoryUnit.lock.find(line.inventory_unit_id)
+        unit = InventoryUnit.find(line.inventory_unit_id)
         raise Pos::Error, "unit is not on hand" unless unit.on_hand?
         raise Pos::Error, "unit is not at this store" unless unit.store_id == transaction.store_id
         raise Pos::Error, "unit does not match the merchandise" unless unit.product_variant_id == variant.id

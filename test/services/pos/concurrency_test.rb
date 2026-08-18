@@ -283,6 +283,140 @@ class Pos::ConcurrencyTest < ActiveSupport::TestCase
     }
   end
 
+  test "concurrent adds of the same unit from two registers leave one working line" do
+    _used_variant, unit = pos_on_hand_unit(store: @store, actor: @actor, tax_class: @tax, name: "Race Used")
+    first = prepare_empty_sale(register_number: 21)
+    second = prepare_empty_sale(register_number: 22)
+    actor_id = @actor.id
+    unit_identifier = unit.unit_identifier
+
+    ready = Queue.new
+    go = Queue.new
+    results = Array.new(2)
+    errors = Array.new(2)
+    jobs = [ first, second ]
+    threads = jobs.each_with_index.map do |job, i|
+      Thread.new do
+        ActiveRecord::Base.connection_pool.with_connection do
+          ready << true
+          go.pop
+          results[i] = Pos::AddMerchandise.call(
+            transaction: PosTransaction.find(job[:transaction].id),
+            actor: User.find(actor_id),
+            expected_lock_version: job[:transaction].lock_version,
+            identifier: unit_identifier
+          )
+        rescue StandardError => e
+          errors[i] = e
+        end
+      end
+    end
+    2.times { ready.pop }
+    2.times { go << true }
+    threads.each { |thread| assert thread.join(30), "thread did not finish" }
+
+    successes = results.compact
+    failures = errors.compact
+    assert_equal 1, successes.size, failures.map(&:message).inspect
+    assert_equal 1, failures.size, successes.inspect
+    assert_match(/already on a working transaction/, failures.first.message)
+    assert_equal 1, PosTransactionLine.uncached {
+      PosTransactionLine.where(inventory_unit_id: unit.id).count
+    }
+    working_owners = PosTransactionLine.uncached {
+      PosTransactionLine.joins(:pos_transaction)
+                        .where(inventory_unit_id: unit.id, pos_transactions: { status: "working" })
+                        .count
+    }
+    assert_equal 1, working_owners
+  end
+
+  test "concurrent completion and shrinkage of the same unit do not deadlock" do
+    _used_variant, unit = pos_on_hand_unit(store: @store, actor: @actor, tax_class: @tax, name: "Deadlock Used")
+    ready_sale = prepare_unit_sale(register_number: 23, unit: unit, presented_cents: 2500)
+    actor_id = @actor.id
+    store_id = @store.id
+    variant_id = unit.product_variant_id
+    unit_identifier = unit.unit_identifier
+    shrinkage_id = AdjustmentReason.find_by!(code: "shrinkage").id
+
+    ready = Queue.new
+    go = Queue.new
+    complete_result = nil
+    adjustment_result = nil
+    complete_error = nil
+    adjustment_error = nil
+    threads = [
+      Thread.new do
+        ActiveRecord::Base.connection_pool.with_connection do
+          ready << true
+          go.pop
+          complete_result = Pos::CompleteTransaction.call(
+            transaction: PosTransaction.find(ready_sale[:transaction].id),
+            actor: User.find(actor_id),
+            operation_id: SecureRandom.uuid_v7,
+            expected_lock_version: ready_sale[:transaction].lock_version,
+            expected_total_cents: ready_sale[:transaction].total_cents,
+            amount_presented_cents: 2500
+          )
+        rescue StandardError => e
+          complete_error = e
+        end
+      end,
+      Thread.new do
+        ActiveRecord::Base.connection_pool.with_connection do
+          ready << true
+          go.pop
+          adjustment_result = Inventory::PostAdjustment.call(
+            store: Store.find(store_id),
+            product_variant: ProductVariant.find(variant_id),
+            adjustment_reason: AdjustmentReason.find(shrinkage_id),
+            quantity_delta: -1,
+            actor: User.find(actor_id),
+            source_id: SecureRandom.uuid_v7,
+            idempotency_key: SecureRandom.uuid_v7,
+            unit_identifier: unit_identifier
+          )
+        rescue StandardError => e
+          adjustment_error = e
+        end
+      end
+    ]
+    2.times { ready.pop }
+    2.times { go << true }
+    threads.each { |thread| assert thread.join(30), "thread did not finish" }
+
+    [ complete_error, adjustment_error ].compact.each do |error|
+      refute_match(/deadlock/i, error.message)
+    end
+
+    successes = [ complete_result, adjustment_result ].compact
+    failures = [ complete_error, adjustment_error ].compact
+    assert_equal 1, successes.size, failures.map(&:message).inspect
+    assert_equal 1, failures.size
+
+    unit = InventoryUnit.uncached { InventoryUnit.find(unit.id) }
+    assert unit.removed?
+    sale_count = InventoryLedgerEntry.uncached {
+      InventoryLedgerEntry.where(source_type: "PosTransactionLine", inventory_unit_id: unit.id).count
+    }
+    adjustment_count = InventoryLedgerEntry.uncached {
+      InventoryLedgerEntry.where(source_type: "InventoryAdjustment", inventory_unit_id: unit.id, entry_type: "adjustment")
+                          .where("quantity_delta < 0").count
+    }
+    transaction = PosTransaction.uncached { PosTransaction.find(ready_sale[:transaction].id) }
+    if complete_result
+      assert transaction.completed?
+      assert_equal 1, sale_count
+      assert_equal 0, adjustment_count
+    else
+      assert transaction.working?
+      assert_nil transaction.receipt_sequence
+      assert_equal 0, sale_count
+      assert_equal 1, adjustment_count
+    end
+  end
+
   private
 
   def prepare_sale(register_number:, presented_cents:)
@@ -294,6 +428,33 @@ class Pos::ConcurrencyTest < ActiveSupport::TestCase
       actor: @actor,
       expected_lock_version: transaction.lock_version,
       identifier: @variant.sku
+    )
+    transaction.reload
+    Pos::TenderCash.call(
+      transaction: transaction,
+      actor: @actor,
+      expected_lock_version: transaction.lock_version,
+      amount_presented_cents: presented_cents
+    )
+    { context: context, transaction: transaction.reload }
+  end
+
+  def prepare_empty_sale(register_number:)
+    register = Register.create!(store: @store, register_number: register_number, name: "Lane #{register_number}")
+    context = pos_open_context(store: @store, actor: @actor, register: register)
+    transaction = Pos::StartTransaction.call(session: context[:session], actor: @actor)
+    { context: context, transaction: transaction }
+  end
+
+  def prepare_unit_sale(register_number:, unit:, presented_cents:)
+    register = Register.create!(store: @store, register_number: register_number, name: "Lane #{register_number}")
+    context = pos_open_context(store: @store, actor: @actor, register: register)
+    transaction = Pos::StartTransaction.call(session: context[:session], actor: @actor)
+    Pos::AddMerchandise.call(
+      transaction: transaction,
+      actor: @actor,
+      expected_lock_version: transaction.lock_version,
+      identifier: unit.unit_identifier
     )
     transaction.reload
     Pos::TenderCash.call(

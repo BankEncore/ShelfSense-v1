@@ -53,6 +53,15 @@ physical.business_date == valuation.business_date
 
 `pos.transaction_completed` describes the commercial operation. `inventory.sale_posted` describes the stock/valuation change and is written in the same outer transaction.
 
+Individual-sale lock order matches `PostAdjustment`:
+
+```text
+InventoryBalance   # FOR UPDATE (lock_or_create)
+InventoryUnit      # FOR UPDATE
+```
+
+`CompleteTransaction` must not hold an `InventoryUnit` row lock before posting. Freeze-time unit checks are non-locking; posting is the authoritative locked validation. A unit that leaves `on_hand` between freeze and posting rolls the whole completion back.
+
 ## `Inventory::PostAdjustment` required inputs
 
 - `store`, `product_variant`, `adjustment_reason`, signed `quantity_delta`

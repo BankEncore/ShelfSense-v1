@@ -169,7 +169,7 @@ COMMIT
 
 The lock makes the existence check and insert atomic across Registers. A second cashier waits, then fails with a conflict — not a silent steal. Removing the line (F8) releases the working reference so another Session may add the unit.
 
-Completion re-locks the unit and re-checks `on_hand` at the transaction store so an intervening Phase 3 adjustment cannot complete a sale of a unit that already left on-hand.
+Completion freeze reads the unit without holding a row lock so snapshots can be taken. Authoritative availability is re-checked in `Inventory::PostSale`, which locks `InventoryBalance` then `InventoryUnit` — the same order as `PostAdjustment`. An intervening Phase 3 adjustment that removes the unit fails posting and rolls back the whole completion (no receipt).
 
 ### 4.5 Completion
 
@@ -177,9 +177,8 @@ Completion re-locks the unit and re-checks `on_hand` at the transaction store so
 
 - variant still sellable
 - `inventory_unit_id` present, quantity `1`
-- lock unit; still `on_hand` at the transaction store
-- freeze snapshots (§6)
-- post through the inventory posting boundary (§7)
+- freeze snapshots from the unit **without** holding a unit row lock (§6)
+- post through the inventory posting boundary (§7), which locks `InventoryBalance` then `InventoryUnit` and re-checks `on_hand` at the transaction store
 
 After success the unit is `removed` (`removed_at` set). **Do not add a `sold` lifecycle state.** Phase 3 stays `on_hand | removed`. Distinguish POS sale from an adjustment decrease via ledger `entry_type = sale` and `source_type = PosTransactionLine`.
 
