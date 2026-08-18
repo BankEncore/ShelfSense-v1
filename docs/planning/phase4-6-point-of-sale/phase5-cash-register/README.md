@@ -11,6 +11,6 @@
 | [close-z-screens.md](close-z-screens.md) | Slice 3 print, blind close, enter-gate Z, HTTP/auth/retry |
 | [close-z-screens-ux.md](close-z-screens-ux.md) | Slice 3 low-fidelity frames (receipt, blind count, closed Session, Z) |
 
-Parent multi-phase sequencing: [../spec.md](../spec.md). Phase 4 completion kernel: [../phase4-point-of-sale/](../phase4-point-of-sale/).
+Parent multi-phase sequencing: [../spec.md](../spec.md). Phase 4 completion kernel: [../phase4-point-of-sale/](../phase4-point-of-sale/). Phase 6 operational POS MVP: [../phase6-pos-mvp/](../phase6-pos-mvp/).
 
 Where this packet and `../spec.md` disagree on cash columns, expected-cash formula, Z snapshots, authorization, or the register workspace interaction contract, **prefer this packet**.

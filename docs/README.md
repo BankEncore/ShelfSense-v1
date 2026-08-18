@@ -24,11 +24,14 @@ This directory contains the project’s technical authority, development guidanc
 | [Receipt identity](planning/phase4-6-point-of-sale/phase4-point-of-sale/receipt-identity.md) | Compact `S…-R…-T…` transaction reference and receipt header forms (ADR-006) |
 | [Register identity](planning/phase4-6-point-of-sale/phase4-point-of-sale/register-identity.md) | Register vs Terminal; pre-Phase-4 `workstations`→`registers` rename (ADR-021) |
 | [POS operation and Core facts](planning/phase4-6-point-of-sale/phase4-point-of-sale/operation-and-core-facts.md) | Canonical envelope vs normalized Core dual authority (ADR-020) |
-| [Phase 5 cash register plan](planning/phase4-6-point-of-sale/phase5-cash-register/phase5-plan.md) | Phase 5 cash/Z (slice 1 implemented) and register-workspace contract |
+| [Phase 5 cash register plan](planning/phase4-6-point-of-sale/phase5-cash-register/phase5-plan.md) | Implemented Phase 5 cash/Z, Register workspace, print, and close/Z |
 | [Phase 5 cash register schema](planning/phase4-6-point-of-sale/phase5-cash-register/phase5-schema.md) | Implemented session close snapshots and reporting-period Z aggregates |
 | [Phase 5 register workspace](planning/phase4-6-point-of-sale/phase5-cash-register/register-workspace.md) | Slice 2 open gate, modes, HTTP/retry, focus, completion receipt vs print |
 | [Phase 5 register workspace UX](planning/phase4-6-point-of-sale/phase5-cash-register/register-workspace-ux.md) | Slice 2 low-fidelity wireframes (focus, keys, Turbo regions) |
-| [POS Phases 4–6 plan](planning/phase4-6-point-of-sale/spec.md) | Multi-phase POS sequencing (foundation → cash register → breadth) |
+| [Phase 6 POS MVP plan](planning/phase4-6-point-of-sale/phase6-pos-mvp/phase6-plan.md) | Phase 6 slice map, deferrals, merge-to-main, and acceptance |
+| [Phase 6 MVP contract](planning/phase4-6-point-of-sale/phase6-pos-mvp/mvp-contract.md) | Slice 6.0 CompletedPosOperation v2 and cross-cutting locks |
+| [Phase 6 merchandise breadth](planning/phase4-6-point-of-sale/phase6-pos-mvp/merchandise-breadth.md) | Slice 6.1 Used/individual and non-inventory sales contract |
+| [POS Phases 4–6 plan](planning/phase4-6-point-of-sale/spec.md) | Multi-phase POS sequencing (foundation → cash register → MVP); §6 deferred to the Phase 6 packet |
 | [UX conventions](ux-conventions.md) | Shared admin page anatomy, partials, currency boundaries, palette, and Hotwire deferral |
 | [Development guide](development.md) | Docker-only local setup, PostgreSQL configuration, application commands, and troubleshooting |
 | [Testing and CI](testing.md) | Active GitHub Actions checks and prerequisites for deferred checks |

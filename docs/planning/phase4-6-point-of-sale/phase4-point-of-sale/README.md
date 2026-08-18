@@ -2,7 +2,7 @@
 
 **Status:** Implemented (headless Cash sale, completion kernel, receipt identity, inventory posting).
 
-Phase 5 cash accountability and register UI: [../phase5-cash-register/](../phase5-cash-register/).
+Phase 5 cash accountability and register UI: [../phase5-cash-register/](../phase5-cash-register/). Phase 6 operational POS MVP: [../phase6-pos-mvp/](../phase6-pos-mvp/).
 
 | Document | Purpose |
 |---|---|

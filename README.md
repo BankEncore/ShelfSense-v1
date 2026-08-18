@@ -2,7 +2,7 @@
 
 ShelfSense is an inventory, purchasing, customer-service, and point-of-sale system for independent bookstores. It is designed for one organization operating one or more stores, with a central organization server and store Registers. A future standalone Terminal (ADR-021) may continue ordinary checkout during temporary connectivity loss.
 
-Phases 0–4 are implemented. Phase 5 slice 1 (headless cash accountability and Z finalize) is implemented. Slice 2 is the cashier Register workspace (Importmap + Turbo + Stimulus).
+Phases 0–5 are implemented. Phase 6 is the operational POS MVP; the planning packet (slice 6.0 contract and 6.1 merchandise-breadth spec) is locked, and implementation has not started.
 
 ## Goals
 
@@ -200,11 +200,19 @@ Authoritative plan: [phase4-plan.md](docs/planning/phase4-6-point-of-sale/phase4
 
 ### Phase 5: First operational cash register
 
-Status: in progress (slices 1–2 implemented; slice 3 print and close/Z screens remain).
+Status: implemented (headless cash/Z, Register workspace, receipt print, blind close, immutable Z).
 
 Phase 5 turns the Phase 4 completion path into a cashier-usable online Rails register. Opening float, session close snapshots, finalized Z facts, and the cashier Register workspace are implemented.
 
 Authoritative plan: [phase5-plan.md](docs/planning/phase4-6-point-of-sale/phase5-cash-register/phase5-plan.md). Schema: [phase5-schema.md](docs/planning/phase4-6-point-of-sale/phase5-cash-register/phase5-schema.md). Workspace contract: [register-workspace.md](docs/planning/phase4-6-point-of-sale/phase5-cash-register/register-workspace.md).
+
+### Phase 6: Operational POS MVP
+
+Status: planning packet locked (slice 6.0 completed-operation contract and slice 6.1 merchandise-breadth spec). Implementation has not started.
+
+Phase 6 extends the Phase 5 Cash register with Used/non-inventory sales, mixed tenders, history/reprint, controlled pricing, returns, post-void, and closeout reporting. Each slice merges independently to `main`.
+
+Authoritative plan: [phase6-plan.md](docs/planning/phase4-6-point-of-sale/phase6-pos-mvp/phase6-plan.md). Contract: [mvp-contract.md](docs/planning/phase4-6-point-of-sale/phase6-pos-mvp/mvp-contract.md). Slice 6.1: [merchandise-breadth.md](docs/planning/phase4-6-point-of-sale/phase6-pos-mvp/merchandise-breadth.md).
 
 ## Phase 1 authorization model
 
@@ -241,7 +249,7 @@ Start with the [documentation index](docs/README.md). Key references include:
 - [Phase 1 plan](docs/planning/phase1-operational-foundation/phase1-plan.md), [schema](docs/planning/phase1-operational-foundation/phase1-schema.md), and [authorization contract](docs/planning/phase1-operational-foundation/phase1-authorization.md)
 - [Phase 2 plan](docs/planning/phase2-financial-classification-and-merchandise-foundation/phase2-plan.md), [schema](docs/planning/phase2-financial-classification-and-merchandise-foundation/phase-2-database-schema.md), and [authorization contract](docs/planning/phase2-financial-classification-and-merchandise-foundation/phase2-authorization.md)
 - [Phase 2.2 UX foundation](docs/planning/phase2.2-ux-foundation/phase-2.2-ux-foundation.md) and [UX conventions](docs/ux-conventions.md)
-- [Phase 4 POS plan](docs/planning/phase4-6-point-of-sale/phase4-point-of-sale/phase4-plan.md) and [Phase 5 cash register plan](docs/planning/phase4-6-point-of-sale/phase5-cash-register/phase5-plan.md)
+- [Phase 4 POS plan](docs/planning/phase4-6-point-of-sale/phase4-point-of-sale/phase4-plan.md), [Phase 5 cash register plan](docs/planning/phase4-6-point-of-sale/phase5-cash-register/phase5-plan.md), and [Phase 6 POS MVP plan](docs/planning/phase4-6-point-of-sale/phase6-pos-mvp/phase6-plan.md)
 - [Development guide](docs/development.md)
 - [Testing and CI](docs/testing.md)
 - [GitHub work management](docs/github-workflow.md)

@@ -19,6 +19,14 @@ Those companions supersede conflicting Phase 4 detail in §4 of this document (e
 
 Those companions supersede conflicting Phase 5 detail in §5 of this document (especially session cash column names, expected-cash formula, Z snapshot persistence, and authorization for finalize).
 
+**Phase 6 implementation authority:** For Phase 6 MVP slice order, CompletedPosOperation v2, merchandise breadth, merge-to-main delivery, and explicit deferrals (open ring, suspend/recall, cash operations, Store Close), prefer:
+
+- [phase6-plan.md](phase6-pos-mvp/phase6-plan.md)
+- [mvp-contract.md](phase6-pos-mvp/mvp-contract.md)
+- [merchandise-breadth.md](phase6-pos-mvp/merchandise-breadth.md)
+
+Those companions supersede conflicting Phase 6 detail in §6 of this document (especially the 13-slice map, open ring in §6.1, suspend/recall, full cash operations, and “functionally complete bookstore register” as the phase destination).
+
 **Phase 4 prerequisite:** Complete the `workstations` → `registers` rename slice (ADR-021 / [register-identity.md](phase4-point-of-sale/register-identity.md) §5) before POS reporting-period, session, or transaction migrations.
 
 # POS Phases 4–6 Detailed Implementation Plan
