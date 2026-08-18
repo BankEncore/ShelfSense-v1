@@ -467,6 +467,45 @@ class PosCloseZTest < ActionDispatch::IntegrationTest
     assert_select "a", text: "Leave period open", count: 0
   end
 
+  test "close initiation without session_id is not found" do
+    post pos_register_enter_path, params: enter_params
+    post pos_register_close_path
+    assert_response :not_found
+    assert PosSession.open.find_by!(register: @register).open?
+    assert PosTransaction.working.exists?(register: @register)
+  end
+
+  test "close initiation for another cashier session is not found" do
+    post pos_register_enter_path, params: enter_params
+    session_record = PosSession.open.find_by!(register: @register)
+    other = pos_transacting_user(store: @store, assigned_by: @actor, username: "other_close_init")
+    delete session_path
+    sign_in_as("other_close_init")
+
+    post pos_register_close_path, params: { session_id: session_record.id, register_id: @register.id }
+    assert_response :not_found
+    assert session_record.reload.open?
+    assert session_record.pos_transactions.working.exists?
+  end
+
+  test "close initiation for another register session is not found" do
+    post pos_register_enter_path, params: enter_params
+    session_a = PosSession.open.find_by!(register: @register)
+    other_register = Register.create!(store: @store, register_number: 2, name: "Back")
+    other_session = pos_open_context(
+      store: @store,
+      actor: @actor,
+      register: other_register,
+      opening_float_cents: 0
+    )[:session]
+
+    post pos_register_close_path, params: { session_id: other_session.id }
+    assert_response :not_found
+    assert session_a.reload.open?
+    assert other_session.reload.open?
+    assert other_session.pos_transactions.working.empty?
+  end
+
   private
 
   def sign_in_as(username)
