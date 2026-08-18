@@ -16,4 +16,21 @@ class PosHelperTest < ActionView::TestCase
     assert_equal "Description unavailable", pos_print_line_description(line)
     refute_includes pos_print_line_description(line), "Live Product Name"
   end
+
+  test "print line description shows unit identity from the snapshot only" do
+    product = Product.new(name: "Live Product Name")
+    variant = ProductVariant.new(sku: "LIVE-SKU", product: product)
+    line = PosTransactionLine.new(
+      product_variant: variant,
+      merchandise_snapshot: {
+        "description" => "Snapshot Used Book",
+        "sku" => "OLD-SKU",
+        "unit_identifier" => "2200000000001",
+        "condition_code" => "like_new"
+      }
+    )
+
+    assert_equal "Snapshot Used Book  like_new  2200000000001", pos_print_line_description(line)
+    refute_includes pos_print_line_description(line), "Live Product Name"
+  end
 end

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_17_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_18_010000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -495,6 +495,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_17_120000) do
     t.timestamptz "created_at", null: false
     t.string "direction", null: false
     t.bigint "extended_selling_amount_cents", null: false
+    t.uuid "inventory_unit_id"
     t.integer "line_number", null: false
     t.bigint "line_tax_cents", default: 0, null: false
     t.bigint "line_total_cents", default: 0, null: false
@@ -507,10 +508,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_17_120000) do
     t.string "tax_class_code_snapshot", null: false
     t.uuid "tax_class_id", null: false
     t.timestamptz "updated_at", null: false
+    t.index ["inventory_unit_id"], name: "index_pos_transaction_lines_on_inventory_unit_id"
     t.index ["pos_transaction_id", "line_number"], name: "idx_on_pos_transaction_id_line_number_00590a67d2", unique: true
     t.index ["product_variant_id"], name: "index_pos_transaction_lines_on_product_variant_id"
     t.index ["tax_class_id"], name: "index_pos_transaction_lines_on_tax_class_id"
     t.check_constraint "direction::text = 'sale'::text", name: "pos_transaction_lines_direction_valid"
+    t.check_constraint "inventory_unit_id IS NULL OR quantity = 1", name: "pos_transaction_lines_unit_quantity_one"
     t.check_constraint "quantity > 0", name: "pos_transaction_lines_quantity_positive"
   end
 
@@ -844,6 +847,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_17_120000) do
   add_foreign_key "pos_sessions", "stores"
   add_foreign_key "pos_sessions", "users", column: "cashier_user_id"
   add_foreign_key "pos_tenders", "pos_transactions"
+  add_foreign_key "pos_transaction_lines", "inventory_units", on_delete: :restrict
   add_foreign_key "pos_transaction_lines", "pos_transactions"
   add_foreign_key "pos_transaction_lines", "product_variants"
   add_foreign_key "pos_transaction_lines", "tax_classes"

@@ -1,6 +1,6 @@
 # Inventory posting service contract
 
-Status: Implemented with Phase 3 adjustments and Phase 4 POS sales.
+Status: Implemented with Phase 3 adjustments, Phase 4 quantity-tracked POS sales, and Phase 6 Slice 6.1 individual unit sales.
 
 Later purchasing, POS, transfer, reservation, and disposition workflows must post physical and valuation effects only through the named inventory posting services. Controllers, callbacks, imports, and future workflows must not update `inventory_balances` directly.
 
@@ -28,17 +28,23 @@ Required inputs (received from completion; not re-derived):
 Per line:
 
 ```text
-quantity_delta = −quantity
+quantity tracking     quantity_delta = −quantity; moving-average depletion
+individual tracking   quantity_delta = −1; specific-identification on the exact inventory_unit;
+                      on_hand → removed; ledger/valuation inventory_unit_id set
+non_inventory         do not call PostSale
 reject_below_zero
 source_type = "PosTransactionLine"
 source_id   = line.id
 ```
 
-Quantity-tracked Standard merchandise only in Phase 4. Pair integrity after write:
+`Pos::CompleteTransaction` skips `Inventory::PostSale` for `non_inventory` lines. Calling `PostSale` directly with non-inventory merchandise is an error. Do not call `Inventory::PostAdjustment` from the sale path.
+
+Quantity-tracked Standard, individually tracked Used, and skip-for-non-inventory are the Phase 6 Slice 6.1 sale posting set. Pair integrity after write:
 
 ```text
 physical.store == valuation.store
 physical.variant == valuation.variant
+physical.inventory_unit_id == valuation.inventory_unit_id
 physical.quantity == valuation.quantity
 physical.source == valuation.source
 physical.occurred_at == valuation.occurred_at
@@ -46,6 +52,15 @@ physical.business_date == valuation.business_date
 ```
 
 `pos.transaction_completed` describes the commercial operation. `inventory.sale_posted` describes the stock/valuation change and is written in the same outer transaction.
+
+Individual-sale lock order matches `PostAdjustment`:
+
+```text
+InventoryBalance   # FOR UPDATE (lock_or_create)
+InventoryUnit      # FOR UPDATE
+```
+
+`CompleteTransaction` must not hold an `InventoryUnit` row lock before posting. Freeze-time unit checks are non-locking; posting is the authoritative locked validation. A unit that leaves `on_hand` between freeze and posting rolls the whole completion back.
 
 ## `Inventory::PostAdjustment` required inputs
 
@@ -61,4 +76,4 @@ One transaction writes: posted adjustment, physical ledger entry, valuation ledg
 
 ## Tracking
 
-Uses `ProductVariant#derived_inventory_tracking`. Rejects `non_inventory` / nil. Does not add a persisted tracking column.
+Uses `ProductVariant#derived_inventory_tracking`. `PostAdjustment` rejects `non_inventory` / nil. `PostSale` accepts `quantity` and `individual` and rejects `non_inventory` / nil. Does not add a persisted tracking column. Unit lifecycle remains `on_hand | removed`; POS sales are distinguished by ledger `entry_type = sale` and `source_type = PosTransactionLine`.

@@ -44,7 +44,12 @@ module Pos
       raise Pos::Error, "completed envelope is missing store number" unless positive_integer?(receipt["store_number"])
       raise Pos::Error, "completed envelope is missing register number" unless positive_integer?(receipt["register_number"])
       raise Pos::Error, "completed envelope fact_type is invalid" unless @envelope.dig("operation", "fact_type") == PosOperation::FACT_TYPE
-      raise Pos::Error, "completed envelope schema_version is invalid" unless @envelope.fetch("schema_version") == 1
+      version = @envelope.fetch("schema_version")
+      raise Pos::Error, "completed envelope schema_version is invalid" unless [ 1, 2 ].include?(version)
+      return unless version == 2
+
+      signed_net = @envelope.fetch("transaction")["signed_net_cents"]
+      raise Pos::Error, "completed envelope is missing signed_net_cents" unless signed_net.is_a?(Integer)
     end
 
     private

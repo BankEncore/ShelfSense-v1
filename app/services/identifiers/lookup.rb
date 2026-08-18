@@ -2,7 +2,7 @@
 
 module Identifiers
   class Lookup
-    Result = Struct.new(:status, :product, :variant, :variants, :message, keyword_init: true)
+    Result = Struct.new(:status, :product, :variant, :variants, :inventory_unit, :message, keyword_init: true)
 
     def self.call(raw)
       new(raw).call
@@ -36,6 +36,17 @@ module Identifiers
         else
           Result.new(status: :product, product: product)
         end
+      when "inventory_unit"
+        unit = row.inventory_unit
+        return Result.new(status: :not_found, message: "Unit missing") if unit.nil?
+
+        variant = unit.product_variant
+        Result.new(
+          status: :inventory_unit,
+          inventory_unit: unit,
+          variant: variant,
+          product: variant&.product
+        )
       else
         Result.new(status: :invalid, message: "Unknown identifier kind")
       end

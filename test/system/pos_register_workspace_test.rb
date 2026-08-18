@@ -247,6 +247,51 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     assert_equal 1, OutboxMessage.where(event_type: "pos.transaction_completed").count
   end
 
+  test "cashier can complete a mixed cash basket of standard used and non-inventory" do
+    _used_variant, unit = pos_on_hand_unit(store: @store, actor: @actor, tax_class: @tax, name: "Used Book")
+    service = pos_sellable_variant(
+      actor: @actor,
+      tax_class: @tax,
+      inventory_mode: "non_inventory",
+      name: "Store Service"
+    )
+    condition_code = unit.product_variant.merchandise_condition.code
+
+    open_register
+    add_current_sku
+    field = find("#pos-command-field")
+    field.fill_in with: @variant.sku
+    field.send_keys :enter
+    assert_selector "tr.is-selected[data-quantity='2']"
+
+    field.fill_in with: unit.unit_identifier
+    field.send_keys :enter
+    assert_selector "tr.is-selected[data-unit-line='true']"
+    assert_text unit.unit_identifier
+    assert_button "Quantity (*)", disabled: true
+    send_keys "*"
+    assert_text "SALE ENTRY"
+    assert_no_text "QUANTITY"
+
+    field = find("#pos-command-field")
+    field.fill_in with: service.sku
+    field.send_keys :enter
+    assert_text "Store Service"
+
+    click_on "Tender (+)"
+    field = find("#pos-command-field")
+    field.fill_in with: "100.00"
+    field.send_keys :enter
+    send_keys :enter
+
+    assert_text "Sale complete", wait: 10
+    assert_text unit.unit_identifier
+    assert_text condition_code
+    assert_text "Used Book"
+    assert_text "Store Service"
+    assert_equal 1, PosTransaction.completed.where(register: @register).count
+  end
+
   private
 
   def sign_in_admin

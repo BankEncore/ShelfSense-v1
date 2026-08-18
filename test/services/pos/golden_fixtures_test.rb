@@ -25,6 +25,38 @@ class PosGoldenFixturesTest < ActiveSupport::TestCase
     assert_kind_of Integer, payload.fetch("receipt").fetch("store_number")
     assert_kind_of Integer, payload.fetch("receipt").fetch("register_number")
     assert payload.fetch("receipt").fetch("sequence").present?
+    Pos::CompletedTransactionFacts.new(payload).verify!
+  end
+
+  test "CompletedPosOperation v2 canonical JSON and SHA-256 match committed fixtures" do
+    payload = JSON.parse(File.read(FIXTURES.join("completed_pos_operation_v2/cash_sale.json")))
+    expected_canonical = File.read(FIXTURES.join("completed_pos_operation_v2/cash_sale.canonical.json"))
+    expected_hash = File.read(FIXTURES.join("completed_pos_operation_v2/cash_sale.sha256")).strip
+
+    assert_equal expected_canonical, Idempotency::CanonicalJson.dump(payload)
+    assert_equal expected_hash, Idempotency::CanonicalJson.hash(payload)
+    assert_equal 2, payload.fetch("schema_version")
+    assert_equal payload.fetch("transaction").fetch("total_cents"), payload.fetch("transaction").fetch("signed_net_cents")
+    refute payload.fetch("lines").first.key?("inventory_unit_id")
+    Pos::CompletedTransactionFacts.new(payload).verify!
+  end
+
+  test "CompletedPosOperation v2 used-unit fixture includes inventory_unit_id and snapshot identity" do
+    payload = JSON.parse(File.read(FIXTURES.join("completed_pos_operation_v2/used_unit.json")))
+    expected_canonical = File.read(FIXTURES.join("completed_pos_operation_v2/used_unit.canonical.json"))
+    expected_hash = File.read(FIXTURES.join("completed_pos_operation_v2/used_unit.sha256")).strip
+
+    assert_equal expected_canonical, Idempotency::CanonicalJson.dump(payload)
+    assert_equal expected_hash, Idempotency::CanonicalJson.hash(payload)
+    assert_equal 2, payload.fetch("schema_version")
+    assert_equal payload.fetch("transaction").fetch("total_cents"), payload.fetch("transaction").fetch("signed_net_cents")
+    line = payload.fetch("lines").first
+    assert line.fetch("inventory_unit_id").present?
+    assert_equal 1, line.fetch("quantity")
+    snapshot = line.fetch("merchandise_snapshot")
+    assert snapshot.fetch("unit_identifier").present?
+    assert snapshot.fetch("condition_code").present?
+    Pos::CompletedTransactionFacts.new(payload).verify!
   end
 
   test "tax golden cases compute half-up independently and include non-applicable rows" do

@@ -8,6 +8,7 @@ class InventoryUnit < ApplicationRecord
   belongs_to :product_variant
   belongs_to :store
   has_many :inventory_adjustments, dependent: :restrict_with_exception
+  has_many :pos_transaction_lines, dependent: :restrict_with_exception
 
   validates :unit_identifier, :lifecycle_state, :acquisition_cost_cents, :carrying_value_cents, presence: true
   validates :unit_identifier, uniqueness: true, format: { with: /\A\d{13}\z/ }

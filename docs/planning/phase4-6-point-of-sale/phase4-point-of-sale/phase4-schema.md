@@ -193,7 +193,8 @@ One row for working and completed (or cancelled) commercial state.
 | `line_total_cents` | bigint | extended + tax for Phase 4 sale lines; positive magnitude |
 | `tax_class_id` | uuid | FK; merchandise Tax Class used for determination |
 | `tax_class_code_snapshot` | string | snapshot; classification code (`physical_book`), not a treatment |
-| `merchandise_snapshot` | jsonb | **required when transaction is completed**; fixed v1 keys (see §8.1); Phase 4 Core shape per ADR-020 — do not also require a competing column set |
+| `merchandise_snapshot` | jsonb | **required when transaction is completed**; v1 keys plus unit keys when `inventory_unit_id` is present (see §8.1) |
+| `inventory_unit_id` | uuid | nullable FK → `inventory_units` (`on_delete: :restrict`); required for individually tracked lines; CHECK `inventory_unit_id IS NULL OR quantity = 1` |
 | `created_at` / `updated_at` | timestamptz | |
 
 Unique `(pos_transaction_id, line_number)`.
@@ -203,9 +204,10 @@ Unique `(pos_transaction_id, line_number)`.
 ```text
 tax_treatment                    # not used; applicability is per Store Tax
 default_tax_class_id / applied_  # deferred until Tax Class override
-inventory_unit_id                # Phase 6+
 discount fields                  # Phase 6
 ```
+
+`inventory_unit_id` is present from Slice 6.1. It is omitted from v2 envelopes when null. There is no unique index on `inventory_unit_id` (later linked returns reuse the unit identity on a new line). Working-unit exclusivity is enforced by `AddMerchandise` locking the `InventoryUnit` row.
 
 ### 8.1 Merchandise snapshot (required at completion)
 
@@ -219,7 +221,7 @@ Minimum v1 shape:
 }
 ```
 
-Optional keys may be added in later operation versions without expanding the relational line schema. While `status = working`, snapshot may be absent or provisional; completion **must** refuse to finish without a valid required snapshot.
+Optional keys may be added in later operation versions without expanding the relational line schema. Slice 6.1 unit lines also snapshot `unit_identifier` and `condition_code`. While `status = working`, snapshot may be absent or provisional; completion **must** refuse to finish without a valid required snapshot.
 
 ---
 

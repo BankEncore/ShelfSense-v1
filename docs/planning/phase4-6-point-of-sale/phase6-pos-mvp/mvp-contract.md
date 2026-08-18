@@ -25,9 +25,11 @@ line
   selling price
   override
   discount
+  return price adjustment
   applied Tax Class
   tax components
   original sale line (return)
+```
 
 tender
   tender type
@@ -94,10 +96,11 @@ CompletedPosOperation
 │   ├── currency_code
 │   ├── occurred_at
 │   ├── business_date
-│   ├── subtotal_cents                # unsigned; meaning locked in §5
-│   ├── tax_cents                     # unsigned magnitude of tax on the settlement
+│   ├── subtotal_cents                # unsigned; Phase 4/5 sale-only meaning; §5
+│   ├── tax_cents                     # unsigned; Phase 4/5 sale-only meaning; §5
 │   ├── total_cents                   # unsigned settlement amount (v1 meaning kept)
 │   └── signed_net_cents              # signed; §5
+│                                     # 6.5 adds directional commercial aggregates
 │
 ├── lines[]
 │   ├── (v1 line fields)
@@ -105,6 +108,7 @@ CompletedPosOperation
 │   ├── merchandise_snapshot          # v1 keys plus unit keys when present (§6)
 │   ├── override                      # omit when none; 6.4
 │   ├── discount                      # omit when none; 6.4
+│   ├── return_price_adjustment       # omit when none; unlinked return; 6.5
 │   ├── original_transaction_line_id  # omit when not a linked return; 6.5
 │   └── tax_components[]              # v1 Store Tax determinations
 │
@@ -133,7 +137,7 @@ CompletedPosOperation
 
 Do **not** use `operation_type` on the envelope. Command type lives only on `pos_operations`.
 
-Exact JSON key set for override, discount, controlled_actions, and corrections is locked in the owning slice contract. 6.0 locks that those facts live **in the completed operation**, not as edits to prior rows.
+Exact JSON key set for override, discount, return_price_adjustment, controlled_actions, and corrections is locked in the owning slice contract. 6.0 locks that those facts live **in the completed operation**, not as edits to prior rows.
 
 ---
 
@@ -153,17 +157,34 @@ Exact JSON key set for override, discount, controlled_actions, and corrections i
 | Tax Class | Applied Tax Class used for determination. Default equals merchandise Tax Class until 6.4 override. Preserve both default and applied once override exists. |
 | `tax_components[]` | Every active Store Tax determination, including `applies = false`. |
 | `original_transaction_line_id` | Linked return only. Unlinked returns omit it. |
+| `return_price_adjustment` | Unlinked-return commercial valuation fact (§4.2). Omit on sales and linked returns. |
 
 Do not store negative `line_total_cents` because `direction = return`.
 
-### 4.2 Tenders
+### 4.2 Return price adjustment (conceptual; 6.5)
+
+An unlinked return is valued under **current** POS rules, optionally modified by an explicit return price adjustment. That adjustment is neither an ordinary sale discount nor merely the `return_price_adjustment` controlled-action record.
+
+Reserve a first-class line block (exact keys in the 6.5 contract):
+
+```text
+return_price_adjustment:
+  method                      # MVP: percentage
+  value                       # e.g. basis points or percent as 6.5 defines
+  adjustment_cents            # magnitude of the adjustment
+  resulting_unit_value_cents  # return unit value after adjustment
+```
+
+Approval explains who authorized it. This block is the commercial pricing fact: reference price, method/value, resulting return unit value. Do not encode it as `discount` or as `override`.
+
+### 4.3 Tenders
 
 | Field | Meaning |
 |---|---|
 | `amount_cents` | Applied amount; positive. |
 | `direction` | `payment` (funds in) or `refund` (funds out). |
 | Cash presented / change | Only on Cash **payment** tenders. Not on refunds. Not on Card/Check/Other. |
-| External reference | Optional or required per tender configuration (6.2). Stored on the completed tender; customer print may omit it (§11). |
+| External reference | Optional or required per tender configuration (6.2). Stored on the completed tender; customer print may omit it (§14). |
 
 ```text
 SUM(payments) − SUM(refunds) = signed_net_cents
@@ -179,11 +200,11 @@ signed_net_cents = 0  → no tender
 
 ---
 
-## 5. Totals: keep `total_cents`, add signed net
+## 5. Totals: keep `total_cents`, add signed net, do not overload subtotal/tax
 
 v1 `total_cents` is the unsigned amount the customer pays on a sale-only Cash transaction. **Do not redefine it as net-after-returns.**
 
-Lock:
+Locked now:
 
 ```text
 signed_net_cents
@@ -193,16 +214,41 @@ signed_net_cents
 total_cents
   = abs(signed_net_cents)
   = settlement amount (customer pays or receives)
-
-subtotal_cents / tax_cents
-  = unsigned components of that settlement for sale-only Phase 4/5 rows
 ```
 
 For every Phase 4/5 sale-only completion, `signed_net_cents = total_cents`.
 
+`subtotal_cents` and `tax_cents` keep their **sale-only Phase 4/5 meanings** (unsigned components of a sale settlement). They are **not** defined for mixed sale/return or return-only transactions in this contract.
+
+**Required 6.5 decision** (lock before any return migration): introduce explicit directional or signed commercial aggregates rather than forcing the old unsigned fields to carry mixed meaning. Preferred direction:
+
+```text
+gross_sale_… / gross_return_…
+  or
+signed_subtotal_cents
+signed_tax_cents
+signed_net_cents
+```
+
+Preserve existing `subtotal_cents`, `tax_cents`, and `total_cents` with their historical sale-only / settlement-amount meanings. Exact field names and CHECKs belong in the 6.5 contract.
+
 Core may derive `signed_net_cents` until 6.5 needs it persisted. The envelope includes it on every v2 completion (sale-only: equal to `total_cents`).
 
-Z `finalized_total_cents` remains `SUM(transaction.total_cents)` until 6.7. 6.7 adds gross / returns / discounts / net columns. It must not later treat `finalized_total_cents` as net-after-returns.
+### 5.1 Session / Z must stay truthful in the owning slice
+
+`finalized_total_cents = SUM(transaction.total_cents)` is correct only while every completed `total_cents` is a sale settlement. A return whose `total_cents` is `abs(signed_net)` would inflate Z if summed as sales:
+
+```text
+Sale     total_cents = 100
+Refund   total_cents =  25
+SUM(total_cents)     = 125   # not net commercial activity
+```
+
+**6.5 must make Session/Z calculations direction-aware in the same change that first completes a return.** It cannot leave Z treating refund magnitude as positive sales.
+
+**6.2 must add basic Card / Check / Other tender totals to Session/Z** when those tenders become completable. Overall sale totals can remain correct without them, but a register that takes Card with only Cash on the Z is not usable.
+
+6.7 may add or reorganize additive snapshot columns and presentation. It does **not** repair knowingly inaccurate intermediate reporting. Already-finalized periods stay immutable.
 
 ---
 
@@ -284,11 +330,11 @@ expected = opening_float_cents
 
 ---
 
-## 9. Z snapshots (named now, migrated in 6.7)
+## 9. Z snapshots
 
-Already-finalized periods stay immutable. 6.7 adds additive columns; 6.0 names them.
+Already-finalized periods stay immutable. Live Session/Z **previews** and new-period snapshots must represent each slice’s facts truthfully (§5.1). 6.7 consolidates additive `finalized_*` columns and presentation; owning slices (6.2 tenders, 6.5 returns/Cash refunds) change calculations first.
 
-Existing Phase 5 fields keep their meaning:
+Existing Phase 5 fields keep their sale-only / Cash-payment meanings until the owning slice replaces the **calculation** (not the historical column meaning on already-finalized rows):
 
 ```text
 finalized_transaction_count
@@ -301,7 +347,7 @@ finalized_*_sum cash custody fields
 finalized_by_user_id
 ```
 
-6.7 additive commercial / tender fields (preview names; exact CHECKs in the 6.7 contract):
+Preview names for additive commercial / tender snapshot fields (exact CHECKs in the owning slice or 6.7 contract):
 
 ```text
 finalized_gross_sales_cents
@@ -382,7 +428,7 @@ Completion must not share one “recalculate tax” helper for historical revers
 
 Inventory movement occurs only at completion, through the named posting boundary ([inventory-posting-contract.md](../../phase3-inventory-foundation/inventory-posting-contract.md)).
 
-Working transactions still do **not** create `reserved`. Unique Used units use working-line uniqueness plus a completion-time lock (6.1). Do not introduce a reservation ledger in this MVP.
+Working transactions still do **not** create `reserved`. Unique Used units serialize `AddMerchandise` on the `InventoryUnit` row and re-lock at completion ([merchandise-breadth.md](merchandise-breadth.md) §4.4). Do not introduce a reservation ledger in this MVP.
 
 Non-inventory lines create **no** ledger, valuation, or balance rows.
 
@@ -398,10 +444,16 @@ Reprint never assigns a new receipt number, never mutates `printed_at` as commer
 
 ---
 
-## 15. Out of 6.0
+## 15. Slice-local representation
+
+Every slice that adds a completed commercial fact must update, in that same slice: completed snapshot, customer-relevant receipt, history/detail, audit, and reporting where totals change. 6.7 consolidates; it does not repair knowingly inaccurate intermediate figures.
+
+---
+
+## 16. Out of 6.0
 
 - Any migration or application code
 - Unused Core columns “for later”
 - New permission keys
-- Changing Phase 5 expected-Cash or Z snapshot CHECKs
+- Changing Phase 5 expected-Cash or Z snapshot CHECKs in this docs slice (6.2 / 6.5 change live calculations; 6.7 may add additive snapshot columns)
 - Terminal / standalone provenance (still a later compatible envelope version before offline completion)

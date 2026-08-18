@@ -25,6 +25,7 @@ module Pos
         transaction = Pos::Support.lock_working_transaction!(@transaction, @expected_lock_version)
         Pos::Support.clear_working_tenders!(transaction)
         line = transaction.pos_transaction_lines.find(@line.id)
+        raise Pos::Error, "quantity must be 1 for individually tracked merchandise" if line.unit_line? && @quantity != 1
         line.quantity = @quantity
         line.recalc_extended!
         Pos::Support.apply_provisional_tax!(line)
