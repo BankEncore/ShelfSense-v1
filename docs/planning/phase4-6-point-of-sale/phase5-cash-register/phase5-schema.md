@@ -71,6 +71,7 @@ Z cash columns are **sums of independent session custody intervals**. They do no
 |---|---|---|
 | `finalized_transaction_count` | integer | null while open; `>= 0` when finalized |
 | `finalized_subtotal_cents` | bigint | null while open; sum of completed `subtotal_cents` |
+| `finalized_discount_cents` | bigint | additive 6.4; NULL on pre-6.4 finalized rows = not captured; new finalize writes `0` when there was no discount |
 | `finalized_tax_cents` | bigint | null while open; sum of completed `tax_cents` |
 | `finalized_total_cents` | bigint | null while open; sum of completed `total_cents` |
 | `finalized_cash_payment_cents` | bigint | null while open; sum of completed cash payment `amount_cents` |

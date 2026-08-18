@@ -77,7 +77,11 @@ class PosWorkspaceInvariantsTest < ActiveSupport::TestCase
       expected_lock_version: transaction.lock_version,
       identifier: @variant.sku
     )
-    first.update_columns(selling_unit_price_cents: 1500, extended_selling_amount_cents: 1500)
+    first.update_columns(
+      selling_unit_price_cents: 1500,
+      extended_selling_amount_cents: 1500,
+      net_merchandise_amount_cents: 1500
+    )
     transaction.reload
     second = Pos::AddMerchandise.call(
       transaction: transaction,

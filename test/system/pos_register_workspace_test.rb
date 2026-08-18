@@ -112,6 +112,29 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     assert_no_text "Example Book"
   end
 
+  test "f5 f6 and f7 open controlled-action overlays" do
+    open_register
+    add_current_sku
+
+    send_keys :f5
+    assert_selector "#pos_control_overlay", visible: true
+    assert_selector "#pos-control-title", text: "Price override"
+    send_keys :escape
+    assert_no_selector "#pos_control_overlay", visible: true
+
+    send_keys :f6
+    assert_selector "#pos_control_overlay", visible: true
+    assert_selector "#pos-control-title", text: "Line discount"
+    send_keys :escape
+    assert_no_selector "#pos_control_overlay", visible: true
+
+    send_keys :f7
+    assert_selector "#pos_control_overlay", visible: true
+    assert_selector "#pos-control-title", text: "Tax Class override"
+    send_keys :escape
+    assert_no_selector "#pos_control_overlay", visible: true
+  end
+
   test "empty basket disables cancel" do
     open_register
     assert_button "Cancel (F9)", disabled: true

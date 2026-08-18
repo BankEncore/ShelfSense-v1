@@ -19,7 +19,9 @@ seed only protected Cash, Card, Check
 admins create genuine Other identities
 cashier never free-types a tender type
 external Card is a recording (no processor)
-exact settlement: SUM(payment amount_cents) = signed_net_cents
+exact settlement: SUM(payment amount_cents) = signed_net_cents when signed_net > 0
+zero-net (6.4C): signed_net = 0 → no tenders; completion allowed
+signed_net < 0 unsupported until 6.5
 at most one Cash payment (partial unique index)
 TenderCash replaces Cash in place; remaining due excludes existing Cash
 tender_number dense 1..N; tender_name snapshot
@@ -169,6 +171,8 @@ payment tenders only
 ```
 
 `signed_net_cents = total_cents` on sale-only transactions.
+
+**6.4C amendment** ([controlled-actions.md](controlled-actions.md)): a 100% discount or $0 override may produce `signed_net_cents = 0`. Then **no tender is permitted** and completion is allowed. Do not record a fake `Cash $0.00` tender. `signed_net_cents < 0` remains 6.5. Positive-total Phase 5/6.2 path is unchanged.
 
 ### 4.1 Remaining due
 

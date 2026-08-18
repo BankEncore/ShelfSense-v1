@@ -17,7 +17,7 @@ module Pos
     def show
       @transaction = PosTransaction.completed.find_by!(id: params[:id], store_id: current_store.id)
       @tenders = @transaction.pos_tenders.ordered.to_a
-      @lines = @transaction.pos_transaction_lines.includes(:pos_line_tax_components).to_a
+      @lines = @transaction.pos_transaction_lines.includes(:pos_line_tax_components, :pos_controlled_actions).to_a
     end
   end
 end

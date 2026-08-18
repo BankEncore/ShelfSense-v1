@@ -18,6 +18,10 @@ module Pos
       completed_transactions.sum(:subtotal_cents)
     end
 
+    def discount_cents
+      completed_transactions.sum(:discount_cents)
+    end
+
     def tax_cents
       completed_transactions.sum(:tax_cents)
     end

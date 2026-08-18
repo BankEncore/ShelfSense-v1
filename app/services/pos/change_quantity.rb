@@ -26,6 +26,9 @@ module Pos
         Pos::Support.clear_working_tenders!(transaction)
         line = transaction.pos_transaction_lines.find(@line.id)
         raise Pos::Error, "quantity must be 1 for individually tracked merchandise" if line.unit_line? && @quantity != 1
+        if line.price_overridden? || line.manually_discounted?
+          raise Pos::Error, "Remove the price override or discount before changing quantity."
+        end
         line.quantity = @quantity
         line.recalc_extended!
         Pos::Support.apply_provisional_tax!(line)

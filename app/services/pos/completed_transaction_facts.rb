@@ -52,6 +52,8 @@ module Pos
       raise Pos::Error, "completed envelope is missing signed_net_cents" unless signed_net.is_a?(Integer)
       verify_origin_name!
       verify_tenders!
+      verify_controlled_actions!
+      verify_line_pricing_keys!
     end
 
     private
@@ -84,6 +86,49 @@ module Pos
         else
           raise Pos::Error, "presented is only for Cash" if tender.key?("amount_presented_cents")
           raise Pos::Error, "change is only for Cash" if tender.key?("change_cents")
+        end
+      end
+    end
+
+    def verify_controlled_actions!
+      actions = @envelope["controlled_actions"]
+      return unless actions.is_a?(Array)
+
+      actions.each do |action|
+        raise Pos::Error, "completed envelope controlled action is invalid" unless action.is_a?(Hash)
+        %w[action performed_by_user_id performed_by_name fingerprint].each do |key|
+          raise Pos::Error, "completed envelope is missing #{key}" if action[key].blank?
+        end
+        result = action.dig("policy_context", "result")
+        raise Pos::Error, "completed envelope policy result is invalid" unless %w[direct approval_required].include?(result)
+        if result == "approval_required"
+          raise Pos::Error, "completed envelope is missing approved_by_user_id" if action["approved_by_user_id"].blank?
+        elsif action.key?("approved_by_user_id")
+          raise Pos::Error, "direct controlled action cannot include approved_by"
+        end
+      end
+    end
+
+    def verify_line_pricing_keys!
+      lines = @envelope["lines"]
+      return unless lines.is_a?(Array)
+
+      lines.each do |line|
+        next unless line.is_a?(Hash)
+
+        if line.key?("override")
+          override = line["override"]
+          raise Pos::Error, "completed envelope override is invalid" unless override.is_a?(Hash)
+          %w[reference_unit_price_cents selling_unit_price_cents unit_variance_cents line_variance_cents].each do |key|
+            raise Pos::Error, "completed envelope is missing #{key}" unless override[key].is_a?(Integer)
+          end
+        end
+        if line.key?("discount")
+          discount = line["discount"]
+          raise Pos::Error, "completed envelope discount is invalid" unless discount.is_a?(Hash)
+          raise Pos::Error, "completed envelope is missing discount basis_points" unless discount["basis_points"].is_a?(Integer)
+          raise Pos::Error, "completed envelope is missing discount_cents" unless discount["discount_cents"].is_a?(Integer)
+          raise Pos::Error, "completed envelope is missing net_merchandise_amount_cents" unless discount["net_merchandise_amount_cents"].is_a?(Integer)
         end
       end
     end

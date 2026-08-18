@@ -354,9 +354,9 @@ UI mode is **browser state**. Authoritative transaction status remains `working`
 
 One primary POS input. Autofocus on load. After every successful action and recoverable error, focus returns there unless a confirmation overlay is open. Overlays must restore focus to the primary input.
 
-Quantity and tender **reuse that same primary field** with a changed label. The only overlay is **cancel confirmation**. Occupied-register deny lives on `GET enter`, not on the selling surface.
+The only overlays are **cancel confirmation** and **controlled-action approval** ([controlled-actions.md](../phase6-pos-mvp/controlled-actions.md)). Occupied-register deny lives on `GET enter`, not on the selling surface.
 
-Intercept `*` and `+` on keydown so they never become identifier text. Do not intercept letter keys such as `T` or hyphen. Delete is native text editing. F8 removes the selected line in `SALE_ENTRY`.
+Intercept `*` and `+` on keydown so they never become identifier text. Do not intercept letter keys such as `T` or hyphen. Delete is native text editing. F8 removes the selected line in `SALE_ENTRY`. Bind F2/F5–F9 on `window` in the capture phase and cancel the default: Chrome on macOS otherwise uses F5 reload, F6 address bar, and F7 caret browsing before the workspace sees the key. `event.code` is accepted when `event.key` is unidentified. When the Keyboard Lock API is available (Chrome), the workspace also requests exclusive F2/F5–F9 so those keys are delivered to the page. Visible Price override / Discount / Tax Class buttons remain the fallback if a browser still swallows a key.
 
 `*` with no selected line is a no-op (stay `SALE_ENTRY`). `+` with no merchandise is a no-op. F8 with no selected line is a no-op. QUANTITY with no selected line is not entered.
 
@@ -375,12 +375,17 @@ Keyboard map (shortcuts; each has a visible control). Bindings are **wireframe-v
 | Escape | back out where the table allows; on cancel overlay, abort confirm |
 | `*` | `QUANTITY` (no-op if no selected line) |
 | `+` | `TENDER` (no-op if no merchandise) |
+| F5 | price override on the selected line (6.4; current binding) |
+| F6 | line discount on the selected line (6.4; current binding) |
+| F7 | Tax Class override on the selected line (6.4; current binding) |
 | F8 | `RemoveWorkingLine` on the selected line in `SALE_ENTRY` |
-| ArrowUp / ArrowDown | move selected line (in `SALE_ENTRY`) |
 | F9 | open cancel confirmation (disabled while `POST complete` is in flight, and while the basket has no lines) |
 | F9 again | confirm cancel (**not** Enter, **not** `Y` — barcodes may contain letters) |
+| ArrowUp / ArrowDown | move selected line (in `SALE_ENTRY`) |
 
 Cancel overlay: no text field (so a scan cannot type into it). Ignore Enter and alphanumeric keys. Visible Confirm (activates on second F9) and Don't cancel (Escape). The selling chrome behind the overlay is `inert`; Tab stays in the dialog. Abort restores the prior mode and focus.
+
+Approval overlay (6.4): real dialog; selling chrome `inert`; Tab trapped. F9 does not approve. Enter in the username field does not Approve. Enter in a non-blank password field may submit. Credentials do not create a manager session. See [controlled-actions.md](../phase6-pos-mvp/controlled-actions.md).
 
 Selected line defaults to the line **returned** by the last `AddMerchandise`, or the last changed line. After `RemoveWorkingLine`, select the previous remaining line, or none if the basket is empty. Arrow keys move selection. QUANTITY and F8 apply to the selected line.
 
@@ -390,17 +395,9 @@ Selected line defaults to the line **returned** by the last `AddMerchandise`, or
 
 Phase 5 shipped standard quantity-tracked merchandise only. Slice 6.1 also sells individually tracked Used units and non-inventory Standard on this same `SALE_ENTRY` scan path ([merchandise-breadth.md](../phase6-pos-mvp/merchandise-breadth.md)). Used variant SKUs are rejected (“scan the unit identifier”). Unit lines do not merge on rescan. QUANTITY is not offered for a selected unit line (`data-unit-line`); `ChangeQuantity` still rejects quantity ≠ 1.
 
-**Rescan merge** happens in `AddMerchandise` after the working-transaction lock, not in Stimulus. Compatible **quantity / non-inventory** line:
+**Rescan merge** happens in `AddMerchandise` after the working-transaction lock, not in Stimulus. Compatible **quantity / non-inventory** line: no inventory unit, same variant, `sale`, no effective controlled-action row, selling equals stored reference, applied Tax Class equals stored default, selling equals **current** catalog regular, applied Tax Class equals **current** variant Tax Class ([controlled-actions.md](../phase6-pos-mvp/controlled-actions.md)).
 
-```text
-same product_variant_id
-same direction
-same selling_unit_price_cents
-same tax_class_id
-same relevant pricing basis
-```
-
-Phase 5 has no discounts or price overrides, so unit price + tax class is the pricing basis. Increment quantity by the scanned amount (default 1). QUANTITY mode sets **absolute** quantity via `ChangeQuantity`.
+Quantity-tracked increment uses the scanned amount (default 1). QUANTITY mode sets **absolute** quantity via `ChangeQuantity`, except when the line has a price override or manual discount ([controlled-actions.md](../phase6-pos-mvp/controlled-actions.md)).
 
 `AddMerchandise` returns the **resulting line** in both cases (new line or incremented line) so the UI always selects that line.
 

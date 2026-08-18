@@ -30,6 +30,12 @@
     <ul class="pos-receipt__lines">
       <% @transaction.pos_transaction_lines.each do |line| %>
         <li><%= line.quantity %> × <%= pos_line_description(line) %>  <%= format_money_cents(line.extended_selling_amount_cents) %></li>
+        <% if line.manually_discounted? %>
+          <li>Discount  <%= format_money_cents(line.manual_discount_cents) %></li>
+        <% end %>
+      <% end %>
+      <% if @transaction.discount_cents.positive? %>
+        <li>Discount  <%= format_money_cents(@transaction.discount_cents) %></li>
       <% end %>
       <li>Tax  <%= format_money_cents(@transaction.tax_cents) %></li>
     </ul>

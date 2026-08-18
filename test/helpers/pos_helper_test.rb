@@ -64,4 +64,17 @@ class PosHelperTest < ActionView::TestCase
     assert_equal "Snapshot Used Book  like_new  2200000000001", pos_history_line_description(line)
     refute_includes pos_history_line_description(line), "Live Product Name"
   end
+
+  test "controlled-line flags use Core facts only" do
+    line = PosTransactionLine.new(
+      reference_unit_price_cents: 1999,
+      selling_unit_price_cents: 1500,
+      manual_discount_basis_points: 1000,
+      tax_class_id: "11111111-1111-1111-1111-111111111111",
+      default_tax_class_id: "22222222-2222-2222-2222-222222222222"
+    )
+
+    assert pos_line_controlled?(line)
+    assert_equal "Override · Discount · Tax Class", pos_line_control_flags(line)
+  end
 end

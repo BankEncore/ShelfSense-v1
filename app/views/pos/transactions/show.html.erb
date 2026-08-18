@@ -10,6 +10,9 @@
       <div><dt>Completed</dt><dd><%= format_store_timestamp(@transaction.completed_at, @transaction.store) %></dd></div>
       <div><dt>Register</dt><dd><%= pos_padded_register_snapshot(@transaction.register_number_snapshot) %></dd></div>
       <div><dt>Cashier</dt><dd><%= pos_cashier_name(@transaction) %></dd></div>
+      <% if @transaction.discount_cents.positive? %>
+        <div><dt>Discount</dt><dd><%= format_money_cents(@transaction.discount_cents) %></dd></div>
+      <% end %>
       <div><dt>Total</dt><dd><%= format_money_cents(@transaction.total_cents) %></dd></div>
     </dl>
 

@@ -45,7 +45,9 @@
      data-register-workspace-auto-complete-value="<%= @auto_complete ? "true" : "false" %>"
      data-register-workspace-workspace-url-value="<%= pos_register_workspace_path %>"
      data-register-workspace-tender-types-value="<%= h((@cashier_tender_types || []).map(&:cashier_payload).to_json) %>"
-     data-action="keydown@document->register-workspace#onKeydown turbo:submit-end->register-workspace#onSubmitEnd">
+     data-register-workspace-policies-value="<%= h((@control_policies || {}).to_json) %>"
+     data-register-workspace-reasons-value="<%= h(Pos::ControlledActionReasons::CATALOGS.to_json) %>"
+     data-action="turbo:submit-end->register-workspace#onSubmitEnd">
   <div data-register-workspace-target="chrome">
     <header class="pos-header">
       <div class="pos-header__row">
@@ -75,14 +77,25 @@
           </thead>
           <tbody>
             <% lines.each do |line| %>
-              <tr class="<%= "is-selected" if line.id == selected_id %>"
+              <tr class="<%= [ ("is-selected" if line.id == selected_id), ("is-controlled" if pos_line_controlled?(line)) ].compact.join(" ") %>"
                   data-line-id="<%= line.id %>"
                   data-quantity="<%= line.quantity %>"
                   data-description="<%= pos_line_description(line) %>"
                   data-unit-line="<%= line.unit_line? %>"
+                  data-price-overridden="<%= line.price_overridden? %>"
+                  data-discounted="<%= line.manually_discounted? %>"
+                  data-tax-overridden="<%= line.tax_class_overridden? %>"
+                  data-selling-cents="<%= line.selling_unit_price_cents %>"
+                  data-discount-bp="<%= line.manual_discount_basis_points %>"
+                  data-tax-class-id="<%= line.tax_class_id %>"
                   aria-selected="<%= line.id == selected_id %>">
                 <td><%= line.id == selected_id ? ">" : "" %> <%= line.quantity %></td>
-                <td><%= pos_line_description(line) %></td>
+                <td>
+                  <%= pos_line_description(line) %>
+                  <% if pos_line_controlled?(line) %>
+                    <span class="pos-line-flags"><%= pos_line_control_flags(line) %></span>
+                  <% end %>
+                </td>
                 <td class="numeric"><%= format_money_cents(line.selling_unit_price_cents) %></td>
                 <td class="numeric"><%= format_money_cents(line.extended_selling_amount_cents) %></td>
               </tr>
@@ -93,6 +106,9 @@
 
       <aside id="pos_totals" class="pos-totals">
         <div>Subtotal  <%= format_money_cents(@transaction.subtotal_cents) %></div>
+        <% if @transaction.discount_cents.positive? %>
+          <div>Discount  <%= format_money_cents(@transaction.discount_cents) %></div>
+        <% end %>
         <div>Tax  <%= format_money_cents(@transaction.tax_cents) %></div>
         <div>Total  <%= format_money_cents(@transaction.total_cents) %></div>
         <% tenders.each do |working_tender| %>
@@ -152,6 +168,9 @@
               data: { register_workspace_target: "abandonButton" } %>
       <% else %>
         <button type="button" class="btn btn--secondary" data-action="register-workspace#enterQuantity" data-register-workspace-target="quantityButton" disabled>Quantity (*)</button>
+        <button type="button" class="btn btn--secondary" data-action="register-workspace#openPriceOverride" data-register-workspace-target="overrideButton" disabled>Price override (F5)</button>
+        <button type="button" class="btn btn--secondary" data-action="register-workspace#openLineDiscount" data-register-workspace-target="discountButton" disabled>Discount (F6)</button>
+        <button type="button" class="btn btn--secondary" data-action="register-workspace#openTaxClassOverride" data-register-workspace-target="taxClassButton" disabled>Tax Class (F7)</button>
         <button type="button" class="btn btn--secondary" data-action="register-workspace#enterTender" data-register-workspace-target="tenderButton" disabled>Tender (+)</button>
         <button type="button" class="btn btn--secondary" data-action="register-workspace#removeSelected" data-register-workspace-target="removeButton" disabled>Remove (F8)</button>
         <% if @ui_mode == "tender" && tenders.any? %>
@@ -213,6 +232,20 @@
       <%= hidden_field_tag :expected_total_cents, @transaction.total_cents %>
     <% end %>
 
+    <%= form_with url: pos_register_controlled_action_path, method: :post, html: { class: "pos-hidden", data: { register_workspace_target: "controlForm", turbo: true } } do %>
+      <%= hidden_field_tag :lock_version, @transaction.lock_version %>
+      <%= hidden_field_tag :line_id, selected_id, data: { register_workspace_target: "controlLineInput" } %>
+      <%= hidden_field_tag :action_type, "", data: { register_workspace_target: "controlActionInput" } %>
+      <%= hidden_field_tag :operation, "apply", data: { register_workspace_target: "controlOperationInput" } %>
+      <%= hidden_field_tag :reason_code, "", data: { register_workspace_target: "controlReasonInput" } %>
+      <%= hidden_field_tag :reason_note, "", data: { register_workspace_target: "controlNoteInput" } %>
+      <%= hidden_field_tag :selling_price, "", data: { register_workspace_target: "controlPriceInput" } %>
+      <%= hidden_field_tag :discount_percent, "", data: { register_workspace_target: "controlDiscountInput" } %>
+      <%= hidden_field_tag :tax_class_id, "", data: { register_workspace_target: "controlTaxInput" } %>
+      <%= hidden_field_tag :approver_username, "", data: { register_workspace_target: "controlApproverUserInput" } %>
+      <%= hidden_field_tag :approver_password, "", data: { register_workspace_target: "controlApproverPasswordInput" } %>
+    <% end %>
+
     <%= form_with url: pos_register_cancel_path, method: :post, html: { class: "pos-hidden", data: { register_workspace_target: "cancelForm", turbo: true } } do %>
       <%= hidden_field_tag :lock_version, @transaction.lock_version %>
     <% end %>
@@ -230,6 +263,59 @@
       <p>Lines will not be sold. No receipt. No inventory movement.</p>
       <button type="button" class="btn btn--secondary" data-action="register-workspace#closeOverlay" data-register-workspace-target="dontCancel">Don't cancel (Esc)</button>
       <button type="button" class="btn btn--danger" data-action="register-workspace#confirmCancel" data-register-workspace-target="confirmCancel">Cancel sale (F9)</button>
+    </div>
+  </div>
+
+  <div class="pos-overlay"
+       id="pos_control_overlay"
+       hidden
+       data-register-workspace-target="controlOverlay"
+       role="dialog"
+       aria-modal="true"
+       aria-labelledby="pos-control-title">
+    <div class="pos-overlay__panel pos-overlay__panel--control">
+      <h2 id="pos-control-title" data-register-workspace-target="controlTitle">Controlled action</h2>
+      <p data-register-workspace-target="controlLineLabel"></p>
+
+      <div data-register-workspace-target="controlPriceWrap">
+        <label for="pos-control-price">Selling price</label>
+        <input id="pos-control-price" class="pos-command__field" data-register-workspace-target="controlPriceField" inputmode="decimal" autocomplete="off">
+      </div>
+
+      <div data-register-workspace-target="controlDiscountWrap" hidden>
+        <label for="pos-control-discount">Discount percent</label>
+        <input id="pos-control-discount" class="pos-command__field" data-register-workspace-target="controlDiscountField" inputmode="decimal" autocomplete="off">
+      </div>
+
+      <div data-register-workspace-target="controlTaxWrap" hidden>
+        <label for="pos-control-tax-class">Tax Class</label>
+        <select id="pos-control-tax-class" class="pos-command__field" data-register-workspace-target="controlTaxField">
+          <% (@tax_classes || TaxClass.none).each do |tax_class| %>
+            <option value="<%= tax_class.id %>"><%= tax_class.admin_label %></option>
+          <% end %>
+        </select>
+      </div>
+
+      <label for="pos-control-reason">Reason</label>
+      <select id="pos-control-reason" class="pos-command__field" data-register-workspace-target="controlReasonField"></select>
+
+      <div data-register-workspace-target="controlNoteWrap" hidden>
+        <label for="pos-control-note">Note</label>
+        <input id="pos-control-note" class="pos-command__field" data-register-workspace-target="controlNoteField" maxlength="200" autocomplete="off">
+      </div>
+
+      <div data-register-workspace-target="controlApproverWrap" hidden>
+        <label for="pos-approver-username">Approver username</label>
+        <input id="pos-approver-username" class="pos-command__field" data-register-workspace-target="approverUsername" autocomplete="off">
+        <label for="pos-approver-password">Approver password</label>
+        <input id="pos-approver-password" class="pos-command__field" type="password" data-register-workspace-target="approverPassword" autocomplete="off">
+      </div>
+
+      <div class="pos-overlay__actions">
+        <button type="button" class="btn btn--secondary" data-action="register-workspace#closeControlOverlay" data-register-workspace-target="controlCancel">Don't apply (Esc)</button>
+        <button type="button" class="btn" data-action="register-workspace#submitControlApply" data-register-workspace-target="controlApply">Apply</button>
+        <button type="button" class="btn btn--secondary" data-action="register-workspace#submitControlRemove" data-register-workspace-target="controlRemove" hidden>Remove</button>
+      </div>
     </div>
   </div>
 </div>

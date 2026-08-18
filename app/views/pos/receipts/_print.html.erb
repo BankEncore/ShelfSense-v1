@@ -23,12 +23,22 @@
           <td><%= pos_print_line_description(line) %></td>
           <td><%= format_money_cents(line.extended_selling_amount_cents) %></td>
         </tr>
+        <% if line.manually_discounted? %>
+          <tr>
+            <td></td>
+            <td>Discount <%= number_with_precision(line.manual_discount_basis_points / 100.0, precision: 2) %>%</td>
+            <td><%= format_money_cents(-line.manual_discount_cents) %></td>
+          </tr>
+        <% end %>
       <% end %>
     </tbody>
   </table>
 
   <dl class="pos-receipt__print-totals">
     <div><dt>Subtotal</dt><dd><%= format_money_cents(transaction.subtotal_cents) %></dd></div>
+    <% if transaction.discount_cents.positive? %>
+      <div><dt>Discount</dt><dd><%= format_money_cents(transaction.discount_cents) %></dd></div>
+    <% end %>
     <div><dt>Tax</dt><dd><%= format_money_cents(transaction.tax_cents) %></dd></div>
     <div><dt>Total</dt><dd><%= format_money_cents(transaction.total_cents) %></dd></div>
     <% tenders.each do |tender| %>

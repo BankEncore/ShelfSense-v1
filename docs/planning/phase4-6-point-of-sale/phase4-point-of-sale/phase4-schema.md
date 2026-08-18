@@ -17,7 +17,7 @@ Companions: [Phase 4 plan](phase4-plan.md), [POS tax contract](pos-tax-contract.
 - Draft/working state may be edited; completed commercial facts are immutable and corrected only by new facts later.
 - Optimistic locking via `lock_version` on mutable aggregate roots (`pos_sessions`, working `pos_transactions`, store tax config).
 - No Phase 5 Cash-accountability columns on sessions in this phase. Those columns are specified in [phase5-schema.md](../phase5-cash-register/phase5-schema.md).
-- No Phase 6 return/discount/approval columns required; leave room via `direction` and versioned operation envelopes rather than speculative null columns.
+- Discount, default/applied Tax Class, and `pos_controlled_actions` are specified in [controlled-actions.md](../phase6-pos-mvp/controlled-actions.md). Do not add unused return columns here.
 
 ---
 
@@ -33,6 +33,7 @@ pos_reporting_periods
 pos_sessions
 pos_transactions
 pos_transaction_lines
+pos_controlled_actions              # 6.4 effective executed facts
 pos_line_tax_components
 pos_tenders
 pos_operations
@@ -154,8 +155,9 @@ One row for working and completed (or cancelled) commercial state.
 | `register_number_snapshot` | integer | null until completed; from `registers.register_number` |
 | `transaction_reference` | string | optional derived compact `S…-R…-T…`; regenerable from snapshots + sequence |
 | `subtotal_cents` | bigint | Phase 4: sum of sale line extended amounts (positive) |
+| `discount_cents` | bigint | NOT NULL default 0; Σ `manual_discount_cents` (6.4C) |
 | `tax_cents` | bigint | Phase 4: sum of component tax (positive for sale-only) |
-| `total_cents` | bigint | Phase 4: amount due; revisit as `transaction_net_cents` when returns arrive |
+| `total_cents` | bigint | sale-only: subtotal − discount + tax; amount due |
 | `lock_version` | integer | null: false, default 0 |
 | `created_at` / `updated_at` | timestamptz | |
 
@@ -188,12 +190,19 @@ One row for working and completed (or cancelled) commercial state.
 | `product_variant_id` | uuid | FK, null: false for Phase 4 merchandise lines |
 | `quantity` | integer | **NOT NULL**; CHECK `quantity > 0` (Phase 4 quantity-tracked) |
 | `reference_unit_price_cents` | bigint | null: false when priced |
-| `selling_unit_price_cents` | bigint | equals reference in Phase 4 |
-| `extended_selling_amount_cents` | bigint | positive magnitude |
+| `selling_unit_price_cents` | bigint | after override, before discount; equals reference until 6.4 override |
+| `extended_selling_amount_cents` | bigint | positive magnitude (`selling × quantity`) |
+| `manual_discount_basis_points` | integer | nullable; null = no manual discount (6.4C) |
+| `manual_discount_cents` | bigint | NOT NULL default 0 |
+| `net_merchandise_amount_cents` | bigint | NOT NULL; `extended − manual_discount_cents` |
 | `line_tax_cents` | bigint | sum of component tax_cents; positive magnitude |
-| `line_total_cents` | bigint | extended + tax for Phase 4 sale lines; positive magnitude |
-| `tax_class_id` | uuid | FK; merchandise Tax Class used for determination |
+| `line_total_cents` | bigint | net + tax (extended + tax until 6.4C) |
+| `default_tax_class_id` | uuid | FK; ProductVariant Tax Class at add (6.4D) |
+| `default_tax_class_code_snapshot` | string | 6.4D |
+| `default_tax_class_name_snapshot` | string | 6.4D |
+| `tax_class_id` | uuid | FK; **applied** Tax Class used for determination |
 | `tax_class_code_snapshot` | string | snapshot; classification code (`physical_book`), not a treatment |
+| `tax_class_name_snapshot` | string | applied display name (6.4D) |
 | `merchandise_snapshot` | jsonb | **required when transaction is completed**; v1 keys plus unit keys when `inventory_unit_id` is present (see §8.1) |
 | `inventory_unit_id` | uuid | nullable FK → `inventory_units` (`on_delete: :restrict`); required for individually tracked lines; CHECK `inventory_unit_id IS NULL OR quantity = 1` |
 | `created_at` / `updated_at` | timestamptz | |
@@ -204,9 +213,9 @@ Unique `(pos_transaction_id, line_number)`.
 
 ```text
 tax_treatment                    # not used; applicability is per Store Tax
-default_tax_class_id / applied_  # deferred until Tax Class override
-discount fields                  # Phase 6
 ```
+
+Default vs applied Tax Class and manual discount columns arrive in [controlled-actions.md](../phase6-pos-mvp/controlled-actions.md) (6.4C/D).
 
 `inventory_unit_id` is present from Slice 6.1. It is omitted from v2 envelopes when null. There is no unique index on `inventory_unit_id` (later linked returns reuse the unit identity on a new line). Working-unit exclusivity is enforced by `AddMerchandise` locking the `InventoryUnit` row.
 
@@ -223,6 +232,10 @@ Minimum v1 shape:
 ```
 
 Optional keys may be added in later operation versions without expanding the relational line schema. Slice 6.1 unit lines also snapshot `unit_identifier` and `condition_code`. While `status = working`, snapshot may be absent or provisional; completion **must** refuse to finish without a valid required snapshot.
+
+### 8.2 `pos_controlled_actions` (6.4)
+
+Currently effective executed controlled-action fact. See [controlled-actions.md](../phase6-pos-mvp/controlled-actions.md). Unique `(pos_transaction_line_id, action_type)` where the line is present. Child of `pos_transactions`; readonly when the parent is commercially immutable. `audit_events` remain the activity log.
 
 ---
 

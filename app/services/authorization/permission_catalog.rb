@@ -83,7 +83,13 @@ module Authorization
       { key: "store_taxes.update", group_key: "store_taxes", name: "Update store taxes", scope_type: "either" },
       { key: "store_taxes.deactivate", group_key: "store_taxes", name: "Deactivate store taxes", scope_type: "either" },
       { key: "pos.transact", group_key: "pos", name: "Operate POS transactions", scope_type: "either" },
-      { key: "pos.manage_tender_types", group_key: "pos", name: "Manage tender types", scope_type: "global" }
+      { key: "pos.manage_tender_types", group_key: "pos", name: "Manage tender types", scope_type: "global" },
+      { key: "pos.price_override.perform", group_key: "pos", name: "Perform price override", scope_type: "either" },
+      { key: "pos.price_override.approve", group_key: "pos", name: "Approve price override", scope_type: "either" },
+      { key: "pos.line_discount.perform", group_key: "pos", name: "Perform line discount", scope_type: "either" },
+      { key: "pos.line_discount.approve", group_key: "pos", name: "Approve line discount", scope_type: "either" },
+      { key: "pos.tax_class_override.perform", group_key: "pos", name: "Perform Tax Class override", scope_type: "either" },
+      { key: "pos.tax_class_override.approve", group_key: "pos", name: "Approve Tax Class override", scope_type: "either" }
     ].freeze
 
     PERMISSIONS = (PHASE1_PERMISSIONS + PHASE2_PERMISSIONS + PHASE3_PERMISSIONS + PHASE4_PERMISSIONS).freeze
@@ -112,6 +118,12 @@ module Authorization
       store_taxes.update
       store_taxes.deactivate
       pos.transact
+      pos.price_override.perform
+      pos.price_override.approve
+      pos.line_discount.perform
+      pos.line_discount.approve
+      pos.tax_class_override.perform
+      pos.tax_class_override.approve
     ].freeze
 
     ROLES = [
@@ -146,6 +158,9 @@ module Authorization
           product_variants.view
           inventory.view
           pos.transact
+          pos.price_override.perform
+          pos.line_discount.perform
+          pos.tax_class_override.perform
         ]
       }
     ].freeze

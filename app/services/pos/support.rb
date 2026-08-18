@@ -74,8 +74,12 @@ module Pos
     end
 
     def exact_settlement?(transaction)
-      tenders = transaction.pos_tenders.to_a
-      tenders.any? && tenders.sum(&:amount_cents) == transaction.total_cents
+      if transaction.total_cents.zero?
+        transaction.pos_transaction_lines.any? && transaction.pos_tenders.empty?
+      else
+        tenders = transaction.pos_tenders.to_a
+        tenders.any? && tenders.sum(&:amount_cents) == transaction.total_cents
+      end
     end
 
     def snapshot_tender_identity!(tender, type)
@@ -125,18 +129,20 @@ module Pos
     end
 
     def apply_provisional_tax!(line)
+      line.recalc_extended! if line.net_merchandise_amount_cents.nil?
       result = Pos::Tax::Calculate.call(
         store: line.pos_transaction.store,
         tax_class: line.tax_class,
-        taxable_basis_cents: line.extended_selling_amount_cents
+        taxable_basis_cents: line.net_merchandise_amount_cents
       )
       line.line_tax_cents = result.tax_cents
-      line.line_total_cents = line.extended_selling_amount_cents + line.line_tax_cents
+      line.line_total_cents = line.net_merchandise_amount_cents + line.line_tax_cents
     end
 
     def refresh_totals!(transaction)
       lines = transaction.pos_transaction_lines.reload
       transaction.subtotal_cents = lines.sum(&:extended_selling_amount_cents)
+      transaction.discount_cents = lines.sum(&:manual_discount_cents)
       transaction.tax_cents = lines.sum(&:line_tax_cents)
       transaction.total_cents = lines.sum(&:line_total_cents)
       transaction.save!

@@ -18,6 +18,10 @@ module Pos
       snapshot_or(:finalized_subtotal_cents) { completed_transactions.sum(:subtotal_cents) }
     end
 
+    def discount_cents
+      snapshot_or(:finalized_discount_cents) { completed_transactions.sum(:discount_cents) }
+    end
+
     def tax_cents
       snapshot_or(:finalized_tax_cents) { completed_transactions.sum(:tax_cents) }
     end
@@ -66,6 +70,7 @@ module Pos
       {
         finalized_transaction_count: transaction_count,
         finalized_subtotal_cents: subtotal_cents,
+        finalized_discount_cents: discount_cents,
         finalized_tax_cents: tax_cents,
         finalized_total_cents: total_cents,
         finalized_cash_payment_cents: cash_payment_cents,
