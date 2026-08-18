@@ -26,6 +26,39 @@ module Pos
       end
     end
 
+    # Assumes the Session is already locked and validated. Not a public bypass of
+    # StartTransaction or ResumeOrStartTransaction.
+    def create_working_transaction!(session:, currency_code:)
+      PosTransaction.create!(
+        store: session.store,
+        register: session.register,
+        pos_session: session,
+        reporting_period: session.reporting_period,
+        cashier_user: session.cashier_user,
+        status: "working",
+        currency_code: currency_code
+      )
+    end
+
+    def lock_open_cashier_session!(session, actor)
+      locked = PosSession.lock.find(session.id)
+      authorize!(actor, locked.store)
+      require_active_context!(locked.store, locked.register)
+      require_session_cashier!(actor, locked)
+      raise Pos::Error, "session is not open" unless locked.open?
+      raise Pos::Error, "reporting period is not open" unless locked.reporting_period.open?
+
+      locked
+    end
+
+    def clear_working_tenders!(transaction)
+      tenders = transaction.pos_tenders
+      return false if tenders.empty?
+
+      tenders.destroy_all
+      true
+    end
+
     def parse_nonnegative_cents!(value, label)
       cents = Integer(value)
       raise Pos::Error, "#{label} must be a non-negative integer" if cents.negative?

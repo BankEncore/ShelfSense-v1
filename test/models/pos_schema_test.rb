@@ -50,6 +50,119 @@ class PosSchemaTest < ActiveSupport::TestCase
     assert_raises(ActiveRecord::RecordNotUnique) { duplicate_period.save! }
   end
 
+  test "database rejects a second working transaction on the same session" do
+    period = open_period
+    session = PosSession.create!(
+      store: @store,
+      register: @register,
+      reporting_period: period,
+      cashier_user: @user,
+      status: "open",
+      opened_at: Time.current
+    )
+    PosTransaction.create!(
+      store: @store,
+      register: @register,
+      pos_session: session,
+      reporting_period: period,
+      cashier_user: @user,
+      status: "working",
+      currency_code: "USD"
+    )
+
+    duplicate = PosTransaction.new(
+      store: @store,
+      register: @register,
+      pos_session: session,
+      reporting_period: period,
+      cashier_user: @user,
+      status: "working",
+      currency_code: "USD"
+    )
+    assert_raises(ActiveRecord::RecordNotUnique) { duplicate.save! }
+  end
+
+  test "completed and cancelled history does not block a new working transaction" do
+    period = open_period
+    session = PosSession.create!(
+      store: @store,
+      register: @register,
+      reporting_period: period,
+      cashier_user: @user,
+      status: "open",
+      opened_at: Time.current
+    )
+    PosTransaction.create!(
+      store: @store,
+      register: @register,
+      pos_session: session,
+      reporting_period: period,
+      cashier_user: @user,
+      status: "cancelled",
+      cancelled_at: Time.current,
+      currency_code: "USD"
+    )
+    working = PosTransaction.create!(
+      store: @store,
+      register: @register,
+      pos_session: session,
+      reporting_period: period,
+      cashier_user: @user,
+      status: "working",
+      currency_code: "USD"
+    )
+    assert working.working?
+  end
+
+  test "different sessions may each have one working transaction" do
+    other_register = Register.create!(store: @store, register_number: 2, name: "Back")
+    first_period = open_period
+    first_session = PosSession.create!(
+      store: @store,
+      register: @register,
+      reporting_period: first_period,
+      cashier_user: @user,
+      status: "open",
+      opened_at: Time.current
+    )
+    second_period = PosReportingPeriod.create!(
+      store: @store,
+      register: other_register,
+      status: "open",
+      opened_at: Time.current,
+      business_date: Date.new(2026, 8, 16)
+    )
+    second_session = PosSession.create!(
+      store: @store,
+      register: other_register,
+      reporting_period: second_period,
+      cashier_user: @user,
+      status: "open",
+      opened_at: Time.current
+    )
+
+    first = PosTransaction.create!(
+      store: @store,
+      register: @register,
+      pos_session: first_session,
+      reporting_period: first_period,
+      cashier_user: @user,
+      status: "working",
+      currency_code: "USD"
+    )
+    second = PosTransaction.create!(
+      store: @store,
+      register: other_register,
+      pos_session: second_session,
+      reporting_period: second_period,
+      cashier_user: @user,
+      status: "working",
+      currency_code: "USD"
+    )
+    assert first.working?
+    assert second.working?
+  end
+
   test "pos.transact is seeded for associate and store manager" do
     assert Permission.exists?(key: "pos.transact")
     assert Role.find_by!(key: "associate").permissions.exists?(key: "pos.transact")

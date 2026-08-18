@@ -77,5 +77,27 @@ Rails.application.routes.draw do
     resource :inventory_reconciliation, only: %i[show], controller: "inventory_reconciliations"
   end
 
+  namespace :pos do
+    get "register/enter", to: "enters#show", as: :register_enter
+    post "register/enter", to: "enters#create"
+    get "register", to: "workspaces#show", as: :register_workspace
+    post "register/merchandise", to: "workspaces#merchandise"
+    post "register/quantity", to: "workspaces#quantity"
+    post "register/remove", to: "workspaces#remove"
+    post "register/abandon_tender", to: "workspaces#abandon_tender"
+    post "register/cancel", to: "workspaces#cancel"
+    post "register/tender", to: "workspaces#tender"
+    post "register/continue", to: "workspaces#continue"
+    post "transactions/:transaction_id/complete", to: "workspaces#complete", as: :transaction_complete
+    get "transactions/:id/completed", to: "completed_transactions#show", as: :completed_transaction
+    post "register/close", to: "register_closes#create", as: :register_close
+    get "sessions/:id/close", to: "session_closes#show", as: :session_close
+    post "sessions/:id/close", to: "session_closes#create"
+    post "sessions/:id/resume_sales", to: "session_closes#resume_sales", as: :session_resume_sales
+    get "sessions/:id/closed", to: "closed_sessions#show", as: :session_closed
+    post "reporting_periods/:id/finalize", to: "reporting_period_finalizations#create", as: :reporting_period_finalize
+    get "reporting_periods/:id/z", to: "reporting_period_zs#show", as: :reporting_period_z
+  end
+
   root "home#show"
 end

@@ -28,7 +28,7 @@ module Pos
 
         applied = transaction.total_cents
         change = @amount_presented_cents - applied
-        transaction.pos_tenders.destroy_all
+        Pos::Support.clear_working_tenders!(transaction)
         tender = transaction.pos_tenders.create!(
           tender_type: "cash",
           direction: "payment",

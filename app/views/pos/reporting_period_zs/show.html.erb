@@ -1,0 +1,24 @@
+<% content_for :title, "Z report" %>
+
+<main class="pos-z">
+  <h1>Z report</h1>
+  <p>Store  <%= pos_padded_store_number(@period.store) %></p>
+  <p>Register  <%= pos_padded_register_number(@register) %></p>
+  <p>Business date  <%= @period.business_date.iso8601 %></p>
+
+  <dl class="pos-z__facts">
+    <div><dt>Transactions</dt><dd><%= @period.finalized_transaction_count %></dd></div>
+    <div><dt>Subtotal</dt><dd><%= format_money_cents(@period.finalized_subtotal_cents) %></dd></div>
+    <div><dt>Tax</dt><dd><%= format_money_cents(@period.finalized_tax_cents) %></dd></div>
+    <div><dt>Total</dt><dd><%= format_money_cents(@period.finalized_total_cents) %></dd></div>
+    <div><dt>Cash payments</dt><dd><%= format_money_cents(@period.finalized_cash_payment_cents) %></dd></div>
+    <div><dt>Sessions</dt><dd><%= @period.finalized_session_count %></dd></div>
+    <div><dt>Opening floats total</dt><dd><%= format_money_cents(@period.finalized_opening_float_cents_sum) %></dd></div>
+    <div><dt>Expected closing Cash</dt><dd><%= format_money_cents(@period.finalized_closing_expected_cash_cents_sum) %></dd></div>
+    <div><dt>Counted closing Cash</dt><dd><%= format_money_cents(@period.finalized_closing_count_cents_sum) %></dd></div>
+    <div><dt>Closing variance</dt><dd><%= format_money_cents(@period.finalized_closing_variance_cents_sum) %></dd></div>
+  </dl>
+
+  <p>Finalized  <%= format_store_timestamp(@period.closed_at, @period.store) %></p>
+  <p>Finalized by  <%= @period.finalized_by.display_name %></p>
+</main>

@@ -172,6 +172,7 @@ One row for working and completed (or cancelled) commercial state.
 - Completed and cancelled rows are application-readonly (`readonly?`); no generic update/delete of completed facts. Child lines, tenders, and tax components are readonly when the parent is not working. Completed `pos_operations` are readonly.
 - Cancelled working transactions create no receipt and no Inventory effect.
 - No Phase 4 `inventory_unit_id` on the header.
+- At most one `working` row per Session: partial unique index `index_pos_transactions_one_working_per_session` on `(pos_session_id) WHERE status = 'working'`. `StartTransaction` rejects a second working row. `ResumeOrStartTransaction` resumes or creates.
 
 ---
 
@@ -400,6 +401,7 @@ Do not invent a POS-only domain `source_type` string unless a global inventory A
 - Partial unique `(register_id) WHERE status = 'open'` on `pos_reporting_periods`.
 - Partial unique `(register_id) WHERE status = 'open'` on `pos_sessions`.
 - Unique `(store_id, register_id, receipt_sequence)` where sequence is not null.
+- Partial unique `(pos_session_id) WHERE status = 'working'` on `pos_transactions` (`index_pos_transactions_one_working_per_session`). Completed and cancelled history does not block a later working row.
 - Unique `(store_id, register_number)` on `registers`.
 - Unique `(pos_transaction_id, line_number)` on lines; CHECK `quantity > 0`.
 - Unique `(pos_transaction_line_id, store_tax_id)` on tax components; nonnegative CHECKs on basis/tax cents.

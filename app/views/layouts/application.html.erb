@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-turbo="false">
   <head>
     <title><%= content_for?(:title) ? "#{content_for(:title)} · ShelfSense" : "ShelfSense" %></title>
     <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -7,6 +7,7 @@
     <%= csp_meta_tag %>
     <%= yield :head %>
     <%= stylesheet_link_tag "application" %>
+    <%= javascript_importmap_tags %>
   </head>
   <body>
     <div class="app-shell">
@@ -81,6 +82,9 @@
             <% end %>
             <% if effective_permissions.include?("audit_events.view") %>
               <%= link_to "Audit", admin_audit_events_path %>
+            <% end %>
+            <% if effective_permissions.include?("pos.transact") && current_store.present? %>
+              <%= link_to "Register", pos_register_enter_path %>
             <% end %>
             <% if accessible_stores.many? %>
               <%= link_to "Switch store", new_store_selection_path %>

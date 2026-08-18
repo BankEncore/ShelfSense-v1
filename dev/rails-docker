@@ -3,7 +3,12 @@ set -euo pipefail
 
 SERVICE="${RAILS_DOCKER_SERVICE:-web}"
 
-if docker compose ps --status running "$SERVICE" | grep -q "$SERVICE"; then
+needs_browser_image() {
+  local joined="$*"
+  [[ "$joined" == *test:system* || "$joined" == *bin/ci* ]]
+}
+
+if ! needs_browser_image "$@" && docker compose ps --status running "$SERVICE" | grep -q "$SERVICE"; then
   docker compose exec "$SERVICE" "$@"
 else
   docker compose run --rm "$SERVICE" "$@"

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_17_010000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_17_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -34,7 +34,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_17_010000) do
     t.boolean "system_protected", default: false, null: false
     t.timestamptz "updated_at", null: false
     t.index ["code"], name: "index_adjustment_reasons_on_code", unique: true
-    t.check_constraint "direction::text = ANY (ARRAY['increase'::character varying, 'decrease'::character varying, 'either'::character varying]::text[])", name: "adjustment_reasons_direction_valid"
+    t.check_constraint "direction::text = ANY (ARRAY['increase'::character varying::text, 'decrease'::character varying::text, 'either'::character varying::text])", name: "adjustment_reasons_direction_valid"
   end
 
   create_table "audit_events", id: :uuid, default: nil, force: :cascade do |t|
@@ -147,7 +147,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_17_010000) do
     t.timestamptz "updated_at", null: false
     t.index ["source_id", "operation_type", "idempotency_key"], name: "index_idempotency_operations_on_scope_key", unique: true
     t.check_constraint "status::text <> 'in_flight'::text OR lease_expires_at IS NOT NULL", name: "idempotency_operations_in_flight_has_lease"
-    t.check_constraint "status::text = ANY (ARRAY['in_flight'::character varying, 'completed'::character varying, 'failed'::character varying]::text[])", name: "idempotency_operations_status_valid"
+    t.check_constraint "status::text = ANY (ARRAY['in_flight'::character varying::text, 'completed'::character varying::text, 'failed'::character varying::text])", name: "idempotency_operations_status_valid"
   end
 
   create_table "identifier_registry", id: :uuid, default: nil, force: :cascade do |t|
@@ -164,8 +164,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_17_010000) do
     t.index ["product_variant_id"], name: "index_identifier_registry_active_variant_industry", unique: true, where: "(((identifier_kind)::text = 'variant_industry'::text) AND (retired_at IS NULL))"
     t.index ["product_variant_id"], name: "index_identifier_registry_variant_sku", unique: true, where: "((identifier_kind)::text = 'variant_sku'::text)"
     t.index ["value"], name: "index_identifier_registry_on_value", unique: true
-    t.check_constraint "((product_id IS NOT NULL)::integer + (product_variant_id IS NOT NULL)::integer + (inventory_unit_id IS NOT NULL)::integer) <= 1 AND (retired_at IS NOT NULL OR identifier_kind::text = 'product_primary'::text AND product_id IS NOT NULL AND product_variant_id IS NULL AND inventory_unit_id IS NULL OR (identifier_kind::text = ANY (ARRAY['variant_sku'::character varying, 'variant_industry'::character varying]::text[])) AND product_variant_id IS NOT NULL AND product_id IS NULL AND inventory_unit_id IS NULL OR identifier_kind::text = 'inventory_unit'::text AND inventory_unit_id IS NOT NULL AND product_id IS NULL AND product_variant_id IS NULL)", name: "identifier_registry_owner_matches_kind"
-    t.check_constraint "identifier_kind::text = ANY (ARRAY['product_primary'::character varying, 'variant_sku'::character varying, 'variant_industry'::character varying, 'inventory_unit'::character varying]::text[])", name: "identifier_registry_kind_valid"
+    t.check_constraint "((product_id IS NOT NULL)::integer + (product_variant_id IS NOT NULL)::integer + (inventory_unit_id IS NOT NULL)::integer) <= 1 AND (retired_at IS NOT NULL OR identifier_kind::text = 'product_primary'::text AND product_id IS NOT NULL AND product_variant_id IS NULL AND inventory_unit_id IS NULL OR (identifier_kind::text = ANY (ARRAY['variant_sku'::character varying::text, 'variant_industry'::character varying::text])) AND product_variant_id IS NOT NULL AND product_id IS NULL AND inventory_unit_id IS NULL OR identifier_kind::text = 'inventory_unit'::text AND inventory_unit_id IS NOT NULL AND product_id IS NULL AND product_variant_id IS NULL)", name: "identifier_registry_owner_matches_kind"
+    t.check_constraint "identifier_kind::text = ANY (ARRAY['product_primary'::character varying::text, 'variant_sku'::character varying::text, 'variant_industry'::character varying::text, 'inventory_unit'::character varying::text])", name: "identifier_registry_kind_valid"
     t.check_constraint "value::text ~ '^[0-9]{13}$'::text", name: "identifier_registry_value_shape"
   end
 
@@ -244,7 +244,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_17_010000) do
     t.index ["unit_identifier"], name: "index_inventory_units_on_unit_identifier", unique: true
     t.check_constraint "acquisition_cost_cents >= 0 AND carrying_value_cents >= 0", name: "inventory_units_costs_nonnegative"
     t.check_constraint "lifecycle_state::text = 'on_hand'::text AND removed_at IS NULL OR lifecycle_state::text = 'removed'::text AND removed_at IS NOT NULL", name: "inventory_units_removal_consistency"
-    t.check_constraint "lifecycle_state::text = ANY (ARRAY['on_hand'::character varying, 'removed'::character varying]::text[])", name: "inventory_units_lifecycle_valid"
+    t.check_constraint "lifecycle_state::text = ANY (ARRAY['on_hand'::character varying::text, 'removed'::character varying::text])", name: "inventory_units_lifecycle_valid"
     t.check_constraint "regular_price_cents IS NULL OR regular_price_cents >= 0", name: "inventory_units_regular_price_nonnegative"
     t.check_constraint "unit_identifier::text ~ '^[0-9]{13}$'::text", name: "inventory_units_identifier_shape"
   end
@@ -269,7 +269,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_17_010000) do
     t.index ["reversal_of_id"], name: "index_inventory_valuation_entries_on_reversal_of_id", unique: true, where: "(reversal_of_id IS NOT NULL)"
     t.index ["source_type", "source_id", "effect_sequence"], name: "index_inventory_valuation_entries_on_source_effect", unique: true
     t.check_constraint "effect_sequence >= 0", name: "inventory_valuation_entries_effect_sequence_nonnegative"
-    t.check_constraint "valuation_method::text = ANY (ARRAY['moving_average'::character varying, 'specific_identification'::character varying]::text[])", name: "inventory_valuation_entries_method_valid"
+    t.check_constraint "valuation_method::text = ANY (ARRAY['moving_average'::character varying::text, 'specific_identification'::character varying::text])", name: "inventory_valuation_entries_method_valid"
   end
 
   create_table "merchandise_categories", id: :uuid, default: nil, force: :cascade do |t|
@@ -346,7 +346,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_17_010000) do
     t.integer "schema_version", default: 1, null: false
     t.index ["delivery_status", "created_at"], name: "index_outbox_messages_on_delivery_status_and_created_at"
     t.index ["event_type"], name: "index_outbox_messages_on_event_type"
-    t.check_constraint "delivery_status::text = ANY (ARRAY['pending'::character varying, 'delivered'::character varying, 'failed'::character varying]::text[])", name: "outbox_messages_delivery_status_valid"
+    t.check_constraint "delivery_status::text = ANY (ARRAY['pending'::character varying::text, 'delivered'::character varying::text, 'failed'::character varying::text])", name: "outbox_messages_delivery_status_valid"
   end
 
   create_table "permissions", id: :uuid, default: nil, force: :cascade do |t|
@@ -406,7 +406,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_17_010000) do
     t.index ["source_id", "command_type", "idempotency_key"], name: "index_pos_operations_on_scope_key", unique: true
     t.index ["store_id"], name: "index_pos_operations_on_store_id"
     t.check_constraint "status::text = 'in_flight'::text AND lease_expires_at IS NOT NULL AND envelope IS NULL AND envelope_hash IS NULL AND fact_type IS NULL OR status::text = 'failed'::text AND envelope IS NULL AND envelope_hash IS NULL OR status::text = 'completed'::text AND fact_type IS NOT NULL AND schema_version IS NOT NULL AND pos_transaction_id IS NOT NULL AND envelope IS NOT NULL AND envelope_hash IS NOT NULL AND posted_at IS NOT NULL", name: "pos_operations_status_payload_rules"
-    t.check_constraint "status::text = ANY (ARRAY['in_flight'::character varying, 'completed'::character varying, 'failed'::character varying]::text[])", name: "pos_operations_status_valid"
+    t.check_constraint "status::text = ANY (ARRAY['in_flight'::character varying::text, 'completed'::character varying::text, 'failed'::character varying::text])", name: "pos_operations_status_valid"
   end
 
   create_table "pos_reporting_periods", id: :uuid, default: nil, force: :cascade do |t|
@@ -445,7 +445,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_17_010000) do
     t.check_constraint "finalized_total_cents IS NULL OR finalized_total_cents >= 0", name: "pos_reporting_periods_finalized_total_nonnegative"
     t.check_constraint "finalized_transaction_count IS NULL OR finalized_transaction_count >= 0", name: "pos_reporting_periods_finalized_transaction_count_nonnegative"
     t.check_constraint "status::text = 'open'::text AND closed_at IS NULL AND finalized_by_user_id IS NULL AND finalized_transaction_count IS NULL AND finalized_subtotal_cents IS NULL AND finalized_tax_cents IS NULL AND finalized_total_cents IS NULL AND finalized_cash_payment_cents IS NULL AND finalized_session_count IS NULL AND finalized_opening_float_cents_sum IS NULL AND finalized_closing_expected_cash_cents_sum IS NULL AND finalized_closing_count_cents_sum IS NULL AND finalized_closing_variance_cents_sum IS NULL OR status::text = 'finalized'::text AND closed_at IS NOT NULL AND finalized_by_user_id IS NOT NULL AND finalized_transaction_count IS NOT NULL AND finalized_subtotal_cents IS NOT NULL AND finalized_tax_cents IS NOT NULL AND finalized_total_cents IS NOT NULL AND finalized_cash_payment_cents IS NOT NULL AND finalized_session_count IS NOT NULL AND finalized_opening_float_cents_sum IS NOT NULL AND finalized_closing_expected_cash_cents_sum IS NOT NULL AND finalized_closing_count_cents_sum IS NOT NULL AND finalized_closing_variance_cents_sum IS NOT NULL", name: "pos_reporting_periods_closed_at_matches_status"
-    t.check_constraint "status::text = ANY (ARRAY['open'::character varying, 'finalized'::character varying]::text[])", name: "pos_reporting_periods_status_valid"
+    t.check_constraint "status::text = ANY (ARRAY['open'::character varying::text, 'finalized'::character varying::text])", name: "pos_reporting_periods_status_valid"
   end
 
   create_table "pos_sessions", id: :uuid, default: nil, force: :cascade do |t|
@@ -473,7 +473,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_17_010000) do
     t.check_constraint "closing_variance_cents IS NULL OR closing_variance_cents = (closing_count_cents - closing_expected_cash_cents)", name: "pos_sessions_closing_variance_matches_count"
     t.check_constraint "opening_float_cents >= 0", name: "pos_sessions_opening_float_nonnegative"
     t.check_constraint "status::text = 'open'::text AND closed_at IS NULL AND closing_expected_cash_cents IS NULL AND closing_count_cents IS NULL AND closing_variance_cents IS NULL OR status::text = 'closed'::text AND closed_at IS NOT NULL AND closing_expected_cash_cents IS NOT NULL AND closing_count_cents IS NOT NULL AND closing_variance_cents IS NOT NULL", name: "pos_sessions_closed_at_matches_status"
-    t.check_constraint "status::text = ANY (ARRAY['open'::character varying, 'closed'::character varying]::text[])", name: "pos_sessions_status_valid"
+    t.check_constraint "status::text = ANY (ARRAY['open'::character varying::text, 'closed'::character varying::text])", name: "pos_sessions_status_valid"
   end
 
   create_table "pos_tenders", id: :uuid, default: nil, force: :cascade do |t|
@@ -538,13 +538,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_17_010000) do
     t.timestamptz "updated_at", null: false
     t.index ["cashier_user_id"], name: "index_pos_transactions_on_cashier_user_id"
     t.index ["pos_session_id"], name: "index_pos_transactions_on_pos_session_id"
+    t.index ["pos_session_id"], name: "index_pos_transactions_one_working_per_session", unique: true, where: "((status)::text = 'working'::text)"
     t.index ["register_id"], name: "index_pos_transactions_on_register_id"
     t.index ["reporting_period_id"], name: "index_pos_transactions_on_reporting_period_id"
     t.index ["store_id", "register_id", "receipt_sequence"], name: "index_pos_transactions_receipt_identity", unique: true, where: "(receipt_sequence IS NOT NULL)"
     t.index ["store_id"], name: "index_pos_transactions_on_store_id"
     t.index ["transaction_reference"], name: "index_pos_transactions_on_transaction_reference", unique: true, where: "(transaction_reference IS NOT NULL)"
     t.check_constraint "status::text = 'working'::text AND receipt_sequence IS NULL AND store_number_snapshot IS NULL AND register_number_snapshot IS NULL AND occurred_at IS NULL AND business_date IS NULL AND completed_at IS NULL AND cancelled_at IS NULL OR status::text = 'completed'::text AND receipt_sequence IS NOT NULL AND store_number_snapshot IS NOT NULL AND register_number_snapshot IS NOT NULL AND occurred_at IS NOT NULL AND business_date IS NOT NULL AND completed_at IS NOT NULL AND cancelled_at IS NULL OR status::text = 'cancelled'::text AND receipt_sequence IS NULL AND store_number_snapshot IS NULL AND register_number_snapshot IS NULL AND occurred_at IS NULL AND business_date IS NULL AND completed_at IS NULL AND cancelled_at IS NOT NULL", name: "pos_transactions_status_null_rules"
-    t.check_constraint "status::text = ANY (ARRAY['working'::character varying, 'completed'::character varying, 'cancelled'::character varying]::text[])", name: "pos_transactions_status_valid"
+    t.check_constraint "status::text = ANY (ARRAY['working'::character varying::text, 'completed'::character varying::text, 'cancelled'::character varying::text])", name: "pos_transactions_status_valid"
   end
 
   create_table "product_variants", id: :uuid, default: nil, force: :cascade do |t|

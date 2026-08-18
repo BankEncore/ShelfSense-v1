@@ -22,6 +22,10 @@ module Pos
       completed_transactions.sum(:tax_cents)
     end
 
+    def total_cents
+      completed_transactions.sum(:total_cents)
+    end
+
     def cash_tender_cents
       PosTender.joins(:pos_transaction)
                .where(pos_transactions: { pos_session_id: @session.id, status: "completed" })

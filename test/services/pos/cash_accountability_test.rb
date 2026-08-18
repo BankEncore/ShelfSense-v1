@@ -311,6 +311,7 @@ class PosCashAccountabilityTest < ActiveSupport::TestCase
     assert_equal session.closing_count_cents, totals.closing_count_cents
     assert_equal session.closing_variance_cents, totals.closing_variance_cents
     assert_equal(-99, totals.closing_variance_cents)
+    assert_equal session.pos_transactions.completed.sum(:total_cents), totals.total_cents
   end
 
   test "finalized period totals return persisted Z snapshots" do

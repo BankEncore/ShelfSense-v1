@@ -10,4 +10,12 @@ class Pos::ReceiptIdentityTest < ActiveSupport::TestCase
       receipt_sequence: 1
     )
   end
+
+  test "formats the printed receipt header from snapshots" do
+    assert_equal "Store: 003   Reg: 02   Trans: 0018427", Pos::ReceiptIdentity.header(
+      store_number: 3,
+      register_number: 2,
+      receipt_sequence: 18427
+    )
+  end
 end

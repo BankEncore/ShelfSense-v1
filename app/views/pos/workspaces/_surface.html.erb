@@ -1,0 +1,194 @@
+<%
+  lines = @lines || @transaction.pos_transaction_lines.includes(product_variant: :product)
+  tender = @tender || @transaction.pos_tenders.find_by(tender_type: "cash")
+  selected_id = @selected_line&.id
+  locked = %w[completion_pending completion_failed].include?(@ui_mode)
+  leftover = @session_record.reporting_period.business_date != BusinessDate.for_store(current_store)
+  amount_due = @transaction.total_cents
+  change_cents = tender&.change_cents
+  completion_recovery = @ui_mode == "completion_failed"
+  command_inputmode =
+    if @ui_mode == "quantity"
+      "numeric"
+    elsif @ui_mode == "tender"
+      "decimal"
+    else
+      "text"
+    end
+  command_label =
+    if @ui_mode == "quantity" && @selected_line
+      "#{pos_line_description(@selected_line)} · Current quantity #{@selected_line.quantity}"
+    elsif @ui_mode == "tender"
+      "Amount due #{format_money_cents(amount_due)}. Cash presented"
+    elsif locked
+      "Cash presented (locked)"
+    else
+      "Scan or identifier"
+    end
+%>
+
+<div id="pos_workspace"
+     class="pos-shell"
+     data-controller="register-workspace"
+     data-register-workspace-mode-value="<%= @ui_mode %>"
+     data-register-workspace-auto-complete-value="<%= @auto_complete ? "true" : "false" %>"
+     data-register-workspace-workspace-url-value="<%= pos_register_workspace_path %>"
+     data-action="keydown@document->register-workspace#onKeydown turbo:submit-end->register-workspace#onSubmitEnd">
+  <div data-register-workspace-target="chrome">
+    <header class="pos-header">
+      <div class="pos-header__row">
+        <span>Store  <%= current_store.admin_label %></span>
+        <span>Register  <%= @register.register_number %></span>
+        <span><%= current_user.display_name %></span>
+      </div>
+      <div class="pos-header__date <%= "pos-date-emphasis" if leftover %>">
+        Business date  <%= @session_record.reporting_period.business_date.iso8601 %>
+      </div>
+      <% if leftover %>
+        <p class="pos-banner" role="status">This register is still on business date <%= @session_record.reporting_period.business_date.iso8601 %>.</p>
+      <% end %>
+    </header>
+
+    <div class="pos-main">
+      <div id="pos_basket" class="pos-basket">
+        <table class="pos-lines">
+          <thead>
+            <tr>
+              <th>Qty</th>
+              <th>Description</th>
+              <th class="numeric">Unit</th>
+              <th class="numeric">Ext</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% lines.each do |line| %>
+              <tr class="<%= "is-selected" if line.id == selected_id %>"
+                  data-line-id="<%= line.id %>"
+                  data-quantity="<%= line.quantity %>"
+                  data-description="<%= pos_line_description(line) %>"
+                  aria-selected="<%= line.id == selected_id %>">
+                <td><%= line.id == selected_id ? ">" : "" %> <%= line.quantity %></td>
+                <td><%= pos_line_description(line) %></td>
+                <td class="numeric"><%= format_money_cents(line.selling_unit_price_cents) %></td>
+                <td class="numeric"><%= format_money_cents(line.extended_selling_amount_cents) %></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+
+      <aside id="pos_totals" class="pos-totals">
+        <div>Subtotal  <%= format_money_cents(@transaction.subtotal_cents) %></div>
+        <div>Tax  <%= format_money_cents(@transaction.tax_cents) %></div>
+        <div>Total  <%= format_money_cents(@transaction.total_cents) %></div>
+        <% if tender %>
+          <div>Cash presented  <%= format_money_cents(tender.amount_presented_cents) %></div>
+          <div class="pos-totals__change">CHANGE  <%= format_money_cents(change_cents) %></div>
+        <% else %>
+          <div class="pos-totals__due">Amount due  <%= format_money_cents(amount_due) %></div>
+        <% end %>
+      </aside>
+    </div>
+
+    <div id="pos_feedback" class="pos-feedback" data-register-workspace-target="feedback" role="<%= @feedback.present? ? "alert" : "status" %>" aria-live="<%= @feedback.present? ? "assertive" : "polite" %>">
+      <% if @ui_mode == "completion_pending" && @feedback.blank? %>
+        Completing sale…
+      <% elsif @feedback.present? %>
+        <%= @feedback %>
+        <% if @ui_mode == "completion_failed" %>
+          Tender is kept. Retry does not take Cash again.
+        <% end %>
+      <% end %>
+    </div>
+
+    <div id="pos_command" class="pos-command">
+      <div class="pos-command__mode" data-register-workspace-target="modeLabel"><%= pos_mode_label(@ui_mode) %></div>
+      <label for="pos-command-field" data-register-workspace-target="fieldLabel"><%= command_label %></label>
+      <input id="pos-command-field"
+             class="pos-command__field"
+             data-register-workspace-target="field"
+             value="<%= @command_value %>"
+             inputmode="<%= command_inputmode %>"
+             autocomplete="off"
+             <%= "disabled" if locked || @ui_mode == "completion_pending" %>
+             <%= "autofocus" unless locked || @ui_mode == "completion_failed" || completion_recovery %>>
+    </div>
+
+    <div id="pos_actions" class="pos-actions">
+      <% if completion_recovery %>
+        <button type="button" class="btn" data-action="register-workspace#submitComplete" data-register-workspace-target="retry" autofocus>Retry complete</button>
+        <%= button_to "Return to sale", pos_register_abandon_tender_path, method: :post,
+              params: { lock_version: @transaction.lock_version },
+              class: "btn btn--secondary",
+              form: { data: { turbo: true } },
+              data: { register_workspace_target: "abandonButton" } %>
+      <% else %>
+        <button type="button" class="btn btn--secondary" data-action="register-workspace#enterQuantity" data-register-workspace-target="quantityButton" disabled>Quantity (*)</button>
+        <button type="button" class="btn btn--secondary" data-action="register-workspace#enterTender" data-register-workspace-target="tenderButton" disabled>Tender (+)</button>
+        <button type="button" class="btn btn--secondary" data-action="register-workspace#removeSelected" data-register-workspace-target="removeButton" disabled>Remove (F8)</button>
+      <% end %>
+      <div data-register-workspace-target="clientRecovery" hidden>
+        <button type="button" class="btn" data-action="register-workspace#submitComplete">Retry complete</button>
+      </div>
+      <button type="button"
+              class="btn btn--danger"
+              data-action="register-workspace#openOverlay"
+              data-register-workspace-target="cancelButton"
+              disabled>
+        Cancel (F9)
+      </button>
+      <% if @ui_mode == "sale_entry" && lines.empty? && tender.blank? %>
+        <%= button_to "Close register", pos_register_close_path, method: :post,
+              params: { session_id: @session_record.id }, class: "btn btn--secondary" %>
+      <% end %>
+    </div>
+
+    <%= form_with url: pos_register_merchandise_path, method: :post, html: { class: "pos-hidden", data: { register_workspace_target: "merchandiseForm", turbo: true } } do %>
+      <%= hidden_field_tag :lock_version, @transaction.lock_version %>
+      <%= hidden_field_tag :selected_line_id, selected_id %>
+      <%= hidden_field_tag :identifier, "", data: { register_workspace_target: "identifierInput" } %>
+    <% end %>
+
+    <%= form_with url: pos_register_quantity_path, method: :post, html: { class: "pos-hidden", data: { register_workspace_target: "quantityForm", turbo: true } } do %>
+      <%= hidden_field_tag :lock_version, @transaction.lock_version %>
+      <%= hidden_field_tag :line_id, selected_id, data: { register_workspace_target: "quantityLineInput" } %>
+      <%= hidden_field_tag :quantity, "", data: { register_workspace_target: "quantityInput" } %>
+    <% end %>
+
+    <%= form_with url: pos_register_remove_path, method: :post, html: { class: "pos-hidden", data: { register_workspace_target: "removeForm", turbo: true } } do %>
+      <%= hidden_field_tag :lock_version, @transaction.lock_version %>
+      <%= hidden_field_tag :line_id, selected_id, data: { register_workspace_target: "removeLineInput" } %>
+    <% end %>
+
+    <%= form_with url: pos_register_tender_path, method: :post, html: { class: "pos-hidden", data: { register_workspace_target: "tenderForm", turbo: true } } do %>
+      <%= hidden_field_tag :lock_version, @transaction.lock_version %>
+      <%= hidden_field_tag :amount_presented, "", data: { register_workspace_target: "presentedInput" } %>
+    <% end %>
+
+    <%= form_with url: pos_transaction_complete_path(@transaction), method: :post, html: { class: "pos-hidden", data: { register_workspace_target: "completeForm", turbo: true } } do %>
+      <%= hidden_field_tag :lock_version, @transaction.lock_version %>
+      <%= hidden_field_tag :completion_operation_id, @completion_operation_id %>
+      <%= hidden_field_tag :expected_total_cents, @transaction.total_cents %>
+      <%= hidden_field_tag :amount_presented_cents, tender&.amount_presented_cents %>
+    <% end %>
+
+    <%= form_with url: pos_register_cancel_path, method: :post, html: { class: "pos-hidden", data: { register_workspace_target: "cancelForm", turbo: true } } do %>
+      <%= hidden_field_tag :lock_version, @transaction.lock_version %>
+    <% end %>
+  </div>
+
+  <div class="pos-overlay"
+       id="pos_overlay"
+       hidden
+       data-register-workspace-target="overlay"
+       role="dialog"
+       aria-modal="true"
+       aria-labelledby="pos-cancel-title">
+    <div class="pos-overlay__panel">
+      <h2 id="pos-cancel-title">Cancel this sale?</h2>
+      <p>Lines will not be sold. No receipt. No inventory movement.</p>
+      <button type="button" class="btn btn--secondary" data-action="register-workspace#closeOverlay" data-register-workspace-target="dontCancel">Don't cancel (Esc)</button>
+      <button type="button" class="btn btn--danger" data-action="register-workspace#confirmCancel" data-register-workspace-target="confirmCancel">Cancel sale (F9)</button>
+    </div>
+  </div>
+</div>

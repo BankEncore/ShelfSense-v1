@@ -59,7 +59,6 @@ module AuthorizesRequests
     else
       redirect_to root_path, alert: "No accessible store is available for your account."
     end
-    throw :abort
   end
 
   def resolve_current_store

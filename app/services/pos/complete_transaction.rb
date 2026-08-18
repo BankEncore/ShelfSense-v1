@@ -8,6 +8,16 @@ module Pos
       new(**attrs).call
     end
 
+    def self.command_payload(transaction:, operation_id:, expected_lock_version:, expected_total_cents:, amount_presented_cents:)
+      {
+        "transaction_id" => transaction.id.to_s,
+        "operation_id" => operation_id.to_s,
+        "expected_lock_version" => expected_lock_version.to_i,
+        "expected_total_cents" => expected_total_cents.to_i,
+        "amount_presented_cents" => amount_presented_cents.to_i
+      }
+    end
+
     def initialize(transaction:, actor:, operation_id:, expected_lock_version:, expected_total_cents:, amount_presented_cents:)
       @transaction = transaction
       @actor = actor
@@ -49,13 +59,13 @@ module Pos
     private
 
     def command_payload(transaction)
-      {
-        "transaction_id" => transaction.id.to_s,
-        "operation_id" => @operation_id.to_s,
-        "expected_lock_version" => @expected_lock_version,
-        "expected_total_cents" => @expected_total_cents,
-        "amount_presented_cents" => @amount_presented_cents
-      }
+      self.class.command_payload(
+        transaction: transaction,
+        operation_id: @operation_id,
+        expected_lock_version: @expected_lock_version,
+        expected_total_cents: @expected_total_cents,
+        amount_presented_cents: @amount_presented_cents
+      )
     end
 
     def complete_commercially!(transaction, operation)

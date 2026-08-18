@@ -1,0 +1,36 @@
+<% content_for :title, "Close register" %>
+
+<main class="pos-close">
+  <header class="pos-header">
+    <div class="pos-header__row">
+      <span>Store  <%= current_store.admin_label %></span>
+      <span>Register  <%= @register.register_number %></span>
+      <span><%= current_user.display_name %></span>
+    </div>
+    <div class="pos-header__date">Business date  <%= @session_record.reporting_period.business_date.iso8601 %></div>
+  </header>
+
+  <h1>Close register</h1>
+  <p>Count all Cash currently in the register.</p>
+
+  <% if @feedback.present? %>
+    <p class="pos-enter__alert" role="alert"><%= @feedback %></p>
+  <% end %>
+
+  <%= form_with url: pos_session_close_path(@session_record), method: :post, class: "pos-close__form" do %>
+    <%= hidden_field_tag :expected_lock_version, @session_record.lock_version %>
+    <div class="form-field">
+      <label for="closing_count">Closing Cash count</label>
+      <%= text_field_tag :closing_count, @closing_count,
+            inputmode: "decimal",
+            autocomplete: "off",
+            autofocus: true,
+            class: "pos-close__field" %>
+    </div>
+    <div class="pos-close__actions">
+      <%= submit_tag "Close session", class: "btn" %>
+    </div>
+  <% end %>
+
+  <%= button_to "Return to sales", pos_session_resume_sales_path(@session_record), method: :post, class: "btn btn--secondary" %>
+</main>

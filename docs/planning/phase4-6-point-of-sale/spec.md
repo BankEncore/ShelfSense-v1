@@ -705,32 +705,36 @@ It belongs to Cash custody/accountability.
 
 # 5.4 Keyboard/scanner Register workspace
 
-Build a dedicated Rails POS workspace.
+Authority: [register-workspace.md](phase5-cash-register/register-workspace.md). Interaction wireframes: [register-workspace-ux.md](phase5-cash-register/register-workspace-ux.md). That packet supersedes this section where they disagree.
+
+Build a dedicated Rails POS workspace (Importmap + Turbo + Stimulus; dedicated POS layout, not admin chrome).
 
 Ordinary path:
 
 ```text
 scan
-→ line added
+→ line added (compatible rescan increments the existing line)
 → scan
 → quantity correction if needed
-→ tender
-→ complete
+→ tender (TenderCash)
+→ complete (CompleteTransaction; separate HTTP request)
+→ on-screen completion receipt/confirmation
 → next transaction
 ```
 
-without requiring a mouse.
+without requiring a mouse. Every shortcut has a visible control.
 
 ### Required UX behavior
 
 * persistent transaction workspace;
-* primary scan/input control;
-* automatic focus;
-* Enter confirms;
-* Escape backs out where safe;
-* focus returns to scan target after ordinary operations;
-* completed transaction resets workspace;
-* errors preserve current transaction.
+* one primary scan/input control; autofocus; scanners are keyboard input ending in Enter;
+* Enter confirms the current ephemeral mode;
+* Escape backs out where [register-workspace.md](phase5-cash-register/register-workspace.md) allows;
+* focus returns to the primary input after ordinary operations;
+* GET workspace never creates a transaction; working + tender restores completion-pending (and a matching completion `operation_id` if one exists); no working transaction redirects to the enter gate (never infers a “latest” receipt);
+* at most one working transaction per Session (`ResumeOrStartTransaction` on POST enter/continue);
+* completed sale shows an on-screen confirmation from immutable facts, then continue starts a fresh working transaction;
+* errors preserve the current working transaction.
 
 ---
 
@@ -744,7 +748,7 @@ QUANTITY
 TENDER
 ```
 
-Additional modes are Phase 6.
+UI modes are ephemeral browser state. Authoritative status remains `working` / `completed` / `cancelled`. After `TenderCash` succeeds, input is locked for `CompleteTransaction` retry (not a fourth named mode). Additional named modes are Phase 6.
 
 ---
 
@@ -758,17 +762,21 @@ Standard quantity-tracked merchandise
 
 No individually tracked, non-inventory, or open-ring lines yet.
 
+`AddMerchandise` merges a compatible rescan (same variant, direction, unit price, tax class) by incrementing quantity and returns the resulting line.
+
 ---
 
 # 5.7 Quantity correction
 
-Allow quantity change before completion.
+Allow quantity change before completion via `ChangeQuantity` (absolute quantity; `0` is invalid — remove the line instead).
 
 Recalculate:
 
 * extended price;
 * tax;
 * total.
+
+Basket mutations (`AddMerchandise`, `ChangeQuantity`, `RemoveWorkingLine`), Return to sale (`AbandonTender`), and `CancelTransaction` clear any working tender in the same transaction.
 
 Phase 5 has no approval requirement because price/discount-controlled actions are not yet exposed.
 
@@ -788,6 +796,10 @@ Allow an open transaction to be cancelled.
 
 Cancellation:
 
+* requires explicit confirmation that scanner Enter cannot submit (second F9 confirms; Enter ignored);
+* Slice 2 disables the Cancel control when the working transaction has no lines (`CancelTransaction` may still cancel an empty working transaction);
+* clears any working tenders in the same database transaction before marking the sale cancelled (keep cancelled lines);
+* then `ResumeOrStartTransaction` so the cashier returns to `SALE_ENTRY`;
 * creates no completed commercial facts;
 * creates no receipt;
 * posts no Inventory movement.
@@ -798,7 +810,7 @@ Preserve minimal cancellation activity where the transaction had meaningful work
 
 # 5.10 Cash tender UI
 
-Provide a focused Cash dialog/interface.
+Provide a focused Cash interface. `TenderCash` and `CompleteTransaction` are **two HTTP requests**. Rails issues `completion_operation_id` on a successful tender (Stimulus treats it as opaque). Refresh of completion-pending **restores** a matching `in_flight`/`failed` operation from **persisted** settlement rather than minting a second attempt. Completion retries must not call `TenderCash` again ([register-workspace.md](phase5-cash-register/register-workspace.md) §6). Return to sale is `AbandonTender` (clears the persisted tender; no `lock_version` bump when there is none). A lost complete response or `POST complete` against an already-completed transaction opens **that** sale's immutable receipt by id.
 
 Example:
 
@@ -808,19 +820,21 @@ Cash received:    [20.00]
 Change:            $2.76
 ```
 
-Completion uses the same Phase 4 settlement/completion services.
+Insufficient Cash stays in `TENDER`. No split tender in Phase 5.
 
 ---
 
 # 5.11 Receipt rendering and printing
 
-Add the first operational receipt.
+Slice 2: on-screen **completion receipt/confirmation** from immutable completed transaction facts (`transaction_reference`, total, Cash presented, change, concise lines). No print controls. Enter on this page is a no-op; **New sale** is an explicit control ([register-workspace-ux.md](phase5-cash-register/register-workspace-ux.md) frame 8).
 
-Required:
+Slice 3: the first supported **print** path for those same facts.
+
+Required (print, Slice 3):
 
 * render from immutable completed transaction facts;
-* permanent receipt number;
-* print prompt after completion;
+* permanent receipt number / transaction reference ([receipt-identity.md](phase4-point-of-sale/receipt-identity.md));
+* print prompt after the cashier can already see the on-screen confirmation;
 * one supported print path;
 * printer failure does not undo completion.
 
