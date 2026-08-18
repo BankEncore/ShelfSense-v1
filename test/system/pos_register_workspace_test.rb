@@ -336,6 +336,36 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     assert_equal 1, PosTransaction.completed.where(register: @register).count
   end
 
+  test "cashier can open completed history and reprint without changing the sale" do
+    open_register
+    add_current_sku
+    click_on "Tender (+)"
+    field = find("#pos-command-field")
+    field.fill_in with: "50.00"
+    field.send_keys :enter
+    send_keys :enter
+    assert_text "Sale complete", wait: 10
+    completed = PosTransaction.completed.find_by!(register: @register)
+    counts = {
+      transactions: PosTransaction.count,
+      tenders: PosTender.count,
+      ledger: InventoryLedgerEntry.count,
+      outbox: OutboxMessage.count,
+      receipt: completed.receipt_sequence
+    }
+
+    click_on "Transactions"
+    assert_text completed.transaction_reference
+    click_on completed.transaction_reference
+    assert_selector ".pos-receipt__reprint", text: "REPRINT", visible: :all
+    assert_text "Example Book"
+    assert_equal counts[:transactions], PosTransaction.count
+    assert_equal counts[:tenders], PosTender.count
+    assert_equal counts[:ledger], InventoryLedgerEntry.count
+    assert_equal counts[:outbox], OutboxMessage.count
+    assert_equal counts[:receipt], completed.reload.receipt_sequence
+  end
+
   private
 
   def sign_in_admin

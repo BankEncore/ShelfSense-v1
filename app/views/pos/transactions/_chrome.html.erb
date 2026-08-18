@@ -1,0 +1,10 @@
+<header class="pos-header pos-no-print">
+  <div class="pos-header__row">
+    <span>Store  <%= current_store.admin_label %></span>
+    <span><%= current_user.display_name %></span>
+  </div>
+  <nav class="pos-history__nav" aria-label="History">
+    <%= link_to "Transactions", pos_transactions_path %>
+    <%= link_to "Register", pos_resume_register_path %>
+  </nav>
+</header>

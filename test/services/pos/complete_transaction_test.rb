@@ -70,6 +70,8 @@ class PosCompleteTransactionTest < ActiveSupport::TestCase
     assert_equal 1, operation.envelope.dig("receipt", "register_number")
     assert_equal transaction.transaction_reference, operation.envelope.dig("receipt", "reference")
     assert_equal @actor.id.to_s, operation.envelope.dig("origin", "performed_by_user_id")
+    assert_equal @actor.display_name, operation.envelope.dig("origin", "performed_by_name")
+    assert_equal @actor.display_name, transaction.cashier_name_snapshot
     assert_equal @actor.id, transaction.cashier_user_id
     assert_equal @actor.id, transaction.pos_session.cashier_user_id
 

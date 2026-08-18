@@ -25,6 +25,27 @@ module PosHelper
     )
   end
 
+  def pos_cashier_name(transaction)
+    transaction.cashier_name_snapshot.presence || "Not captured"
+  end
+
+  def pos_tender_summary(transaction)
+    transaction.pos_tenders.sort_by(&:tender_number).map(&:tender_name).join(" + ")
+  end
+
+  def pos_history_query_params(search)
+    {
+      transaction_reference: search.transaction_reference,
+      register_id: search.register_id,
+      receipt_sequence: search.receipt_sequence,
+      business_date: search.business_date
+    }.compact_blank
+  end
+
+  def pos_applicable_tax_components(line)
+    line.pos_line_tax_components.select(&:applies).sort_by(&:calculation_order)
+  end
+
   def pos_print_line_description(line)
     snapshot = line.merchandise_snapshot
     return "Description unavailable" unless snapshot.is_a?(Hash)
@@ -45,6 +66,10 @@ module PosHelper
 
   def pos_padded_register_number(register)
     Pos::ReceiptIdentity.pad(register.register_number, 2)
+  end
+
+  def pos_padded_register_snapshot(number)
+    Pos::ReceiptIdentity.pad(number, 2)
   end
 
   def pos_optional_money_cents(cents)

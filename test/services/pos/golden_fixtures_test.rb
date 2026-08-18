@@ -99,6 +99,16 @@ class PosGoldenFixturesTest < ActiveSupport::TestCase
     Pos::CompletedTransactionFacts.new(payload).verify!
   end
 
+  test "v2 verify accepts origin without performed_by_name and rejects a blank name" do
+    payload = JSON.parse(File.read(FIXTURES.join("completed_pos_operation_v2/cash_sale.json")))
+    refute payload.fetch("origin").key?("performed_by_name")
+    Pos::CompletedTransactionFacts.new(payload).verify!
+
+    payload["origin"]["performed_by_name"] = ""
+    error = assert_raises(Pos::Error) { Pos::CompletedTransactionFacts.new(payload).verify! }
+    assert_match(/performed_by_name/, error.message)
+  end
+
   test "tax golden cases compute half-up independently and include non-applicable rows" do
     catalog = JSON.parse(File.read(FIXTURES.join("tax_cases.json")))
     catalog.fetch("cases").each do |tax_case|

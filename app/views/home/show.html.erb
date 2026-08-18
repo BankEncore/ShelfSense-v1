@@ -8,6 +8,7 @@
       <p>Current store: <%= current_store.admin_label %>.</p>
       <% if effective_permissions.include?("pos.transact") %>
         <p><%= link_to "Open register", pos_register_enter_path %></p>
+        <p><%= link_to "Transactions", pos_transactions_path %></p>
       <% end %>
     <% elsif accessible_stores.exists? %>
       <p><%= link_to "Select a store", new_store_selection_path %></p>

@@ -1,0 +1,48 @@
+<% content_for :title, "Transaction #{@transaction.transaction_reference}" %>
+
+<main class="pos-history pos-receipt" data-controller="pos-receipt" data-action="keydown@document->pos-receipt#onKeydown">
+  <%= render "pos/transactions/chrome" %>
+
+  <div class="pos-history__detail pos-no-print">
+    <h1>Receipt  <%= @transaction.transaction_reference %></h1>
+    <dl class="pos-history__header">
+      <div><dt>Business date</dt><dd><%= @transaction.business_date.iso8601 %></dd></div>
+      <div><dt>Completed</dt><dd><%= format_store_timestamp(@transaction.completed_at, @transaction.store) %></dd></div>
+      <div><dt>Register</dt><dd><%= pos_padded_register_snapshot(@transaction.register_number_snapshot) %></dd></div>
+      <div><dt>Cashier</dt><dd><%= pos_cashier_name(@transaction) %></dd></div>
+      <div><dt>Total</dt><dd><%= format_money_cents(@transaction.total_cents) %></dd></div>
+    </dl>
+
+    <section aria-label="Lines">
+      <% @lines.each do |line| %>
+        <%= render "pos/transactions/line", line: line %>
+      <% end %>
+    </section>
+
+    <section aria-label="Tenders">
+      <h2>Tenders</h2>
+      <% @tenders.each do |tender| %>
+        <div class="pos-history__tender">
+          <div>
+            <%= tender.tender_number %>
+            <%= tender.tender_name %>
+            <%= format_money_cents(tender.amount_cents) %>
+          </div>
+          <% if tender.cash? %>
+            <div>Presented  <%= format_money_cents(tender.amount_presented_cents) %></div>
+            <div>Change  <%= format_money_cents(tender.change_cents) %></div>
+          <% elsif tender.external_reference.present? %>
+            <div>Reference  <%= tender.external_reference %></div>
+          <% end %>
+        </div>
+      <% end %>
+    </section>
+  </div>
+
+  <%= render "pos/receipts/print", transaction: @transaction, tenders: @tenders, reprint: true %>
+
+  <div class="pos-receipt__actions pos-no-print">
+    <button type="button" class="btn" data-action="pos-receipt#print">Reprint receipt</button>
+    <%= link_to "Back to transactions", pos_transactions_path, class: "btn btn--secondary" %>
+  </div>
+</main>

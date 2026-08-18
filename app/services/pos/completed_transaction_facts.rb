@@ -50,12 +50,20 @@ module Pos
 
       signed_net = @envelope.fetch("transaction")["signed_net_cents"]
       raise Pos::Error, "completed envelope is missing signed_net_cents" unless signed_net.is_a?(Integer)
+      verify_origin_name!
       verify_tenders!
     end
 
     private
 
     V2_TENDER_KEYS = %w[behavioral_category tender_name tender_number].freeze
+
+    def verify_origin_name!
+      origin = @envelope["origin"]
+      return unless origin.is_a?(Hash)
+      return unless origin.key?("performed_by_name")
+      raise Pos::Error, "completed envelope is missing performed_by_name" if origin["performed_by_name"].blank?
+    end
 
     def verify_tenders!
       tenders = @envelope["tenders"]
