@@ -136,9 +136,14 @@ module Pos
     def freeze_lines!(transaction)
       transaction.pos_transaction_lines.lock.each do |line|
         variant = line.product_variant
+        tracking = variant.derived_inventory_tracking
         raise Pos::Error, "merchandise is not sellable" unless variant.sellable?
-        raise Pos::Error, "individually tracked merchandise is not supported" unless variant.derived_inventory_tracking == "quantity"
+        unless %w[quantity non_inventory individual].include?(tracking)
+          raise Pos::Error, "merchandise tracking is not supported"
+        end
         raise Pos::Error, "regular price is required" if line.selling_unit_price_cents.nil?
+
+        unit = freeze_unit_line!(transaction, line, variant, tracking)
 
         line.recalc_extended!
         result = Pos::Tax::Calculate.call(
@@ -149,11 +154,7 @@ module Pos
         line.line_tax_cents = result.tax_cents
         line.line_total_cents = line.extended_selling_amount_cents + line.line_tax_cents
         line.tax_class_code_snapshot = line.tax_class.code
-        line.merchandise_snapshot = {
-          "sku" => variant.sku,
-          "description" => variant.product.name,
-          "tax_class_code" => line.tax_class.code
-        }
+        line.merchandise_snapshot = merchandise_snapshot_for(variant, line, unit)
         line.save!
         line.pos_line_tax_components.delete_all
         result.determinations.each do |determination|
@@ -171,6 +172,42 @@ module Pos
       end
     rescue Pos::Tax::UnresolvedApplicability => e
       raise Pos::Error, e.message
+    end
+
+    def freeze_unit_line!(transaction, line, variant, tracking)
+      if tracking == "individual"
+        raise Pos::Error, "inventory unit is required" if line.inventory_unit_id.blank?
+        raise Pos::Error, "quantity must be 1 for individually tracked merchandise" unless line.quantity == 1
+
+        unit = InventoryUnit.lock.find(line.inventory_unit_id)
+        raise Pos::Error, "unit is not on hand" unless unit.on_hand?
+        raise Pos::Error, "unit is not at this store" unless unit.store_id == transaction.store_id
+        raise Pos::Error, "unit does not match the merchandise" unless unit.product_variant_id == variant.id
+        unit
+      else
+        raise Pos::Error, "inventory unit must be blank" if line.inventory_unit_id.present?
+
+        nil
+      end
+    rescue ActiveRecord::RecordNotFound
+      raise Pos::Error, "unit is not on hand"
+    end
+
+    def merchandise_snapshot_for(variant, line, unit)
+      snapshot = {
+        "sku" => variant.sku,
+        "description" => variant.product.name,
+        "tax_class_code" => line.tax_class.code
+      }
+      return snapshot if unit.nil?
+
+      condition_code = variant.merchandise_condition&.code
+      raise Pos::Error, "condition is required for individually tracked merchandise" if condition_code.blank?
+
+      snapshot.merge(
+        "unit_identifier" => unit.unit_identifier,
+        "condition_code" => condition_code
+      )
     end
 
     def settle_cash!(transaction)
@@ -212,7 +249,7 @@ module Pos
 
     def build_facts!(transaction:, operation_id:, completion_time:, business_date:, receipt:)
       envelope = {
-        "schema_version" => 1,
+        "schema_version" => 2,
         "operation" => {
           "operation_id" => operation_id.to_s,
           "fact_type" => PosOperation::FACT_TYPE
@@ -237,7 +274,8 @@ module Pos
           "business_date" => business_date.iso8601,
           "subtotal_cents" => transaction.subtotal_cents,
           "tax_cents" => transaction.tax_cents,
-          "total_cents" => transaction.total_cents
+          "total_cents" => transaction.total_cents,
+          "signed_net_cents" => transaction.total_cents
         },
         "lines" => transaction.pos_transaction_lines.reload.map { |line| envelope_line(line) },
         "tenders" => transaction.pos_tenders.reload.map { |tender| envelope_tender(tender) }
@@ -248,7 +286,7 @@ module Pos
     end
 
     def envelope_line(line)
-      {
+      payload = {
         "line_id" => line.id.to_s,
         "line_number" => line.line_number,
         "direction" => line.direction,
@@ -275,6 +313,8 @@ module Pos
           }
         end
       }
+      payload["inventory_unit_id"] = line.inventory_unit_id.to_s if line.inventory_unit_id.present?
+      payload
     end
 
     def envelope_tender(tender)
@@ -305,6 +345,8 @@ module Pos
 
     def post_inventory!(transaction, completion_time, business_date, correlation_id)
       transaction.pos_transaction_lines.each do |line|
+        next if line.product_variant.derived_inventory_tracking == "non_inventory"
+
         Inventory::PostSale.call(
           line: line,
           occurred_at: completion_time,
@@ -320,7 +362,7 @@ module Pos
       operation.update!(
         status: "completed",
         fact_type: PosOperation::FACT_TYPE,
-        schema_version: 1,
+        schema_version: 2,
         pos_transaction_id: transaction.id,
         store_id: transaction.store_id,
         register_id: transaction.register_id,
@@ -345,16 +387,24 @@ module Pos
         register: transaction.register,
         subject: transaction,
         correlation_id: operation.id,
-        after_values: {
-          receipt_sequence: facts.receipt_sequence,
-          transaction_reference: facts.transaction_reference,
-          total_cents: transaction.total_cents
-        },
+        after_values: success_audit_after_values(transaction, facts),
         metadata: {
           operation_id: operation.id,
           envelope_hash: facts.envelope_hash
         }
       )
+    end
+
+    def success_audit_after_values(transaction, facts)
+      values = {
+        receipt_sequence: facts.receipt_sequence,
+        transaction_reference: facts.transaction_reference,
+        total_cents: transaction.total_cents
+      }
+      unit_ids = transaction.pos_transaction_lines.filter_map(&:inventory_unit_id)
+      values[:inventory_unit_id] = unit_ids.first.to_s if unit_ids.one?
+      values[:inventory_unit_ids] = unit_ids.map(&:to_s) if unit_ids.many?
+      values
     end
 
     def record_completion_outbox!(transaction, operation, facts, completion_time)

@@ -1,6 +1,6 @@
 # Phase 6 Slice 6.1 — Merchandise breadth
 
-**Status:** HTTP/domain contract locked. Not implemented.
+**Status:** Implemented. Cashier-facing sale of quantity-tracked Standard, individually tracked Used, and non-inventory Standard on the Phase 5 Cash register path.
 
 **Authority:** Cashier-facing sale of quantity-tracked Standard (already works), individually tracked Used, and non-inventory Standard on the Phase 5 Cash register path. Completion, tax, receipt identity, and Cash settlement remain in the [Phase 4 packet](../phase4-point-of-sale/). Envelope v2 keys: [mvp-contract.md](mvp-contract.md). Cash/Z remain Phase 5.
 
@@ -14,8 +14,8 @@ Where this document and [spec.md](../spec.md) §6.1 disagree (open ring), **pref
 three tracking forms on one Cash transaction
 inventory_unit_id on individually tracked lines only
 quantity = 1 for unit lines; QUANTITY must not allow 2
-working uniqueness of inventory_unit_id
-no reserved ledger
+AddMerchandise serializes on the InventoryUnit row (no reserved ledger)
+no cross-table partial unique index on working unit lines
 unit lifecycle stays on_hand | removed
 PostSale posts exact units; skips non-inventory
 unit price: unit regular → variant regular → fail
@@ -60,15 +60,15 @@ individually tracked line  → inventory_unit_id NOT NULL, quantity = 1
 quantity / non-inventory   → inventory_unit_id IS NULL
 ```
 
-Working uniqueness (prevent two working lines from holding the same unit):
+Do **not** add a partial unique index on working `inventory_unit_id`. PostgreSQL cannot predicate that index on `pos_transactions.status`. A global unique index on `inventory_unit_id` would also block a later linked return of the same unit.
+
+The invariant remains:
 
 ```text
-UNIQUE (inventory_unit_id)
-  WHERE inventory_unit_id IS NOT NULL
-    AND the parent transaction status = 'working'
+two working transactions cannot simultaneously contain the same InventoryUnit
 ```
 
-Completed lines keep `inventory_unit_id` for history. After completion the unit is `removed`, so a later working sale of that identifier fails availability, not this uniqueness predicate.
+Enforce it in `AddMerchandise` by serializing on the unit row (§4.4). Completed lines keep `inventory_unit_id` for history. After completion the unit is `removed`, so a later working sale of that identifier fails availability.
 
 Do not add unused discount, override, original-line, or tender-config columns.
 
@@ -123,7 +123,7 @@ Reject when:
 - variant is not sellable
 - derived tracking is not `individual`
 - the unit is already on this working transaction
-- the unit is on **another** working transaction (uniqueness / lock error, not silent steal)
+- the unit is on **another** working transaction (lock + existence check, not silent steal)
 - price cannot be resolved
 
 Do not merge unit lines on rescan. A second scan of the same unit is an error. A scan of a **different** unit is a new line.
@@ -154,12 +154,22 @@ Set both `reference_unit_price_cents` and `selling_unit_price_cents` to that val
 
 ### 4.4 Working availability
 
-Working transactions still do **not** post `reserved` ([phase4-plan.md](../phase4-point-of-sale/phase4-plan.md)). For unique units:
+Working transactions still do **not** post `reserved` ([phase4-plan.md](../phase4-point-of-sale/phase4-plan.md)). Do not introduce a reservation ledger or a denormalized working-unit table to solve POS basket concurrency.
 
-1. Partial unique index on working `inventory_unit_id` (§2).
-2. Completion locks the `inventory_units` row and re-checks `on_hand` + current store.
+Serialize `AddMerchandise` on the `InventoryUnit` row:
 
-Two cashiers cannot both hold the same unit in working baskets. The second add fails. Completion still re-validates so an intervening Phase 3 adjustment cannot sell a unit that left `on_hand`.
+```text
+BEGIN
+  lock InventoryUnit                    # FOR UPDATE
+  reject unless on_hand at current store
+  reject if any working POS line references this unit
+  insert line
+COMMIT
+```
+
+The lock makes the existence check and insert atomic across Registers. A second cashier waits, then fails with a conflict — not a silent steal. Removing the line (F8) releases the working reference so another Session may add the unit.
+
+Completion re-locks the unit and re-checks `on_hand` at the transaction store so an intervening Phase 3 adjustment cannot complete a sale of a unit that already left on-hand.
 
 ### 4.5 Completion
 
@@ -287,14 +297,14 @@ and:
 2. The Used unit is `removed`; ledger `entry_type = sale`, `source_type = PosTransactionLine`, `inventory_unit_id` set.
 3. The Standard quantity-tracked variant on-hand decreased by 2.
 4. Completed snapshots retain unit identifier and condition after the variant is later renamed or the unit is no longer on hand.
-5. A second working transaction cannot add the same `on_hand` unit.
+5. A second working transaction cannot add the same `on_hand` unit (serialized `AddMerchandise` on the unit row).
 6. QUANTITY cannot set a unit line to 2.
 7. Scanning a Used variant SKU does not add a line.
 8. Completion fails if the unit left `on_hand` after it was added (Phase 3 adjustment), with no receipt and no inventory effect.
 9. The Phase 5 all-Cash Standard path remains green (unit tests + system/browser tests).
 10. New completions are `schema_version: 2`.
 
-Headless coverage for posting/uniqueness/idempotency. System coverage for mixed-basket scan → Cash tender → complete → receipt shows the Used unit.
+Headless coverage for posting, concurrent unit add, and idempotency. System coverage for mixed-basket scan → Cash tender → complete → receipt shows the Used unit.
 
 ---
 

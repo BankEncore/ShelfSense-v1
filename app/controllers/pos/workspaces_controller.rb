@@ -193,7 +193,7 @@ module Pos
 
     def prepare_view_state
       @period = @session_record.reporting_period
-      @lines = @transaction.pos_transaction_lines.includes(product_variant: :product)
+      @lines = @transaction.pos_transaction_lines.includes(:inventory_unit, product_variant: [ :product, :merchandise_condition ])
       @tender = @transaction.pos_tenders.find_by(tender_type: "cash")
       @selected_line ||= default_selected_line
       @feedback ||= nil

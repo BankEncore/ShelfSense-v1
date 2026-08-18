@@ -4,11 +4,9 @@ module PosHelper
   def pos_line_description(line)
     snapshot = line.merchandise_snapshot
     if snapshot.is_a?(Hash) && snapshot["description"].present?
-      sku = snapshot["sku"]
-      sku.present? ? "#{snapshot["description"]}  #{sku}" : snapshot["description"]
+      pos_snapshot_line_description(snapshot)
     else
-      variant = line.product_variant
-      "#{variant.product.name}  #{variant.sku}"
+      pos_live_line_description(line)
     end
   end
 
@@ -29,8 +27,16 @@ module PosHelper
 
   def pos_print_line_description(line)
     snapshot = line.merchandise_snapshot
-    description = snapshot.is_a?(Hash) ? snapshot["description"] : nil
-    description.presence || "Description unavailable"
+    return "Description unavailable" unless snapshot.is_a?(Hash)
+
+    description = snapshot["description"].presence
+    return "Description unavailable" if description.blank?
+    return description unless snapshot["unit_identifier"].present?
+
+    parts = [ description ]
+    parts << snapshot["condition_code"] if snapshot["condition_code"].present?
+    parts << snapshot["unit_identifier"]
+    parts.join("  ")
   end
 
   def pos_padded_store_number(store)
@@ -49,5 +55,26 @@ module PosHelper
       "completion_pending" => "CASH TENDER",
       "completion_failed" => "CASH TENDER"
     }.fetch(mode, "SALE ENTRY")
+  end
+
+  def pos_snapshot_line_description(snapshot)
+    parts = [ snapshot["description"] ]
+    if snapshot["unit_identifier"].present?
+      parts << snapshot["condition_code"] if snapshot["condition_code"].present?
+      parts << snapshot["unit_identifier"]
+    elsif snapshot["sku"].present?
+      parts << snapshot["sku"]
+    end
+    parts.join("  ")
+  end
+
+  def pos_live_line_description(line)
+    variant = line.product_variant
+    if line.unit_line?
+      parts = [ variant.product.name, variant.merchandise_condition&.code, line.inventory_unit&.unit_identifier ]
+      parts.compact.join("  ")
+    else
+      "#{variant.product.name}  #{variant.sku}"
+    end
   end
 end

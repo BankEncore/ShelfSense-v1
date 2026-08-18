@@ -1,5 +1,5 @@
 <%
-  lines = @lines || @transaction.pos_transaction_lines.includes(product_variant: :product)
+  lines = @lines || @transaction.pos_transaction_lines.includes(:inventory_unit, product_variant: [ :product, :merchandise_condition ])
   tender = @tender || @transaction.pos_tenders.find_by(tender_type: "cash")
   selected_id = @selected_line&.id
   locked = %w[completion_pending completion_failed].include?(@ui_mode)
@@ -66,6 +66,7 @@
                   data-line-id="<%= line.id %>"
                   data-quantity="<%= line.quantity %>"
                   data-description="<%= pos_line_description(line) %>"
+                  data-unit-line="<%= line.unit_line? %>"
                   aria-selected="<%= line.id == selected_id %>">
                 <td><%= line.id == selected_id ? ">" : "" %> <%= line.quantity %></td>
                 <td><%= pos_line_description(line) %></td>

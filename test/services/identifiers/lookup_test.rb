@@ -76,6 +76,33 @@ class Identifiers::LookupTest < ActiveSupport::TestCase
     assert_match(/13 digits|blank|check digit/i, result.message)
   end
 
+  test "resolves inventory unit without treating the used variant sku as a unit" do
+    used = create_sellable_used!(name: "Used lookup")
+    Inventory::AdjustmentReasons.seed!
+    acquisition = Inventory::PostAdjustment.call(
+      store: Store.first!,
+      product_variant: used,
+      adjustment_reason: AdjustmentReason.find_by!(code: "opening_inventory"),
+      quantity_delta: 1,
+      actor: @actor,
+      source_id: SecureRandom.uuid_v7,
+      idempotency_key: SecureRandom.uuid_v7,
+      acquisition_unit_cost_cents: 400
+    )
+    unit = acquisition.inventory_unit
+
+    sku_result = Identifiers::Lookup.call(used.sku)
+    assert_equal :variant, sku_result.status
+    assert_equal used.id, sku_result.variant.id
+    assert_nil sku_result.inventory_unit
+
+    unit_result = Identifiers::Lookup.call(unit.unit_identifier)
+    assert_equal :inventory_unit, unit_result.status
+    assert_equal unit.id, unit_result.inventory_unit.id
+    assert_equal used.id, unit_result.variant.id
+    assert_equal @product.id, unit_result.product.id
+  end
+
   private
 
   def create_sellable_standard!(name:)

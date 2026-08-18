@@ -380,9 +380,9 @@ Selected line defaults to the line **returned** by the last `AddMerchandise`, or
 
 ## 8. Merchandise commands
 
-Phase 5 UI sells only standard quantity-tracked merchandise (existing `AddMerchandise` validations).
+Phase 5 shipped standard quantity-tracked merchandise only. Slice 6.1 also sells individually tracked Used units and non-inventory Standard on this same `SALE_ENTRY` scan path ([merchandise-breadth.md](../phase6-pos-mvp/merchandise-breadth.md)). Used variant SKUs are rejected (“scan the unit identifier”). Unit lines do not merge on rescan. QUANTITY is not offered for a selected unit line (`data-unit-line`); `ChangeQuantity` still rejects quantity ≠ 1.
 
-**Rescan merge** happens in `AddMerchandise` after the working-transaction lock, not in Stimulus. Compatible line:
+**Rescan merge** happens in `AddMerchandise` after the working-transaction lock, not in Stimulus. Compatible **quantity / non-inventory** line:
 
 ```text
 same product_variant_id

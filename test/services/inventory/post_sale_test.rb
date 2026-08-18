@@ -94,6 +94,99 @@ class InventoryPostSaleTest < ActiveSupport::TestCase
     end
   end
 
+  test "posts specific-identification removal for an individual unit" do
+    used_variant, unit = pos_on_hand_unit(store: @store, actor: @actor, tax_class: @tax, name: "Used Sale")
+    line = Pos::AddMerchandise.call(
+      transaction: @transaction.reload,
+      actor: @actor,
+      expected_lock_version: @transaction.lock_version,
+      identifier: unit.unit_identifier
+    )
+    result = nil
+    PosTransaction.transaction do
+      result = Inventory::PostSale.call(
+        line: line,
+        occurred_at: @occurred_at,
+        business_date: @business_date,
+        actor: @actor
+      )
+    end
+
+    ledger = result.fetch(:ledger)
+    valuation = result.fetch(:valuation)
+    balance = InventoryBalance.find_by!(store: @store, product_variant: used_variant)
+
+    assert unit.reload.removed?
+    assert_equal(-1, ledger.quantity_delta)
+    assert_equal "sale", ledger.entry_type
+    assert_equal unit.id, ledger.inventory_unit_id
+    assert_equal "specific_identification", valuation.valuation_method
+    assert_equal(-unit.carrying_value_cents, valuation.value_delta_cents)
+    assert_equal 0, balance.on_hand_quantity
+    assert_equal 0, balance.inventory_value_cents
+    assert_equal 1, OutboxMessage.where(event_type: "inventory.sale_posted").count
+    assert_empty Inventory::LedgerPairIntegrity.drifts(store_id: @store.id, product_variant_id: used_variant.id)
+  end
+
+  test "duplicate individual source effect is rejected" do
+    _used_variant, unit = pos_on_hand_unit(store: @store, actor: @actor, tax_class: @tax, name: "Used Duplicate")
+    line = Pos::AddMerchandise.call(
+      transaction: @transaction.reload,
+      actor: @actor,
+      expected_lock_version: @transaction.lock_version,
+      identifier: unit.unit_identifier
+    )
+    PosTransaction.transaction do
+      Inventory::PostSale.call(
+        line: line,
+        occurred_at: @occurred_at,
+        business_date: @business_date,
+        actor: @actor
+      )
+    end
+    assert_raises(Inventory::PostSale::Error, ActiveRecord::RecordNotUnique) do
+      PosTransaction.transaction do
+        Inventory::PostSale.call(
+          line: line,
+          occurred_at: @occurred_at,
+          business_date: @business_date,
+          actor: @actor
+        )
+      end
+    end
+    assert unit.reload.removed?
+    assert_equal 1, InventoryLedgerEntry.where(source_type: "PosTransactionLine", source_id: line.id).count
+  end
+
+  test "does not post a sale for non-inventory merchandise" do
+    service = pos_sellable_variant(
+      actor: @actor,
+      tax_class: @tax,
+      inventory_mode: "non_inventory",
+      name: "Store Service"
+    )
+    line = Pos::AddMerchandise.call(
+      transaction: @transaction.reload,
+      actor: @actor,
+      expected_lock_version: @transaction.lock_version,
+      identifier: service.sku
+    )
+
+    error = assert_raises(Inventory::PostSale::Error) do
+      PosTransaction.transaction do
+        Inventory::PostSale.call(
+          line: line,
+          occurred_at: @occurred_at,
+          business_date: @business_date,
+          actor: @actor
+        )
+      end
+    end
+    assert_match(/not inventory-tracked/, error.message)
+    assert_equal 0, InventoryLedgerEntry.where(source_type: "PosTransactionLine", source_id: line.id).count
+    assert_equal 0, OutboxMessage.where(event_type: "inventory.sale_posted").count
+  end
+
   private
 
   def open_stock(quantity, unit_cost_cents)

@@ -158,6 +158,7 @@ export default class extends Controller {
   enterQuantity() {
     if (this.inFlight) return
     if (this.modeValue !== "sale_entry" || !this.selectedRow()) return
+    if (this.selectedUnitLine()) return
     const row = this.selectedRow()
     this.setMode("quantity", "QUANTITY")
     const description = row.dataset.description || "Selected line"
@@ -243,6 +244,7 @@ export default class extends Controller {
       row.setAttribute("aria-selected", selected ? "true" : "false")
     })
     this.syncSelectedLine()
+    this.enableReadyActions()
   }
 
   overlayOpen() {
@@ -251,6 +253,11 @@ export default class extends Controller {
 
   selectedRow() {
     return this.element.querySelector(".pos-lines tbody tr.is-selected")
+  }
+
+  selectedUnitLine() {
+    const row = this.selectedRow()
+    return Boolean(row && row.dataset.unitLine === "true")
   }
 
   syncSelectedLine() {
@@ -277,7 +284,7 @@ export default class extends Controller {
     if (this.modeValue === "sale_entry") {
       const hasSelection = Boolean(this.selectedRow())
       const hasLines = Boolean(this.element.querySelector(".pos-lines tbody tr"))
-      this.setActionEnabled("quantityButton", hasSelection)
+      this.setActionEnabled("quantityButton", hasSelection && !this.selectedUnitLine())
       this.setActionEnabled("tenderButton", hasLines)
       this.setActionEnabled("removeButton", hasSelection)
       this.setActionEnabled("cancelButton", hasLines)

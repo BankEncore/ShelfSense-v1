@@ -341,6 +341,6 @@ class PosWorkingCommandsTest < ActiveSupport::TestCase
         identifier: used.sku
       )
     end
-    assert_match(/individually tracked/, error.message)
+    assert_match(/scan the unit identifier/, error.message)
   end
 end
