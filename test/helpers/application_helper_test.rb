@@ -9,6 +9,12 @@ class ApplicationHelperTest < ActionView::TestCase
     assert_includes format_money_cents(nil), "Not provided"
   end
 
+  test "format_signed_money_cents prefixes a plus for positive amounts" do
+    assert_equal "+$25.00", format_signed_money_cents(2500)
+    assert_equal "-$20.00", format_signed_money_cents(-2000)
+    assert_equal "$0.00", format_signed_money_cents(0)
+  end
+
   test "money_field_value uses integer cents without floats" do
     assert_equal "12.50", money_field_value(1250)
     assert_equal "-0.99", money_field_value(-99)

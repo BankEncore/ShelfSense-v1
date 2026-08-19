@@ -33,6 +33,10 @@ class PosTransaction < ApplicationRecord
     status == "cancelled"
   end
 
+  def sale_total_cents
+    subtotal_cents - discount_cents + tax_cents
+  end
+
   def commercially_immutable?
     persisted? && %w[completed cancelled].include?(attribute_in_database("status"))
   end

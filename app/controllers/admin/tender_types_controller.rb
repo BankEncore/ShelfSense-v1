@@ -15,7 +15,8 @@ module Admin
       @tender_type = TenderType.new(
         behavioral_category: "other",
         external_reference_policy: "optional",
-        active: true
+        active: true,
+        allows_refund: false
       )
     end
 
@@ -26,7 +27,7 @@ module Admin
       if create_and_audit!(
         @tender_type,
         action: "tender_types.create",
-        after_values: { code: @tender_type.code, name: @tender_type.name, behavioral_category: "other" }
+        after_values: { code: @tender_type.code, name: @tender_type.name, behavioral_category: "other", allows_refund: @tender_type.allows_refund }
       )
         redirect_to admin_tender_type_path(@tender_type), notice: "Tender type created."
       else
@@ -39,12 +40,12 @@ module Admin
     def update
       rescue_stale do
         attrs = update_params
-        attrs = attrs.except(:active) if @tender_type.cash?
+        attrs = attrs.except(:active, :allows_refund) if @tender_type.cash?
         if save_and_audit!(
           @tender_type,
           attrs: attrs,
           action: "tender_types.update",
-          before_keys: %w[name active external_reference_policy]
+          before_keys: %w[name active external_reference_policy allows_refund]
         )
           redirect_to admin_tender_type_path(@tender_type), notice: "Tender type updated."
         else
@@ -86,11 +87,11 @@ module Admin
     end
 
     def create_params
-      params.require(:tender_type).permit(:code, :name, :external_reference_policy, :lock_version)
+      params.require(:tender_type).permit(:code, :name, :external_reference_policy, :allows_refund, :lock_version)
     end
 
     def update_params
-      params.require(:tender_type).permit(:name, :active, :external_reference_policy, :lock_version)
+      params.require(:tender_type).permit(:name, :active, :external_reference_policy, :allows_refund, :lock_version)
     end
   end
 end

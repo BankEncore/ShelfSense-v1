@@ -39,8 +39,12 @@ module Pos
       active_registers.find_by(id: register_id)
     end
 
+    def cashier_target_session
+      bound_cashier_open_session || sole_cashier_open_session
+    end
+
     def pos_resume_register_path
-      resume_session = bound_cashier_open_session || sole_cashier_open_session
+      resume_session = cashier_target_session
       if resume_session
         pos_register_workspace_path(register_id: resume_session.register_id)
       else

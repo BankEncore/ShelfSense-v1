@@ -1,6 +1,6 @@
 # Phase 6 — Operational POS MVP
 
-**Status:** Slice 6.0 contract locked ([mvp-contract.md](mvp-contract.md)). Slice 6.1 merchandise breadth implemented ([merchandise-breadth.md](merchandise-breadth.md)). Slice 6.2 tender breadth implemented ([tender-breadth.md](tender-breadth.md)). Slice 6.3 transaction history implemented ([transaction-history.md](transaction-history.md)). Slice 6.4 controlled actions implemented ([controlled-actions.md](controlled-actions.md)). Slice 6.5 returns contract locked ([returns.md](returns.md)); not implemented.
+**Status:** Slice 6.0 contract locked ([mvp-contract.md](mvp-contract.md)). Slice 6.1 merchandise breadth implemented ([merchandise-breadth.md](merchandise-breadth.md)). Slice 6.2 tender breadth implemented ([tender-breadth.md](tender-breadth.md)). Slice 6.3 transaction history implemented ([transaction-history.md](transaction-history.md)). Slice 6.4 controlled actions implemented ([controlled-actions.md](controlled-actions.md)). Slice 6.5A directional Core implemented; slice 6.5B linked-return operator workflow implemented ([returns.md](returns.md)).
 
 **Authority**
 
@@ -11,7 +11,7 @@
 | [Tender breadth](tender-breadth.md) | Slice 6.2: Cash/Card/Check/Other settlement |
 | [Transaction history](transaction-history.md) | Slice 6.3: completed lookup, detail, reprint |
 | [Controlled actions](controlled-actions.md) | Slice 6.4: price override, line discount, Tax Class override |
-| [Returns](returns.md) | Slice 6.5: linked/unlinked returns, refunds, mixed sale+return (contract locked) |
+| [Returns](returns.md) | Slice 6.5: linked/unlinked returns, refunds, mixed sale+return (6.5A/B implemented) |
 | [Phase 4 plan](../phase4-point-of-sale/phase4-plan.md) | Completion, receipt allocation, inventory posting |
 | [CompletedPosOperation v1](../phase4-point-of-sale/completed-pos-operation-v1.md) | Commercial base; v2 is additive |
 | [POS tax contract](../phase4-point-of-sale/pos-tax-contract.md) | Tax Class / Store Tax; linked-return reversal ([§10](../phase4-point-of-sale/pos-tax-contract.md)) |
@@ -195,7 +195,7 @@ MVP linked-return eligibility is limited to authoritative original-line linkage,
 - **Refunds:** tender settlement, not return valuation. External Card refund is cashier-confirmed outside ShelfSense. Expected Cash becomes `float + Cash payments − Cash refunds` and **may be negative** (not a physical drawer cap).
 - **Session/Z:** this slice must make commercial and Cash calculations direction-aware in the same change that first completes a return. `SUM(transaction.total_cents)` must not treat refund magnitude as sales. 6.7 may reorganize snapshot columns; it does not fix a knowingly wrong Z.
 
-Working/cancelled returns do not consume eligibility. Concurrency must prevent two Registers from both returning the final eligible quantity. Delivery: 6.5A headless linked engine, then B/C/D as specified in [returns.md](returns.md) §32.
+Working/cancelled returns do not consume eligibility. Concurrency must prevent two Registers from both returning the final eligible quantity. Delivery: 6.5A Core and 6.5B operator workflow are implemented; C/D remain as specified in [returns.md](returns.md) §32.
 
 ### 6.6 — Post-void
 

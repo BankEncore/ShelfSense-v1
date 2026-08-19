@@ -9,18 +9,27 @@
 
   <dl class="pos-close__facts">
     <div><dt>Transactions</dt><dd><%= @totals.completed_transaction_count %></dd></div>
-    <div><dt>Subtotal</dt><dd><%= format_money_cents(@totals.subtotal_cents) %></dd></div>
-    <div><dt>Discount</dt><dd><%= format_money_cents(@totals.discount_cents) %></dd></div>
-    <div><dt>Tax</dt><dd><%= format_money_cents(@totals.tax_cents) %></dd></div>
+    <div><dt>Sales subtotal</dt><dd><%= format_money_cents(@totals.subtotal_cents) %></dd></div>
+    <div><dt>Sales discount</dt><dd><%= format_money_cents(@totals.discount_cents) %></dd></div>
+    <div><dt>Sales tax</dt><dd><%= format_money_cents(@totals.tax_cents) %></dd></div>
     <div><dt>Sales total</dt><dd><%= format_money_cents(@totals.total_cents) %></dd></div>
-    <div><dt>Cash payments</dt><dd><%= format_money_cents(@totals.cash_tender_cents) %></dd></div>
-    <div><dt>Card payments</dt><dd><%= format_money_cents(@totals.card_tender_cents) %></dd></div>
-    <div><dt>Check payments</dt><dd><%= format_money_cents(@totals.check_tender_cents) %></dd></div>
-    <div><dt>Other payments</dt><dd><%= format_money_cents(@totals.other_tender_cents) %></dd></div>
+    <div><dt>Return subtotal</dt><dd><%= format_money_cents(@totals.return_subtotal_cents) %></dd></div>
+    <div><dt>Return discount reversal</dt><dd><%= format_money_cents(@totals.return_discount_cents) %></dd></div>
+    <div><dt>Return tax reversal</dt><dd><%= format_money_cents(@totals.return_tax_cents) %></dd></div>
+    <div><dt>Returns total</dt><dd><%= format_money_cents(@totals.return_total_cents) %></dd></div>
+    <div><dt>Net</dt><dd><%= format_signed_money_cents(@totals.net_cents) %></dd></div>
+    <div><dt>Cash payments</dt><dd><%= format_money_cents(@totals.cash_payment_cents) %></dd></div>
+    <div><dt>Cash refunds</dt><dd><%= format_money_cents(@totals.cash_refund_cents) %></dd></div>
+    <div><dt>Card payments</dt><dd><%= format_money_cents(@totals.card_payment_cents) %></dd></div>
+    <div><dt>Card refunds</dt><dd><%= format_money_cents(@totals.card_refund_cents) %></dd></div>
+    <div><dt>Check payments</dt><dd><%= format_money_cents(@totals.check_payment_cents) %></dd></div>
+    <div><dt>Check refunds</dt><dd><%= format_money_cents(@totals.check_refund_cents) %></dd></div>
+    <div><dt>Other payments</dt><dd><%= format_money_cents(@totals.other_payment_cents) %></dd></div>
+    <div><dt>Other refunds</dt><dd><%= format_money_cents(@totals.other_refund_cents) %></dd></div>
     <div><dt>Opening float</dt><dd><%= format_money_cents(@session_record.opening_float_cents) %></dd></div>
-    <div><dt>Expected closing Cash</dt><dd><%= format_money_cents(@session_record.closing_expected_cash_cents) %></dd></div>
+    <div><dt>Expected closing Cash</dt><dd><%= format_signed_money_cents(@session_record.closing_expected_cash_cents) %></dd></div>
     <div><dt>Counted Cash</dt><dd><%= format_money_cents(@session_record.closing_count_cents) %></dd></div>
-    <div><dt>Variance</dt><dd><%= format_money_cents(@session_record.closing_variance_cents) %></dd></div>
+    <div><dt>Variance</dt><dd><%= format_signed_money_cents(@session_record.closing_variance_cents) %></dd></div>
   </dl>
 
   <div class="pos-close__actions">

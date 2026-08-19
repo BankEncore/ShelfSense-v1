@@ -41,7 +41,7 @@
           <th>Completed</th>
           <th>Register</th>
           <th>Cashier</th>
-          <th class="numeric">Total</th>
+          <th class="numeric">Net</th>
           <th>Tender</th>
         </tr>
       </thead>
@@ -53,7 +53,7 @@
             <td><%= format_store_timestamp(transaction.completed_at, current_store) %></td>
             <td><%= pos_padded_register_snapshot(transaction.register_number_snapshot) %></td>
             <td><%= pos_cashier_name(transaction) %></td>
-            <td class="numeric"><%= format_money_cents(transaction.total_cents) %></td>
+            <td class="numeric"><%= format_signed_money_cents(transaction.signed_net_cents) %></td>
             <td><%= pos_tender_summary(transaction) %></td>
           </tr>
         <% end %>

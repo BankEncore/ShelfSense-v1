@@ -1,0 +1,88 @@
+<% content_for :title, "Return items #{@transaction.transaction_reference}" %>
+
+<main class="pos-history">
+  <%= render "pos/transactions/chrome" %>
+
+  <h1>Return items</h1>
+  <p class="muted">Receipt  <%= @transaction.transaction_reference %></p>
+
+  <% if @error.present? %>
+    <p class="pos-enter__alert" role="alert"><%= @error %></p>
+  <% end %>
+
+  <% if @target_session.nil? %>
+    <p class="pos-banner" role="status">Open a register before processing a return.</p>
+    <p><%= link_to "Register", pos_resume_register_path, class: "btn" %></p>
+  <% end %>
+
+  <% if @has_working_tenders %>
+    <p class="pos-banner" role="status">Adding return items will clear the current tender entries.</p>
+  <% end %>
+
+  <%= form_with url: pos_transaction_return_items_path(@transaction), method: :post, local: true, class: "pos-return-items" do %>
+    <% @sale_lines.each do |line| %>
+      <% summary = @summaries.fetch(line.id) %>
+      <% basket_qty = @basket_quantities[line.id.to_s] %>
+      <% in_basket = basket_qty.present? %>
+      <% remaining = summary.remaining_quantity %>
+      <% eligible = remaining.positive? && !in_basket && @target_session.present? %>
+      <article class="pos-history__line">
+        <div class="pos-return-items__row">
+          <% if eligible %>
+            <label>
+              <%= check_box_tag "items[#{line.id}][selected]", "1", false, id: "item_#{line.id}_selected" %>
+              <%= pos_history_line_description(line) %>
+            </label>
+            <%= hidden_field_tag "items[#{line.id}][original_line_id]", line.id %>
+          <% else %>
+            <strong><%= pos_history_line_description(line) %></strong>
+          <% end %>
+        </div>
+        <p class="muted">
+          Sold <%= summary.sold_quantity %>
+          · Returned <%= summary.completed_returned_quantity %>
+          · Remaining <%= remaining %>
+          <% if line.unit_line? && line.merchandise_snapshot.is_a?(Hash) && line.merchandise_snapshot["unit_identifier"].present? %>
+            · Unit <%= line.merchandise_snapshot["unit_identifier"] %>
+          <% end %>
+        </p>
+        <% if in_basket %>
+          <p>Already in current basket · Qty <%= basket_qty %></p>
+        <% elsif remaining <= 0 %>
+          <p>Returned in full</p>
+        <% elsif eligible %>
+          <div class="pos-return-items__fields">
+            <div class="form-field">
+              <%= label_tag "items_#{line.id}_quantity", "Qty" %>
+              <% if line.unit_line? %>
+                <%= hidden_field_tag "items[#{line.id}][quantity]", 1 %>
+                <span>1</span>
+              <% else %>
+                <%= number_field_tag "items[#{line.id}][quantity]", 1, min: 1, max: remaining, id: "items_#{line.id}_quantity" %>
+              <% end %>
+            </div>
+            <div class="form-field">
+              <%= label_tag "items_#{line.id}_reason_code", "Reason" %>
+              <%= select_tag "items[#{line.id}][reason_code]",
+                    options_for_select([["Select…", ""]] + @reasons.map { |reason| [reason[:name], reason[:code]] }),
+                    id: "items_#{line.id}_reason_code" %>
+            </div>
+            <div class="form-field">
+              <%= label_tag "items_#{line.id}_reason_note", "Note (required for Other)" %>
+              <%= text_field_tag "items[#{line.id}][reason_note]", "", maxlength: 200, id: "items_#{line.id}_reason_note", autocomplete: "off" %>
+            </div>
+          </div>
+        <% end %>
+      </article>
+    <% end %>
+
+    <% if @can_add %>
+      <div class="actions">
+        <%= submit_tag "Add to register", class: "btn" %>
+        <%= link_to "Cancel", pos_transaction_path(@transaction), class: "btn btn--ghost" %>
+      </div>
+    <% else %>
+      <p><%= link_to "Back to receipt", pos_transaction_path(@transaction), class: "btn btn--secondary" %></p>
+    <% end %>
+  <% end %>
+</main>

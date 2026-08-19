@@ -169,8 +169,8 @@ Business date  completed fact
 Completed      completed_at, Store-local
 Register       register_number_snapshot
 Cashier        cashier_name_snapshot
-Total          total_cents
-Tender         tender_name by tender_number, joined with " + "
+Net            signed_net_cents via format_signed_money_cents (`+$25.00` / `-$20.00` / `$0.00`)
+Tender         tender_name by tender_number, joined with " + "; Cash payment vs Cash refund when refunds are present
 ```
 
 Row/reference opens detail. No live Product / TenderType / User joins except compatibility that does not rewrite displayed facts.
@@ -191,7 +191,7 @@ Tenders in `tender_number` order. Operator detail **may** show `external_referen
 
 Fact-driven sections only. Do not render empty override / discount / return / post-void blocks or disabled fake actions. Line IDs remain the 6.5 hook.
 
-6.5B attaches **Return items** on this detail ([returns.md](returns.md) §25): remaining returnable quantity on original sale lines; no Session ⇒ `Open a register before processing a return.` History itself stays Session-free.
+6.5B attaches **Return items** on this detail ([returns.md](returns.md) §25): remaining returnable quantity on original sale lines; sold / returned / remaining; completed-return links; **Return items** only when remaining quantity > 0. GET `/pos/transactions/:transaction_id/return_items` is read-only. No Session ⇒ `Open a register before processing a return.` History itself stays Session-free until the POST that adds selected items.
 
 ---
 
@@ -260,7 +260,7 @@ Envelope remains durable provenance. Required history behavior uses normalized C
 12. Reprint creates no commercial / inventory / tender / receipt-sequence effects.
 13. Historical show does not set `session[:pos_register_id]`.
 14. History Register resumes the bound open Session when present; the cashier’s sole open Session otherwise; enter when several Sessions are open and none is bound.
-15. 6.5B attaches Return items to historical line IDs without redesigning this surface ([returns.md](returns.md) §25).
+15. 6.5B Return items uses historical line IDs without redesigning this surface ([returns.md](returns.md) §25). GET never opens a Session.
 16. Phase 5/6.1/6.2 checkout and close/Z remain green.
 
 ---

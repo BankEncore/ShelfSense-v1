@@ -12,7 +12,8 @@ module Pos
       @session_record = @transaction.pos_session
       @period = @transaction.reporting_period
       @tenders = @transaction.pos_tenders.ordered
-      @tender = @tenders.find(&:cash?)
+      @tender = @tenders.find { |tender| tender.cash? && tender.direction == "payment" }
+      @transaction.pos_transaction_lines.includes(original_transaction_line: :pos_transaction).load
       session[:pos_register_id] = @register.id
     rescue Pos::Denied
       raise ActiveRecord::RecordNotFound

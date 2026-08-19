@@ -27,7 +27,7 @@ class PosCloseZTest < ActionDispatch::IntegrationTest
     get pos_completed_transaction_path(transaction)
     assert_response :success
     assert_select "button", text: "Print receipt"
-    assert_match "New sale", response.body
+    assert_match "New transaction", response.body
     assert_match "Close register", response.body
     assert_match "Store: 001   Reg: 01   Trans:", response.body
     assert_match "Example Book", response.body
@@ -525,13 +525,13 @@ class PosCloseZTest < ActionDispatch::IntegrationTest
     transaction = PosTransaction.working.find_by!(register: @register)
     post pos_register_merchandise_path, params: { identifier: @variant.sku, lock_version: transaction.lock_version }
     transaction.reload
-    post pos_register_tender_path, params: { amount_presented: "25.00", lock_version: transaction.lock_version }
+    post pos_register_tender_path, params: { tender_amount: "25.00", lock_version: transaction.lock_version }
     transaction.reload
     operation_id = css_select("input[name='completion_operation_id']").first["value"]
     post pos_transaction_complete_path(transaction), params: {
       completion_operation_id: operation_id,
       lock_version: transaction.lock_version,
-      expected_total_cents: transaction.total_cents,
+      expected_total_cents: transaction.total_cents, expected_signed_net_cents: transaction.signed_net_cents,
       amount_presented_cents: 2500
     }
     transaction.reload

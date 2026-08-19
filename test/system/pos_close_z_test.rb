@@ -59,14 +59,14 @@ class PosCloseZTest < ApplicationSystemTestCase
     field.send_keys :enter
     send_keys :enter
 
-    assert_text "Sale complete", wait: 10
+    assert_text "Transaction complete", wait: 10
     assert_button "Print receipt"
-    assert_text "New sale"
+    assert_text "New transaction"
     assert_text "Close register"
     assert_selector ".pos-receipt__print-header", visible: :all, text: /Store: 001\s+Reg: 01\s+Trans:/
     transaction = PosTransaction.completed.find_by!(register: @register)
     send_keys :enter
-    assert_text "Sale complete"
+    assert_text "Transaction complete"
     assert transaction.reload.completed?
 
     click_on "Close register"
@@ -121,7 +121,7 @@ class PosCloseZTest < ApplicationSystemTestCase
     field.send_keys :enter
     send_keys :enter
 
-    assert_text "Sale complete", wait: 10
+    assert_text "Transaction complete", wait: 10
     assert_text "Change"
     assert_button "Print receipt"
     assert_selector ".pos-receipt__print-header", visible: :all, text: /Store: 001\s+Reg: 01\s+Trans:/

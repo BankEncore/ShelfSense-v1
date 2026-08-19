@@ -16,6 +16,15 @@
         <%= form.label :active, "Active" %>
       </div>
     <% end %>
+    <div class="form-field">
+      <%= form.check_box :allows_refund %>
+      <%= form.label :allows_refund, "Allow refunds" %>
+    </div>
+  <% else %>
+    <div class="form-field">
+      <%= check_box_tag :allows_refund_display, "1", true, disabled: true %>
+      <%= label_tag :allows_refund_display, "Allow refunds" %>
+    </div>
   <% end %>
   <div class="actions">
     <%= form.submit class: "btn" %>

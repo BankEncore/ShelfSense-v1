@@ -1,6 +1,6 @@
 # Phase 6 Slice 6.5 — Returns, refunds, and exchanges
 
-**Status:** Contract locked. 6.5A implementing.
+**Status:** Contract locked. 6.5A implemented. 6.5B implemented.
 
 **Authority:** Linked return, unlinked return, mixed sale+return, refund tenders, and direction-aware Session/Z on the existing POS transaction. Dual authority with Core remains [mvp-contract.md](mvp-contract.md) / [ADR-020](../../../adr/ADR-020-pos-operation-envelope-and-core-facts.md). Tax remains [pos-tax-contract.md](../phase4-point-of-sale/pos-tax-contract.md) §10. Inventory posting remains [inventory-posting-contract.md](../../phase3-inventory-foundation/inventory-posting-contract.md). Settlement extends [tender-breadth.md](tender-breadth.md). Controlled-action policy remains [controlled-actions.md](controlled-actions.md). History initiation extends [transaction-history.md](transaction-history.md).
 
@@ -685,7 +685,7 @@ signed_net = 0  → no tenders
 
 Never complete with both payment and refund tenders. An exchange is net-settled.
 
-`Pos::Support.exact_settlement?` and remaining-due must use `signed_net` and tender `direction`. Workspace: net > 0 → payment tender; net < 0 → refund tender; net = 0 → no tender (merchandise required).
+`Pos::Support.exact_settlement?` and remaining-due must use `signed_net` and tender `direction`. Workspace: net > 0 → payment tender; net < 0 → refund tender; net = 0 → stay in `SALE_ENTRY` (no tender; merchandise required). `+` confirms the even exchange and completes. Auto-complete is only for exact payment/refund settlement, not net-zero.
 
 ---
 
@@ -739,9 +739,9 @@ Individual: checkbox / Return; quantity fixed 1; show unit identifier.
 
 No open POS Session → do **not** create one. Show: `Open a register before processing a return.` History itself remains usable without a Session.
 
-If a working transaction already exists on the bound Register Session, add return lines to it.
+If a working transaction already exists on the bound Register Session, add return lines to it. Sale + linked return in the same basket is cashier-operable in 6.5B.
 
-Before 6.5B makes linked returns cashier-operable, visible Session/Z must already display returns/refunds truthfully (6.5A may be headless Core).
+GET history and GET Return items never open a Session, start a transaction, rebind `session[:pos_register_id]`, or reserve quantity. POST is the first allowed side effect (`ResumeOrStartTransaction` then `AddLinkedReturnLines`).
 
 ---
 
@@ -836,9 +836,9 @@ Implementation notes: dropped `pos_sessions_closing_expected_nonnegative` and `p
 
 ### 6.5B — Linked-return operator workflow
 
-History remaining quantity; Return items; basket return lines; partial quantity; Used-unit linked return; return receipt; return history/detail; refund tender workspace.
+History remaining quantity; Return items; basket return lines; partial quantity; Used-unit linked return; return receipt; return history/detail; refund tender workspace. Sale + linked return may share one working basket.
 
-**Merge gate:** visible Session/Z already displays returns/refunds truthfully before linked returns are cashier-operable.
+**Implemented.** Merge gate: cashier-usable linked return from history through refund, receipt, and visible Session/Z.
 
 ### 6.5C — Unlinked return
 
@@ -846,7 +846,7 @@ History remaining quantity; Return items; basket return lines; partial quantity;
 
 ### 6.5D — Mixed transaction and closeout hardening
 
-Sale + linked; sale + unlinked; net positive/negative/zero; mixed refund tender; Session close; Z finalize; receipt/reprint; concurrency; completion retry/idempotency; full Phase 5–6.4 regression. No new domain model.
+Comprehensive mixed/unlinked/closeout hardening: sale + unlinked; net positive/negative/zero with unlinked; mixed refund tender; Session close; Z finalize; receipt/reprint; concurrency; completion retry/idempotency; full Phase 5–6.4 regression. Sale + linked return is already cashier-operable in 6.5B. No new domain model.
 
 ---
 
@@ -868,7 +868,7 @@ Sale + linked; sale + unlinked; net positive/negative/zero; mixed refund tender;
 14. An unlinked return begins at the current resolved reference price and may use an explicitly entered return unit price. A differing return price is preserved as a first-class commercial adjustment but is authorized as part of the single `unlinked_return` controlled action, not as a separate sale price override or discount.
 15. `signed_net > 0` completes with exact payment tenders.
 16. `signed_net < 0` completes with exact refund tenders.
-17. `signed_net = 0` completes with no tender (merchandise lines required).
+17. `signed_net = 0` completes with no tender (merchandise lines required) after the cashier confirms with `+`. The workspace does not auto-complete an even exchange.
 18. Cash refunds reduce expected Cash using `opening float + Cash payments − Cash refunds`; expected Cash reflects accounting facts and is not used as a physical drawer-capacity control in the MVP.
 19. Card refund is externally processed and merely recorded by ShelfSense.
 20. Session/Z reports sales, returns, net, payments, and refunds directionally.

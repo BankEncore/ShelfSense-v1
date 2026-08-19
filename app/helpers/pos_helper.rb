@@ -38,7 +38,35 @@ module PosHelper
   end
 
   def pos_tender_summary(transaction)
-    transaction.pos_tenders.sort_by(&:tender_number).map(&:tender_name).join(" + ")
+    tenders = transaction.pos_tenders.sort_by(&:tender_number)
+    refunds = tenders.any? { |tender| tender.direction == "refund" }
+    tenders.map { |tender| pos_tender_label(tender, distinguish_cash_payment: refunds) }.join(" + ")
+  end
+
+  def pos_tender_label(tender, distinguish_cash_payment: true)
+    if tender.direction == "refund"
+      "#{tender.tender_name} refund"
+    elsif tender.cash? && distinguish_cash_payment
+      "#{tender.tender_name} payment"
+    else
+      tender.tender_name
+    end
+  end
+
+  def pos_cash_payment?(tender)
+    tender.cash? && tender.direction == "payment"
+  end
+
+  def pos_line_amount_cents(line)
+    line.return? ? -line.extended_selling_amount_cents : line.extended_selling_amount_cents
+  end
+
+  def pos_line_discount_cents(line)
+    line.return? ? line.manual_discount_cents : -line.manual_discount_cents
+  end
+
+  def pos_line_tax_cents(line)
+    line.return? ? -line.line_tax_cents : line.line_tax_cents
   end
 
   def pos_history_query_params(search)
@@ -103,6 +131,7 @@ module PosHelper
       "sale_entry" => "SALE ENTRY",
       "quantity" => "QUANTITY",
       "tender" => "CASH TENDER",
+      "refund" => "REFUND",
       "completion_pending" => "CASH TENDER",
       "completion_failed" => "CASH TENDER"
     }.fetch(mode, "SALE ENTRY")
