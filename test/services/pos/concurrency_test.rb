@@ -810,12 +810,17 @@ class Pos::ConcurrencyTest < ActiveSupport::TestCase
     2.times { go << true }
     threads.each { |thread| assert thread.join(30), "thread did not finish" }
 
-    assert complete_result || complete_error
-    assert close_result || close_error
+    failures = [ complete_error, close_error ].compact
+    assert complete_result, failures.map(&:message).inspect
+    refute complete_error && close_error, failures.map(&:message).inspect
+
     session = PosSession.uncached { PosSession.find(session_id) }
     txn = PosTransaction.uncached { PosTransaction.find(transaction_id) }
+    assert txn.completed?, complete_error&.message
     refute session.closed? && txn.working?
-    if txn.completed? && session.closed?
+
+    if session.closed?
+      assert close_result
       assert_equal session.id, txn.pos_session_id
       expected = session.opening_float_cents +
                  PosTender.joins(:pos_transaction).where(
@@ -829,6 +834,8 @@ class Pos::ConcurrencyTest < ActiveSupport::TestCase
                    direction: "refund"
                  ).sum(:amount_cents)
       assert_equal expected, session.closing_expected_cash_cents
+    else
+      assert close_error
     end
   end
 
