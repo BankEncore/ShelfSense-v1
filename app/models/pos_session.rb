@@ -12,8 +12,9 @@ class PosSession < ApplicationRecord
   validates :status, :opened_at, presence: true
   validates :status, inclusion: { in: STATUSES }
   validates :opening_float_cents, numericality: { only_integer: true, greater_than_or_equal_to: 0 }
-  validates :closing_expected_cash_cents, :closing_count_cents,
+  validates :closing_count_cents,
             numericality: { only_integer: true, greater_than_or_equal_to: 0 }, allow_nil: true
+  validates :closing_expected_cash_cents, numericality: { only_integer: true }, allow_nil: true
   validates :closing_variance_cents, numericality: { only_integer: true }, allow_nil: true
   validate :context_matches_period_and_register
   validate :closing_snapshots_match_status

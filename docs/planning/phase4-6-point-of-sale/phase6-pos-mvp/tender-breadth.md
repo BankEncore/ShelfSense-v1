@@ -4,7 +4,7 @@
 
 **Authority:** One settlement redesign for Cash, external Card, Check, and admin-created Other on the Phase 5/6.1 register. Envelope v2 tender keys: [mvp-contract.md](mvp-contract.md). Expected Cash and all-Cash Phase 5 equivalence remain [phase5-plan.md](../phase5-cash-register/phase5-plan.md). 6.1 Cash envelopes stay the existing Cash tender representation.
 
-Companions: [phase6-plan.md](phase6-plan.md), [register-workspace.md](../phase5-cash-register/register-workspace.md), [close-z-screens.md](../phase5-cash-register/close-z-screens.md), [phase4-schema.md](../phase4-point-of-sale/phase4-schema.md).
+Companions: [phase6-plan.md](phase6-plan.md), [register-workspace.md](../phase5-cash-register/register-workspace.md), [close-z-screens.md](../phase5-cash-register/close-z-screens.md), [phase4-schema.md](../phase4-point-of-sale/phase4-schema.md), [returns.md](returns.md).
 
 Draft [tender.md](../../../drafts/specifications/pos/tender.md) is vocabulary. This document is implementation authority for the MVP subset.
 
@@ -21,7 +21,7 @@ cashier never free-types a tender type
 external Card is a recording (no processor)
 exact settlement: SUM(payment amount_cents) = signed_net_cents when signed_net > 0
 zero-net (6.4C): signed_net = 0 → no tenders; completion allowed
-signed_net < 0 unsupported until 6.5
+signed_net < 0 unsupported until 6.5 ([returns.md](returns.md))
 at most one Cash payment (partial unique index)
 TenderCash replaces Cash in place; remaining due excludes existing Cash
 tender_number dense 1..N; tender_name snapshot
@@ -45,7 +45,7 @@ Check
 admin-created Other
 ```
 
-Stored Value, integrated Card processing, and refund tenders are out. Until Cash refunds exist, expected Cash stays the Phase 5 formula.
+Stored Value, integrated Card processing, and refund tenders are out of **6.2**. Refunds, `allows_refund`, Cash refund Core, and direction-aware remaining due are [returns.md](returns.md). Until Cash refunds exist, expected Cash stays the Phase 5 formula.
 
 ---
 
@@ -65,7 +65,7 @@ UUIDv7 (`create_uuid_table`). Centrally mastered reference data.
 | `system_protected` | true for seeded Cash/Card/Check |
 | `lock_version` | optimistic locking |
 
-Do **not** add `allows_payment` or `allows_refund`. 6.5 expands refund eligibility.
+Do **not** add `allows_payment` or `allows_refund` in 6.2. 6.5 adds `allows_refund` ([returns.md](returns.md) §20).
 
 Seed only:
 
@@ -172,7 +172,7 @@ payment tenders only
 
 `signed_net_cents = total_cents` on sale-only transactions.
 
-**6.4C amendment** ([controlled-actions.md](controlled-actions.md)): a 100% discount or $0 override may produce `signed_net_cents = 0`. Then **no tender is permitted** and completion is allowed. Do not record a fake `Cash $0.00` tender. `signed_net_cents < 0` remains 6.5. Positive-total Phase 5/6.2 path is unchanged.
+**6.4C amendment** ([controlled-actions.md](controlled-actions.md)): a 100% discount or $0 override may produce `signed_net_cents = 0`. Then **no tender is permitted** and completion is allowed. Do not record a fake `Cash $0.00` tender. `signed_net_cents < 0` is [returns.md](returns.md). Positive-total Phase 5/6.2 path is unchanged.
 
 ### 4.1 Remaining due
 
@@ -300,8 +300,8 @@ Idempotent completion retries must still produce only one completed set of tende
 ## 10. Out of Slice 6.2
 
 ```text
-refund tenders and refund columns/flags
-signed-net = 0 / no-tender completion
+refund tenders and refund columns/flags     # 6.5 [returns.md](returns.md)
+signed-net = 0 / no-tender completion       # 6.4C
 Stored Value / gift cards / store credit
 integrated Card processing
 original-tender refund policy

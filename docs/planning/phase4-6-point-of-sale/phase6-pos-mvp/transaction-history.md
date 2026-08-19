@@ -4,7 +4,7 @@
 
 **Authority:** Store-scoped completed-transaction lookup, immutable detail, and customer-receipt reprint for the Phase 5/6 register. Dual authority with Core remains [mvp-contract.md](mvp-contract.md) / [ADR-020](../../../adr/ADR-020-pos-operation-envelope-and-core-facts.md). Receipt identity remains [receipt-identity.md](../phase4-point-of-sale/receipt-identity.md).
 
-Companions: [phase6-plan.md](phase6-plan.md), [register-workspace.md](../phase5-cash-register/register-workspace.md), [phase4-schema.md](../phase4-point-of-sale/phase4-schema.md).
+Companions: [phase6-plan.md](phase6-plan.md), [register-workspace.md](../phase5-cash-register/register-workspace.md), [phase4-schema.md](../phase4-point-of-sale/phase4-schema.md), [returns.md](returns.md).
 
 Draft [receipts.md](../../../drafts/specifications/pos/receipts.md) is vocabulary. This document is implementation authority for the MVP subset.
 
@@ -191,6 +191,8 @@ Tenders in `tender_number` order. Operator detail **may** show `external_referen
 
 Fact-driven sections only. Do not render empty override / discount / return / post-void blocks or disabled fake actions. Line IDs remain the 6.5 hook.
 
+6.5B attaches **Return items** on this detail ([returns.md](returns.md) §25): remaining returnable quantity on original sale lines; no Session ⇒ `Open a register before processing a return.` History itself stays Session-free.
+
 ---
 
 ## 9. Reprint
@@ -258,7 +260,7 @@ Envelope remains durable provenance. Required history behavior uses normalized C
 12. Reprint creates no commercial / inventory / tender / receipt-sequence effects.
 13. Historical show does not set `session[:pos_register_id]`.
 14. History Register resumes the bound open Session when present; the cashier’s sole open Session otherwise; enter when several Sessions are open and none is bound.
-15. 6.5 can later attach Return items to historical line IDs without redesigning this surface.
+15. 6.5B attaches Return items to historical line IDs without redesigning this surface ([returns.md](returns.md) §25).
 16. Phase 5/6.1/6.2 checkout and close/Z remain green.
 
 ---

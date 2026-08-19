@@ -50,6 +50,7 @@ module Pos
 
       signed_net = @envelope.fetch("transaction")["signed_net_cents"]
       raise Pos::Error, "completed envelope is missing signed_net_cents" unless signed_net.is_a?(Integer)
+      verify_return_keys!
       verify_origin_name!
       verify_tenders!
       verify_controlled_actions!
@@ -59,6 +60,34 @@ module Pos
     private
 
     V2_TENDER_KEYS = %w[behavioral_category tender_name tender_number].freeze
+
+    def verify_return_keys!
+      transaction = @envelope.fetch("transaction")
+      keys = %w[return_subtotal_cents return_discount_cents return_tax_cents return_total_cents]
+      present = keys.select { |key| transaction.key?(key) }
+      unless present.empty?
+        raise Pos::Error, "completed envelope is missing return totals" unless present.size == keys.size
+        keys.each do |key|
+          raise Pos::Error, "completed envelope is missing #{key}" unless transaction[key].is_a?(Integer)
+        end
+      end
+      raise Pos::Error, "completed envelope cannot include sale_total_cents" if transaction.key?("sale_total_cents")
+      if @envelope.dig("corrections", "return_of_transaction_id").present?
+        raise Pos::Error, "completed envelope cannot include corrections.return_of_transaction_id"
+      end
+
+      lines = @envelope["lines"]
+      return unless lines.is_a?(Array)
+
+      lines.each do |line|
+        next unless line.is_a?(Hash) && line["direction"] == "return"
+
+        reason = line["return_reason"]
+        raise Pos::Error, "completed envelope is missing return_reason" unless reason.is_a?(Hash)
+        raise Pos::Error, "completed envelope is missing return reason code" if reason["code"].blank?
+        raise Pos::Error, "completed envelope is missing return reason name" if reason["name"].blank?
+      end
+    end
 
     def verify_origin_name!
       origin = @envelope["origin"]
@@ -80,7 +109,10 @@ module Pos
         raise Pos::Error, "completed envelope tender_number is invalid" unless positive_integer?(tender["tender_number"])
         category = tender["behavioral_category"]
         raise Pos::Error, "completed envelope behavioral_category is invalid" unless TenderType::CATEGORIES.include?(category)
-        if category == "cash"
+        if category == "cash" && tender["direction"] == "refund"
+          raise Pos::Error, "presented is only for Cash payments" if tender.key?("amount_presented_cents")
+          raise Pos::Error, "change is only for Cash payments" if tender.key?("change_cents")
+        elsif category == "cash"
           raise Pos::Error, "completed envelope is missing Cash presented" unless tender["amount_presented_cents"].is_a?(Integer)
           raise Pos::Error, "completed envelope is missing Cash change" unless tender["change_cents"].is_a?(Integer)
         else

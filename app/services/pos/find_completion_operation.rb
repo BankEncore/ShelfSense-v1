@@ -38,9 +38,10 @@ module Pos
         transaction: @transaction,
         operation_id: operation.id,
         expected_lock_version: @transaction.lock_version,
-        expected_total_cents: @transaction.total_cents
+        expected_total_cents: @transaction.total_cents,
+        expected_signed_net_cents: @transaction.signed_net_cents
       )
-      operation.command_payload_hash == Idempotency::CanonicalJson.hash(payload)
+      Pos::CompleteTransaction.payload_hash_matches?(operation.command_payload_hash, payload)
     end
   end
 end

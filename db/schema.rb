@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_18_162000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_18_200000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -446,14 +446,23 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_18_162000) do
     t.timestamptz "created_at", null: false
     t.uuid "finalized_by_user_id"
     t.bigint "finalized_card_payment_cents"
+    t.bigint "finalized_card_refund_cents"
     t.bigint "finalized_cash_payment_cents"
+    t.bigint "finalized_cash_refund_cents"
     t.bigint "finalized_check_payment_cents"
+    t.bigint "finalized_check_refund_cents"
     t.bigint "finalized_closing_count_cents_sum"
     t.bigint "finalized_closing_expected_cash_cents_sum"
     t.bigint "finalized_closing_variance_cents_sum"
     t.bigint "finalized_discount_cents"
+    t.bigint "finalized_net_cents"
     t.bigint "finalized_opening_float_cents_sum"
     t.bigint "finalized_other_payment_cents"
+    t.bigint "finalized_other_refund_cents"
+    t.bigint "finalized_return_discount_cents"
+    t.bigint "finalized_return_subtotal_cents"
+    t.bigint "finalized_return_tax_cents"
+    t.bigint "finalized_return_total_cents"
     t.integer "finalized_session_count"
     t.bigint "finalized_subtotal_cents"
     t.bigint "finalized_tax_cents"
@@ -470,14 +479,21 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_18_162000) do
     t.index ["register_id"], name: "index_pos_reporting_periods_one_open_per_register", unique: true, where: "((status)::text = 'open'::text)"
     t.index ["store_id"], name: "index_pos_reporting_periods_on_store_id"
     t.check_constraint "finalized_card_payment_cents IS NULL OR finalized_card_payment_cents >= 0", name: "pos_reporting_periods_finalized_card_payment_nonnegative"
+    t.check_constraint "finalized_card_refund_cents IS NULL OR finalized_card_refund_cents >= 0", name: "pos_reporting_periods_finalized_card_refund_cents_nonnegative"
     t.check_constraint "finalized_cash_payment_cents IS NULL OR finalized_cash_payment_cents >= 0", name: "pos_reporting_periods_finalized_cash_payment_nonnegative"
+    t.check_constraint "finalized_cash_refund_cents IS NULL OR finalized_cash_refund_cents >= 0", name: "pos_reporting_periods_finalized_cash_refund_cents_nonnegative"
     t.check_constraint "finalized_check_payment_cents IS NULL OR finalized_check_payment_cents >= 0", name: "pos_reporting_periods_finalized_check_payment_nonnegative"
+    t.check_constraint "finalized_check_refund_cents IS NULL OR finalized_check_refund_cents >= 0", name: "pos_reporting_periods_finalized_check_refund_cents_nonnegative"
     t.check_constraint "finalized_closing_count_cents_sum IS NULL OR finalized_closing_count_cents_sum >= 0", name: "pos_reporting_periods_finalized_closing_count_sum_nonnegative"
-    t.check_constraint "finalized_closing_expected_cash_cents_sum IS NULL OR finalized_closing_expected_cash_cents_sum >= 0", name: "pos_reporting_periods_finalized_closing_expected_sum_nonnegativ"
     t.check_constraint "finalized_closing_variance_cents_sum IS NULL OR finalized_closing_variance_cents_sum = (finalized_closing_count_cents_sum - finalized_closing_expected_cash_cents_sum)", name: "pos_reporting_periods_finalized_variance_matches_sums"
     t.check_constraint "finalized_discount_cents IS NULL OR finalized_discount_cents >= 0", name: "pos_reporting_periods_finalized_discount_nonnegative"
     t.check_constraint "finalized_opening_float_cents_sum IS NULL OR finalized_opening_float_cents_sum >= 0", name: "pos_reporting_periods_finalized_opening_float_sum_nonnegative"
     t.check_constraint "finalized_other_payment_cents IS NULL OR finalized_other_payment_cents >= 0", name: "pos_reporting_periods_finalized_other_payment_nonnegative"
+    t.check_constraint "finalized_other_refund_cents IS NULL OR finalized_other_refund_cents >= 0", name: "pos_reporting_periods_finalized_other_refund_cents_nonnegative"
+    t.check_constraint "finalized_return_discount_cents IS NULL OR finalized_return_discount_cents >= 0", name: "pos_reporting_periods_finalized_return_discount_cents_nonnegati"
+    t.check_constraint "finalized_return_subtotal_cents IS NULL OR finalized_return_subtotal_cents >= 0", name: "pos_reporting_periods_finalized_return_subtotal_cents_nonnegati"
+    t.check_constraint "finalized_return_tax_cents IS NULL OR finalized_return_tax_cents >= 0", name: "pos_reporting_periods_finalized_return_tax_cents_nonnegative"
+    t.check_constraint "finalized_return_total_cents IS NULL OR finalized_return_total_cents >= 0", name: "pos_reporting_periods_finalized_return_total_cents_nonnegative"
     t.check_constraint "finalized_session_count IS NULL OR finalized_session_count >= 0", name: "pos_reporting_periods_finalized_session_count_nonnegative"
     t.check_constraint "finalized_subtotal_cents IS NULL OR finalized_subtotal_cents >= 0", name: "pos_reporting_periods_finalized_subtotal_nonnegative"
     t.check_constraint "finalized_tax_cents IS NULL OR finalized_tax_cents >= 0", name: "pos_reporting_periods_finalized_tax_nonnegative"
@@ -508,7 +524,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_18_162000) do
     t.index ["reporting_period_id"], name: "index_pos_sessions_on_reporting_period_id"
     t.index ["store_id"], name: "index_pos_sessions_on_store_id"
     t.check_constraint "closing_count_cents IS NULL OR closing_count_cents >= 0", name: "pos_sessions_closing_count_nonnegative"
-    t.check_constraint "closing_expected_cash_cents IS NULL OR closing_expected_cash_cents >= 0", name: "pos_sessions_closing_expected_nonnegative"
     t.check_constraint "closing_variance_cents IS NULL OR closing_variance_cents = (closing_count_cents - closing_expected_cash_cents)", name: "pos_sessions_closing_variance_matches_count"
     t.check_constraint "opening_float_cents >= 0", name: "pos_sessions_opening_float_nonnegative"
     t.check_constraint "status::text = 'open'::text AND closed_at IS NULL AND closing_expected_cash_cents IS NULL AND closing_count_cents IS NULL AND closing_variance_cents IS NULL OR status::text = 'closed'::text AND closed_at IS NOT NULL AND closing_expected_cash_cents IS NOT NULL AND closing_count_cents IS NOT NULL AND closing_variance_cents IS NOT NULL", name: "pos_sessions_closed_at_matches_status"
@@ -532,11 +547,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_18_162000) do
     t.index ["pos_transaction_id", "tender_number"], name: "index_pos_tenders_on_transaction_and_number", unique: true
     t.index ["pos_transaction_id"], name: "index_pos_tenders_on_pos_transaction_id"
     t.index ["pos_transaction_id"], name: "index_pos_tenders_one_cash_payment", unique: true, where: "(((behavioral_category)::text = 'cash'::text) AND ((direction)::text = 'payment'::text))"
+    t.index ["pos_transaction_id"], name: "index_pos_tenders_one_cash_refund", unique: true, where: "(((behavioral_category)::text = 'cash'::text) AND ((direction)::text = 'refund'::text))"
     t.index ["tender_type_id"], name: "index_pos_tenders_on_tender_type_id"
     t.check_constraint "amount_cents >= 0", name: "pos_tenders_amount_nonnegative"
-    t.check_constraint "behavioral_category::text = 'cash'::text AND amount_presented_cents IS NOT NULL AND change_cents IS NOT NULL AND amount_presented_cents >= 0 AND change_cents >= 0 AND amount_presented_cents = (amount_cents + change_cents) OR (behavioral_category::text = ANY (ARRAY['card'::character varying, 'check'::character varying, 'other'::character varying]::text[])) AND amount_presented_cents IS NULL AND change_cents IS NULL", name: "pos_tenders_cash_presented_matches"
+    t.check_constraint "behavioral_category::text = 'cash'::text AND direction::text = 'payment'::text AND amount_presented_cents IS NOT NULL AND change_cents IS NOT NULL AND amount_presented_cents >= 0 AND change_cents >= 0 AND amount_presented_cents = (amount_cents + change_cents) OR behavioral_category::text = 'cash'::text AND direction::text = 'refund'::text AND amount_presented_cents IS NULL AND change_cents IS NULL OR (behavioral_category::text = ANY (ARRAY['card'::character varying, 'check'::character varying, 'other'::character varying]::text[])) AND amount_presented_cents IS NULL AND change_cents IS NULL", name: "pos_tenders_cash_presented_matches"
     t.check_constraint "behavioral_category::text = ANY (ARRAY['cash'::character varying, 'card'::character varying, 'check'::character varying, 'other'::character varying]::text[])", name: "pos_tenders_category_valid"
-    t.check_constraint "direction::text = 'payment'::text", name: "pos_tenders_direction_valid"
+    t.check_constraint "direction::text = ANY (ARRAY['payment'::character varying, 'refund'::character varying]::text[])", name: "pos_tenders_direction_valid"
     t.check_constraint "tender_number >= 1", name: "pos_tenders_number_positive"
   end
 
@@ -555,10 +571,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_18_162000) do
     t.bigint "manual_discount_cents", default: 0, null: false
     t.jsonb "merchandise_snapshot"
     t.bigint "net_merchandise_amount_cents", null: false
+    t.uuid "original_transaction_line_id"
     t.uuid "pos_transaction_id", null: false
     t.uuid "product_variant_id", null: false
     t.integer "quantity", null: false
     t.bigint "reference_unit_price_cents", null: false
+    t.string "return_reason_code"
+    t.string "return_reason_name_snapshot"
+    t.text "return_reason_note"
     t.bigint "selling_unit_price_cents", null: false
     t.string "tax_class_code_snapshot", null: false
     t.uuid "tax_class_id", null: false
@@ -566,14 +586,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_18_162000) do
     t.timestamptz "updated_at", null: false
     t.index ["default_tax_class_id"], name: "index_pos_transaction_lines_on_default_tax_class_id"
     t.index ["inventory_unit_id"], name: "index_pos_transaction_lines_on_inventory_unit_id"
+    t.index ["original_transaction_line_id"], name: "index_pos_transaction_lines_on_original_transaction_line_id"
     t.index ["pos_transaction_id", "line_number"], name: "idx_on_pos_transaction_id_line_number_00590a67d2", unique: true
+    t.index ["pos_transaction_id", "original_transaction_line_id"], name: "index_pos_transaction_lines_one_linked_original", unique: true, where: "(original_transaction_line_id IS NOT NULL)"
     t.index ["product_variant_id"], name: "index_pos_transaction_lines_on_product_variant_id"
     t.index ["tax_class_id"], name: "index_pos_transaction_lines_on_tax_class_id"
-    t.check_constraint "direction::text = 'sale'::text", name: "pos_transaction_lines_direction_valid"
+    t.check_constraint "direction::text = 'sale'::text AND original_transaction_line_id IS NULL AND return_reason_code IS NULL AND return_reason_name_snapshot IS NULL AND return_reason_note IS NULL OR direction::text = 'return'::text AND return_reason_code IS NOT NULL AND return_reason_name_snapshot IS NOT NULL AND (return_reason_code::text = ANY (ARRAY['changed_mind'::character varying, 'defective'::character varying, 'wrong_item'::character varying, 'duplicate_purchase'::character varying, 'other'::character varying]::text[])) AND (return_reason_code::text <> 'other'::text AND return_reason_note IS NULL OR return_reason_code::text = 'other'::text AND return_reason_note IS NOT NULL AND char_length(return_reason_note) >= 1 AND char_length(return_reason_note) <= 200)", name: "pos_transaction_lines_return_reason_rules"
+    t.check_constraint "direction::text = ANY (ARRAY['sale'::character varying, 'return'::character varying]::text[])", name: "pos_transaction_lines_direction_valid"
     t.check_constraint "inventory_unit_id IS NULL OR quantity = 1", name: "pos_transaction_lines_unit_quantity_one"
     t.check_constraint "manual_discount_basis_points IS NULL OR manual_discount_basis_points >= 1 AND manual_discount_basis_points <= 10000", name: "pos_transaction_lines_discount_bp_range"
     t.check_constraint "manual_discount_cents >= 0", name: "pos_transaction_lines_discount_nonnegative"
     t.check_constraint "net_merchandise_amount_cents = (extended_selling_amount_cents - manual_discount_cents)", name: "pos_transaction_lines_net_matches_extended_minus_discount"
+    t.check_constraint "original_transaction_line_id IS NULL OR direction::text = 'return'::text", name: "pos_transaction_lines_original_requires_return"
     t.check_constraint "quantity > 0", name: "pos_transaction_lines_quantity_positive"
   end
 
@@ -593,6 +617,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_18_162000) do
     t.uuid "register_id", null: false
     t.integer "register_number_snapshot"
     t.uuid "reporting_period_id", null: false
+    t.bigint "return_discount_cents", default: 0, null: false
+    t.bigint "return_subtotal_cents", default: 0, null: false
+    t.bigint "return_tax_cents", default: 0, null: false
+    t.bigint "return_total_cents", default: 0, null: false
+    t.bigint "signed_net_cents", default: 0, null: false
     t.string "status", null: false
     t.uuid "store_id", null: false
     t.integer "store_number_snapshot"
@@ -611,8 +640,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_18_162000) do
     t.index ["store_id", "register_id", "receipt_sequence"], name: "index_pos_transactions_receipt_identity", unique: true, where: "(receipt_sequence IS NOT NULL)"
     t.index ["store_id"], name: "index_pos_transactions_on_store_id"
     t.index ["transaction_reference"], name: "index_pos_transactions_on_transaction_reference", unique: true, where: "(transaction_reference IS NOT NULL)"
+    t.check_constraint "return_subtotal_cents >= 0 AND return_discount_cents >= 0 AND return_tax_cents >= 0 AND return_total_cents >= 0", name: "pos_transactions_return_totals_nonnegative"
+    t.check_constraint "return_total_cents = (return_subtotal_cents - return_discount_cents + return_tax_cents)", name: "pos_transactions_return_total_matches_components"
+    t.check_constraint "signed_net_cents = (subtotal_cents - discount_cents + tax_cents - return_total_cents)", name: "pos_transactions_signed_net_matches_components"
     t.check_constraint "status::text = 'working'::text AND receipt_sequence IS NULL AND store_number_snapshot IS NULL AND register_number_snapshot IS NULL AND occurred_at IS NULL AND business_date IS NULL AND completed_at IS NULL AND cancelled_at IS NULL OR status::text = 'completed'::text AND receipt_sequence IS NOT NULL AND store_number_snapshot IS NOT NULL AND register_number_snapshot IS NOT NULL AND occurred_at IS NOT NULL AND business_date IS NOT NULL AND completed_at IS NOT NULL AND cancelled_at IS NULL OR status::text = 'cancelled'::text AND receipt_sequence IS NULL AND store_number_snapshot IS NULL AND register_number_snapshot IS NULL AND occurred_at IS NULL AND business_date IS NULL AND completed_at IS NULL AND cancelled_at IS NOT NULL", name: "pos_transactions_status_null_rules"
     t.check_constraint "status::text = ANY (ARRAY['working'::character varying::text, 'completed'::character varying::text, 'cancelled'::character varying::text])", name: "pos_transactions_status_valid"
+    t.check_constraint "total_cents = abs(signed_net_cents)", name: "pos_transactions_total_matches_abs_signed_net"
   end
 
   create_table "product_variants", id: :uuid, default: nil, force: :cascade do |t|
@@ -821,6 +854,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_18_162000) do
 
   create_table "tender_types", id: :uuid, default: nil, force: :cascade do |t|
     t.boolean "active", default: true, null: false
+    t.boolean "allows_refund", default: false, null: false
     t.string "behavioral_category", null: false
     t.string "code", null: false
     t.timestamptz "created_at", null: false
@@ -831,6 +865,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_18_162000) do
     t.timestamptz "updated_at", null: false
     t.index ["code"], name: "index_tender_types_on_code", unique: true
     t.check_constraint "behavioral_category::text = ANY (ARRAY['cash'::character varying, 'card'::character varying, 'check'::character varying, 'other'::character varying]::text[])", name: "tender_types_category_valid"
+    t.check_constraint "code::text <> 'cash'::text OR allows_refund = true", name: "tender_types_cash_allows_refund"
     t.check_constraint "external_reference_policy::text = ANY (ARRAY['omitted'::character varying, 'optional'::character varying, 'required'::character varying]::text[])", name: "tender_types_reference_policy_valid"
   end
 
@@ -932,6 +967,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_18_162000) do
   add_foreign_key "pos_tenders", "pos_transactions"
   add_foreign_key "pos_tenders", "tender_types", on_delete: :restrict
   add_foreign_key "pos_transaction_lines", "inventory_units", on_delete: :restrict
+  add_foreign_key "pos_transaction_lines", "pos_transaction_lines", column: "original_transaction_line_id", on_delete: :restrict
   add_foreign_key "pos_transaction_lines", "pos_transactions"
   add_foreign_key "pos_transaction_lines", "product_variants"
   add_foreign_key "pos_transaction_lines", "tax_classes"

@@ -413,6 +413,69 @@ class Pos::ConcurrencyTest < ActiveSupport::TestCase
     end
   end
 
+  test "two registers racing the last linked return quantity yield one completion" do
+    open_quantity_stock(store: @store, variant: @variant, actor: @actor, quantity: 1)
+    original_ready = prepare_sale(register_number: 11, presented_cents: 2500)
+    original = Pos::CompleteTransaction.call(
+      transaction: original_ready[:transaction],
+      actor: @actor,
+      operation_id: SecureRandom.uuid_v7,
+      expected_lock_version: original_ready[:transaction].lock_version,
+      expected_total_cents: original_ready[:transaction].total_cents
+    ).transaction
+    original_line_id = original.pos_transaction_lines.first.id
+    actor_id = @actor.id
+
+    first = prepare_empty_sale(register_number: 12)
+    second = prepare_empty_sale(register_number: 13)
+    jobs = [ first, second ]
+    results = Array.new(2)
+    errors = Array.new(2)
+    threads = jobs.each_with_index.map do |job, i|
+      Thread.new do
+        ActiveRecord::Base.connection_pool.with_connection do
+          transaction = PosTransaction.find(job[:transaction].id)
+          actor = User.find(actor_id)
+          original_line = PosTransactionLine.find(original_line_id)
+          Pos::AddLinkedReturnLine.call(
+            transaction: transaction,
+            actor: actor,
+            expected_lock_version: transaction.lock_version,
+            original_line: original_line,
+            quantity: 1,
+            reason_code: "changed_mind"
+          )
+          transaction.reload
+          Pos::AddRefundTender.call(
+            transaction: transaction,
+            actor: actor,
+            expected_lock_version: transaction.lock_version,
+            tender_type: TenderType.find_by!(code: "cash"),
+            amount_cents: -transaction.signed_net_cents
+          )
+          transaction.reload
+          results[i] = Pos::CompleteTransaction.call(
+            transaction: transaction,
+            actor: actor,
+            operation_id: SecureRandom.uuid_v7,
+            expected_lock_version: transaction.lock_version,
+            expected_total_cents: transaction.total_cents,
+            expected_signed_net_cents: transaction.signed_net_cents
+          )
+        rescue StandardError => e
+          errors[i] = e
+        end
+      end
+    end
+    threads.each { |thread| assert thread.join(30), "thread did not finish" }
+
+    successes = results.compact
+    failures = errors.compact
+    assert_equal 1, successes.size, failures.map(&:message).inspect
+    assert_equal 1, failures.size, successes.inspect
+    assert_match(/remaining quantity|stale lock/i, failures.first.message)
+  end
+
   private
 
   def prepare_sale(register_number:, presented_cents:)

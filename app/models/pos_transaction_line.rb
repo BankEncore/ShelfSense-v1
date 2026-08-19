@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class PosTransactionLine < ApplicationRecord
-  DIRECTIONS = %w[sale].freeze
+  DIRECTIONS = %w[sale return].freeze
   SNAPSHOT_KEYS = %w[sku description tax_class_code].freeze
   UNIT_SNAPSHOT_KEYS = %w[unit_identifier condition_code].freeze
 
@@ -10,6 +10,7 @@ class PosTransactionLine < ApplicationRecord
   belongs_to :tax_class
   belongs_to :default_tax_class, class_name: "TaxClass", optional: true
   belongs_to :inventory_unit, optional: true
+  belongs_to :original_transaction_line, class_name: "PosTransactionLine", optional: true
   has_many :pos_line_tax_components, dependent: :destroy
   has_many :pos_controlled_actions, dependent: :destroy
 
@@ -20,24 +21,39 @@ class PosTransactionLine < ApplicationRecord
   validates :line_number, uniqueness: { scope: :pos_transaction_id }
   validate :inventory_unit_matches_tracking
   validate :merchandise_snapshot_complete, if: -> { pos_transaction&.completed? }
+  validate :return_reason_rules
+
+  def sale?
+    direction == "sale"
+  end
+
+  def return?
+    direction == "return"
+  end
+
+  def linked_return?
+    return? && original_transaction_line_id.present?
+  end
 
   def unit_line?
     inventory_unit_id.present?
   end
 
   def price_overridden?
-    selling_unit_price_cents != reference_unit_price_cents
+    sale? && selling_unit_price_cents != reference_unit_price_cents
   end
 
   def manually_discounted?
-    manual_discount_basis_points.present?
+    sale? && manual_discount_basis_points.present?
   end
 
   def tax_class_overridden?
-    default_tax_class_id.present? && tax_class_id != default_tax_class_id
+    sale? && default_tax_class_id.present? && tax_class_id != default_tax_class_id
   end
 
   def recalc_extended!
+    raise Pos::Error, "linked returns cannot use sale-line recalculation" if linked_return?
+
     self.extended_selling_amount_cents = selling_unit_price_cents * quantity
     self.manual_discount_cents ||= 0
     if manual_discount_basis_points.present?
@@ -58,6 +74,29 @@ class PosTransactionLine < ApplicationRecord
   end
 
   private
+
+  def return_reason_rules
+    if sale?
+      if original_transaction_line_id.present? || return_reason_code.present? ||
+         return_reason_name_snapshot.present? || return_reason_note.present?
+        errors.add(:base, "sale lines cannot have return fields")
+      end
+      return
+    end
+    return unless return?
+
+    errors.add(:return_reason_code, "is required") if return_reason_code.blank?
+    errors.add(:return_reason_name_snapshot, "is required") if return_reason_name_snapshot.blank?
+    if return_reason_code.present? && Pos::ReturnReasons::CODES.exclude?(return_reason_code)
+      errors.add(:return_reason_code, "is not included in the list")
+    end
+    if Pos::ReturnReasons.require_note?(return_reason_code)
+      errors.add(:return_reason_note, "is required") if return_reason_note.blank?
+      errors.add(:return_reason_note, "is too long") if return_reason_note.to_s.length > 200
+    elsif return_reason_note.present?
+      errors.add(:return_reason_note, "must be blank unless the reason is other")
+    end
+  end
 
   def inventory_unit_matches_tracking
     tracking = product_variant&.derived_inventory_tracking

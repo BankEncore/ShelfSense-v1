@@ -1,6 +1,6 @@
 # Inventory posting service contract
 
-Status: Implemented with Phase 3 adjustments, Phase 4 quantity-tracked POS sales, and Phase 6 Slice 6.1 individual unit sales.
+Status: Implemented with Phase 3 adjustments, Phase 4 quantity-tracked POS sales, and Phase 6 Slice 6.1 individual unit sales. Slice 6.5 `Inventory::PostReturn` is specified in [returns.md](../phase4-6-point-of-sale/phase6-pos-mvp/returns.md) and is not yet implemented.
 
 Later purchasing, POS, transfer, reservation, and disposition workflows must post physical and valuation effects only through the named inventory posting services. Controllers, callbacks, imports, and future workflows must not update `inventory_balances` directly.
 
@@ -11,8 +11,9 @@ Later purchasing, POS, transfer, reservation, and disposition workflows must pos
 | `Inventory::PostAdjustment` | Manual/reasoned quantity or unit adjustments | `inventory.adjustment_posted` |
 | `Inventory::ReverseAdjustment` | Exact compensating reversal of a posted adjustment | (existing reversal outbox/audit) |
 | `Inventory::PostSale` | Completed POS sale-line depletion | `inventory.sale_posted` |
+| `Inventory::PostReturn` | Completed POS return-line restore (6.5) | `inventory.return_posted` |
 
-`Inventory::PostSale` must not call `Inventory::PostAdjustment`, must not emit `inventory.adjustment_posted`, and must not require `adjustment_reason`. Duplicate protection is the unique `(source_type, source_id, effect_sequence)` constraint on ledger and valuation rows.
+`Inventory::PostSale` and `Inventory::PostReturn` must not call `Inventory::PostAdjustment`, must not emit `inventory.adjustment_posted`, and must not require `adjustment_reason`. Duplicate protection is the unique `(source_type, source_id, effect_sequence)` constraint on ledger and valuation rows.
 
 ## `Inventory::PostSale`
 
@@ -62,6 +63,50 @@ InventoryUnit      # FOR UPDATE
 
 `CompleteTransaction` must not hold an `InventoryUnit` row lock before posting. Freeze-time unit checks are non-locking; posting is the authoritative locked validation. A unit that leaves `on_hand` between freeze and posting rolls the whole completion back.
 
+## `Inventory::PostReturn`
+
+Named 6.5 boundary, parallel to `PostSale`. Joins the **caller's** transaction. Do not call `PostAdjustment`. Authority: [returns.md](../phase4-6-point-of-sale/phase6-pos-mvp/returns.md) §12 / §15.
+
+Required inputs (received from completion; not re-derived):
+
+- completed return `line` (`PosTransactionLine`, `direction = return`)
+- `occurred_at`
+- `business_date`
+- `actor`
+
+Lock order matches `PostSale`:
+
+```text
+InventoryBalance   # FOR UPDATE (lock_or_create)
+InventoryUnit      # FOR UPDATE when individual
+```
+
+Lock the unit **inside** `PostReturn`, not before freeze.
+
+Per line:
+
+```text
+quantity tracking, linked     quantity_delta = +returned qty;
+                              restore allocated original sale depletion
+                              (source_type = PosTransactionLine, source_id = original sale line)
+quantity tracking, unlinked   on_hand > 0 → ROUND_HALF_UP(inventory_value × qty / on_hand)
+                              on_hand = 0 → latest valuation entry only:
+                              iff calculation_metadata.prior_quantity > 0
+                              incoming = ROUND_HALF_UP(prior_value × qty / prior_quantity);
+                              else reject
+individual                    restore using original sale valuation when linked
+                              (write that restored amount onto carrying_value_cents);
+                              unlinked: restore the known removed unit at carrying_value_cents;
+                              removed → on_hand; removed_at = NULL
+non_inventory                 do not call PostReturn
+source_type = "PosTransactionLine"
+source_id   = return line.id
+entry_type  = return
+valuation   = acquisition (stock in)
+```
+
+`Pos::CompleteTransaction` skips `Inventory::PostReturn` for `non_inventory` lines. Customer refund price never writes inventory value. Outbox/audit `inventory.return_posted`.
+
 ## `Inventory::PostAdjustment` required inputs
 
 - `store`, `product_variant`, `adjustment_reason`, signed `quantity_delta`
@@ -76,4 +121,4 @@ One transaction writes: posted adjustment, physical ledger entry, valuation ledg
 
 ## Tracking
 
-Uses `ProductVariant#derived_inventory_tracking`. `PostAdjustment` rejects `non_inventory` / nil. `PostSale` accepts `quantity` and `individual` and rejects `non_inventory` / nil. Does not add a persisted tracking column. Unit lifecycle remains `on_hand | removed`; POS sales are distinguished by ledger `entry_type = sale` and `source_type = PosTransactionLine`.
+Uses `ProductVariant#derived_inventory_tracking`. `PostAdjustment` rejects `non_inventory` / nil. `PostSale` and `PostReturn` accept `quantity` and `individual` and reject `non_inventory` / nil. Does not add a persisted tracking column. Unit lifecycle remains `on_hand | removed`; POS sales are distinguished by ledger `entry_type = sale` and `source_type = PosTransactionLine`; POS returns use `entry_type = return`.

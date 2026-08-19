@@ -67,6 +67,17 @@ class PosGoldenFixturesTest < ActiveSupport::TestCase
     assert_equal expected_canonical, Idempotency::CanonicalJson.dump(payload)
     assert_equal expected_hash, Idempotency::CanonicalJson.hash(payload)
     refute payload.key?("amount_presented_cents")
+    refute payload.key?("expected_signed_net_cents")
+  end
+
+  test "CompleteTransactionCommand 6.5 includes expected_signed_net_cents and matches committed fixtures" do
+    payload = JSON.parse(File.read(FIXTURES.join("complete_transaction_command_v65.json")))
+    expected_canonical = File.read(FIXTURES.join("complete_transaction_command_v65.canonical.json"))
+    expected_hash = File.read(FIXTURES.join("complete_transaction_command_v65.sha256")).strip
+
+    assert_equal expected_canonical, Idempotency::CanonicalJson.dump(payload)
+    assert_equal expected_hash, Idempotency::CanonicalJson.hash(payload)
+    assert_equal payload.fetch("expected_total_cents"), payload.fetch("expected_signed_net_cents")
   end
 
   test "CompletedPosOperation v2 6.2 cash snapshots include tender_number name and category" do

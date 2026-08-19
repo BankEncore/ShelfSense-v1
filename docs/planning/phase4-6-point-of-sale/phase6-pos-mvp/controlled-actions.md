@@ -4,7 +4,7 @@
 
 **Authority:** Permission-tier controlled actions on a working sale line: price override, percentage line discount, and Tax Class override. Dual authority with Core remains [mvp-contract.md](mvp-contract.md) / [ADR-020](../../../adr/ADR-020-pos-operation-envelope-and-core-facts.md). Tax remains [pos-tax-contract.md](../phase4-point-of-sale/pos-tax-contract.md). Settlement remains [tender-breadth.md](tender-breadth.md) as amended here for zero-net.
 
-Companions: [phase6-plan.md](phase6-plan.md), [register-workspace.md](../phase5-cash-register/register-workspace.md), [phase4-schema.md](../phase4-point-of-sale/phase4-schema.md), [transaction-history.md](transaction-history.md).
+Companions: [phase6-plan.md](phase6-plan.md), [register-workspace.md](../phase5-cash-register/register-workspace.md), [phase4-schema.md](../phase4-point-of-sale/phase4-schema.md), [transaction-history.md](transaction-history.md), [returns.md](returns.md).
 
 Draft [approvals.md](../../../drafts/specifications/pos/approvals.md), [pricing.md](../../../drafts/specifications/pos/pricing.md), [discounts.md](../../../drafts/specifications/pos/discounts.md), and [tax.md](../../../drafts/specifications/pos/tax.md) are vocabulary. This document is implementation authority for the MVP subset.
 
@@ -22,7 +22,7 @@ reason always required; reason_code is material to the fingerprint
 net merchandise is always present; tax uses net
 zero-cent rounded discounts are rejected
 signed net = 0 → no tenders; completion allowed
-signed net < 0 still 6.5
+signed net < 0 still 6.5 ([returns.md](returns.md))
 F8/F9 are not controlled actions
 history/receipt read Core + effective rows; envelope is provenance
 Phase 5 ordinary Cash sale unchanged when unused
@@ -77,7 +77,7 @@ pos.tax_class_override.perform
 pos.tax_class_override.approve
 ```
 
-`scope_type: either`. Do **not** seed `unlinked_return` / `return_price_adjustment` / `post_void` (identifiers remain reserved in [mvp-contract.md](mvp-contract.md) §11).
+`scope_type: either`. Do **not** seed `unlinked_return` / `return_price_adjustment` / `post_void` in 6.4 (identifiers remain reserved in [mvp-contract.md](mvp-contract.md) §11). 6.5 seeds only `unlinked_return`; `return_price_adjustment` stays reserved. 6.4 completion integrity stays **sale-direction**; those three actions are prohibited on return lines ([returns.md](returns.md) §16 / §19).
 
 | Role | Perform | Approve |
 |---|---|---|
@@ -140,7 +140,7 @@ Currently **effective** executed fact on a working/completed/cancelled transacti
 |---|---|
 | `id` | UUIDv7 |
 | `pos_transaction_id` | FK, required |
-| `pos_transaction_line_id` | FK, nullable for 6.5/6.6; **NOT NULL** for 6.4 actions |
+| `pos_transaction_line_id` | FK; **NOT NULL** through 6.5 (line-scoped, including unlinked return). Dropping that CHECK is 6.6 (`post_void`). |
 | `action_type` | `price_override` \| `line_discount` \| `tax_class_override` |
 | `performed_by_user_id` / `performed_by_name_snapshot` | required |
 | `approved_by_user_id` / `approved_by_name_snapshot` | required iff `approval_required`; else NULL |
@@ -225,13 +225,15 @@ Changing `reason_code` (or the `other` note) after approval is a different reque
 
 ## 8. Completion integrity
 
-Refuse completion unless Core and effective facts agree, **then** require stored `material_values` to equal the commercial fields reconstructed from Core, **then** recompute each fingerprint from actual Core + stored material reason and compare to `action_fingerprint`:
+Refuse completion unless Core and effective facts agree, **then** require stored `material_values` to equal the commercial fields reconstructed from Core, **then** recompute each fingerprint from actual Core + stored material reason and compare to `action_fingerprint`. This pairing is **sale-direction**:
 
 ```text
 selling != reference  ↔  effective price_override
 manual_discount_basis_points present  ↔  effective line_discount
 tax_class_id != default_tax_class_id  ↔  effective tax_class_override
 ```
+
+6.5 direction-aware integrity ([returns.md](returns.md) §19): linked returns have no 6.4 sale controlled-action rows; unlinked requires `unlinked_return` only. A differing unlinked return price is not a sale override or discount. `price_overridden?` / `manually_discounted?` stay sale-direction helpers. Services reject `price_override` / `line_discount` / `tax_class_override` on return lines.
 
 Old v2 envelopes without `controlled_actions` / `override` / `discount` / default Tax Class keys remain valid. If those keys are present, they must be well-formed. A present `controlled_actions[]` entry requires subject line identity, reason, policy result and version, material values, executed time, performer name, fingerprint, and approver name when `approval_required`. Do not bump `schema_version`.
 
@@ -297,7 +299,7 @@ Amend [tender-breadth.md](tender-breadth.md):
 ```text
 signed net > 0  → payment tenders required; exact settlement
 signed net = 0  → no tenders permitted; completion allowed
-signed net < 0  → unsupported until 6.5
+signed net < 0  → unsupported until 6.5 ([returns.md](returns.md))
 ```
 
 No fake `Cash $0.00`. Positive-total Phase 5/6.2 path unchanged.
@@ -306,14 +308,16 @@ No fake `Cash $0.00`. Positive-total Phase 5/6.2 path unchanged.
 
 ## 13. Quantity and merge
 
+Sale lines only ([returns.md](returns.md) §10):
+
 ```text
-line has price override  → ChangeQuantity rejected
-line has manual discount → ChangeQuantity rejected
+sale line has price override  → ChangeQuantity rejected
+sale line has manual discount → ChangeQuantity rejected
 ```
 
 Message: `Remove the price override or discount before changing quantity.`
 
-Tax Class override does **not** block quantity.
+Tax Class override does **not** block quantity. Linked return lines may `ChangeQuantity` (re-run historical allocation). Unlinked return quantity is fingerprint-bound and cannot be edited ([returns.md](returns.md) §10 / §17).
 
 Compatible rescan (`AddMerchandise`) requires **all** of:
 

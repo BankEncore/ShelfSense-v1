@@ -279,6 +279,11 @@ class PosCompleteTransactionTest < ActiveSupport::TestCase
     envelope = Pos::CompleteTransaction.call(**complete_args).operation.envelope
     assert_equal 2, envelope.fetch("schema_version")
     assert_equal envelope.fetch("transaction").fetch("total_cents"), envelope.fetch("transaction").fetch("signed_net_cents")
+    assert_equal 0, envelope.fetch("transaction").fetch("return_subtotal_cents")
+    assert_equal 0, envelope.fetch("transaction").fetch("return_discount_cents")
+    assert_equal 0, envelope.fetch("transaction").fetch("return_tax_cents")
+    assert_equal 0, envelope.fetch("transaction").fetch("return_total_cents")
+    refute envelope.fetch("transaction").key?("sale_total_cents")
     refute envelope.fetch("lines").first.key?("inventory_unit_id")
     assert_equal PosOperation::FACT_TYPE, envelope.fetch("operation").fetch("fact_type")
     assert envelope.fetch("receipt").fetch("sequence").present?
