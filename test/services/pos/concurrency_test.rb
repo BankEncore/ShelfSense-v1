@@ -549,6 +549,289 @@ class Pos::ConcurrencyTest < ActiveSupport::TestCase
     assert InventoryUnit.uncached { InventoryUnit.find(unit_id).removed? }
   end
 
+  test "sale versus unlinked restore of the same used unit leaves one valid unit state" do
+    Pos::TenderTypes.seed!
+    _used_variant, unit = pos_on_hand_unit(store: @store, actor: @actor, tax_class: @tax, name: "Sale vs unlinked")
+    sale = prepare_unit_sale(register_number: 41, unit: unit, presented_cents: 2500)
+    Pos::CompleteTransaction.call(
+      transaction: sale[:transaction],
+      actor: @actor,
+      operation_id: SecureRandom.uuid_v7,
+      expected_lock_version: sale[:transaction].lock_version,
+      expected_total_cents: sale[:transaction].total_cents,
+      expected_signed_net_cents: sale[:transaction].signed_net_cents
+    )
+    assert unit.reload.removed?
+
+    unlinked = prepare_unlinked_return(register_number: 42, unit: unit)
+    sale_job = prepare_empty_sale(register_number: 43)
+    actor_id = @actor.id
+    unit_id = unit.id
+    identifier = unit.unit_identifier
+    unlinked_id = unlinked[:transaction].id
+    unlinked_lock = unlinked[:transaction].lock_version
+    unlinked_total = unlinked[:transaction].total_cents
+    unlinked_net = unlinked[:transaction].signed_net_cents
+    sale_id = sale_job[:transaction].id
+    sale_lock = sale_job[:transaction].lock_version
+    ready = Queue.new
+    go = Queue.new
+    unlinked_result = nil
+    sale_result = nil
+    unlinked_error = nil
+    sale_error = nil
+
+    threads = [
+      Thread.new do
+        ActiveRecord::Base.connection_pool.with_connection do
+          ready << true
+          go.pop
+          unlinked_result = Pos::CompleteTransaction.call(
+            transaction: PosTransaction.find(unlinked_id),
+            actor: User.find(actor_id),
+            operation_id: SecureRandom.uuid_v7,
+            expected_lock_version: unlinked_lock,
+            expected_total_cents: unlinked_total,
+            expected_signed_net_cents: unlinked_net
+          )
+        rescue StandardError => e
+          unlinked_error = e
+        end
+      end,
+      Thread.new do
+        ActiveRecord::Base.connection_pool.with_connection do
+          ready << true
+          go.pop
+          transaction = PosTransaction.find(sale_id)
+          Pos::AddMerchandise.call(
+            transaction: transaction,
+            actor: User.find(actor_id),
+            expected_lock_version: sale_lock,
+            identifier: identifier
+          )
+          transaction.reload
+          Pos::TenderCash.call(
+            transaction: transaction,
+            actor: User.find(actor_id),
+            expected_lock_version: transaction.lock_version,
+            amount_presented_cents: transaction.total_cents
+          )
+          sale_result = Pos::CompleteTransaction.call(
+            transaction: transaction.reload,
+            actor: User.find(actor_id),
+            operation_id: SecureRandom.uuid_v7,
+            expected_lock_version: transaction.lock_version,
+            expected_total_cents: transaction.total_cents,
+            expected_signed_net_cents: transaction.signed_net_cents
+          )
+        rescue StandardError => e
+          sale_error = e
+        end
+      end
+    ]
+    2.times { ready.pop }
+    2.times { go << true }
+    threads.each { |thread| assert thread.join(30), "thread did not finish" }
+
+    assert unlinked_result || unlinked_error
+    assert sale_result || sale_error
+    unit = InventoryUnit.uncached { InventoryUnit.find(unit_id) }
+    restores = InventoryLedgerEntry.uncached {
+      InventoryLedgerEntry.where(
+        inventory_unit_id: unit_id,
+        source_type: "PosTransactionLine",
+        entry_type: "return"
+      ).count
+    }
+    assert_equal 1, restores
+    assert unit.on_hand? || unit.removed?
+    if unit.removed?
+      assert sale_result
+      assert unlinked_result
+    else
+      assert unlinked_result
+      assert_nil sale_result
+    end
+    assert_empty Inventory::LedgerPairIntegrity.drifts(store_id: @store.id)
+  end
+
+  test "linked versus unlinked restore of the same used unit yields one on-hand unit" do
+    Pos::TenderTypes.seed!
+    _used_variant, unit = pos_on_hand_unit(store: @store, actor: @actor, tax_class: @tax, name: "Linked vs unlinked")
+    sale = prepare_unit_sale(register_number: 31, unit: unit, presented_cents: 2500)
+    original = Pos::CompleteTransaction.call(
+      transaction: sale[:transaction],
+      actor: @actor,
+      operation_id: SecureRandom.uuid_v7,
+      expected_lock_version: sale[:transaction].lock_version,
+      expected_total_cents: sale[:transaction].total_cents,
+      expected_signed_net_cents: sale[:transaction].signed_net_cents
+    ).transaction
+    original_line = original.pos_transaction_lines.first
+    assert unit.reload.removed?
+
+    unlinked = prepare_unlinked_return(register_number: 32, unit: unit)
+    linked = prepare_linked_return(register_number: 33, original_line: original_line)
+    jobs = [ unlinked, linked ]
+    actor_id = @actor.id
+    unit_id = unit.id
+    ready = Queue.new
+    go = Queue.new
+    results = Array.new(2)
+    errors = Array.new(2)
+    threads = jobs.each_with_index.map do |job, i|
+      Thread.new do
+        ActiveRecord::Base.connection_pool.with_connection do
+          ready << true
+          go.pop
+          transaction = PosTransaction.find(job[:transaction].id)
+          results[i] = Pos::CompleteTransaction.call(
+            transaction: transaction,
+            actor: User.find(actor_id),
+            operation_id: SecureRandom.uuid_v7,
+            expected_lock_version: transaction.lock_version,
+            expected_total_cents: transaction.total_cents,
+            expected_signed_net_cents: transaction.signed_net_cents
+          )
+        rescue StandardError => e
+          errors[i] = e
+        end
+      end
+    end
+    2.times { ready.pop }
+    2.times { go << true }
+    threads.each { |thread| assert thread.join(30), "thread did not finish" }
+
+    successes = results.compact
+    failures = errors.compact
+    assert_equal 1, successes.size, failures.map(&:message).inspect
+    assert_equal 1, failures.size, successes.inspect
+    assert InventoryUnit.uncached { InventoryUnit.find(unit_id).on_hand? }
+    restores = InventoryLedgerEntry.uncached {
+      InventoryLedgerEntry.where(
+        inventory_unit_id: unit_id,
+        source_type: "PosTransactionLine",
+        entry_type: "return"
+      ).count
+    }
+    assert_equal 1, restores
+    loser_id = jobs.map { |job| job[:transaction].id } - [ successes.first.transaction.id ]
+    loser = PosTransaction.uncached { PosTransaction.find(loser_id.first) }
+    assert loser.working?
+    assert_nil loser.receipt_sequence
+  end
+
+  test "complete mixed transaction versus close session never omits a completed fact" do
+    Pos::TenderTypes.seed!
+    open_quantity_stock(store: @store, variant: @variant, actor: @actor, quantity: 5)
+    register = Register.create!(store: @store, register_number: 51, name: "Mixed close race")
+    context = pos_open_context(store: @store, actor: @actor, register: register)
+    transaction = Pos::StartTransaction.call(session: context[:session], actor: @actor)
+    Pos::AddMerchandise.call(
+      transaction: transaction,
+      actor: @actor,
+      expected_lock_version: transaction.lock_version,
+      identifier: @variant.sku
+    )
+    Pos::ExecuteUnlinkedReturn.call(
+      transaction: transaction.reload,
+      actor: @actor,
+      expected_lock_version: transaction.lock_version,
+      identifier: @variant.sku,
+      quantity: 1,
+      reason_code: "changed_mind",
+      requested_return_unit_price_cents: 500
+    )
+    transaction.reload
+    if transaction.signed_net_cents.positive?
+      Pos::TenderCash.call(
+        transaction: transaction,
+        actor: @actor,
+        expected_lock_version: transaction.lock_version,
+        amount_presented_cents: transaction.total_cents
+      )
+    elsif transaction.signed_net_cents.negative?
+      Pos::AddRefundTender.call(
+        transaction: transaction,
+        actor: @actor,
+        expected_lock_version: transaction.lock_version,
+        tender_type: TenderType.find_by!(code: "cash"),
+        amount_cents: -transaction.signed_net_cents
+      )
+    end
+    transaction.reload
+    session_id = context[:session].id
+    session_lock = context[:session].lock_version
+    transaction_id = transaction.id
+    txn_lock = transaction.lock_version
+    total = transaction.total_cents
+    signed_net = transaction.signed_net_cents
+    actor_id = @actor.id
+    ready = Queue.new
+    go = Queue.new
+    complete_result = nil
+    close_result = nil
+    complete_error = nil
+    close_error = nil
+
+    threads = [
+      Thread.new do
+        ActiveRecord::Base.connection_pool.with_connection do
+          ready << true
+          go.pop
+          complete_result = Pos::CompleteTransaction.call(
+            transaction: PosTransaction.find(transaction_id),
+            actor: User.find(actor_id),
+            operation_id: SecureRandom.uuid_v7,
+            expected_lock_version: txn_lock,
+            expected_total_cents: total,
+            expected_signed_net_cents: signed_net
+          )
+        rescue StandardError => e
+          complete_error = e
+        end
+      end,
+      Thread.new do
+        ActiveRecord::Base.connection_pool.with_connection do
+          ready << true
+          go.pop
+          close_result = Pos::CloseSession.call(
+            session: PosSession.find(session_id),
+            actor: User.find(actor_id),
+            expected_lock_version: session_lock,
+            closing_count_cents: 0
+          )
+        rescue StandardError => e
+          close_error = e
+        end
+      end
+    ]
+    2.times { ready.pop }
+    2.times { go << true }
+    threads.each { |thread| assert thread.join(30), "thread did not finish" }
+
+    assert complete_result || complete_error
+    assert close_result || close_error
+    session = PosSession.uncached { PosSession.find(session_id) }
+    txn = PosTransaction.uncached { PosTransaction.find(transaction_id) }
+    refute session.closed? && txn.working?
+    if txn.completed? && session.closed?
+      assert_equal session.id, txn.pos_session_id
+      expected = session.opening_float_cents +
+                 PosTender.joins(:pos_transaction).where(
+                   pos_transactions: { pos_session_id: session.id, status: "completed" },
+                   behavioral_category: "cash",
+                   direction: "payment"
+                 ).sum(:amount_cents) -
+                 PosTender.joins(:pos_transaction).where(
+                   pos_transactions: { pos_session_id: session.id, status: "completed" },
+                   behavioral_category: "cash",
+                   direction: "refund"
+                 ).sum(:amount_cents)
+      assert_equal expected, session.closing_expected_cash_cents
+    end
+  end
+
   private
 
   def prepare_sale(register_number:, presented_cents:)
@@ -594,6 +877,29 @@ class Pos::ConcurrencyTest < ActiveSupport::TestCase
     Pos::AddRefundTender.call(
       transaction: transaction,
       actor: actor,
+      expected_lock_version: transaction.lock_version,
+      tender_type: TenderType.find_by!(code: "cash"),
+      amount_cents: -transaction.signed_net_cents
+    )
+    { context: job[:context], transaction: transaction.reload }
+  end
+
+  def prepare_unlinked_return(register_number:, unit:)
+    job = prepare_empty_sale(register_number: register_number)
+    transaction = job[:transaction]
+    Pos::ExecuteUnlinkedReturn.call(
+      transaction: transaction,
+      actor: @actor,
+      expected_lock_version: transaction.lock_version,
+      identifier: unit.unit_identifier,
+      quantity: 1,
+      reason_code: "changed_mind",
+      requested_return_unit_price_cents: 1200
+    )
+    transaction.reload
+    Pos::AddRefundTender.call(
+      transaction: transaction,
+      actor: @actor,
       expected_lock_version: transaction.lock_version,
       tender_type: TenderType.find_by!(code: "cash"),
       amount_cents: -transaction.signed_net_cents

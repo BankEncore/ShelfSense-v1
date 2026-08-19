@@ -1,6 +1,6 @@
 # Phase 6 Slice 6.5 — Returns, refunds, and exchanges
 
-**Status:** Contract locked. 6.5A implemented. 6.5B implemented. 6.5C implemented. Next: 6.5D mixed/unlinked closeout hardening.
+**Status:** Contract locked. 6.5A–D implemented. Phase 6.5 complete. Next: 6.6 post-void.
 
 **Authority:** Linked return, unlinked return, mixed sale+return, refund tenders, and direction-aware Session/Z on the existing POS transaction. Dual authority with Core remains [mvp-contract.md](mvp-contract.md) / [ADR-020](../../../adr/ADR-020-pos-operation-envelope-and-core-facts.md). Tax remains [pos-tax-contract.md](../phase4-point-of-sale/pos-tax-contract.md) §10. Inventory posting remains [inventory-posting-contract.md](../../phase3-inventory-foundation/inventory-posting-contract.md). Settlement extends [tender-breadth.md](tender-breadth.md). Controlled-action policy remains [controlled-actions.md](controlled-actions.md). History initiation extends [transaction-history.md](transaction-history.md).
 
@@ -866,11 +866,22 @@ Implementation notes:
 - `Pos::ExecuteUnlinkedReturn` creates the line (preallocated UUIDv7) plus one `unlinked_return` fact. Return-owned identifier resolution does not inherit `Identifiers::Lookup`'s `sellable?` filter. Denied approval audits the working transaction; there is no pending line.
 - Overlay lookup is JSON resolve-only. Identifier Enter never submits approval. F8 remove audits `pos.unlinked_return.removed` before `dependent: :destroy`.
 - `FreezeUnlinkedReturnLine` keeps approved reference/selling/Tax Class, applies current Store Tax, and writes `merchandise_snapshot`. `Inventory::ReturnValuation` runs after the balance lock. Envelope `return_price_adjustment` is arithmetic and is not a sale override/discount.
-- Mixed sale+unlinked remains structurally allowed. 6.5D owns the comprehensive mixed/closeout matrix.
+- Mixed sale+unlinked remains structurally allowed. 6.5D owns the comprehensive mixed/closeout matrix and is implemented.
 
 ### 6.5D — Mixed transaction and closeout hardening
 
-Comprehensive mixed/unlinked/closeout hardening: sale + unlinked; net positive/negative/zero with unlinked; mixed refund tender; Session close; Z finalize; receipt/reprint; concurrency; completion retry/idempotency; full Phase 5–6.4 regression. Sale + linked return is already cashier-operable in 6.5B. No new domain model.
+**Implemented.** Merge gate: cashier-usable mixed sale + unlinked +/−/0, sale + linked + unlinked, split Cash+Card payment and refund; receipt/reprint/history, inventory, expected Cash, Session close, two-session Z, and completion retry stay truthful.
+
+Implementation notes:
+
+- Mixed baskets are ordinary `direction = return` lines with different historical authority. Linked + unlinked on the same transaction is allowed.
+- Unlinked reference-vs-return-price variance stays out of `discount_cents` / `return_discount_cents`.
+- Any material basket mutation clears working tenders so a sign change cannot keep the wrong settlement direction.
+- Concurrent linked vs unlinked restore of the same removed Used unit yields one `on_hand` unit. Completing a mixed transaction versus closing the Session never omits a completed fact from closed Session Cash.
+- Used-unit posting reloads the unit with `SELECT … FOR UPDATE` outside the transaction query cache so two restorers cannot both treat the row as still removed.
+- Pre-6.5 finalized additive Z columns remain NULL and display as not captured; they are not backfilled.
+
+Sale + linked-only +/−/0 and even exchange remain 6.5B regressions. Return-only unlinked remains a 6.5C regression.
 
 ---
 

@@ -28,13 +28,13 @@ This directory contains the project’s technical authority, development guidanc
 | [Phase 5 cash register schema](planning/phase4-6-point-of-sale/phase5-cash-register/phase5-schema.md) | Implemented session close snapshots and reporting-period Z aggregates |
 | [Phase 5 register workspace](planning/phase4-6-point-of-sale/phase5-cash-register/register-workspace.md) | Slice 2 open gate, modes, HTTP/retry, focus, completion receipt vs print |
 | [Phase 5 register workspace UX](planning/phase4-6-point-of-sale/phase5-cash-register/register-workspace-ux.md) | Slice 2 low-fidelity wireframes (focus, keys, Turbo regions) |
-| [Phase 6 POS MVP plan](planning/phase4-6-point-of-sale/phase6-pos-mvp/phase6-plan.md) | Phase 6 slice map, deferrals, merge-to-main, and acceptance (6.0–6.4 and 6.5A/B implemented; 6.5C next) |
+| [Phase 6 POS MVP plan](planning/phase4-6-point-of-sale/phase6-pos-mvp/phase6-plan.md) | Phase 6 slice map, deferrals, merge-to-main, and acceptance (6.0–6.5 implemented; 6.6 next) |
 | [Phase 6 MVP contract](planning/phase4-6-point-of-sale/phase6-pos-mvp/mvp-contract.md) | Slice 6.0 CompletedPosOperation v2 and cross-cutting locks |
 | [Phase 6 merchandise breadth](planning/phase4-6-point-of-sale/phase6-pos-mvp/merchandise-breadth.md) | Slice 6.1 Used/individual and non-inventory sales (implemented) |
 | [Phase 6 tender breadth](planning/phase4-6-point-of-sale/phase6-pos-mvp/tender-breadth.md) | Slice 6.2 Cash/Card/Check/Other settlement (implemented) |
 | [Phase 6 transaction history](planning/phase4-6-point-of-sale/phase6-pos-mvp/transaction-history.md) | Slice 6.3 completed lookup, detail, reprint (implemented) |
 | [Phase 6 controlled actions](planning/phase4-6-point-of-sale/phase6-pos-mvp/controlled-actions.md) | Slice 6.4 price override, line discount, Tax Class override (implemented) |
-| [Phase 6 returns](planning/phase4-6-point-of-sale/phase6-pos-mvp/returns.md) | Slice 6.5 linked/unlinked returns, refunds, mixed sale+return (6.5A/B implemented; 6.5C next) |
+| [Phase 6 returns](planning/phase4-6-point-of-sale/phase6-pos-mvp/returns.md) | Slice 6.5 linked/unlinked returns, refunds, mixed sale+return (6.5A–D implemented) |
 | [POS Phases 4–6 plan](planning/phase4-6-point-of-sale/spec.md) | Multi-phase POS sequencing (foundation → cash register → MVP); §6 deferred to the Phase 6 packet |
 | [UX conventions](ux-conventions.md) | Shared admin page anatomy, partials, currency boundaries, palette, and Hotwire deferral |
 | [Development guide](development.md) | Docker-only local setup, PostgreSQL configuration, application commands, and troubleshooting |
