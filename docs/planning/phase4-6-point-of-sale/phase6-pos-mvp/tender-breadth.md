@@ -45,7 +45,7 @@ Check
 admin-created Other
 ```
 
-Stored Value, integrated Card processing, and refund tenders are out of **6.2**. Refunds, `allows_refund`, Cash refund Core, and direction-aware remaining due are [returns.md](returns.md). Until Cash refunds exist, expected Cash stays the Phase 5 formula.
+Stored Value, integrated Card processing, and refund tenders are out of **6.2**. Refunds, `allows_refund`, Cash refund Core, and direction-aware remaining due are [returns.md](returns.md) (6.5A Core; 6.5B cashier refund workspace). Until Cash refunds exist, expected Cash stays the Phase 5 formula.
 
 ---
 
@@ -65,7 +65,7 @@ UUIDv7 (`create_uuid_table`). Centrally mastered reference data.
 | `system_protected` | true for seeded Cash/Card/Check |
 | `lock_version` | optimistic locking |
 
-Do **not** add `allows_payment` in 6.2. 6.5 adds `allows_refund` ([returns.md](returns.md) §20). Cash is always refundable and read-only in admin. Card/Check/Other are editable; new Other defaults `false`. Workspace refund F2 uses `TenderType.refund_selectable`.
+Do **not** add `allows_payment` in 6.2. 6.5 added `allows_refund` ([returns.md](returns.md) §20). Cash is always refundable and read-only in admin. Card/Check/Other are editable; new Other defaults `false`. Workspace refund F2 uses `TenderType.refund_selectable`.
 
 Seed only:
 

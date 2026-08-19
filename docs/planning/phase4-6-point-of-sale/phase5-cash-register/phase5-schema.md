@@ -10,7 +10,7 @@ Companions: [Phase 5 plan](phase5-plan.md), [Phase 4 schema](../phase4-point-of-
 
 ## 1. Design principles
 
-- Money is signed-capable integer `_cents`. Opening float and count are `>= 0`. Expected Cash is `>= 0` through Phase 5/6.4; [returns.md](../phase6-pos-mvp/returns.md) §23 revises that so expected (and the Z expected sum) **may be negative** once Cash refunds exist. Variance may be negative.
+- Money is signed-capable integer `_cents`. Opening float and count are `>= 0`. Expected Cash is `>= 0` through Phase 5/6.4; 6.5A dropped the nonnegative expected CHECKs so expected (and the Z expected sum) **may be negative** ([returns.md](../phase6-pos-mvp/returns.md) §23). Variance may be negative.
 - Close and finalize persist **snapshots**. Do not add live cash counters.
 - Open session: closing snapshots NULL. Closed session: closing snapshots NOT NULL.
 - Open period: Phase 5 `finalized_*` snapshot fields and `finalized_by_user_id` NULL. Finalized period: those Phase 5 fields NOT NULL. 6.2 category columns may remain NULL on already-finalized rows (“not captured”).
@@ -25,7 +25,7 @@ Companions: [Phase 5 plan](phase5-plan.md), [Phase 4 schema](../phase4-point-of-
 | Column | Type | Notes |
 |---|---|---|
 | `opening_float_cents` | bigint | null: false, default 0; `>= 0`; set at open; retained after close |
-| `closing_expected_cash_cents` | bigint | null while open; **server-derived** at close. Phase 5: `>= 0`. 6.5: may be negative ([returns.md](../phase6-pos-mvp/returns.md) §23). |
+| `closing_expected_cash_cents` | bigint | null while open; **server-derived** at close. Phase 5: `>= 0`. 6.5A: may be negative ([returns.md](../phase6-pos-mvp/returns.md) §23). |
 | `closing_count_cents` | bigint | null while open; `>= 0` when closed; cashier-entered count only |
 | `closing_variance_cents` | bigint | null while open; `count - expected` when closed; may be negative |
 
@@ -57,7 +57,7 @@ closing_variance_cents IS NULL
   OR closing_variance_cents = closing_count_cents - closing_expected_cash_cents
 ```
 
-The nonnegative expected CHECK is Phase 5/6.4. 6.5 revises it so expected may be negative ([returns.md](../phase6-pos-mvp/returns.md) §23). Count stays `>= 0`. Variance arithmetic is unchanged.
+The nonnegative expected CHECK is Phase 5/6.4. 6.5A dropped it so expected may be negative ([returns.md](../phase6-pos-mvp/returns.md) §23). Count stays `>= 0`. Variance arithmetic is unchanged.
 
 Closing columns are all-null or all-present (implied by the status pairing). Variance has no sign CHECK; the arithmetic CHECK holds whenever variance is present.
 
@@ -88,9 +88,9 @@ Nullable additive columns, **not** part of `closed_at_matches_status`. NULL on a
 | `finalized_check_payment_cents` | bigint | same |
 | `finalized_other_payment_cents` | bigint | same |
 
-### Return / refund additions (6.5)
+### Return / refund additions (6.5A)
 
-Specified in [returns.md](../phase6-pos-mvp/returns.md) §29. Same additive NULL = not-captured pattern as 6.2/6.4. Do **not** add these to `closed_at_matches_status`.
+Implemented in [returns.md](../phase6-pos-mvp/returns.md) §29. Same additive NULL = not-captured pattern as 6.2/6.4. Do **not** add these to `closed_at_matches_status`.
 
 ```text
 finalized_return_subtotal_cents

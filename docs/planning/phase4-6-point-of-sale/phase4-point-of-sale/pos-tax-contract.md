@@ -229,7 +229,7 @@ Do **not** add `default_tax_class_id` / `applied_tax_class_id` until Tax Class o
 
 Linked returns reverse **original completed component facts**. They do not recalculate using current Store Taxes or current merchandise Tax Class.
 
-Partial returns need a deterministic rule for consuming original per-component `tax_cents` and residual cents (defined when returns are implemented).
+Partial returns consume original per-component `tax_cents` and residual cents through `Pos::HistoricalReturnAllocation` ([returns.md](../../phase6-pos-mvp/returns.md) §11). The final eligible return takes leftover cents. Unlinked returns use current `Pos::Tax::Calculate` (6.5C).
 
 ---
 

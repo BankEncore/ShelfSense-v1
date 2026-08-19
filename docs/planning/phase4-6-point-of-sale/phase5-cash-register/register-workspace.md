@@ -362,7 +362,7 @@ Intercept `*` and `+` on keydown so they never become identifier text. Do not in
 
 | Mode | Enter | Escape | Other |
 |---|---|---|---|
-| `SALE_ENTRY` | identifier → `AddMerchandise`. Empty Enter is a no-op. Digits alone are an identifier, not quantity | clear input; stay `SALE_ENTRY` | `*` → `QUANTITY` if a line is selected; `+` → `TENDER` if merchandise exists; F8 removes selected line |
+| `SALE_ENTRY` | identifier → `AddMerchandise`. Empty Enter is a no-op. Digits alone are an identifier, not quantity | clear input; stay `SALE_ENTRY` | `*` → `QUANTITY` if a line is selected; `+` → `TENDER` if merchandise exists and `signed_net ≠ 0`; mixed even exchange `+` confirms complete ([returns.md](../phase6-pos-mvp/returns.md)); F8 removes selected line |
 | `QUANTITY` | `ChangeQuantity` on selected line → `SALE_ENTRY` | abandon → `SALE_ENTRY` | quantity `0` is invalid (service requires positive); F8 is not used here — Escape then F8 in `SALE_ENTRY` |
 | `TENDER` (before `TenderCash` succeeds) | `POST tender` only | → `SALE_ENTRY` | insufficient Cash: remain `TENDER` |
 | completion pending (`TenderCash` succeeded, including GET workspace restore) | not a fourth named mode; input locked until complete response | do not silently return to `SALE_ENTRY` | retry is `POST complete` only; **Return to sale** is `POST abandon_tender` |
@@ -418,7 +418,7 @@ Complete        → tender becomes completed immutable fact
 
 Inventory shortage is a **completion** error (Phase 4 posts on complete, not on add-line). The scan path will not catch oversell.
 
-Cancel: explicit confirmation overlay (see keyboard map). Slice 2 **disables the control** when the working transaction has no lines; that is operator UX, not a `CancelTransaction` invariant. Escape / Don't cancel returns to the prior mode and focus. Scanner Enter must not confirm. Cancel from the recoverable completion-error screen (working + tender) uses this same `CancelTransaction` rule.
+Cancel: explicit confirmation overlay (see keyboard map). Copy is transaction-generic (`Cancel this transaction?`), not sale-only. Slice 2 **disables the control** when the working transaction has no lines; that is operator UX, not a `CancelTransaction` invariant. Escape / Don't cancel returns to the prior mode and focus. Scanner Enter must not confirm. Cancel from the recoverable completion-error screen (working + tender) uses this same `CancelTransaction` rule.
 
 ---
 
@@ -465,6 +465,8 @@ System tests (when the workspace is implemented) must cover at least: scan → f
 
 ## 11. Out of this contract
 
-Split tender, discounts, returns, suspend/recall, drawers, Terminal, new permissions, close/Z outbox, polished visual design, mobile POS, customer display.
+This Slice 2 contract does not define split tender, discounts, returns, suspend/recall, drawers, Terminal, new permissions, close/Z outbox, polished visual design, mobile POS, or customer display.
+
+Later slices that reuse this workspace: 6.2 mixed tender, 6.4 controlled actions, 6.5B linked returns and refunds ([returns.md](../phase6-pos-mvp/returns.md)). 6.5C unlinked return is next.
 
 Receipt print, blind close, and Z screens are Slice 3: [close-z-screens.md](close-z-screens.md).

@@ -1,8 +1,6 @@
 # Phase 6 Slice 6.5 — Returns, refunds, and exchanges
 
-**Status:** Contract locked. 6.5A implemented. 6.5B implemented.
-
-**Authority:** Linked return, unlinked return, mixed sale+return, refund tenders, and direction-aware Session/Z on the existing POS transaction. Dual authority with Core remains [mvp-contract.md](mvp-contract.md) / [ADR-020](../../../adr/ADR-020-pos-operation-envelope-and-core-facts.md). Tax remains [pos-tax-contract.md](../phase4-point-of-sale/pos-tax-contract.md) §10. Inventory posting remains [inventory-posting-contract.md](../../phase3-inventory-foundation/inventory-posting-contract.md). Settlement extends [tender-breadth.md](tender-breadth.md). Controlled-action policy remains [controlled-actions.md](controlled-actions.md). History initiation extends [transaction-history.md](transaction-history.md).
+**Status:** Contract locked. 6.5A implemented. 6.5B implemented. Next: 6.5C unlinked return.
 
 **Authority:** Linked return, unlinked return, mixed sale+return, refund tenders, and direction-aware Session/Z on the existing POS transaction. Dual authority with Core remains [mvp-contract.md](mvp-contract.md) / [ADR-020](../../../adr/ADR-020-pos-operation-envelope-and-core-facts.md). Tax remains [pos-tax-contract.md](../phase4-point-of-sale/pos-tax-contract.md) §10. Inventory posting remains [inventory-posting-contract.md](../../phase3-inventory-foundation/inventory-posting-contract.md). Settlement extends [tender-breadth.md](tender-breadth.md). Controlled-action policy remains [controlled-actions.md](controlled-actions.md). History initiation extends [transaction-history.md](transaction-history.md).
 
@@ -704,7 +702,7 @@ Expected Cash is an **accounting expectation**, not a physical drawer count. **D
 
 If a Cash refund would take expected below zero, the workspace **may show a non-blocking warning**. It must not refuse, require a second actor, or take a Session lock for capacity.
 
-Phase 5 currently assumes `closing_expected_cash_cents >= 0` and a nonnegative Z expected-sum CHECK. 6.5A **must revise those CHECKs** so expected (and the Z expected sum) may be negative. `closing_count_cents` stays `>= 0`. Variance remains `count - expected` and may be more positive when expected is negative.
+Phase 5 assumed `closing_expected_cash_cents >= 0` and a nonnegative Z expected-sum CHECK. 6.5A dropped those CHECKs so expected (and the Z expected sum) may be negative. `closing_count_cents` stays `>= 0`. Variance remains `count - expected` and may be more positive when expected is negative.
 
 ---
 
@@ -848,9 +846,21 @@ History remaining quantity; Return items; basket return lines; partial quantity;
 
 **Implemented.** Merge gate: cashier-usable linked return from history through refund, receipt, and visible Session/Z.
 
+Implementation notes:
+
+- `cashier_target_session` is shared by Register resume and Return items. GET history / GET Return items never create a Session, working transaction, or register binding.
+- Return items POST resolves selected items first (nothing selected never touches Core), scopes `original_line_id`s to the receipt in the URL, then runs `ResumeOrStartTransaction` and `AddLinkedReturnLines` in one outer database transaction. A failed add does not leave an empty working transaction.
+- `AddLinkedReturnLines` is the atomic batch; `AddLinkedReturnLine` is a one-item wrapper. Duplicate originals, remaining quantity, tenders cleared once, totals refreshed once.
+- `PosTransaction#even_exchange?` is mixed sale + return with `signed_net = 0`. Sale-only or return-only zero-net retains 6.4C completion-pending / auto-complete and is not labeled Even exchange.
+- Customer print, immediate completion, and history detail share directional totals with tax (`pos/receipts/_directional_totals`). Omit a direction that has no lines.
+- F5/F6/F7 are disabled for return lines. Stimulus quantity uses `data-linked-return` so a future unlinked return is not treated as quantity-editable in JS. `ChangeQuantity` already rejects unlinked quantity changes.
+- Cancel overlay copy is transaction-generic. Completion-retry copy is tender-generic.
+
 ### 6.5C — Unlinked return
 
-`unlinked_return` permissions; `ExecuteUnlinkedReturn`; prospective line UUID; current-rule price/tax; cashier-entered return unit price; known removed Used unit; unlinked quantity valuation; single approval overlay; history/audit/envelope. No separate RPA permission framework.
+**Next.** `unlinked_return` permissions; `ExecuteUnlinkedReturn`; prospective line UUID; current-rule price/tax; cashier-entered return unit price; known removed Used unit; unlinked quantity valuation; single approval overlay; history/audit/envelope. No separate RPA permission framework.
+
+Do not redo 6.5B workspace settlement, even-exchange hold-open, directional receipts, or Return items. 6.5C adds the unlinked command and its permission keys. `Inventory::PostReturn` currently requires a linked return line; this slice must extend it with the unlinked valuation rules in §15. `pos.unlinked_return.perform` / `.approve` are not seeded yet. `FreezeUnlinkedReturnLine` is specified in §24 and is not yet callable.
 
 ### 6.5D — Mixed transaction and closeout hardening
 

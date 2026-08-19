@@ -2,7 +2,7 @@
 
 ShelfSense is an inventory, purchasing, customer-service, and point-of-sale system for independent bookstores. It is designed for one organization operating one or more stores, with a central organization server and store Registers. A future standalone Terminal (ADR-021) may continue ordinary checkout during temporary connectivity loss.
 
-Phases 0–5 are implemented. Phase 6 is the operational POS MVP; the planning packet (slice 6.0 contract and 6.1 merchandise-breadth spec) is locked, and implementation has not started.
+Phases 0–5 are implemented. Phase 6 is the operational POS MVP: slices 6.0–6.4 and 6.5A/B (linked-return Core and cashier workflow) are implemented. Next is 6.5C unlinked return.
 
 ## Goals
 
@@ -208,11 +208,11 @@ Authoritative plan: [phase5-plan.md](docs/planning/phase4-6-point-of-sale/phase5
 
 ### Phase 6: Operational POS MVP
 
-Status: planning packet locked (slice 6.0 completed-operation contract and slice 6.1 merchandise-breadth spec). Implementation has not started.
+Status: slices 6.0–6.4 and 6.5A/B implemented (CompletedPosOperation v2, Used/non-inventory sales, mixed tenders, history/reprint, controlled pricing, linked returns and refunds). Next: 6.5C unlinked return.
 
 Phase 6 extends the Phase 5 Cash register with Used/non-inventory sales, mixed tenders, history/reprint, controlled pricing, returns, post-void, and closeout reporting. Each slice merges independently to `main`.
 
-Authoritative plan: [phase6-plan.md](docs/planning/phase4-6-point-of-sale/phase6-pos-mvp/phase6-plan.md). Contract: [mvp-contract.md](docs/planning/phase4-6-point-of-sale/phase6-pos-mvp/mvp-contract.md). Slice 6.1: [merchandise-breadth.md](docs/planning/phase4-6-point-of-sale/phase6-pos-mvp/merchandise-breadth.md).
+Authoritative plan: [phase6-plan.md](docs/planning/phase4-6-point-of-sale/phase6-pos-mvp/phase6-plan.md). Contract: [mvp-contract.md](docs/planning/phase4-6-point-of-sale/phase6-pos-mvp/mvp-contract.md). Returns: [returns.md](docs/planning/phase4-6-point-of-sale/phase6-pos-mvp/returns.md).
 
 ## Phase 1 authorization model
 

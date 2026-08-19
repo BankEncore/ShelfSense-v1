@@ -1,6 +1,6 @@
 # Inventory posting service contract
 
-Status: Implemented with Phase 3 adjustments, Phase 4 quantity-tracked POS sales, and Phase 6 Slice 6.1 individual unit sales. Slice 6.5 `Inventory::PostReturn` is specified in [returns.md](../phase4-6-point-of-sale/phase6-pos-mvp/returns.md) and is not yet implemented.
+Status: Implemented with Phase 3 adjustments, Phase 4 quantity-tracked POS sales, Phase 6 Slice 6.1 individual unit sales, and Phase 6 Slice 6.5A linked-return restore. Unlinked `Inventory::PostReturn` valuation is 6.5C ([returns.md](../phase4-6-point-of-sale/phase6-pos-mvp/returns.md) §15).
 
 Later purchasing, POS, transfer, reservation, and disposition workflows must post physical and valuation effects only through the named inventory posting services. Controllers, callbacks, imports, and future workflows must not update `inventory_balances` directly.
 
@@ -65,7 +65,7 @@ InventoryUnit      # FOR UPDATE
 
 ## `Inventory::PostReturn`
 
-Named 6.5 boundary, parallel to `PostSale`. Joins the **caller's** transaction. Do not call `PostAdjustment`. Authority: [returns.md](../phase4-6-point-of-sale/phase6-pos-mvp/returns.md) §12 / §15.
+Named 6.5 boundary, parallel to `PostSale`. Joins the **caller's** transaction. Do not call `PostAdjustment`. Authority: [returns.md](../phase4-6-point-of-sale/phase6-pos-mvp/returns.md) §12 / §15. Linked restore is implemented (6.5A). The current service requires `linked_return?`; unlinked quantity and Used valuation in this section wait for 6.5C.
 
 Required inputs (received from completion; not re-derived):
 
