@@ -114,6 +114,10 @@ module PosHelper
     format_money_cents(cents)
   end
 
+  def pos_unlinked_return_price_adjusted?(line)
+    line.unlinked_return? && line.selling_unit_price_cents != line.reference_unit_price_cents
+  end
+
   def pos_line_controlled?(line)
     line.price_overridden? || line.manually_discounted? || line.tax_class_overridden?
   end

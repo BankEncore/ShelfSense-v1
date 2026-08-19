@@ -479,6 +479,76 @@ class Pos::ConcurrencyTest < ActiveSupport::TestCase
     assert_equal 0, remaining
   end
 
+  test "two registers cannot concurrently claim the same removed used unit" do
+    Pos::TenderTypes.seed!
+    _used_variant, unit = pos_on_hand_unit(store: @store, actor: @actor, tax_class: @tax)
+    sale = prepare_unit_sale(register_number: 21, unit: unit, presented_cents: 2500)
+    Pos::CompleteTransaction.call(
+      transaction: sale[:transaction],
+      actor: @actor,
+      operation_id: SecureRandom.uuid_v7,
+      expected_lock_version: sale[:transaction].lock_version,
+      expected_total_cents: sale[:transaction].total_cents,
+      expected_signed_net_cents: sale[:transaction].signed_net_cents
+    )
+    assert unit.reload.removed?
+
+    first = prepare_empty_sale(register_number: 22)
+    second = prepare_empty_sale(register_number: 23)
+    jobs = [
+      { transaction_id: first[:transaction].id, lock_version: first[:transaction].lock_version },
+      { transaction_id: second[:transaction].id, lock_version: second[:transaction].lock_version }
+    ]
+    unit_id = unit.id
+    identifier = unit.unit_identifier
+    actor_id = @actor.id
+    ready = Queue.new
+    go = Queue.new
+    results = Array.new(2)
+    errors = Array.new(2)
+    threads = jobs.each_with_index.map do |job, i|
+      Thread.new do
+        ActiveRecord::Base.connection_pool.with_connection do
+          ready << true
+          go.pop
+          results[i] = Pos::ExecuteUnlinkedReturn.call(
+            transaction: PosTransaction.find(job[:transaction_id]),
+            actor: User.find(actor_id),
+            expected_lock_version: job[:lock_version],
+            identifier: identifier,
+            quantity: 1,
+            reason_code: "changed_mind",
+            requested_return_unit_price_cents: 1200
+          )
+        rescue StandardError => e
+          errors[i] = e
+        end
+      end
+    end
+    2.times { ready.pop }
+    2.times { go << true }
+    threads.each { |thread| assert thread.join(30), "thread did not finish" }
+
+    successes = results.compact
+    failures = errors.compact
+    assert_equal 1, successes.size, failures.map(&:message).inspect
+    assert_equal 1, failures.size, successes.inspect
+    assert_match(/already on a working return|stale lock/i, failures.first.message)
+
+    working_lines = PosTransactionLine.uncached {
+      PosTransactionLine.joins(:pos_transaction).where(
+        inventory_unit_id: unit_id,
+        pos_transactions: { status: "working" }
+      ).to_a
+    }
+    assert_equal 1, working_lines.size
+    assert_equal successes.first.id, working_lines.first.id
+    assert_equal 1, PosControlledAction.uncached {
+      PosControlledAction.where(action_type: "unlinked_return", pos_transaction_line_id: working_lines.first.id).count
+    }
+    assert InventoryUnit.uncached { InventoryUnit.find(unit_id).removed? }
+  end
+
   private
 
   def prepare_sale(register_number:, presented_cents:)

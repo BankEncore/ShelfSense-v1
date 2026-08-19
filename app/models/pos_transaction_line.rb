@@ -35,6 +35,10 @@ class PosTransactionLine < ApplicationRecord
     return? && original_transaction_line_id.present?
   end
 
+  def unlinked_return?
+    return? && original_transaction_line_id.blank?
+  end
+
   def unit_line?
     inventory_unit_id.present?
   end

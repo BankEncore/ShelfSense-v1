@@ -191,8 +191,10 @@ module Pos
           Pos::FreezeSaleLine.call(transaction: transaction, line: line)
         elsif line.linked_return?
           Pos::FreezeLinkedReturnLine.call(transaction: transaction, line: line)
+        elsif line.unlinked_return?
+          Pos::FreezeUnlinkedReturnLine.call(transaction: transaction, line: line)
         else
-          raise Pos::Error, "unlinked returns are not supported"
+          raise Pos::Error, "return line is missing linkage or unlinked-return facts"
         end
       end
     end
@@ -361,6 +363,15 @@ module Pos
           "line_variance_cents" => unit_variance * line.quantity
         }
       end
+      if emit_return_price_adjustment?(line)
+        unit_variance = line.selling_unit_price_cents - line.reference_unit_price_cents
+        payload["return_price_adjustment"] = {
+          "reference_unit_price_cents" => line.reference_unit_price_cents,
+          "resulting_unit_price_cents" => line.selling_unit_price_cents,
+          "unit_variance_cents" => unit_variance,
+          "line_variance_cents" => unit_variance * line.quantity
+        }
+      end
       if emit_historical_discount?(line)
         payload["discount"] = {
           "source" => "manual",
@@ -381,12 +392,18 @@ module Pos
 
     def emit_historical_override?(line)
       return line.price_overridden? if line.sale?
+      return false if line.unlinked_return?
 
       line.selling_unit_price_cents != line.reference_unit_price_cents
     end
 
+    def emit_return_price_adjustment?(line)
+      line.unlinked_return? && line.selling_unit_price_cents != line.reference_unit_price_cents
+    end
+
     def emit_historical_discount?(line)
       return line.manually_discounted? if line.sale?
+      return false if line.unlinked_return?
 
       line.manual_discount_cents.to_i.positive? || line.manual_discount_basis_points.present?
     end
@@ -463,7 +480,7 @@ module Pos
             actor: @actor,
             correlation_id: correlation_id
           )
-        elsif line.linked_return?
+        elsif line.return?
           Inventory::PostReturn.call(
             line: line,
             occurred_at: completion_time,
@@ -472,7 +489,7 @@ module Pos
             correlation_id: correlation_id
           )
         else
-          raise Pos::Error, "unlinked returns are not supported"
+          raise Pos::Error, "unknown line direction"
         end
       end
     end

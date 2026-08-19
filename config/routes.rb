@@ -89,6 +89,8 @@ Rails.application.routes.draw do
     post "register/quantity", to: "workspaces#quantity"
     post "register/remove", to: "workspaces#remove"
     post "register/controlled_action", to: "workspaces#controlled_action"
+    post "register/unlinked_return_lookup", to: "workspaces#unlinked_return_lookup"
+    post "register/unlinked_return", to: "workspaces#unlinked_return"
     post "register/abandon_tender", to: "workspaces#abandon_tender"
     post "register/cancel", to: "workspaces#cancel"
     post "register/tender", to: "workspaces#tender"

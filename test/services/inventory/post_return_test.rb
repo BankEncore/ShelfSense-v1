@@ -61,6 +61,79 @@ class InventoryPostReturnTest < ActiveSupport::TestCase
     assert_empty Inventory::LedgerPairIntegrity.drifts(store_id: @store.id, product_variant_id: @variant.id)
   end
 
+  test "unlinked quantity restore uses the locked current moving average not the refund price" do
+    transaction = Pos::StartTransaction.call(session: @context[:session], actor: @actor)
+    line = Pos::ExecuteUnlinkedReturn.call(
+      transaction: transaction,
+      actor: @actor,
+      expected_lock_version: transaction.lock_version,
+      identifier: @variant.sku,
+      quantity: 2,
+      reason_code: "changed_mind",
+      requested_return_unit_price_cents: 1999
+    )
+    balance_before = InventoryBalance.find_by!(store: @store, product_variant: @variant)
+    result = nil
+    PosTransaction.transaction do
+      result = Inventory::PostReturn.call(
+        line: line,
+        occurred_at: Time.utc(2026, 8, 19, 17, 0, 0),
+        business_date: Date.new(2026, 8, 19),
+        actor: @actor
+      )
+    end
+
+    valuation = result.fetch(:valuation)
+    balance = InventoryBalance.find_by!(store: @store, product_variant: @variant)
+    assert_equal 2, result.fetch(:ledger).quantity_delta
+    assert_equal 200, valuation.value_delta_cents
+    assert_equal "current_moving_average", valuation.calculation_metadata["valuation_basis"]
+    assert_equal balance_before.on_hand_quantity + 2, balance.on_hand_quantity
+    assert_equal balance_before.inventory_value_cents + 200, balance.inventory_value_cents
+    assert_not_equal line.extended_selling_amount_cents, valuation.value_delta_cents
+    event = AuditEvent.find_by!(action: "inventory.return_posted", subject_id: line.id)
+    assert_equal "current_moving_average", event.after_values["valuation_basis"]
+    outbox = OutboxMessage.find_by!(event_type: "inventory.return_posted", aggregate_id: line.id)
+    assert_equal false, outbox.payload["linked"]
+    assert_equal "current_moving_average", outbox.payload["valuation_basis"]
+  end
+
+  test "unlinked used restore posts the unit carrying value" do
+    used_variant, unit = pos_on_hand_unit(store: @store, actor: @actor, tax_class: @tax, unit_cost_cents: 500)
+    sale = complete_unit_sale(unit)
+    assert unit.reload.removed?
+    transaction = Pos::StartTransaction.call(session: @context[:session], actor: @actor)
+    line = Pos::ExecuteUnlinkedReturn.call(
+      transaction: transaction,
+      actor: @actor,
+      expected_lock_version: transaction.lock_version,
+      identifier: unit.unit_identifier,
+      quantity: 1,
+      reason_code: "changed_mind",
+      requested_return_unit_price_cents: 1200
+    )
+    result = nil
+    PosTransaction.transaction do
+      result = Inventory::PostReturn.call(
+        line: line,
+        occurred_at: Time.utc(2026, 8, 19, 17, 5, 0),
+        business_date: Date.new(2026, 8, 19),
+        actor: @actor
+      )
+    end
+
+    assert_equal 500, result.fetch(:valuation).value_delta_cents
+    assert_equal "unit_carrying_value", result.fetch(:valuation).calculation_metadata["valuation_basis"]
+    outbox = OutboxMessage.where(event_type: "inventory.return_posted", aggregate_id: line.id).order(:created_at).last
+    assert_equal false, outbox.payload["linked"]
+    assert_equal "unit_carrying_value", outbox.payload["valuation_basis"]
+    assert unit.reload.on_hand?
+    assert_equal 500, unit.carrying_value_cents
+    assert_equal used_variant.id, line.product_variant_id
+    assert_nil line.original_transaction_line_id
+    assert_not_equal sale.pos_transaction_lines.first.id, line.id
+  end
+
   private
 
   def complete_sale
@@ -98,5 +171,30 @@ class InventoryPostReturnTest < ActiveSupport::TestCase
       quantity: 1,
       reason_code: "defective"
     )
+  end
+
+  def complete_unit_sale(unit)
+    transaction = Pos::StartTransaction.call(session: @context[:session], actor: @actor)
+    Pos::AddMerchandise.call(
+      transaction: transaction,
+      actor: @actor,
+      expected_lock_version: transaction.lock_version,
+      identifier: unit.unit_identifier
+    )
+    transaction.reload
+    Pos::TenderCash.call(
+      transaction: transaction,
+      actor: @actor,
+      expected_lock_version: transaction.lock_version,
+      amount_presented_cents: transaction.total_cents
+    )
+    Pos::CompleteTransaction.call(
+      transaction: transaction.reload,
+      actor: @actor,
+      operation_id: SecureRandom.uuid_v7,
+      expected_lock_version: transaction.lock_version,
+      expected_total_cents: transaction.total_cents,
+      expected_signed_net_cents: transaction.signed_net_cents
+    ).transaction
   end
 end

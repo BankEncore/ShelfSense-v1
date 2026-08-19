@@ -1,6 +1,6 @@
 # Phase 6 Slice 6.5 — Returns, refunds, and exchanges
 
-**Status:** Contract locked. 6.5A implemented. 6.5B implemented. Next: 6.5C unlinked return.
+**Status:** Contract locked. 6.5A implemented. 6.5B implemented. 6.5C implemented. Next: 6.5D mixed/unlinked closeout hardening.
 
 **Authority:** Linked return, unlinked return, mixed sale+return, refund tenders, and direction-aware Session/Z on the existing POS transaction. Dual authority with Core remains [mvp-contract.md](mvp-contract.md) / [ADR-020](../../../adr/ADR-020-pos-operation-envelope-and-core-facts.md). Tax remains [pos-tax-contract.md](../phase4-point-of-sale/pos-tax-contract.md) §10. Inventory posting remains [inventory-posting-contract.md](../../phase3-inventory-foundation/inventory-posting-contract.md). Settlement extends [tender-breadth.md](tender-breadth.md). Controlled-action policy remains [controlled-actions.md](controlled-actions.md). History initiation extends [transaction-history.md](transaction-history.md).
 
@@ -385,7 +385,7 @@ Do not share one “recalculate tax” helper for historical reversal and curren
 
 Named boundary `Inventory::PostReturn`, parallel to `Inventory::PostSale`. Joins the caller’s transaction. Do not call `PostAdjustment`. Lock order: `InventoryBalance` then `InventoryUnit`. Skip `non_inventory`. Duplicate protection remains `(source_type, source_id, effect_sequence)` with `source_type = PosTransactionLine` and `source_id =` **return** line id.
 
-Ledger `entry_type = return`. Valuation increase uses `acquisition` (stock in). Outbox/audit `inventory.return_posted`.
+Ledger `entry_type = return`. Valuation increase uses `acquisition` (stock in). Outbox/audit `inventory.return_posted` include `linked` and `valuation_basis`.
 
 **Every linked return restores inventory using the valuation actually relieved by the original completed sale.** Do not use today’s moving average. Do not treat live `InventoryUnit.carrying_value_cents` as historical authority.
 
@@ -858,9 +858,15 @@ Implementation notes:
 
 ### 6.5C — Unlinked return
 
-**Next.** `unlinked_return` permissions; `ExecuteUnlinkedReturn`; prospective line UUID; current-rule price/tax; cashier-entered return unit price; known removed Used unit; unlinked quantity valuation; single approval overlay; history/audit/envelope. No separate RPA permission framework.
+**Implemented.** Merge gate: cashier-usable return-only unlinked workflow — Return without receipt, identify known merchandise, quantity/reason/return price, manager approval when required, Cash refund complete.
 
-Do not redo 6.5B workspace settlement, even-exchange hold-open, directional receipts, or Return items. 6.5C adds the unlinked command and its permission keys. `Inventory::PostReturn` currently requires a linked return line; this slice must extend it with the unlinked valuation rules in §15. `pos.unlinked_return.perform` / `.approve` are not seeded yet. `FreezeUnlinkedReturnLine` is specified in §24 and is not yet callable.
+Implementation notes:
+
+- Seeded `pos.unlinked_return.perform` / `.approve` only. No `return_price_adjustment` permission. `action_type` CHECK includes `unlinked_return`.
+- `Pos::ExecuteUnlinkedReturn` creates the line (preallocated UUIDv7) plus one `unlinked_return` fact. Return-owned identifier resolution does not inherit `Identifiers::Lookup`'s `sellable?` filter. Denied approval audits the working transaction; there is no pending line.
+- Overlay lookup is JSON resolve-only. Identifier Enter never submits approval. F8 remove audits `pos.unlinked_return.removed` before `dependent: :destroy`.
+- `FreezeUnlinkedReturnLine` keeps approved reference/selling/Tax Class, applies current Store Tax, and writes `merchandise_snapshot`. `Inventory::ReturnValuation` runs after the balance lock. Envelope `return_price_adjustment` is arithmetic and is not a sale override/discount.
+- Mixed sale+unlinked remains structurally allowed. 6.5D owns the comprehensive mixed/closeout matrix.
 
 ### 6.5D — Mixed transaction and closeout hardening
 

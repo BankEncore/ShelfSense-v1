@@ -36,6 +36,14 @@
         </li>
         <% if line.linked_return? && line.original_transaction_line&.pos_transaction %>
           <li class="muted">Return from <%= line.original_transaction_line.pos_transaction.transaction_reference %></li>
+        <% elsif line.unlinked_return? %>
+          <li class="muted">Unlinked return</li>
+          <% if pos_unlinked_return_price_adjusted?(line) %>
+            <li class="muted">
+              Reference <%= format_money_cents(line.reference_unit_price_cents) %>
+              · Return <%= format_money_cents(line.selling_unit_price_cents) %>
+            </li>
+          <% end %>
         <% end %>
         <% if line.manual_discount_cents.to_i.positive? %>
           <li><%= line.return? ? "Discount reversal" : "Discount" %>  <%= format_signed_money_cents(pos_line_discount_cents(line)) %></li>

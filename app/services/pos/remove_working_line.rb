@@ -24,6 +24,7 @@ module Pos
         Pos::Support.clear_working_tenders!(transaction)
         transaction.pos_transaction_lines.find(@line.id).tap do |line|
           record_linked_return_removed!(transaction, line) if line.linked_return?
+          record_unlinked_return_removed!(transaction, line) if line.unlinked_return?
           line.destroy!
         end
         Pos::Support.refresh_totals!(transaction)
@@ -33,6 +34,31 @@ module Pos
     end
 
     private
+
+    def record_unlinked_return_removed!(transaction, line)
+      action = line.pos_controlled_actions.find_by(action_type: "unlinked_return")
+      Audit::Recorder.record!(
+        action: "pos.unlinked_return.removed",
+        outcome: "succeeded",
+        actor_user: @actor,
+        actor_label: @actor.display_name,
+        store: transaction.store,
+        register: transaction.register,
+        subject: line,
+        reason_code: line.return_reason_code,
+        reason_text: line.return_reason_note,
+        before_values: {
+          quantity: line.quantity,
+          reference_unit_price_cents: line.reference_unit_price_cents,
+          selling_unit_price_cents: line.selling_unit_price_cents,
+          product_variant_id: line.product_variant_id,
+          inventory_unit_id: line.inventory_unit_id,
+          action_fingerprint: action&.action_fingerprint,
+          performed_by_user_id: action&.performed_by_user_id,
+          approved_by_user_id: action&.approved_by_user_id
+        }.compact
+      )
+    end
 
     def record_linked_return_removed!(transaction, line)
       Audit::Recorder.record!(

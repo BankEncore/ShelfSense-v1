@@ -1,6 +1,6 @@
 # Phase 6 — Operational POS MVP
 
-**Status:** Slice 6.0 contract locked ([mvp-contract.md](mvp-contract.md)). Slice 6.1 merchandise breadth implemented ([merchandise-breadth.md](merchandise-breadth.md)). Slice 6.2 tender breadth implemented ([tender-breadth.md](tender-breadth.md)). Slice 6.3 transaction history implemented ([transaction-history.md](transaction-history.md)). Slice 6.4 controlled actions implemented ([controlled-actions.md](controlled-actions.md)). Slice 6.5A directional Core implemented; slice 6.5B linked-return operator workflow implemented ([returns.md](returns.md)).
+**Status:** Slice 6.0 contract locked ([mvp-contract.md](mvp-contract.md)). Slice 6.1 merchandise breadth implemented ([merchandise-breadth.md](merchandise-breadth.md)). Slice 6.2 tender breadth implemented ([tender-breadth.md](tender-breadth.md)). Slice 6.3 transaction history implemented ([transaction-history.md](transaction-history.md)). Slice 6.4 controlled actions implemented ([controlled-actions.md](controlled-actions.md)). Slice 6.5A directional Core implemented; slice 6.5B linked-return operator workflow implemented; slice 6.5C unlinked return implemented ([returns.md](returns.md)).
 
 **Authority**
 
@@ -11,7 +11,7 @@
 | [Tender breadth](tender-breadth.md) | Slice 6.2: Cash/Card/Check/Other settlement |
 | [Transaction history](transaction-history.md) | Slice 6.3: completed lookup, detail, reprint |
 | [Controlled actions](controlled-actions.md) | Slice 6.4: price override, line discount, Tax Class override |
-| [Returns](returns.md) | Slice 6.5: linked/unlinked returns, refunds, mixed sale+return (6.5A/B implemented; 6.5C next) |
+| [Returns](returns.md) | Slice 6.5: linked/unlinked returns, refunds, mixed sale+return (6.5A/B/C implemented; 6.5D next) |
 | [Phase 4 plan](../phase4-point-of-sale/phase4-plan.md) | Completion, receipt allocation, inventory posting |
 | [CompletedPosOperation v1](../phase4-point-of-sale/completed-pos-operation-v1.md) | Commercial base; v2 is additive |
 | [POS tax contract](../phase4-point-of-sale/pos-tax-contract.md) | Tax Class / Store Tax; linked-return reversal ([§10](../phase4-point-of-sale/pos-tax-contract.md)) |
@@ -112,7 +112,7 @@ Write the detailed implementation contract for slices 6.6–6.7 immediately befo
 | **6.2** | Tender breadth | Card, Check, admin-created Other, mixed tender | **Implemented.** All-Cash sale remains Phase 5-equivalent; Session/Z shows Card/Check/Other |
 | **6.3** | Transaction history | Lookup, detail, receipt reprint | **Implemented.** Sale workspace does not depend on history |
 | **6.4** | Controlled pricing/actions | Approval framework, price override, line discount, Tax Class override | **Implemented.** Ordinary path stays `direct` unless policy requires a second actor |
-| **6.5** | Returns | Linked, unlinked, price adjustment, mixed sale/return | **6.5A/B implemented** ([returns.md](returns.md)). 6.5C unlinked is next. Sale-only baskets still complete the same way; Session/Z is direction-aware |
+| **6.5** | Returns | Linked, unlinked, price adjustment, mixed sale/return | **6.5A/B/C implemented** ([returns.md](returns.md)). 6.5D mixed/closeout hardening is next. Sale-only baskets still complete the same way; Session/Z is direction-aware |
 | **6.6** | Post-void | Controlled whole-transaction correction | Entry is from history; sale path untouched |
 | **6.7** | MVP closeout | Receipts, Z/tender reporting polish, audit/history UX, regression | Additive snapshots; already-finalized periods stay immutable |
 
@@ -183,7 +183,7 @@ Perform/approve permission keys arrive in this slice. Z finalize stays on `pos.t
 
 ### 6.5 — Returns and exchanges
 
-**6.5A/B implemented. 6.5C next.** Authority: [returns.md](returns.md).
+**6.5A/B/C implemented. 6.5D next.** Authority: [returns.md](returns.md).
 
 No Exchange entity. Returns are new facts; refunds are settlement. Directional Core keeps sale-side `subtotal_cents` / `discount_cents` / `tax_cents` and adds `return_*` plus persisted `signed_net_cents`. `total_cents = abs(signed_net_cents)`.
 
@@ -195,7 +195,7 @@ MVP linked-return eligibility is limited to authoritative original-line linkage,
 - **Refunds:** tender settlement, not return valuation. External Card refund is cashier-confirmed outside ShelfSense. Expected Cash becomes `float + Cash payments − Cash refunds` and **may be negative** (not a physical drawer cap).
 - **Session/Z:** this slice must make commercial and Cash calculations direction-aware in the same change that first completes a return. `SUM(transaction.total_cents)` must not treat refund magnitude as sales. 6.7 may reorganize snapshot columns; it does not fix a knowingly wrong Z.
 
-Working/cancelled returns do not consume eligibility. Concurrency must prevent two Registers from both returning the final eligible quantity. Delivery: 6.5A Core and 6.5B operator workflow are implemented; 6.5C unlinked is next; 6.5D remains as specified in [returns.md](returns.md) §32.
+Working/cancelled returns do not consume eligibility. Concurrency must prevent two Registers from both returning the final eligible quantity. Delivery: 6.5A Core, 6.5B operator workflow, and 6.5C unlinked return are implemented; 6.5D remains as specified in [returns.md](returns.md) §32.
 
 ### 6.6 — Post-void
 
@@ -285,7 +285,7 @@ Fractional quantities
 3. Lock 6.2 tender contract → implement settlement redesign (Cash equivalence gate; Session/Z tender totals)
 4. Lock 6.3 history contract → lookup / detail / reprint
 5. Lock 6.4 controlled-action contract → framework, then override / discount / Tax Class
-6. 6.5A linked Core and 6.5B operator workflow implemented ([returns.md](returns.md)) → 6.5C unlinked return, then 6.5D mixed/unlinked closeout hardening
+6. 6.5A linked Core, 6.5B operator workflow, and 6.5C unlinked return implemented ([returns.md](returns.md)) → 6.5D mixed/unlinked closeout hardening
 7. Lock 6.6 post-void contract → compensating whole-transaction fact
 8. Lock 6.7 closeout contract → receipt/Z/audit/keyboard regression (polish, not first truthful reporting)
 ```
