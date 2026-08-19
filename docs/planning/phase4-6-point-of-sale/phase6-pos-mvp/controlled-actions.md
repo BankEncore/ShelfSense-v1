@@ -77,7 +77,7 @@ pos.tax_class_override.perform
 pos.tax_class_override.approve
 ```
 
-`scope_type: either`. Do **not** seed `unlinked_return` / `return_price_adjustment` / `post_void` in 6.4 (identifiers remain reserved in [mvp-contract.md](mvp-contract.md) §11). 6.5 seeds only `unlinked_return`; `return_price_adjustment` stays reserved. 6.4 completion integrity stays **sale-direction**; those three actions are prohibited on return lines ([returns.md](returns.md) §16 / §19).
+`scope_type: either`. Do **not** seed `unlinked_return` / `return_price_adjustment` / `post_void` in 6.4 (identifiers remain reserved in [mvp-contract.md](mvp-contract.md) §11). 6.5C seeds only `unlinked_return`; `return_price_adjustment` stays reserved. 6.4 completion integrity stays **sale-direction**; those three actions are prohibited on return lines ([returns.md](returns.md) §16 / §19).
 
 | Role | Perform | Approve |
 |---|---|---|

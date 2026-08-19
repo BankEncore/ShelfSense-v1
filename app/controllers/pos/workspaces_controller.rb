@@ -77,9 +77,9 @@ module Pos
         line = find_line!
         @selected_line = Pos::ExecuteControlledAction.call(
           transaction: @transaction,
-          line: line,
           actor: current_user,
           expected_lock_version: expected_lock_version,
+          line: line,
           action_type: params.require(:action_type),
           operation: params.require(:operation),
           reason_code: params[:reason_code],
@@ -87,6 +87,51 @@ module Pos
           **controlled_action_commercial_attrs,
           approver_username: params[:approver_username],
           approver_password: params[:approver_password]
+        )
+        @transaction.reload
+        @ui_mode = "sale_entry"
+        respond_workspace
+      end
+    end
+
+    def unlinked_return_lookup
+      Pos::Support.authorize!(current_user, current_store)
+      result = Pos::ResolveUnlinkedReturnMerchandise.call(
+        identifier: params.require(:identifier),
+        store: current_store
+      )
+      render json: {
+        description: result.description,
+        tracking: result.tracking,
+        quantity_fixed: result.quantity_fixed,
+        reference_unit_price_cents: result.reference_unit_price_cents,
+        product_variant_id: result.variant.id,
+        inventory_unit_id: result.inventory_unit&.id,
+        tax_class_id: result.tax_class.id
+      }
+    rescue Pos::Denied
+      render json: { error: "You are not authorized to perform that action." }, status: :forbidden
+    rescue Identifiers::NormalizationError, Pos::Error => e
+      render json: { error: e.message }, status: :unprocessable_entity
+    end
+
+    def unlinked_return
+      rescue_workspace(error_mode: "sale_entry") do
+        @selected_line = Pos::ExecuteUnlinkedReturn.call(
+          transaction: @transaction,
+          actor: current_user,
+          expected_lock_version: expected_lock_version,
+          identifier: params.require(:identifier),
+          quantity: params[:quantity].presence || 1,
+          reason_code: params.require(:reason_code),
+          reason_note: params[:reason_note],
+          requested_return_unit_price_cents: parse_optional_cents(params.require(:return_price)),
+          approver_username: params[:approver_username],
+          approver_password: params[:approver_password],
+          expected_product_variant_id: params[:expected_product_variant_id],
+          expected_inventory_unit_id: params[:expected_inventory_unit_id],
+          expected_reference_unit_price_cents: params[:expected_reference_unit_price_cents],
+          expected_tax_class_id: params[:expected_tax_class_id]
         )
         @transaction.reload
         @ui_mode = "sale_entry"
@@ -281,7 +326,8 @@ module Pos
       @control_policies = {
         "price_override" => Pos::ControlledActionPolicy.result(user: current_user, store: current_store, action_type: "price_override").to_s,
         "line_discount" => Pos::ControlledActionPolicy.result(user: current_user, store: current_store, action_type: "line_discount").to_s,
-        "tax_class_override" => Pos::ControlledActionPolicy.result(user: current_user, store: current_store, action_type: "tax_class_override").to_s
+        "tax_class_override" => Pos::ControlledActionPolicy.result(user: current_user, store: current_store, action_type: "tax_class_override").to_s,
+        "unlinked_return" => Pos::ControlledActionPolicy.result(user: current_user, store: current_store, action_type: "unlinked_return").to_s
       }
       @feedback ||= nil
       @command_value ||= nil

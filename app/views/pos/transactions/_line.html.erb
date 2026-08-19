@@ -30,12 +30,18 @@
     <% if line.tax_class_name_snapshot.present? %>
       <div><dt>Applied Tax Class</dt><dd><%= line.tax_class_name_snapshot %></dd></div>
     <% end %>
-    <% if line.return? %>
+      <% if line.return? %>
       <div><dt>Return reason</dt><dd><%= line.return_reason_name_snapshot %></dd></div>
       <% if line.return_reason_note.present? %>
         <div><dt>Note</dt><dd><%= line.return_reason_note %></dd></div>
       <% end %>
-      <% if line.original_transaction_line&.pos_transaction %>
+      <% if line.unlinked_return? %>
+        <div><dt>Linkage</dt><dd>Unlinked return</dd></div>
+        <% if pos_unlinked_return_price_adjusted?(line) %>
+          <div><dt>Reference</dt><dd><%= format_money_cents(line.reference_unit_price_cents) %></dd></div>
+          <div><dt>Return price</dt><dd><%= format_money_cents(line.selling_unit_price_cents) %></dd></div>
+        <% end %>
+      <% elsif line.original_transaction_line&.pos_transaction %>
         <div>
           <dt>Original receipt</dt>
           <dd><%= link_to line.original_transaction_line.pos_transaction.transaction_reference, pos_transaction_path(line.original_transaction_line.pos_transaction) %></dd>
@@ -69,7 +75,7 @@
       </ul>
     <% end %>
   <% end %>
-  <% if line.sale? %>
+  <% if line.sale? || line.unlinked_return? %>
     <% line.pos_controlled_actions.each do |action| %>
       <section class="pos-history__control" aria-label="<%= action.action_type.tr('_', ' ') %>">
         <h3><%= action.action_type.tr("_", " ") %></h3>

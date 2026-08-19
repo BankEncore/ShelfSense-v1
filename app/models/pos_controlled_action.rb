@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class PosControlledAction < ApplicationRecord
-  ACTION_TYPES = %w[price_override line_discount tax_class_override].freeze
+  ACTION_TYPES = %w[price_override line_discount tax_class_override unlinked_return].freeze
   POLICY_RESULTS = %w[direct approval_required].freeze
   POLICY_VERSION = "phase6_permission_tier_v1"
   FINGERPRINT_SCHEMA_VERSION = "v1"

@@ -554,6 +554,8 @@ input[type="submit"]:hover {
 
 .pos-overlay__panel--control {
   max-width: 32rem;
+  max-height: min(90vh, 44rem);
+  overflow-y: auto;
   display: grid;
   gap: var(--space-3);
 }

@@ -56,6 +56,7 @@ module Pos
       verify_tenders!
       verify_controlled_actions!
       verify_line_pricing_keys!
+      verify_unlinked_return_facts!
     end
 
     private
@@ -218,6 +219,60 @@ module Pos
           raise Pos::Error, "completed envelope is missing discount basis_points" unless discount["basis_points"].is_a?(Integer)
           raise Pos::Error, "completed envelope is missing discount_cents" unless discount["discount_cents"].is_a?(Integer)
           raise Pos::Error, "completed envelope is missing net_merchandise_amount_cents" unless discount["net_merchandise_amount_cents"].is_a?(Integer)
+        end
+        verify_return_price_adjustment_shape!(line)
+      end
+    end
+
+    def verify_return_price_adjustment_shape!(line)
+      adjustment = line["return_price_adjustment"]
+      sale = line["direction"] != "return"
+      linked = line["direction"] == "return" && line["original_transaction_line_id"].present?
+      if sale || linked
+        raise Pos::Error, "completed envelope cannot include return_price_adjustment" if line.key?("return_price_adjustment")
+        return
+      end
+      return unless line["direction"] == "return"
+
+      reference = line["reference_unit_price_cents"]
+      selling = line["selling_unit_price_cents"]
+      return unless reference.is_a?(Integer) && selling.is_a?(Integer)
+
+      if selling == reference
+        raise Pos::Error, "completed envelope cannot include return_price_adjustment" if line.key?("return_price_adjustment")
+        return
+      end
+
+      raise Pos::Error, "completed envelope is missing return_price_adjustment" unless adjustment.is_a?(Hash)
+      %w[reference_unit_price_cents resulting_unit_price_cents unit_variance_cents line_variance_cents].each do |key|
+        raise Pos::Error, "completed envelope is missing #{key}" unless adjustment[key].is_a?(Integer)
+      end
+      unit_variance = selling - reference
+      unless adjustment["reference_unit_price_cents"] == reference &&
+             adjustment["resulting_unit_price_cents"] == selling &&
+             adjustment["unit_variance_cents"] == unit_variance &&
+             adjustment["line_variance_cents"] == unit_variance * line["quantity"].to_i
+        raise Pos::Error, "completed envelope return_price_adjustment is invalid"
+      end
+    end
+
+    def verify_unlinked_return_facts!
+      lines = @envelope["lines"]
+      return unless lines.is_a?(Array)
+
+      actions = @envelope["controlled_actions"]
+      actions = [] unless actions.is_a?(Array)
+      unlinked_actions = actions.select { |action| action.is_a?(Hash) && action["action"] == "unlinked_return" }
+
+      lines.each do |line|
+        next unless line.is_a?(Hash)
+
+        line_id = line["line_id"].to_s
+        matching = unlinked_actions.select { |action| action.dig("subject", "line_id").to_s == line_id }
+        if line["direction"] == "return" && line["original_transaction_line_id"].blank?
+          raise Pos::Error, "completed envelope is missing unlinked_return action" unless matching.one?
+        else
+          raise Pos::Error, "completed envelope cannot include unlinked_return action" if matching.any?
         end
       end
     end

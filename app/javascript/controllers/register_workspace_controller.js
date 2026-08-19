@@ -8,6 +8,8 @@ export default class extends Controller {
     "chrome",
     "overlay",
     "controlOverlay",
+    "unlinkedOverlay",
+    "unlinkedForm",
     "completeForm",
     "tenderForm",
     "removeTenderForm",
@@ -54,6 +56,34 @@ export default class extends Controller {
     "controlCancel",
     "controlApply",
     "controlRemove",
+    "unlinkedButton",
+    "unlinkedIdentifierField",
+    "unlinkedIdentifierInput",
+    "unlinkedQuantityInput",
+    "unlinkedReasonInput",
+    "unlinkedNoteInput",
+    "unlinkedPriceInput",
+    "unlinkedExpectedVariantInput",
+    "unlinkedExpectedUnitInput",
+    "unlinkedExpectedReferenceInput",
+    "unlinkedExpectedTaxInput",
+    "unlinkedApproverUserInput",
+    "unlinkedApproverPasswordInput",
+    "unlinkedFeedback",
+    "unlinkedPreview",
+    "unlinkedDescription",
+    "unlinkedReferenceLabel",
+    "unlinkedQuantityWrap",
+    "unlinkedQuantityField",
+    "unlinkedReasonField",
+    "unlinkedNoteWrap",
+    "unlinkedNoteField",
+    "unlinkedPriceField",
+    "unlinkedApproverWrap",
+    "unlinkedApproverUsername",
+    "unlinkedApproverPassword",
+    "unlinkedCancel",
+    "unlinkedApply",
     "dontCancel",
     "confirmCancel",
     "retry",
@@ -76,6 +106,8 @@ export default class extends Controller {
     tenderTypes: Array,
     policies: Object,
     reasons: Object,
+    returnReasons: Array,
+    unlinkedLookupUrl: String,
     settlement: String,
     refundRemaining: Number
   }
@@ -86,6 +118,11 @@ export default class extends Controller {
     if (this.hasControlReasonFieldTarget) {
       this.controlReasonFieldTarget.addEventListener("change", () => {
         this.toggleHidden(this.hasControlNoteWrapTarget && this.controlNoteWrapTarget, this.controlReasonFieldTarget.value !== "other")
+      })
+    }
+    if (this.hasUnlinkedReasonFieldTarget) {
+      this.unlinkedReasonFieldTarget.addEventListener("change", () => {
+        this.toggleHidden(this.hasUnlinkedNoteWrapTarget && this.unlinkedNoteWrapTarget, this.unlinkedReasonFieldTarget.value !== "other")
       })
     }
     if (this.autoCompleteValue) {
@@ -104,6 +141,11 @@ export default class extends Controller {
     const functionKey = this.functionKey(event)
     const key = functionKey || event.key
     if (this.claimedFunctionKey(functionKey)) this.claimFunctionKey(event)
+
+    if (this.unlinkedOverlayOpen()) {
+      this.onUnlinkedOverlayKeydown(event, key)
+      return
+    }
 
     if (this.controlOverlayOpen()) {
       this.onControlOverlayKeydown(event, key)
@@ -222,6 +264,41 @@ export default class extends Controller {
     if (this.hasApproverPasswordTarget && target === this.approverPasswordTarget) {
       event.preventDefault()
       if (this.approverPasswordTarget.value.trim() !== "") this.submitControlApply()
+      return
+    }
+    if (this.isActionableControl(target)) return
+    event.preventDefault()
+  }
+
+  onUnlinkedOverlayKeydown(event, key = this.functionKey(event) || event.key) {
+    if (key === "Tab") {
+      this.trapUnlinkedOverlayTab(event)
+      return
+    }
+    if (key === "Escape") {
+      event.preventDefault()
+      this.closeUnlinkedOverlay()
+      return
+    }
+    if (key === "F9") {
+      event.preventDefault()
+      return
+    }
+    if (key !== "Enter") return
+
+    const target = event.target
+    if (this.hasUnlinkedIdentifierFieldTarget && target === this.unlinkedIdentifierFieldTarget) {
+      event.preventDefault()
+      this.resolveUnlinkedIdentifier()
+      return
+    }
+    if (this.hasUnlinkedApproverUsernameTarget && target === this.unlinkedApproverUsernameTarget) {
+      event.preventDefault()
+      return
+    }
+    if (this.hasUnlinkedApproverPasswordTarget && target === this.unlinkedApproverPasswordTarget) {
+      event.preventDefault()
+      if (this.unlinkedApproverPasswordTarget.value.trim() !== "") this.submitUnlinkedReturn()
       return
     }
     if (this.isActionableControl(target)) return
@@ -490,6 +567,179 @@ export default class extends Controller {
     this.restoreFocus()
   }
 
+  openUnlinkedOverlay() {
+    if (this.inFlight) return
+    if (this.modeValue !== "sale_entry") return
+    if (this.policyFor("unlinked_return") === "prohibited") return
+    if (!this.hasUnlinkedOverlayTarget) return
+
+    this.resetUnlinkedOverlay()
+    this.populateUnlinkedReasons()
+    const needsApprover = this.policyFor("unlinked_return") === "approval_required"
+    this.toggleHidden(this.hasUnlinkedApproverWrapTarget && this.unlinkedApproverWrapTarget, !needsApprover)
+    this.unlinkedOverlayTarget.hidden = false
+    if (this.hasChromeTarget) this.chromeTarget.inert = true
+    if (this.hasUnlinkedIdentifierFieldTarget) this.unlinkedIdentifierFieldTarget.focus()
+  }
+
+  closeUnlinkedOverlay() {
+    if (!this.hasUnlinkedOverlayTarget) return
+    this.unlinkedOverlayTarget.hidden = true
+    if (this.hasChromeTarget) this.chromeTarget.inert = false
+    this.restoreFocus()
+  }
+
+  resetUnlinkedOverlay() {
+    this.unlinkedPreviewPayload = null
+    if (this.hasUnlinkedFeedbackTarget) this.unlinkedFeedbackTarget.textContent = ""
+    if (this.hasUnlinkedIdentifierFieldTarget) this.unlinkedIdentifierFieldTarget.value = ""
+    this.toggleHidden(this.hasUnlinkedPreviewTarget && this.unlinkedPreviewTarget, true)
+    if (this.hasUnlinkedApplyTarget) this.unlinkedApplyTarget.hidden = true
+    if (this.hasUnlinkedNoteFieldTarget) this.unlinkedNoteFieldTarget.value = ""
+    this.toggleHidden(this.hasUnlinkedNoteWrapTarget && this.unlinkedNoteWrapTarget, true)
+    if (this.hasUnlinkedApproverUsernameTarget) this.unlinkedApproverUsernameTarget.value = ""
+    if (this.hasUnlinkedApproverPasswordTarget) this.unlinkedApproverPasswordTarget.value = ""
+  }
+
+  populateUnlinkedReasons() {
+    if (!this.hasUnlinkedReasonFieldTarget) return
+    const entries = this.returnReasonsValue || []
+    this.unlinkedReasonFieldTarget.innerHTML = ""
+    entries.forEach((entry) => {
+      const option = document.createElement("option")
+      option.value = entry.code
+      option.textContent = entry.name
+      this.unlinkedReasonFieldTarget.appendChild(option)
+    })
+  }
+
+  async resolveUnlinkedIdentifier() {
+    if (this.inFlight || !this.hasUnlinkedIdentifierFieldTarget) return
+    const identifier = this.unlinkedIdentifierFieldTarget.value.trim()
+    if (identifier === "") return
+    const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute("content")
+    try {
+      const response = await fetch(this.unlinkedLookupUrlValue, {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+          "X-CSRF-Token": token || ""
+        },
+        body: new URLSearchParams({ identifier }).toString()
+      })
+      const payload = await response.json()
+      if (!response.ok) {
+        this.showUnlinkedFeedback(payload.error || "merchandise not found")
+        this.toggleHidden(this.hasUnlinkedPreviewTarget && this.unlinkedPreviewTarget, true)
+        if (this.hasUnlinkedApplyTarget) this.unlinkedApplyTarget.hidden = true
+        return
+      }
+      this.applyUnlinkedPreview(payload)
+    } catch (_error) {
+      this.showUnlinkedFeedback("merchandise not found")
+    }
+  }
+
+  applyUnlinkedPreview(payload) {
+    this.unlinkedPreviewPayload = payload
+    if (this.hasUnlinkedFeedbackTarget) this.unlinkedFeedbackTarget.textContent = ""
+    this.toggleHidden(this.hasUnlinkedPreviewTarget && this.unlinkedPreviewTarget, false)
+    if (this.hasUnlinkedDescriptionTarget) this.unlinkedDescriptionTarget.textContent = payload.description || ""
+    if (this.hasUnlinkedReferenceLabelTarget) {
+      this.unlinkedReferenceLabelTarget.textContent = this.formatCents(payload.reference_unit_price_cents)
+    }
+    if (this.hasUnlinkedPriceFieldTarget) {
+      this.unlinkedPriceFieldTarget.value = this.formatCents(payload.reference_unit_price_cents)
+    }
+    const fixed = Boolean(payload.quantity_fixed)
+    this.toggleHidden(this.hasUnlinkedQuantityWrapTarget && this.unlinkedQuantityWrapTarget, fixed)
+    if (this.hasUnlinkedQuantityFieldTarget) {
+      this.unlinkedQuantityFieldTarget.value = "1"
+      this.unlinkedQuantityFieldTarget.disabled = fixed
+    }
+    if (this.hasUnlinkedApplyTarget) this.unlinkedApplyTarget.hidden = false
+    if (this.hasUnlinkedQuantityFieldTarget && !fixed) {
+      this.unlinkedQuantityFieldTarget.focus()
+    } else if (this.hasUnlinkedReasonFieldTarget) {
+      this.unlinkedReasonFieldTarget.focus()
+    }
+  }
+
+  showUnlinkedFeedback(message) {
+    if (this.hasUnlinkedFeedbackTarget) this.unlinkedFeedbackTarget.textContent = message
+  }
+
+  submitUnlinkedReturn() {
+    if (this.inFlight || !this.hasUnlinkedFormTarget) return
+    if (!this.unlinkedPreviewPayload) return
+    if (this.hasUnlinkedIdentifierInputTarget) {
+      this.unlinkedIdentifierInputTarget.value = this.hasUnlinkedIdentifierFieldTarget
+        ? this.unlinkedIdentifierFieldTarget.value.trim()
+        : ""
+    }
+    if (this.hasUnlinkedQuantityInputTarget) {
+      this.unlinkedQuantityInputTarget.value = this.unlinkedPreviewPayload.quantity_fixed
+        ? "1"
+        : (this.hasUnlinkedQuantityFieldTarget ? this.unlinkedQuantityFieldTarget.value.trim() : "1")
+    }
+    if (this.hasUnlinkedReasonInputTarget) {
+      this.unlinkedReasonInputTarget.value = this.hasUnlinkedReasonFieldTarget ? this.unlinkedReasonFieldTarget.value : ""
+    }
+    if (this.hasUnlinkedNoteInputTarget) {
+      this.unlinkedNoteInputTarget.value = this.hasUnlinkedNoteFieldTarget ? this.unlinkedNoteFieldTarget.value.trim() : ""
+    }
+    if (this.hasUnlinkedPriceInputTarget) {
+      this.unlinkedPriceInputTarget.value = this.hasUnlinkedPriceFieldTarget ? this.unlinkedPriceFieldTarget.value.trim() : ""
+    }
+    if (this.hasUnlinkedExpectedVariantInputTarget) {
+      this.unlinkedExpectedVariantInputTarget.value = this.unlinkedPreviewPayload.product_variant_id || ""
+    }
+    if (this.hasUnlinkedExpectedUnitInputTarget) {
+      this.unlinkedExpectedUnitInputTarget.value = this.unlinkedPreviewPayload.inventory_unit_id || ""
+    }
+    if (this.hasUnlinkedExpectedReferenceInputTarget) {
+      this.unlinkedExpectedReferenceInputTarget.value = this.unlinkedPreviewPayload.reference_unit_price_cents ?? ""
+    }
+    if (this.hasUnlinkedExpectedTaxInputTarget) {
+      this.unlinkedExpectedTaxInputTarget.value = this.unlinkedPreviewPayload.tax_class_id || ""
+    }
+    if (this.hasUnlinkedApproverUserInputTarget) {
+      this.unlinkedApproverUserInputTarget.value = this.hasUnlinkedApproverUsernameTarget
+        ? this.unlinkedApproverUsernameTarget.value.trim()
+        : ""
+    }
+    if (this.hasUnlinkedApproverPasswordInputTarget) {
+      this.unlinkedApproverPasswordInputTarget.value = this.hasUnlinkedApproverPasswordTarget
+        ? this.unlinkedApproverPasswordTarget.value
+        : ""
+    }
+    this.beginFlight()
+    this.unlinkedFormTarget.requestSubmit()
+  }
+
+  trapUnlinkedOverlayTab(event) {
+    const controls = this.unlinkedOverlayControls()
+    if (controls.length === 0) return
+    event.preventDefault()
+    const current = controls.indexOf(document.activeElement)
+    let next = current
+    if (event.shiftKey) {
+      next = current <= 0 ? controls.length - 1 : current - 1
+    } else {
+      next = current === controls.length - 1 || current < 0 ? 0 : current + 1
+    }
+    controls[next].focus()
+  }
+
+  unlinkedOverlayControls() {
+    if (!this.hasUnlinkedOverlayTarget) return []
+    return Array.from(this.unlinkedOverlayTarget.querySelectorAll("input, select, button")).filter((el) => {
+      if (el.disabled || el.hidden) return false
+      return !el.closest("[hidden]")
+    })
+  }
+
   submitControlApply() {
     if (this.inFlight || !this.hasControlFormTarget) return
     this.fillControlForm("apply")
@@ -557,7 +807,7 @@ export default class extends Controller {
   }
 
   overlayOpen() {
-    return this.cancelOverlayOpen() || this.controlOverlayOpen()
+    return this.cancelOverlayOpen() || this.controlOverlayOpen() || this.unlinkedOverlayOpen()
   }
 
   cancelOverlayOpen() {
@@ -566,6 +816,10 @@ export default class extends Controller {
 
   controlOverlayOpen() {
     return this.hasControlOverlayTarget && !this.controlOverlayTarget.hidden
+  }
+
+  unlinkedOverlayOpen() {
+    return this.hasUnlinkedOverlayTarget && !this.unlinkedOverlayTarget.hidden
   }
 
   selectedRow() {
@@ -594,7 +848,7 @@ export default class extends Controller {
   }
 
   disableMutationControls() {
-    ["quantityButton", "overrideButton", "discountButton", "taxClassButton", "tenderButton", "removeButton", "cancelButton", "retry", "abandonButton"].forEach((name) => {
+    ["unlinkedButton", "quantityButton", "overrideButton", "discountButton", "taxClassButton", "tenderButton", "removeButton", "cancelButton", "retry", "abandonButton"].forEach((name) => {
       this.setActionEnabled(name, false)
     })
   }
@@ -605,6 +859,7 @@ export default class extends Controller {
       const hasLines = Boolean(this.element.querySelector(".pos-lines tbody tr"))
       const returnLine = this.selectedReturnLine()
       const quantityOk = hasSelection && !this.selectedUnitLine() && !this.selectedQuantityBlocked()
+      this.setActionEnabled("unlinkedButton", this.policyFor("unlinked_return") !== "prohibited")
       this.setActionEnabled("quantityButton", quantityOk)
       this.setActionEnabled("overrideButton", hasSelection && !returnLine && this.policyFor("price_override") !== "prohibited")
       this.setActionEnabled("discountButton", hasSelection && !returnLine && this.policyFor("line_discount") !== "prohibited")

@@ -67,6 +67,8 @@
      data-register-workspace-refund-remaining-value="<%= remaining_refund_cents %>"
      data-register-workspace-policies-value="<%= h((@control_policies || {}).to_json) %>"
      data-register-workspace-reasons-value="<%= h(Pos::ControlledActionReasons::CATALOGS.to_json) %>"
+     data-register-workspace-return-reasons-value="<%= h(Pos::ReturnReasons::ENTRIES.to_json) %>"
+     data-register-workspace-unlinked-lookup-url-value="<%= pos_register_unlinked_return_lookup_path %>"
      data-action="turbo:submit-end->register-workspace#onSubmitEnd">
   <div data-register-workspace-target="chrome">
     <header class="pos-header">
@@ -125,6 +127,19 @@
                         <%= original ? " · " : "" %><%= line.return_reason_name_snapshot %>
                       <% end %>
                     </div>
+                  <% elsif line.unlinked_return? %>
+                    <div class="muted">
+                      Unlinked return
+                      <% if line.return_reason_name_snapshot.present? %>
+                        · <%= line.return_reason_name_snapshot %>
+                      <% end %>
+                    </div>
+                    <% if pos_unlinked_return_price_adjusted?(line) %>
+                      <div class="muted">
+                        Reference <%= format_money_cents(line.reference_unit_price_cents) %>
+                        · Return <%= format_money_cents(line.selling_unit_price_cents) %>
+                      </div>
+                    <% end %>
                   <% end %>
                 </td>
                 <td class="numeric"><%= format_money_cents(line.selling_unit_price_cents) %></td>
@@ -207,6 +222,7 @@
               form: { data: { turbo: true } },
               data: { register_workspace_target: "abandonButton" } %>
       <% else %>
+        <button type="button" class="btn btn--secondary" data-action="register-workspace#openUnlinkedOverlay" data-register-workspace-target="unlinkedButton" disabled>Return without receipt</button>
         <button type="button" class="btn btn--secondary" data-action="register-workspace#enterQuantity" data-register-workspace-target="quantityButton" disabled>Quantity (*)</button>
         <button type="button" class="btn btn--secondary" data-action="register-workspace#openPriceOverride" data-register-workspace-target="overrideButton" disabled>Price override (F5)</button>
         <button type="button" class="btn btn--secondary" data-action="register-workspace#openLineDiscount" data-register-workspace-target="discountButton" disabled>Discount (F6)</button>
@@ -287,6 +303,21 @@
       <%= hidden_field_tag :approver_password, "", data: { register_workspace_target: "controlApproverPasswordInput" } %>
     <% end %>
 
+    <%= form_with url: pos_register_unlinked_return_path, method: :post, html: { class: "pos-hidden", data: { register_workspace_target: "unlinkedForm", turbo: true } } do %>
+      <%= hidden_field_tag :lock_version, @transaction.lock_version %>
+      <%= hidden_field_tag :identifier, "", data: { register_workspace_target: "unlinkedIdentifierInput" } %>
+      <%= hidden_field_tag :quantity, "", data: { register_workspace_target: "unlinkedQuantityInput" } %>
+      <%= hidden_field_tag :reason_code, "", data: { register_workspace_target: "unlinkedReasonInput" } %>
+      <%= hidden_field_tag :reason_note, "", data: { register_workspace_target: "unlinkedNoteInput" } %>
+      <%= hidden_field_tag :return_price, "", data: { register_workspace_target: "unlinkedPriceInput" } %>
+      <%= hidden_field_tag :expected_product_variant_id, "", data: { register_workspace_target: "unlinkedExpectedVariantInput" } %>
+      <%= hidden_field_tag :expected_inventory_unit_id, "", data: { register_workspace_target: "unlinkedExpectedUnitInput" } %>
+      <%= hidden_field_tag :expected_reference_unit_price_cents, "", data: { register_workspace_target: "unlinkedExpectedReferenceInput" } %>
+      <%= hidden_field_tag :expected_tax_class_id, "", data: { register_workspace_target: "unlinkedExpectedTaxInput" } %>
+      <%= hidden_field_tag :approver_username, "", data: { register_workspace_target: "unlinkedApproverUserInput" } %>
+      <%= hidden_field_tag :approver_password, "", data: { register_workspace_target: "unlinkedApproverPasswordInput" } %>
+    <% end %>
+
     <%= form_with url: pos_register_cancel_path, method: :post, html: { class: "pos-hidden", data: { register_workspace_target: "cancelForm", turbo: true } } do %>
       <%= hidden_field_tag :lock_version, @transaction.lock_version %>
     <% end %>
@@ -356,6 +387,55 @@
         <button type="button" class="btn btn--secondary" data-action="register-workspace#closeControlOverlay" data-register-workspace-target="controlCancel">Don't apply (Esc)</button>
         <button type="button" class="btn" data-action="register-workspace#submitControlApply" data-register-workspace-target="controlApply">Apply</button>
         <button type="button" class="btn btn--secondary" data-action="register-workspace#submitControlRemove" data-register-workspace-target="controlRemove" hidden>Remove</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="pos-overlay"
+       id="pos_unlinked_overlay"
+       hidden
+       data-register-workspace-target="unlinkedOverlay"
+       role="dialog"
+       aria-modal="true"
+       aria-labelledby="pos-unlinked-title">
+    <div class="pos-overlay__panel pos-overlay__panel--control">
+      <h2 id="pos-unlinked-title">Return without receipt</h2>
+      <p data-register-workspace-target="unlinkedFeedback" role="status"></p>
+
+      <label for="pos-unlinked-identifier">Scan or identifier</label>
+      <input id="pos-unlinked-identifier" class="pos-command__field" data-register-workspace-target="unlinkedIdentifierField" autocomplete="off">
+
+      <div id="pos_unlinked_preview" data-register-workspace-target="unlinkedPreview" hidden>
+        <p data-register-workspace-target="unlinkedDescription"></p>
+        <p>Current price <span data-register-workspace-target="unlinkedReferenceLabel"></span></p>
+
+        <div data-register-workspace-target="unlinkedQuantityWrap">
+          <label for="pos-unlinked-quantity">Quantity</label>
+          <input id="pos-unlinked-quantity" class="pos-command__field" data-register-workspace-target="unlinkedQuantityField" inputmode="numeric" autocomplete="off" value="1">
+        </div>
+
+        <label for="pos-unlinked-reason">Return reason</label>
+        <select id="pos-unlinked-reason" class="pos-command__field" data-register-workspace-target="unlinkedReasonField"></select>
+
+        <div data-register-workspace-target="unlinkedNoteWrap" hidden>
+          <label for="pos-unlinked-note">Note</label>
+          <input id="pos-unlinked-note" class="pos-command__field" data-register-workspace-target="unlinkedNoteField" maxlength="200" autocomplete="off">
+        </div>
+
+        <label for="pos-unlinked-price">Return unit price</label>
+        <input id="pos-unlinked-price" class="pos-command__field" data-register-workspace-target="unlinkedPriceField" inputmode="decimal" autocomplete="off">
+
+        <div data-register-workspace-target="unlinkedApproverWrap" hidden>
+          <label for="pos-unlinked-approver-username">Approver username</label>
+          <input id="pos-unlinked-approver-username" class="pos-command__field" data-register-workspace-target="unlinkedApproverUsername" autocomplete="off">
+          <label for="pos-unlinked-approver-password">Approver password</label>
+          <input id="pos-unlinked-approver-password" class="pos-command__field" type="password" data-register-workspace-target="unlinkedApproverPassword" autocomplete="off">
+        </div>
+      </div>
+
+      <div class="pos-overlay__actions">
+        <button type="button" class="btn btn--secondary" data-action="register-workspace#closeUnlinkedOverlay" data-register-workspace-target="unlinkedCancel">Don't return (Esc)</button>
+        <button type="button" class="btn" data-action="register-workspace#submitUnlinkedReturn" data-register-workspace-target="unlinkedApply" hidden>Add return</button>
       </div>
     </div>
   </div>

@@ -31,6 +31,22 @@
             <td>Return from <%= line.original_transaction_line.pos_transaction.transaction_reference %></td>
             <td></td>
           </tr>
+        <% elsif line.unlinked_return? %>
+          <tr>
+            <td></td>
+            <td>Unlinked return</td>
+            <td></td>
+          </tr>
+          <% if pos_unlinked_return_price_adjusted?(line) %>
+            <tr>
+              <td></td>
+              <td>
+                Reference <%= format_money_cents(line.reference_unit_price_cents) %>
+                · Return <%= format_money_cents(line.selling_unit_price_cents) %>
+              </td>
+              <td></td>
+            </tr>
+          <% end %>
         <% end %>
         <% if line.manual_discount_cents.to_i.positive? %>
           <tr>

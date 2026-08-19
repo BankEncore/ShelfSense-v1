@@ -89,7 +89,9 @@ module Authorization
       { key: "pos.line_discount.perform", group_key: "pos", name: "Perform line discount", scope_type: "either" },
       { key: "pos.line_discount.approve", group_key: "pos", name: "Approve line discount", scope_type: "either" },
       { key: "pos.tax_class_override.perform", group_key: "pos", name: "Perform Tax Class override", scope_type: "either" },
-      { key: "pos.tax_class_override.approve", group_key: "pos", name: "Approve Tax Class override", scope_type: "either" }
+      { key: "pos.tax_class_override.approve", group_key: "pos", name: "Approve Tax Class override", scope_type: "either" },
+      { key: "pos.unlinked_return.perform", group_key: "pos", name: "Perform unlinked return", scope_type: "either" },
+      { key: "pos.unlinked_return.approve", group_key: "pos", name: "Approve unlinked return", scope_type: "either" }
     ].freeze
 
     PERMISSIONS = (PHASE1_PERMISSIONS + PHASE2_PERMISSIONS + PHASE3_PERMISSIONS + PHASE4_PERMISSIONS).freeze
@@ -124,6 +126,8 @@ module Authorization
       pos.line_discount.approve
       pos.tax_class_override.perform
       pos.tax_class_override.approve
+      pos.unlinked_return.perform
+      pos.unlinked_return.approve
     ].freeze
 
     ROLES = [
@@ -161,6 +165,7 @@ module Authorization
           pos.price_override.perform
           pos.line_discount.perform
           pos.tax_class_override.perform
+          pos.unlinked_return.perform
         ]
       }
     ].freeze

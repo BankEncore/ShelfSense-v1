@@ -23,7 +23,7 @@ module Inventory
 
       validate_request!
       tracking == "individual" ? post_individual! : post_quantity!
-    rescue LedgerPairIntegrity::Error => e
+    rescue LedgerPairIntegrity::Error, ReturnValuation::Error => e
       raise Error, e.message
     end
 
@@ -31,6 +31,10 @@ module Inventory
 
     def tracking
       @tracking ||= @line.product_variant.derived_inventory_tracking
+    end
+
+    def linked?
+      @line.linked_return?
     end
 
     def original_line
@@ -45,8 +49,12 @@ module Inventory
       raise Error, "business_date is required" if @business_date.blank?
       raise Error, "actor is required" if @actor.blank?
       raise Error, "line quantity must be positive" unless @line.quantity.to_i.positive?
-      raise Error, "return line is not linked" unless @line.linked_return?
-      raise Error, "original sale line is required" if original_line.nil?
+      raise Error, "line is not a return" unless @line.return?
+      if linked?
+        raise Error, "original sale line is required" if original_line.nil?
+      elsif original_line.present?
+        raise Error, "unlinked return cannot reference an original sale line"
+      end
       return unless tracking == "individual"
 
       raise Error, "inventory unit is required" if @line.inventory_unit_id.blank?
@@ -57,9 +65,23 @@ module Inventory
       variant = @line.product_variant
       store = @line.pos_transaction.store
       quantity_delta = @line.quantity
-      restored_value = allocated_inventory_value
 
-      balance = Balances.lock_or_create!(store: store, product_variant: variant)
+      if linked?
+        restored_value = allocated_inventory_value
+        @valuation_basis = "linked_original_sale"
+        balance = Balances.lock_or_create!(store: store, product_variant: variant)
+      else
+        balance = Balances.lock_or_create!(store: store, product_variant: variant)
+        valuation = ReturnValuation.call(
+          store: store,
+          variant: variant,
+          quantity: quantity_delta,
+          balance: balance
+        )
+        restored_value = valuation.incoming_value_cents
+        @valuation_basis = valuation.basis
+      end
+
       effects = acquire_quantity(balance, quantity_delta, restored_value)
 
       persist_effects!(
@@ -80,9 +102,22 @@ module Inventory
       raise Error, "unit must be removed" unless unit.removed?
       raise Error, "unit store mismatch" unless unit.store_id == store.id
       raise Error, "unit variant mismatch" unless unit.product_variant_id == variant.id
-      raise Error, "return unit does not match the original sale" unless unit.id == original_line.inventory_unit_id
+      if linked?
+        raise Error, "return unit does not match the original sale" unless unit.id == original_line.inventory_unit_id
+        restored_value = original_sale_value_magnitude
+        @valuation_basis = "linked_original_sale"
+      else
+        valuation = ReturnValuation.call(
+          store: store,
+          variant: variant,
+          quantity: 1,
+          inventory_unit: unit,
+          balance: balance
+        )
+        restored_value = valuation.incoming_value_cents
+        @valuation_basis = valuation.basis
+      end
 
-      restored_value = original_sale_value_magnitude
       quantity_delta = 1
       effects = acquire_specific_identification(balance, restored_value)
 
@@ -159,10 +194,10 @@ module Inventory
           inventory_unit_id: inventory_unit&.id,
           pos_transaction_id: @line.pos_transaction_id,
           pos_transaction_line_id: @line.id,
-          original_transaction_line_id: original_line.id,
+          original_transaction_line_id: original_line&.id,
           quantity_delta: quantity_delta,
           value_delta_cents: effects[:value_delta_cents],
-          linked: true
+          linked: linked?
         }.compact
       )
       Audit::Recorder.record!(
@@ -174,11 +209,11 @@ module Inventory
         subject: @line,
         correlation_id: @correlation_id,
         after_values: {
-          original_transaction_line_id: original_line.id,
+          original_transaction_line_id: original_line&.id,
           quantity: @line.quantity,
           inventory_unit_id: inventory_unit&.id,
           value_restored_cents: effects[:value_delta_cents],
-          valuation_basis: "linked_original_sale"
+          valuation_basis: @valuation_basis
         }.compact
       )
 
@@ -193,11 +228,7 @@ module Inventory
         value_delta_cents: restored_value,
         resulting_on_hand: qty + quantity_delta,
         resulting_value_cents: value + restored_value,
-        metadata: {
-          prior_quantity: qty,
-          prior_value_cents: value,
-          original_transaction_line_id: original_line.id
-        }
+        metadata: quantity_metadata(qty, value)
       }
     end
 
@@ -209,13 +240,18 @@ module Inventory
         value_delta_cents: restored_value,
         resulting_on_hand: qty + 1,
         resulting_value_cents: value + restored_value,
-        metadata: {
-          prior_quantity: qty,
-          prior_value_cents: value,
-          inventory_unit_id: @line.inventory_unit_id,
-          original_transaction_line_id: original_line.id
-        }
+        metadata: quantity_metadata(qty, value).merge(inventory_unit_id: @line.inventory_unit_id)
       }
+    end
+
+    def quantity_metadata(qty, value)
+      metadata = {
+        prior_quantity: qty,
+        prior_value_cents: value
+      }
+      metadata[:original_transaction_line_id] = original_line.id if original_line
+      metadata[:valuation_basis] = @valuation_basis if @valuation_basis
+      metadata
     end
 
     def allocated_inventory_value

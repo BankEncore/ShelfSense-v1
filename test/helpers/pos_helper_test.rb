@@ -78,4 +78,17 @@ class PosHelperTest < ActionView::TestCase
     assert pos_line_controlled?(line)
     assert_equal "Override · Discount · Tax Class", pos_line_control_flags(line)
   end
+
+  test "unlinked return price distinction is not a sale override" do
+    line = PosTransactionLine.new(
+      direction: "return",
+      original_transaction_line_id: nil,
+      reference_unit_price_cents: 1999,
+      selling_unit_price_cents: 1800
+    )
+
+    assert pos_unlinked_return_price_adjusted?(line)
+    refute pos_line_controlled?(line)
+    assert_equal "", pos_line_control_flags(line)
+  end
 end
