@@ -69,6 +69,9 @@ class PosRegisterTest < ActionDispatch::IntegrationTest
     follow_redirect!
     assert_response :success
     assert_match "Transaction complete", response.body
+    assert_match "Sales subtotal", response.body
+    assert_match "Sales tax", response.body
+    assert_match "Sales total", response.body
     assert_match transaction.reload.transaction_reference, response.body
     assert_match "New transaction", response.body
     assert_match "Print receipt", response.body

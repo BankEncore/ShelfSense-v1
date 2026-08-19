@@ -50,13 +50,7 @@
   </table>
 
   <dl class="pos-receipt__print-totals">
-    <% if transaction.pos_transaction_lines.any?(&:sale?) %>
-      <div><dt>Sales total</dt><dd><%= format_money_cents(transaction.sale_total_cents) %></dd></div>
-    <% end %>
-    <% if transaction.return_total_cents.positive? || transaction.pos_transaction_lines.any?(&:return?) %>
-      <div><dt>Returns</dt><dd><%= format_signed_money_cents(-transaction.return_total_cents) %></dd></div>
-    <% end %>
-    <div><dt>Net</dt><dd><%= format_signed_money_cents(transaction.signed_net_cents) %></dd></div>
+    <%= render "pos/receipts/directional_totals", transaction: transaction %>
     <% tenders.each do |tender| %>
       <div><dt><%= pos_tender_label(tender) %></dt><dd><%= format_money_cents(tender.amount_cents) %></dd></div>
       <% if pos_cash_payment?(tender) %>

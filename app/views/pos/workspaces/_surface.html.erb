@@ -12,7 +12,7 @@
   locked = %w[completion_pending completion_failed].include?(@ui_mode)
   leftover = @session_record.reporting_period.business_date != BusinessDate.for_store(current_store)
   refund_mode = settlement_direction == :refund
-  even_exchange = settlement_direction == :none && lines.any?
+  even_exchange = @transaction.even_exchange?
   remaining_cents = refund_mode ? remaining_refund_cents : remaining_payment_cents
   change_cents = tender&.change_cents
   completion_recovery = @ui_mode == "completion_failed"
@@ -171,7 +171,7 @@
       <% elsif @feedback.present? %>
         <%= @feedback %>
         <% if @ui_mode == "completion_failed" %>
-          Tender is kept. Retry does not take Cash again.
+          Tender is kept. Retry does not take it again.
         <% end %>
       <% end %>
     </div>
@@ -300,10 +300,10 @@
        aria-modal="true"
        aria-labelledby="pos-cancel-title">
     <div class="pos-overlay__panel">
-      <h2 id="pos-cancel-title">Cancel this sale?</h2>
-      <p>Lines will not be sold. No receipt. No inventory movement.</p>
+      <h2 id="pos-cancel-title">Cancel this transaction?</h2>
+      <p>Lines will not be sold or returned. No receipt. No inventory movement.</p>
       <button type="button" class="btn btn--secondary" data-action="register-workspace#closeOverlay" data-register-workspace-target="dontCancel">Don't cancel (Esc)</button>
-      <button type="button" class="btn btn--danger" data-action="register-workspace#confirmCancel" data-register-workspace-target="confirmCancel">Cancel sale (F9)</button>
+      <button type="button" class="btn btn--danger" data-action="register-workspace#confirmCancel" data-register-workspace-target="confirmCancel">Cancel transaction (F9)</button>
     </div>
   </div>
 

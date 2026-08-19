@@ -100,6 +100,39 @@ class PosReturnItemsTest < ActionDispatch::IntegrationTest
     assert working.pos_transaction_lines.first.linked_return?
   end
 
+  test "empty selection does not create a working transaction" do
+    sale = complete_cash_sale!
+    line = sale.pos_transaction_lines.first
+    working_before = PosTransaction.working.count
+
+    post pos_transaction_return_items_path(sale), params: selected_item(line, selected: "0")
+    assert_response :unprocessable_entity
+    assert_match "return items are required", response.body
+    assert_equal working_before, PosTransaction.working.count
+  end
+
+  test "invalid return selection does not create a working transaction" do
+    sale = complete_cash_sale!
+    line = sale.pos_transaction_lines.first
+    working_before = PosTransaction.working.count
+
+    post pos_transaction_return_items_path(sale), params: selected_item(line, quantity: 99)
+    assert_response :unprocessable_entity
+    assert_match "return quantity exceeds remaining quantity", response.body
+    assert_equal working_before, PosTransaction.working.count
+  end
+
+  test "submitted original lines must belong to the receipt" do
+    sale = complete_cash_sale!
+    other = complete_cash_sale!
+    working_before = PosTransaction.working.count
+
+    post pos_transaction_return_items_path(sale), params: selected_item(other.pos_transaction_lines.first)
+    assert_response :unprocessable_entity
+    assert_match "original sale line is missing", response.body
+    assert_equal working_before, PosTransaction.working.count
+  end
+
   test "bound open session wins over another open session for the same cashier" do
     sale = complete_cash_sale!
     other_register = Register.create!(store: @store, register_number: 2, name: "Back")

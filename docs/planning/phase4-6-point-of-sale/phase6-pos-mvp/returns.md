@@ -156,7 +156,7 @@ signed_net   = total_cents
 
 `Pos::Support.refresh_totals!` becomes directional aggregation (sale vs return lines). It is a major invariant boundary and requires dedicated golden tests.
 
-Empty basket `total = 0` is still **not** completion-pending. Even exchange requires merchandise lines (sale and/or return) and no tenders.
+Empty basket `total = 0` is still **not** completion-pending. Even exchange is mixed sale + return with `signed_net = 0` and no tenders. Sale-only or return-only zero-net retains prior completion-pending / auto-complete.
 
 ---
 
@@ -685,7 +685,7 @@ signed_net = 0  → no tenders
 
 Never complete with both payment and refund tenders. An exchange is net-settled.
 
-`Pos::Support.exact_settlement?` and remaining-due must use `signed_net` and tender `direction`. Workspace: net > 0 → payment tender; net < 0 → refund tender; net = 0 → stay in `SALE_ENTRY` (no tender; merchandise required). `+` confirms the even exchange and completes. Auto-complete is only for exact payment/refund settlement, not net-zero.
+`Pos::Support.exact_settlement?` and remaining-due must use `signed_net` and tender `direction`. Workspace: net > 0 → payment tender; net < 0 → refund tender; mixed sale+return with net = 0 → stay in `SALE_ENTRY` (no tender) so more sale lines can be added; `+` confirms the even exchange and completes. Sale-only or return-only `signed_net = 0` remains completion-pending with auto-complete. Auto-complete is for exact payment/refund settlement and non-mixed zero-net, not mixed even exchange.
 
 ---
 
@@ -741,7 +741,7 @@ No open POS Session → do **not** create one. Show: `Open a register before pro
 
 If a working transaction already exists on the bound Register Session, add return lines to it. Sale + linked return in the same basket is cashier-operable in 6.5B.
 
-GET history and GET Return items never open a Session, start a transaction, rebind `session[:pos_register_id]`, or reserve quantity. POST is the first allowed side effect (`ResumeOrStartTransaction` then `AddLinkedReturnLines`).
+GET history and GET Return items never open a Session, start a transaction, rebind `session[:pos_register_id]`, or reserve quantity. POST is the first allowed side effect. Resolve the selected items first (nothing selected never touches Core). Then `ResumeOrStartTransaction` and `AddLinkedReturnLines` run in one outer database transaction so a failed add does not leave an empty working transaction. Submitted `original_line_id`s must belong to the receipt in the URL.
 
 ---
 
@@ -762,7 +762,15 @@ RETURN Example Book         -$15.00
 
 Linked: `Return from S001-R01-T000123`. Unlinked, when return price ≠ reference: show reference, authorized return unit price, and variance.
 
-Totals show Sales total, Returns, Net, then payment **or** refund tenders — never a misleading positive `$20 Total` on a return-only receipt without identifying it as a refund.
+Totals keep directional presentation and tax visibility. Omit a direction that has no lines:
+
+```text
+Sales subtotal / Sales discount / Sales tax / Sales total
+Return subtotal / Discount reversal / Tax reversal / Returns total
+Net
+```
+
+Then payment **or** refund tenders — never a misleading positive `$20 Total` on a return-only receipt without identifying it as a refund.
 
 ---
 
@@ -868,7 +876,7 @@ Comprehensive mixed/unlinked/closeout hardening: sale + unlinked; net positive/n
 14. An unlinked return begins at the current resolved reference price and may use an explicitly entered return unit price. A differing return price is preserved as a first-class commercial adjustment but is authorized as part of the single `unlinked_return` controlled action, not as a separate sale price override or discount.
 15. `signed_net > 0` completes with exact payment tenders.
 16. `signed_net < 0` completes with exact refund tenders.
-17. `signed_net = 0` completes with no tender (merchandise lines required) after the cashier confirms with `+`. The workspace does not auto-complete an even exchange.
+17. Mixed sale+return with `signed_net = 0` completes with no tender after the cashier confirms with `+`. Sale-only or return-only zero-net auto-completes with no tender and is not labeled Even exchange.
 18. Cash refunds reduce expected Cash using `opening float + Cash payments − Cash refunds`; expected Cash reflects accounting facts and is not used as a physical drawer-capacity control in the MVP.
 19. Card refund is externally processed and merely recorded by ShelfSense.
 20. Session/Z reports sales, returns, net, payments, and refunds directionally.

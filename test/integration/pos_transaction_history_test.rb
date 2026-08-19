@@ -122,6 +122,8 @@ class PosTransactionHistoryTest < ActionDispatch::IntegrationTest
 
     get pos_transaction_path(transaction)
     assert_response :success
+    assert_match "Sales tax", response.body
+    assert_match "Sales total", response.body
     assert_match "Sold 1", response.body
     assert_match "Remaining 1", response.body
     assert_select "a", text: "Return items"

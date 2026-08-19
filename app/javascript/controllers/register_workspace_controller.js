@@ -807,7 +807,8 @@ export default class extends Controller {
 
   selectedQuantityBlocked() {
     const row = this.selectedRow()
-    if (!row || row.dataset.direction === "return") return false
+    if (!row) return false
+    if (row.dataset.direction === "return") return row.dataset.linkedReturn !== "true"
     return Boolean(row.dataset.priceOverridden === "true" || row.dataset.discounted === "true")
   }
 

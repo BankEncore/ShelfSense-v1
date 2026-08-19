@@ -131,6 +131,9 @@ class PosLinkedReturnWorkspaceTest < ActionDispatch::IntegrationTest
     assert_match "New transaction", response.body
     assert_match "Cash refund", response.body
     refute_match "Cash presented", response.body
+    assert_match "Return subtotal", response.body
+    assert_match "Tax reversal", response.body
+    assert_match "Returns total", response.body
     assert_match "Return from #{sale.transaction_reference}", response.body
     assert working.reload.completed?
     assert_equal(-refund_cents, working.signed_net_cents)
@@ -214,8 +217,40 @@ class PosLinkedReturnWorkspaceTest < ActionDispatch::IntegrationTest
       expected_signed_net_cents: 0
     }
     assert_redirected_to pos_completed_transaction_path(working)
+    follow_redirect!
+    assert_match "Sales tax", response.body
+    assert_match "Tax reversal", response.body
+    assert_match "Sales total", response.body
+    assert_match "Returns total", response.body
     assert working.reload.completed?
     assert_equal 0, working.pos_tenders.count
+  end
+
+  test "sale-only zero net auto-completes and is not labeled even exchange" do
+    post pos_register_enter_path, params: enter_params
+    working = PosTransaction.working.find_by!(register: @register)
+    post pos_register_merchandise_path, params: { identifier: @variant.sku, lock_version: working.lock_version }
+    line = working.reload.pos_transaction_lines.first
+    post pos_register_controlled_action_path, params: {
+      lock_version: working.lock_version,
+      line_id: line.id,
+      action_type: "line_discount",
+      operation: "apply",
+      reason_code: "customer_service",
+      discount_percent: "100.00"
+    }
+    assert_response :success
+    working.reload
+    assert_equal 0, working.signed_net_cents
+    refute working.even_exchange?
+    refute_match "Even exchange", response.body
+    assert_select "[data-register-workspace-auto-complete-value='true']"
+
+    get pos_register_workspace_path
+    assert_response :success
+    refute_match "Even exchange", response.body
+    assert_select "[data-register-workspace-auto-complete-value='true']"
+    assert_match "Completing transaction", response.body
   end
 
   test "closed session and z show returns refunds net and legacy nulls as not captured" do

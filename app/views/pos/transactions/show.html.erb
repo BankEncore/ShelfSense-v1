@@ -12,30 +12,8 @@
       <div><dt>Cashier</dt><dd><%= pos_cashier_name(@transaction) %></dd></div>
     </dl>
 
-    <% if @lines.any?(&:sale?) %>
-      <dl class="pos-history__header">
-        <div><dt>Sales subtotal</dt><dd><%= format_money_cents(@transaction.subtotal_cents) %></dd></div>
-        <% if @transaction.discount_cents.positive? %>
-          <div><dt>Sales discount</dt><dd><%= format_money_cents(@transaction.discount_cents) %></dd></div>
-        <% end %>
-        <div><dt>Sales tax</dt><dd><%= format_money_cents(@transaction.tax_cents) %></dd></div>
-        <div><dt>Sales total</dt><dd><%= format_money_cents(@transaction.sale_total_cents) %></dd></div>
-      </dl>
-    <% end %>
-
-    <% if @transaction.return_total_cents.positive? || @lines.any?(&:return?) %>
-      <dl class="pos-history__header">
-        <div><dt>Return subtotal</dt><dd><%= format_signed_money_cents(-@transaction.return_subtotal_cents) %></dd></div>
-        <% if @transaction.return_discount_cents.positive? %>
-          <div><dt>Discount reversal</dt><dd><%= format_signed_money_cents(@transaction.return_discount_cents) %></dd></div>
-        <% end %>
-        <div><dt>Tax reversal</dt><dd><%= format_signed_money_cents(-@transaction.return_tax_cents) %></dd></div>
-        <div><dt>Returns total</dt><dd><%= format_signed_money_cents(-@transaction.return_total_cents) %></dd></div>
-      </dl>
-    <% end %>
-
     <dl class="pos-history__header">
-      <div><dt>Net</dt><dd><%= format_signed_money_cents(@transaction.signed_net_cents) %></dd></div>
+      <%= render "pos/receipts/directional_totals", transaction: @transaction %>
     </dl>
 
     <% if @returnable %>

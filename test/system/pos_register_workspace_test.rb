@@ -202,9 +202,9 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     open_register
     add_current_sku
     send_keys :f9
-    assert_text "Cancel this sale?"
+    assert_text "Cancel this transaction?"
     send_keys :enter
-    assert_text "Cancel this sale?"
+    assert_text "Cancel this transaction?"
     assert_text "Example Book"
     send_keys :f9
     assert_text "SALE ENTRY"
@@ -251,7 +251,7 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     assert_button "Cancel (F9)", disabled: true
     assert_text "SALE ENTRY"
     assert_no_text "CASH TENDER"
-    assert_no_text "Cancel this sale?"
+    assert_no_text "Cancel this transaction?"
     assert_text "Example Book"
   end
 

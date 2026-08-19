@@ -17,13 +17,16 @@ module Pos
         return
       end
 
-      working = Pos::ResumeOrStartTransaction.call(session: target_session, actor: current_user)
-      Pos::AddLinkedReturnLines.call(
-        transaction: working,
-        actor: current_user,
-        expected_lock_version: working.lock_version,
-        items: selected_items
-      )
+      items = selected_items
+      ApplicationRecord.transaction do
+        working = Pos::ResumeOrStartTransaction.call(session: target_session, actor: current_user)
+        Pos::AddLinkedReturnLines.call(
+          transaction: working,
+          actor: current_user,
+          expected_lock_version: working.lock_version,
+          items: items
+        )
+      end
       session[:pos_register_id] = target_session.register_id
       redirect_to pos_register_workspace_path(register_id: target_session.register_id)
     rescue Pos::Denied
@@ -67,12 +70,16 @@ module Pos
       rows = params[:items]
       raise Pos::Error, "return items are required" if rows.blank?
 
+      allowed_ids = @transaction.pos_transaction_lines.select(&:sale?).map { |line| line.id.to_s }
       selected = rows.each_value.filter_map do |row|
         attrs = row.respond_to?(:permit) ? row.permit(:selected, :original_line_id, :quantity, :reason_code, :reason_note) : row
         next unless ActiveModel::Type::Boolean.new.cast(attrs[:selected])
 
+        original_line_id = attrs[:original_line_id].to_s
+        raise Pos::Error, "original sale line is missing" unless allowed_ids.include?(original_line_id)
+
         {
-          original_line_id: attrs[:original_line_id],
+          original_line_id: original_line_id,
           quantity: attrs[:quantity],
           reason_code: attrs[:reason_code],
           reason_note: attrs[:reason_note]

@@ -1,0 +1,19 @@
+<% sale_present = transaction.pos_transaction_lines.any?(&:sale?) %>
+<% return_present = transaction.return_total_cents.positive? || transaction.pos_transaction_lines.any?(&:return?) %>
+<% if sale_present %>
+  <div><dt>Sales subtotal</dt><dd><%= format_money_cents(transaction.subtotal_cents) %></dd></div>
+  <% if transaction.discount_cents.positive? %>
+    <div><dt>Sales discount</dt><dd><%= format_money_cents(transaction.discount_cents) %></dd></div>
+  <% end %>
+  <div><dt>Sales tax</dt><dd><%= format_money_cents(transaction.tax_cents) %></dd></div>
+  <div><dt>Sales total</dt><dd><%= format_money_cents(transaction.sale_total_cents) %></dd></div>
+<% end %>
+<% if return_present %>
+  <div><dt>Return subtotal</dt><dd><%= format_signed_money_cents(-transaction.return_subtotal_cents) %></dd></div>
+  <% if transaction.return_discount_cents.positive? %>
+    <div><dt>Discount reversal</dt><dd><%= format_signed_money_cents(transaction.return_discount_cents) %></dd></div>
+  <% end %>
+  <div><dt>Tax reversal</dt><dd><%= format_signed_money_cents(-transaction.return_tax_cents) %></dd></div>
+  <div><dt>Returns total</dt><dd><%= format_signed_money_cents(-transaction.return_total_cents) %></dd></div>
+<% end %>
+<div><dt>Net</dt><dd><%= format_signed_money_cents(transaction.signed_net_cents) %></dd></div>

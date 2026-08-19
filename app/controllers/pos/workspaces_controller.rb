@@ -377,14 +377,14 @@ module Pos
     def apply_error_mode(error_mode)
       return if error_mode == "derive"
       if Pos::Support.exact_settlement?(@transaction)
-        return unless Pos::Support.settlement_direction(@transaction) == :none
+        return unless @transaction.even_exchange?
       end
 
       @ui_mode = error_mode
     end
 
     def even_exchange_pending?
-      @settlement_direction == :none && @completion_status == "pending"
+      @transaction.even_exchange? && @completion_status == "pending"
     end
 
     def controlled_action_commercial_attrs

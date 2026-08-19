@@ -56,6 +56,8 @@ class PosLinkedReturnTest < ApplicationSystemTestCase
     assert_text "Transaction complete", wait: 10
     assert_text "Cash refund"
     assert_no_text "Cash presented"
+    assert_text "Tax reversal"
+    assert_text "Returns total"
     assert_text "Return from #{sale.transaction_reference}"
 
     returned = PosTransaction.completed.where(register: @register).where.not(id: sale.id).first!
@@ -112,6 +114,8 @@ class PosLinkedReturnTest < ApplicationSystemTestCase
 
     click_on "Complete (+)"
     assert_text "Transaction complete", wait: 10
+    assert_text "Sales tax"
+    assert_text "Tax reversal"
     completed = PosTransaction.completed.where(register: @register).where.not(id: sale.id).first!
     assert_equal 0, completed.signed_net_cents
     assert_equal 0, completed.pos_tenders.count
