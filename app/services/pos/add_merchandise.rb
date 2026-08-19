@@ -35,6 +35,7 @@ module Pos
           add_variant_line!(transaction, result.variant)
         end
         Pos::Support.refresh_totals!(transaction)
+        Pos::Support.touch_working_transaction!(transaction)
         line
       end
     rescue Pos::Tax::UnresolvedApplicability => e

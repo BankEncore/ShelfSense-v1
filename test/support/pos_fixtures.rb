@@ -159,7 +159,8 @@ module PosFixtures
       ),
       subtotal_cents: total_cents,
       tax_cents: 0,
-      total_cents: total_cents
+      total_cents: total_cents,
+      signed_net_cents: total_cents
     )
   end
 end

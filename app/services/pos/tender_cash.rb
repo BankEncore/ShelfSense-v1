@@ -26,11 +26,12 @@ module Pos
         cash_type = Pos::Support.cash_tender_type
         raise Pos::Error, "Cash is not available" unless cash_type.active?
 
-        existing = transaction.pos_tenders.cash.first
-        remaining = Pos::Support.remaining_due_cents(transaction, except: existing)
+        existing = transaction.pos_tenders.cash.payments.first
+        raise Pos::Error, "transaction does not require payment" unless Pos::Support.settlement_direction(transaction) == :payment
+        remaining = Pos::Support.remaining_payment_cents(transaction, except: existing)
         raise Pos::Error, "no remaining amount due" if remaining <= 0
 
-        if remaining == transaction.total_cents && @amount_presented_cents < remaining
+        if remaining == transaction.signed_net_cents && @amount_presented_cents < remaining
           raise Pos::Error, "presented amount is less than amount due"
         end
 

@@ -203,6 +203,8 @@ Defines linked and unlinked returns, historical financial reversal, returnable q
 
 A return is a new POS fact that reverses all or part of an earlier sale. It never edits the original completed transaction.
 
+> **Phase 6 MVP:** [returns.md](../../../planning/phase4-6-point-of-sale/phase6-pos-mvp/returns.md) is implementation authority and supersedes this draft’s still-pending unlinked-policy questions for the MVP.
+
 > **Repository note:** the current file is named `returns` and should be renamed `returns.md`.
 
 ---

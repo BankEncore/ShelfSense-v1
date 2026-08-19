@@ -19,7 +19,7 @@ module Pos
     def begin!(register_id:, operation_id:, command_payload:, store_id:, pos_transaction_id:)
       hash = Idempotency::CanonicalJson.hash(command_payload)
       existing = PosOperation.find_by(id: operation_id)
-      return resolve_existing!(existing, register_id: register_id, hash: hash) if existing
+      return resolve_existing!(existing, register_id: register_id, command_payload: command_payload) if existing
 
       begin
         create_in_flight!(
@@ -37,7 +37,7 @@ module Pos
         )
         raise Error, "could not resolve operation uniqueness collision" if recovered.nil?
 
-        resolve_existing!(recovered, register_id: register_id, hash: hash)
+        resolve_existing!(recovered, register_id: register_id, command_payload: command_payload)
       end
     end
 
@@ -64,10 +64,12 @@ module Pos
       Result.new(operation: operation, replayed: false)
     end
 
-    def resolve_existing!(existing, register_id:, hash:)
+    def resolve_existing!(existing, register_id:, command_payload:)
       raise Error, "operation_id reused against another register" if existing.source_id != register_id
       raise Error, "operation_id reused with a different command type" if existing.command_type != PosOperation::COMMAND_TYPE
-      raise Pos::PayloadMismatch, "idempotency key reused with a different payload" if existing.command_payload_hash != hash
+      unless Pos::CompleteTransaction.payload_hash_matches?(existing.command_payload_hash, command_payload)
+        raise Pos::PayloadMismatch, "idempotency key reused with a different payload"
+      end
       return Result.new(operation: existing, replayed: true) if existing.status == "completed"
 
       if existing.status == "in_flight"

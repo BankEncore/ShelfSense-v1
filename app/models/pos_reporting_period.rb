@@ -28,11 +28,14 @@ class PosReportingPeriod < ApplicationRecord
             numericality: { only_integer: true, greater_than_or_equal_to: 0 }, allow_nil: true
   validates :finalized_subtotal_cents, :finalized_tax_cents, :finalized_total_cents,
             :finalized_cash_payment_cents, :finalized_opening_float_cents_sum,
-            :finalized_closing_expected_cash_cents_sum, :finalized_closing_count_cents_sum,
+            :finalized_closing_count_cents_sum,
             :finalized_card_payment_cents, :finalized_check_payment_cents, :finalized_other_payment_cents,
-            :finalized_discount_cents,
+            :finalized_discount_cents, :finalized_return_subtotal_cents, :finalized_return_discount_cents,
+            :finalized_return_tax_cents, :finalized_return_total_cents, :finalized_cash_refund_cents,
+            :finalized_card_refund_cents, :finalized_check_refund_cents, :finalized_other_refund_cents,
             numericality: { only_integer: true, greater_than_or_equal_to: 0 }, allow_nil: true
-  validates :finalized_closing_variance_cents_sum, numericality: { only_integer: true }, allow_nil: true
+  validates :finalized_closing_expected_cash_cents_sum, :finalized_closing_variance_cents_sum, :finalized_net_cents,
+            numericality: { only_integer: true }, allow_nil: true
   validate :store_matches_register
   validate :finalized_snapshots_match_status
   validate :category_snapshots_blank_while_open
@@ -65,12 +68,16 @@ class PosReportingPeriod < ApplicationRecord
   def category_snapshots_blank_while_open
     return unless open?
 
-    if %w[finalized_card_payment_cents finalized_check_payment_cents finalized_other_payment_cents].any? { |attribute| !self[attribute].nil? }
+    additive = %w[
+      finalized_card_payment_cents finalized_check_payment_cents finalized_other_payment_cents
+      finalized_discount_cents finalized_return_subtotal_cents finalized_return_discount_cents
+      finalized_return_tax_cents finalized_return_total_cents finalized_net_cents
+      finalized_cash_refund_cents finalized_card_refund_cents finalized_check_refund_cents
+      finalized_other_refund_cents
+    ]
+    if additive.any? { |attribute| !self[attribute].nil? }
       errors.add(:base, "tender category snapshots must be blank while the period is open")
     end
-    return if finalized_discount_cents.nil?
-
-    errors.add(:finalized_discount_cents, "must be blank while the period is open")
   end
 
   def finalized_snapshots_match_status

@@ -4,7 +4,7 @@ class PosTender < ApplicationRecord
   include UuidV7PrimaryKey
 
   CATEGORIES = TenderType::CATEGORIES
-  DIRECTIONS = %w[payment].freeze
+  DIRECTIONS = %w[payment refund].freeze
 
   belongs_to :pos_transaction
   belongs_to :configured_tender_type, class_name: "TenderType", foreign_key: :tender_type_id
@@ -20,6 +20,7 @@ class PosTender < ApplicationRecord
 
   scope :ordered, -> { order(:tender_number, :id) }
   scope :payments, -> { where(direction: "payment") }
+  scope :refunds, -> { where(direction: "refund") }
   scope :cash, -> { where(behavioral_category: "cash") }
 
   def cash?
@@ -34,6 +35,7 @@ class PosTender < ApplicationRecord
 
   def cash_presented_matches_applied
     return unless cash?
+    return if direction == "refund"
 
     if amount_presented_cents.nil? || change_cents.nil?
       errors.add(:base, "Cash presented and change are required")
@@ -49,7 +51,7 @@ class PosTender < ApplicationRecord
   end
 
   def non_cash_omits_presented_and_change
-    return if cash?
+    return if cash? && direction == "payment"
     return if amount_presented_cents.nil? && change_cents.nil?
 
     errors.add(:base, "presented and change are only for Cash")

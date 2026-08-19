@@ -27,7 +27,27 @@ module Pos
     end
 
     def total_cents
-      snapshot_or(:finalized_total_cents) { completed_transactions.sum(:total_cents) }
+      snapshot_or(:finalized_total_cents) { subtotal_cents - discount_cents + tax_cents }
+    end
+
+    def return_subtotal_cents
+      snapshot_or(:finalized_return_subtotal_cents) { completed_transactions.sum(:return_subtotal_cents) }
+    end
+
+    def return_discount_cents
+      snapshot_or(:finalized_return_discount_cents) { completed_transactions.sum(:return_discount_cents) }
+    end
+
+    def return_tax_cents
+      snapshot_or(:finalized_return_tax_cents) { completed_transactions.sum(:return_tax_cents) }
+    end
+
+    def return_total_cents
+      snapshot_or(:finalized_return_total_cents) { completed_transactions.sum(:return_total_cents) }
+    end
+
+    def net_cents
+      snapshot_or(:finalized_net_cents) { completed_transactions.sum(:signed_net_cents) }
     end
 
     def cash_payment_cents
@@ -44,6 +64,22 @@ module Pos
 
     def other_payment_cents
       snapshot_or(:finalized_other_payment_cents) { category_payment_cents("other") }
+    end
+
+    def cash_refund_cents
+      snapshot_or(:finalized_cash_refund_cents) { category_refund_cents("cash") }
+    end
+
+    def card_refund_cents
+      snapshot_or(:finalized_card_refund_cents) { category_refund_cents("card") }
+    end
+
+    def check_refund_cents
+      snapshot_or(:finalized_check_refund_cents) { category_refund_cents("check") }
+    end
+
+    def other_refund_cents
+      snapshot_or(:finalized_other_refund_cents) { category_refund_cents("other") }
     end
 
     def session_count
@@ -73,10 +109,19 @@ module Pos
         finalized_discount_cents: discount_cents,
         finalized_tax_cents: tax_cents,
         finalized_total_cents: total_cents,
+        finalized_return_subtotal_cents: return_subtotal_cents,
+        finalized_return_discount_cents: return_discount_cents,
+        finalized_return_tax_cents: return_tax_cents,
+        finalized_return_total_cents: return_total_cents,
+        finalized_net_cents: net_cents,
         finalized_cash_payment_cents: cash_payment_cents,
         finalized_card_payment_cents: card_payment_cents,
         finalized_check_payment_cents: check_payment_cents,
         finalized_other_payment_cents: other_payment_cents,
+        finalized_cash_refund_cents: cash_refund_cents,
+        finalized_card_refund_cents: card_refund_cents,
+        finalized_check_refund_cents: check_refund_cents,
+        finalized_other_refund_cents: other_refund_cents,
         finalized_session_count: session_count,
         finalized_opening_float_cents_sum: opening_float_cents_sum,
         finalized_closing_expected_cash_cents_sum: closing_expected_cash_cents_sum,
@@ -94,9 +139,17 @@ module Pos
     end
 
     def category_payment_cents(category)
+      category_tender_cents(category, "payment")
+    end
+
+    def category_refund_cents(category)
+      category_tender_cents(category, "refund")
+    end
+
+    def category_tender_cents(category, direction)
       PosTender.joins(:pos_transaction)
                .where(pos_transactions: { reporting_period_id: @period.id, status: "completed" })
-               .where(behavioral_category: category, direction: "payment")
+               .where(behavioral_category: category, direction: direction)
                .sum(:amount_cents)
     end
 

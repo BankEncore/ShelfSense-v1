@@ -174,12 +174,14 @@ module Pos
           return
         end
 
+        expected_total = params.require(:expected_total_cents)
         result = Pos::CompleteTransaction.call(
           transaction: @transaction,
           actor: current_user,
           operation_id: params.require(:completion_operation_id),
           expected_lock_version: expected_lock_version,
-          expected_total_cents: params.require(:expected_total_cents)
+          expected_total_cents: expected_total,
+          expected_signed_net_cents: expected_total
         )
         redirect_to pos_completed_transaction_path(result.transaction)
       end

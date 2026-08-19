@@ -47,6 +47,7 @@ module Pos
       PosTransaction.transaction do
         transaction = Pos::Support.lock_working_transaction!(@transaction, @expected_lock_version)
         line = transaction.pos_transaction_lines.find(@line.id)
+        raise Pos::Error, "controlled actions are sale-direction only" if line.return?
         existing = line.pos_controlled_actions.find_by(action_type: @action_type)
 
         if @operation == "remove"

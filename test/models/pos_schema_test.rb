@@ -227,6 +227,49 @@ class PosSchemaTest < ActiveSupport::TestCase
     assert_raises(ActiveRecord::RecordNotUnique) { duplicate.save! }
   end
 
+  test "database rejects a second Cash refund on the same transaction" do
+    period = open_period
+    session = PosSession.create!(
+      store: @store,
+      register: @register,
+      reporting_period: period,
+      cashier_user: @user,
+      status: "open",
+      opened_at: Time.current
+    )
+    transaction = PosTransaction.create!(
+      store: @store,
+      register: @register,
+      pos_session: session,
+      reporting_period: period,
+      cashier_user: @user,
+      status: "working",
+      currency_code: "USD"
+    )
+    cash = TenderType.find_by!(code: "cash")
+    attrs = {
+      pos_transaction: transaction,
+      configured_tender_type: cash,
+      tender_type: "cash",
+      tender_name: "Cash",
+      behavioral_category: "cash",
+      direction: "refund",
+      amount_cents: 100,
+      amount_presented_cents: nil,
+      change_cents: nil
+    }
+    PosTender.create!(attrs.merge(tender_number: 1))
+    duplicate = PosTender.new(attrs.merge(tender_number: 2))
+    assert_raises(ActiveRecord::RecordNotUnique) { duplicate.save! }
+  end
+
+  test "closed session expected cash may be negative" do
+    period = open_period
+    session = PosSession.new(closed_session_attributes(period, expected: -500, count: 0, variance: 500))
+    assert session.valid?
+    session.save!
+  end
+
   test "closed session variance must equal count minus expected" do
     period = open_period
     session = PosSession.new(closed_session_attributes(period, expected: 100, count: 90, variance: 0))

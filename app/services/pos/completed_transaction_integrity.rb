@@ -12,6 +12,11 @@ module Pos
 
     def verify!
       @transaction.pos_transaction_lines.each do |line|
+        if line.return?
+          raise Pos::Error, "return lines cannot have controlled actions" if line.pos_controlled_actions.any?
+          next
+        end
+
         actions = line.pos_controlled_actions.index_by(&:action_type)
         verify_pair!(
           present: line.price_overridden?,

@@ -67,6 +67,7 @@ class PosHelperTest < ActionView::TestCase
 
   test "controlled-line flags use Core facts only" do
     line = PosTransactionLine.new(
+      direction: "sale",
       reference_unit_price_cents: 1999,
       selling_unit_price_cents: 1500,
       manual_discount_basis_points: 1000,

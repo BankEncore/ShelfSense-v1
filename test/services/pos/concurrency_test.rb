@@ -413,6 +413,72 @@ class Pos::ConcurrencyTest < ActiveSupport::TestCase
     end
   end
 
+  test "two registers racing the last linked return quantity yield one completion" do
+    Pos::TenderTypes.seed!
+    open_quantity_stock(store: @store, variant: @variant, actor: @actor, quantity: 1)
+    original_ready = prepare_sale(register_number: 11, presented_cents: 2500)
+    original = Pos::CompleteTransaction.call(
+      transaction: original_ready[:transaction],
+      actor: @actor,
+      operation_id: SecureRandom.uuid_v7,
+      expected_lock_version: original_ready[:transaction].lock_version,
+      expected_total_cents: original_ready[:transaction].total_cents
+    ).transaction
+    original_line = original.pos_transaction_lines.first
+    original_line_id = original_line.id
+    actor_id = @actor.id
+
+    first = prepare_linked_return(register_number: 12, original_line: original_line)
+    second = prepare_linked_return(register_number: 13, original_line: original_line)
+    jobs = [ first, second ]
+    ready = Queue.new
+    go = Queue.new
+    results = Array.new(2)
+    errors = Array.new(2)
+    threads = jobs.each_with_index.map do |job, i|
+      Thread.new do
+        ActiveRecord::Base.connection_pool.with_connection do
+          ready << true
+          go.pop
+          transaction = PosTransaction.find(job[:transaction].id)
+          results[i] = Pos::CompleteTransaction.call(
+            transaction: transaction,
+            actor: User.find(actor_id),
+            operation_id: SecureRandom.uuid_v7,
+            expected_lock_version: transaction.lock_version,
+            expected_total_cents: transaction.total_cents,
+            expected_signed_net_cents: transaction.signed_net_cents
+          )
+        rescue StandardError => e
+          errors[i] = e
+        end
+      end
+    end
+    2.times { ready.pop }
+    2.times { go << true }
+    threads.each { |thread| assert thread.join(30), "thread did not finish" }
+
+    successes = results.compact
+    failures = errors.compact
+    assert_equal 1, successes.size, failures.map(&:message).inspect
+    assert_equal 1, failures.size, successes.inspect
+    assert_match(/remaining quantity|stale lock/i, failures.first.message)
+
+    winner = successes.first.transaction
+    assert winner.completed?
+    loser_id = jobs.map { |job| job[:transaction].id } - [ winner.id ]
+    loser = PosTransaction.uncached { PosTransaction.find(loser_id.first) }
+    assert loser.working?
+    assert_nil loser.receipt_sequence
+    assert_equal 1, OutboxMessage.uncached {
+      OutboxMessage.where(event_type: "inventory.return_posted").count
+    }
+    remaining = PosTransactionLine.uncached {
+      Pos::Returnability.remaining_quantity(PosTransactionLine.find(original_line_id))
+    }
+    assert_equal 0, remaining
+  end
+
   private
 
   def prepare_sale(register_number:, presented_cents:)
@@ -440,6 +506,29 @@ class Pos::ConcurrencyTest < ActiveSupport::TestCase
     context = pos_open_context(store: @store, actor: @actor, register: register)
     transaction = Pos::StartTransaction.call(session: context[:session], actor: @actor)
     { context: context, transaction: transaction }
+  end
+
+  def prepare_linked_return(register_number:, original_line:)
+    job = prepare_empty_sale(register_number: register_number)
+    transaction = job[:transaction]
+    actor = @actor
+    Pos::AddLinkedReturnLine.call(
+      transaction: transaction,
+      actor: actor,
+      expected_lock_version: transaction.lock_version,
+      original_line: original_line,
+      quantity: 1,
+      reason_code: "changed_mind"
+    )
+    transaction.reload
+    Pos::AddRefundTender.call(
+      transaction: transaction,
+      actor: actor,
+      expected_lock_version: transaction.lock_version,
+      tender_type: TenderType.find_by!(code: "cash"),
+      amount_cents: -transaction.signed_net_cents
+    )
+    { context: job[:context], transaction: transaction.reload }
   end
 
   def prepare_unit_sale(register_number:, unit:, presented_cents:)

@@ -8,27 +8,60 @@ module Pos
       new(**attrs).call
     end
 
-    def self.command_payload(transaction:, operation_id:, expected_lock_version:, expected_total_cents:)
+    def self.command_payload(transaction:, operation_id:, expected_lock_version:, expected_total_cents:, expected_signed_net_cents: nil)
       {
         "transaction_id" => transaction.id.to_s,
         "operation_id" => operation_id.to_s,
         "expected_lock_version" => expected_lock_version.to_i,
-        "expected_total_cents" => expected_total_cents.to_i
+        "expected_total_cents" => expected_total_cents.to_i,
+        "expected_signed_net_cents" => resolve_expected_signed_net_cents!(
+          transaction: transaction,
+          expected_total_cents: expected_total_cents,
+          expected_signed_net_cents: expected_signed_net_cents
+        )
       }
     end
 
-    def initialize(transaction:, actor:, operation_id:, expected_lock_version:, expected_total_cents:)
+    def self.resolve_expected_signed_net_cents!(transaction:, expected_total_cents:, expected_signed_net_cents:)
+      expected_total_cents = expected_total_cents.to_i
+      if expected_signed_net_cents.nil?
+        unless transaction.signed_net_cents == transaction.total_cents
+          raise Pos::Error, "expected signed net is required"
+        end
+
+        expected_total_cents
+      else
+        expected_signed_net_cents.to_i
+      end
+    end
+
+    def self.payload_hash_matches?(stored_hash, command_payload)
+      current = Idempotency::CanonicalJson.hash(command_payload)
+      return true if stored_hash == current
+      return false unless command_payload["expected_signed_net_cents"] == command_payload["expected_total_cents"]
+
+      legacy = command_payload.except("expected_signed_net_cents")
+      stored_hash == Idempotency::CanonicalJson.hash(legacy)
+    end
+
+    def initialize(transaction:, actor:, operation_id:, expected_lock_version:, expected_total_cents:, expected_signed_net_cents: nil)
       @transaction = transaction
       @actor = actor
       @operation_id = operation_id
       @expected_lock_version = expected_lock_version.to_i
       @expected_total_cents = expected_total_cents.to_i
+      @expected_signed_net_cents = expected_signed_net_cents
     end
 
     def call
       lease = nil
       Pos::Support.authorize!(@actor, @transaction.store)
       Pos::Support.require_transaction_cashier!(@actor, @transaction)
+      @expected_signed_net_cents = self.class.resolve_expected_signed_net_cents!(
+        transaction: @transaction,
+        expected_total_cents: @expected_total_cents,
+        expected_signed_net_cents: @expected_signed_net_cents
+      )
 
       lease = Pos::OperationLease.begin!(
         register_id: @transaction.register_id,
@@ -61,7 +94,8 @@ module Pos
         transaction: transaction,
         operation_id: @operation_id,
         expected_lock_version: @expected_lock_version,
-        expected_total_cents: @expected_total_cents
+        expected_total_cents: @expected_total_cents,
+        expected_signed_net_cents: @expected_signed_net_cents
       )
     end
 
@@ -89,11 +123,15 @@ module Pos
         end
 
         validate_context!(transaction)
+        lock_original_sale_lines!(transaction)
         freeze_lines!(transaction)
         Pos::Support.refresh_totals!(transaction)
         Pos::CompletedTransactionIntegrity.verify!(transaction)
         if transaction.total_cents != @expected_total_cents
           raise Pos::Error, "expected total does not match amount due"
+        end
+        if transaction.signed_net_cents != @expected_signed_net_cents
+          raise Pos::Error, "expected signed net does not match"
         end
         settle_tenders!(transaction)
 
@@ -131,105 +169,60 @@ module Pos
       raise Pos::Error, "transaction has no merchandise" if transaction.pos_transaction_lines.none?
     end
 
+    def lock_original_sale_lines!(transaction)
+      original_ids = transaction.pos_transaction_lines.filter_map(&:original_transaction_line_id).uniq.sort
+      return if original_ids.empty?
+
+      originals = PosTransactionLine.lock.where(id: original_ids).order(:id).to_a
+      raise Pos::Error, "original sale line is missing" if originals.size != original_ids.size
+
+      originals.each do |original|
+        remaining = Pos::Returnability.remaining_quantity(original)
+        requested = transaction.pos_transaction_lines
+                               .select { |line| line.original_transaction_line_id == original.id }
+                               .sum(&:quantity)
+        raise Pos::Error, "return quantity exceeds remaining quantity" if requested > remaining
+      end
+    end
+
     def freeze_lines!(transaction)
-      transaction.pos_transaction_lines.lock.each do |line|
-        variant = line.product_variant
-        tracking = variant.derived_inventory_tracking
-        raise Pos::Error, "merchandise is not sellable" unless variant.sellable?
-        unless %w[quantity non_inventory individual].include?(tracking)
-          raise Pos::Error, "merchandise tracking is not supported"
-        end
-        raise Pos::Error, "regular price is required" if line.selling_unit_price_cents.nil?
-
-        unit = freeze_unit_line!(transaction, line, variant, tracking)
-
-        line.recalc_extended!
-        result = Pos::Tax::Calculate.call(
-          store: transaction.store,
-          tax_class: line.tax_class,
-          taxable_basis_cents: line.net_merchandise_amount_cents
-        )
-        line.line_tax_cents = result.tax_cents
-        line.line_total_cents = line.net_merchandise_amount_cents + line.line_tax_cents
-        line.tax_class_code_snapshot = line.tax_class.code
-        line.tax_class_name_snapshot ||= line.tax_class.name
-        if line.default_tax_class_id.present?
-          default_class = line.default_tax_class || TaxClass.find(line.default_tax_class_id)
-          line.default_tax_class_code_snapshot ||= default_class.code
-          line.default_tax_class_name_snapshot ||= default_class.name
-        end
-        line.merchandise_snapshot = merchandise_snapshot_for(variant, line, unit)
-        line.save!
-        line.pos_line_tax_components.delete_all
-        result.determinations.each do |determination|
-          line.pos_line_tax_components.create!(
-            store_tax_id: determination.store_tax_id,
-            store_tax_code_snapshot: determination.store_tax_code,
-            store_tax_name_snapshot: determination.store_tax_name,
-            rate_percent: determination.rate_percent,
-            applies: determination.applies,
-            taxable_basis_cents: determination.taxable_basis_cents,
-            tax_cents: determination.tax_cents,
-            calculation_order: determination.calculation_order
-          )
+      transaction.pos_transaction_lines.lock.order(:id).each do |line|
+        if line.sale?
+          Pos::FreezeSaleLine.call(transaction: transaction, line: line)
+        elsif line.linked_return?
+          Pos::FreezeLinkedReturnLine.call(transaction: transaction, line: line)
+        else
+          raise Pos::Error, "unlinked returns are not supported"
         end
       end
-    rescue Pos::Tax::UnresolvedApplicability => e
-      raise Pos::Error, e.message
-    end
-
-    def freeze_unit_line!(transaction, line, variant, tracking)
-      if tracking == "individual"
-        raise Pos::Error, "inventory unit is required" if line.inventory_unit_id.blank?
-        raise Pos::Error, "quantity must be 1 for individually tracked merchandise" unless line.quantity == 1
-
-        unit = InventoryUnit.find(line.inventory_unit_id)
-        raise Pos::Error, "unit is not on hand" unless unit.on_hand?
-        raise Pos::Error, "unit is not at this store" unless unit.store_id == transaction.store_id
-        raise Pos::Error, "unit does not match the merchandise" unless unit.product_variant_id == variant.id
-        unit
-      else
-        raise Pos::Error, "inventory unit must be blank" if line.inventory_unit_id.present?
-
-        nil
-      end
-    rescue ActiveRecord::RecordNotFound
-      raise Pos::Error, "unit is not on hand"
-    end
-
-    def merchandise_snapshot_for(variant, line, unit)
-      snapshot = {
-        "sku" => variant.sku,
-        "description" => variant.product.name,
-        "tax_class_code" => line.tax_class.code
-      }
-      return snapshot if unit.nil?
-
-      condition_code = variant.merchandise_condition&.code
-      raise Pos::Error, "condition is required for individually tracked merchandise" if condition_code.blank?
-
-      snapshot.merge(
-        "unit_identifier" => unit.unit_identifier,
-        "condition_code" => condition_code
-      )
     end
 
     def settle_tenders!(transaction)
       tenders = transaction.pos_tenders.ordered.to_a
-      if transaction.total_cents.zero?
+      signed_net = transaction.signed_net_cents
+      if signed_net.zero?
         raise Pos::Error, "zero-net sales cannot have tenders" if tenders.any?
         return
       end
 
       raise Pos::Error, "tender is required" if tenders.empty?
-      raise Pos::Error, "refund tenders are not supported" if tenders.any? { |tender| tender.direction != "payment" }
 
+      if signed_net.positive?
+        raise Pos::Error, "refund tenders are not supported" if tenders.any? { |tender| tender.direction != "payment" }
+        settle_payments!(transaction, tenders, signed_net)
+      else
+        raise Pos::Error, "payment tenders are not supported" if tenders.any? { |tender| tender.direction != "refund" }
+        settle_refunds!(tenders, -signed_net)
+      end
+    end
+
+    def settle_payments!(transaction, tenders, due_cents)
       cash = tenders.find(&:cash?)
       non_cash = tenders.reject(&:cash?)
       non_cash_applied = non_cash.sum(&:amount_cents)
 
       if cash
-        remaining = transaction.total_cents - non_cash_applied
+        remaining = due_cents - non_cash_applied
         raise Pos::Error, "tenders exceed amount due" if remaining.negative?
         if cash.amount_presented_cents < remaining
           raise Pos::Error, "presented amount is less than amount due"
@@ -239,12 +232,22 @@ module Pos
           amount_cents: remaining,
           change_cents: cash.amount_presented_cents - remaining
         )
-      elsif non_cash_applied != transaction.total_cents
+      elsif non_cash_applied != due_cents
         raise Pos::Error, "tenders must equal amount due"
       end
 
-      applied = transaction.pos_tenders.sum(:amount_cents)
-      raise Pos::Error, "tenders must equal amount due" unless applied == transaction.total_cents
+      applied = transaction.pos_tenders.payments.sum(:amount_cents)
+      raise Pos::Error, "tenders must equal amount due" unless applied == due_cents
+    end
+
+    def settle_refunds!(tenders, refund_due_cents)
+      cash = tenders.find(&:cash?)
+      if cash && (cash.amount_presented_cents.present? || cash.change_cents.present?)
+        raise Pos::Error, "Cash refund cannot have presented or change"
+      end
+
+      applied = tenders.sum(&:amount_cents)
+      raise Pos::Error, "refunds must equal amount due" unless applied == refund_due_cents
     end
 
     def allocate_receipt!(transaction)
@@ -294,7 +297,11 @@ module Pos
           "subtotal_cents" => transaction.subtotal_cents,
           "tax_cents" => transaction.tax_cents,
           "total_cents" => transaction.total_cents,
-          "signed_net_cents" => transaction.total_cents
+          "return_subtotal_cents" => transaction.return_subtotal_cents,
+          "return_discount_cents" => transaction.return_discount_cents,
+          "return_tax_cents" => transaction.return_tax_cents,
+          "return_total_cents" => transaction.return_total_cents,
+          "signed_net_cents" => transaction.signed_net_cents
         },
         "lines" => transaction.pos_transaction_lines.reload.map { |line| envelope_line(line) },
         "tenders" => transaction.pos_tenders.ordered.map { |tender| envelope_tender(tender) }
@@ -336,7 +343,16 @@ module Pos
         end
       }
       payload["inventory_unit_id"] = line.inventory_unit_id.to_s if line.inventory_unit_id.present?
-      if line.price_overridden?
+      payload["original_transaction_line_id"] = line.original_transaction_line_id.to_s if line.original_transaction_line_id.present?
+      if line.return?
+        reason = {
+          "code" => line.return_reason_code,
+          "name" => line.return_reason_name_snapshot
+        }
+        reason["note"] = line.return_reason_note if line.return_reason_note.present?
+        payload["return_reason"] = reason
+      end
+      if emit_historical_override?(line)
         unit_variance = line.selling_unit_price_cents - line.reference_unit_price_cents
         payload["override"] = {
           "reference_unit_price_cents" => line.reference_unit_price_cents,
@@ -345,7 +361,7 @@ module Pos
           "line_variance_cents" => unit_variance * line.quantity
         }
       end
-      if line.manually_discounted?
+      if emit_historical_discount?(line)
         payload["discount"] = {
           "source" => "manual",
           "method" => "percentage",
@@ -361,6 +377,18 @@ module Pos
       end
       payload["tax_class_name"] = line.tax_class_name_snapshot if line.tax_class_name_snapshot.present?
       payload
+    end
+
+    def emit_historical_override?(line)
+      return line.price_overridden? if line.sale?
+
+      line.selling_unit_price_cents != line.reference_unit_price_cents
+    end
+
+    def emit_historical_discount?(line)
+      return line.manually_discounted? if line.sale?
+
+      line.manual_discount_cents.to_i.positive? || line.manual_discount_basis_points.present?
     end
 
     def envelope_controlled_action(action)
@@ -399,7 +427,7 @@ module Pos
         "direction" => tender.direction,
         "amount_cents" => tender.amount_cents
       }
-      if tender.cash?
+      if tender.cash? && tender.direction == "payment"
         payload["amount_presented_cents"] = tender.amount_presented_cents
         payload["change_cents"] = tender.change_cents
       end
@@ -424,16 +452,28 @@ module Pos
     end
 
     def post_inventory!(transaction, completion_time, business_date, correlation_id)
-      transaction.pos_transaction_lines.each do |line|
+      transaction.pos_transaction_lines.order(:id).each do |line|
         next if line.product_variant.derived_inventory_tracking == "non_inventory"
 
-        Inventory::PostSale.call(
-          line: line,
-          occurred_at: completion_time,
-          business_date: business_date,
-          actor: @actor,
-          correlation_id: correlation_id
-        )
+        if line.sale?
+          Inventory::PostSale.call(
+            line: line,
+            occurred_at: completion_time,
+            business_date: business_date,
+            actor: @actor,
+            correlation_id: correlation_id
+          )
+        elsif line.linked_return?
+          Inventory::PostReturn.call(
+            line: line,
+            occurred_at: completion_time,
+            business_date: business_date,
+            actor: @actor,
+            correlation_id: correlation_id
+          )
+        else
+          raise Pos::Error, "unlinked returns are not supported"
+        end
       end
     end
 

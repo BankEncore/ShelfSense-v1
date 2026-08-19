@@ -4,13 +4,13 @@
 
 **Authority:** Column and constraint intent for Phase 5 session cash and reporting-period Z snapshots. Phase 4 tables stay as migrated; this document only adds the deferred cash/Z fields. Cross-cutting rules remain in `AGENTS.md` and accepted ADRs.
 
-Companions: [Phase 5 plan](phase5-plan.md), [Phase 4 schema](../phase4-point-of-sale/phase4-schema.md).
+Companions: [Phase 5 plan](phase5-plan.md), [Phase 4 schema](../phase4-point-of-sale/phase4-schema.md), [returns.md](../phase6-pos-mvp/returns.md) (6.5 directional Z / Cash refund columns).
 
 ---
 
 ## 1. Design principles
 
-- Money is signed-capable integer `_cents`. Opening float, expected, and count are `>= 0`. Variance may be negative.
+- Money is signed-capable integer `_cents`. Opening float and count are `>= 0`. Expected Cash is `>= 0` through Phase 5/6.4; [returns.md](../phase6-pos-mvp/returns.md) §23 revises that so expected (and the Z expected sum) **may be negative** once Cash refunds exist. Variance may be negative.
 - Close and finalize persist **snapshots**. Do not add live cash counters.
 - Open session: closing snapshots NULL. Closed session: closing snapshots NOT NULL.
 - Open period: Phase 5 `finalized_*` snapshot fields and `finalized_by_user_id` NULL. Finalized period: those Phase 5 fields NOT NULL. 6.2 category columns may remain NULL on already-finalized rows (“not captured”).
@@ -25,7 +25,7 @@ Companions: [Phase 5 plan](phase5-plan.md), [Phase 4 schema](../phase4-point-of-
 | Column | Type | Notes |
 |---|---|---|
 | `opening_float_cents` | bigint | null: false, default 0; `>= 0`; set at open; retained after close |
-| `closing_expected_cash_cents` | bigint | null while open; `>= 0` when closed; **server-derived** at close |
+| `closing_expected_cash_cents` | bigint | null while open; **server-derived** at close. Phase 5: `>= 0`. 6.5: may be negative ([returns.md](../phase6-pos-mvp/returns.md) §23). |
 | `closing_count_cents` | bigint | null while open; `>= 0` when closed; cashier-entered count only |
 | `closing_variance_cents` | bigint | null while open; `count - expected` when closed; may be negative |
 
@@ -57,6 +57,8 @@ closing_variance_cents IS NULL
   OR closing_variance_cents = closing_count_cents - closing_expected_cash_cents
 ```
 
+The nonnegative expected CHECK is Phase 5/6.4. 6.5 revises it so expected may be negative ([returns.md](../phase6-pos-mvp/returns.md) §23). Count stays `>= 0`. Variance arithmetic is unchanged.
+
 Closing columns are all-null or all-present (implied by the status pairing). Variance has no sign CHECK; the arithmetic CHECK holds whenever variance is present.
 
 ---
@@ -85,6 +87,24 @@ Nullable additive columns, **not** part of `closed_at_matches_status`. NULL on a
 | `finalized_card_payment_cents` | bigint | null while open or on pre-6.2 finalized rows; `>= 0` when captured |
 | `finalized_check_payment_cents` | bigint | same |
 | `finalized_other_payment_cents` | bigint | same |
+
+### Return / refund additions (6.5)
+
+Specified in [returns.md](../phase6-pos-mvp/returns.md) §29. Same additive NULL = not-captured pattern as 6.2/6.4. Do **not** add these to `closed_at_matches_status`.
+
+```text
+finalized_return_subtotal_cents
+finalized_return_discount_cents
+finalized_return_tax_cents
+finalized_return_total_cents
+finalized_net_cents                 # signed
+finalized_cash_refund_cents
+finalized_card_refund_cents
+finalized_check_refund_cents
+finalized_other_refund_cents
+```
+
+For 6.5+ finalized periods, `finalized_total_cents` remains the **sale-direction** customer total. Do not `SUM(transaction.total_cents)` across mixed/return rows as sales.
 
 ### Session-custody aggregates (from closed session snapshots)
 

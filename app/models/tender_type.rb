@@ -17,6 +17,7 @@ class TenderType < ApplicationRecord
   validate :protected_identity_rules
   validate :unprotected_category_is_other
   validate :cash_keeps_omitted_reference
+  validate :cash_keeps_allows_refund
   before_destroy :prevent_system_identity_destroy
 
   scope :active, -> { where(active: true) }
@@ -109,5 +110,12 @@ class TenderType < ApplicationRecord
     return if external_reference_policy == "omitted"
 
     errors.add(:external_reference_policy, "must be omitted for Cash")
+  end
+
+  def cash_keeps_allows_refund
+    return unless cash?
+    return if allows_refund
+
+    errors.add(:allows_refund, "must remain true for Cash")
   end
 end

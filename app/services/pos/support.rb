@@ -69,16 +69,49 @@ module Pos
       scope.sum(:amount_cents)
     end
 
+    def applied_refund_cents(transaction, except: nil)
+      scope = transaction.pos_tenders.refunds
+      scope = scope.where.not(id: except.id) if except
+      scope.sum(:amount_cents)
+    end
+
     def remaining_due_cents(transaction, except: nil)
       transaction.total_cents - applied_payment_cents(transaction, except: except)
     end
 
+    def settlement_direction(transaction)
+      net = transaction.signed_net_cents
+      return :payment if net.positive?
+      return :refund if net.negative?
+
+      :none
+    end
+
+    def remaining_payment_cents(transaction, except: nil)
+      return 0 unless transaction.signed_net_cents.positive?
+
+      [ transaction.signed_net_cents - applied_payment_cents(transaction, except: except), 0 ].max
+    end
+
+    def remaining_refund_cents(transaction, except: nil)
+      return 0 unless transaction.signed_net_cents.negative?
+
+      [ -transaction.signed_net_cents - applied_refund_cents(transaction, except: except), 0 ].max
+    end
+
     def exact_settlement?(transaction)
-      if transaction.total_cents.zero?
-        transaction.pos_transaction_lines.any? && transaction.pos_tenders.empty?
-      else
-        tenders = transaction.pos_tenders.to_a
-        tenders.any? && tenders.sum(&:amount_cents) == transaction.total_cents
+      tenders = transaction.pos_tenders.to_a
+      case settlement_direction(transaction)
+      when :none
+        transaction.pos_transaction_lines.any? && tenders.empty?
+      when :payment
+        tenders.any? &&
+          tenders.all? { |tender| tender.direction == "payment" } &&
+          applied_payment_cents(transaction) == transaction.signed_net_cents
+      when :refund
+        tenders.any? &&
+          tenders.all? { |tender| tender.direction == "refund" } &&
+          applied_refund_cents(transaction) == -transaction.signed_net_cents
       end
     end
 
@@ -141,10 +174,22 @@ module Pos
 
     def refresh_totals!(transaction)
       lines = transaction.pos_transaction_lines.reload
-      transaction.subtotal_cents = lines.sum(&:extended_selling_amount_cents)
-      transaction.discount_cents = lines.sum(&:manual_discount_cents)
-      transaction.tax_cents = lines.sum(&:line_tax_cents)
-      transaction.total_cents = lines.sum(&:line_total_cents)
+      sale_lines = lines.select(&:sale?)
+      return_lines = lines.select(&:return?)
+
+      transaction.subtotal_cents = sale_lines.sum(&:extended_selling_amount_cents)
+      transaction.discount_cents = sale_lines.sum(&:manual_discount_cents)
+      transaction.tax_cents = sale_lines.sum(&:line_tax_cents)
+      sale_total = transaction.subtotal_cents - transaction.discount_cents + transaction.tax_cents
+
+      transaction.return_subtotal_cents = return_lines.sum(&:extended_selling_amount_cents)
+      transaction.return_discount_cents = return_lines.sum(&:manual_discount_cents)
+      transaction.return_tax_cents = return_lines.sum(&:line_tax_cents)
+      transaction.return_total_cents =
+        transaction.return_subtotal_cents - transaction.return_discount_cents + transaction.return_tax_cents
+
+      transaction.signed_net_cents = sale_total - transaction.return_total_cents
+      transaction.total_cents = transaction.signed_net_cents.abs
       transaction.save!
     end
   end

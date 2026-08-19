@@ -17,7 +17,7 @@ Companions: [Phase 4 plan](phase4-plan.md), [POS tax contract](pos-tax-contract.
 - Draft/working state may be edited; completed commercial facts are immutable and corrected only by new facts later.
 - Optimistic locking via `lock_version` on mutable aggregate roots (`pos_sessions`, working `pos_transactions`, store tax config).
 - No Phase 5 Cash-accountability columns on sessions in this phase. Those columns are specified in [phase5-schema.md](../phase5-cash-register/phase5-schema.md).
-- Discount, default/applied Tax Class, and `pos_controlled_actions` are specified in [controlled-actions.md](../phase6-pos-mvp/controlled-actions.md). Do not add unused return columns here.
+- Discount, default/applied Tax Class, and `pos_controlled_actions` are specified in [controlled-actions.md](../phase6-pos-mvp/controlled-actions.md). Directional return columns, line/tender `direction`, and `allows_refund` are specified in [returns.md](../phase6-pos-mvp/returns.md). Do not add unused return columns here beyond the field-level pointers in this outline.
 
 ---
 
@@ -154,10 +154,15 @@ One row for working and completed (or cancelled) commercial state.
 | `store_number_snapshot` | integer | null until completed; from `stores.store_number` |
 | `register_number_snapshot` | integer | null until completed; from `registers.register_number` |
 | `transaction_reference` | string | optional derived compact `S…-R…-T…`; regenerable from snapshots + sequence |
-| `subtotal_cents` | bigint | Phase 4: sum of sale line extended amounts (positive) |
-| `discount_cents` | bigint | NOT NULL default 0; Σ `manual_discount_cents` (6.4C) |
-| `tax_cents` | bigint | Phase 4: sum of component tax (positive for sale-only) |
-| `total_cents` | bigint | sale-only: subtotal − discount + tax; amount due |
+| `subtotal_cents` | bigint | Phase 4: sum of sale line extended amounts (positive). 6.5 keeps this **sale-direction** meaning. |
+| `discount_cents` | bigint | NOT NULL default 0; Σ sale-direction `manual_discount_cents` (6.4C) |
+| `tax_cents` | bigint | Phase 4: sum of sale-direction component tax |
+| `return_subtotal_cents` | bigint | 6.5; NOT NULL default 0; Σ return-direction extended |
+| `return_discount_cents` | bigint | 6.5; NOT NULL default 0 |
+| `return_tax_cents` | bigint | 6.5; NOT NULL default 0 |
+| `return_total_cents` | bigint | 6.5; `return_subtotal - return_discount + return_tax` |
+| `signed_net_cents` | bigint | 6.5 persisted; sale_total − return_total. Sale-only: equals `total_cents`. |
+| `total_cents` | bigint | unsigned settlement: `abs(signed_net_cents)`. Sale-only: subtotal − discount + tax. |
 | `lock_version` | integer | null: false, default 0 |
 | `created_at` / `updated_at` | timestamptz | |
 
@@ -186,7 +191,7 @@ One row for working and completed (or cancelled) commercial state.
 | `id` | uuid | PK, UUIDv7 (= `line_id`) |
 | `pos_transaction_id` | uuid | FK, null: false |
 | `line_number` | integer | stable display/order within transaction |
-| `direction` | string | Phase 4: `sale` only; Phase 6 adds `return` |
+| `direction` | string | Phase 4–6.4: `sale` only. 6.5: `sale \| return` ([returns.md](../phase6-pos-mvp/returns.md)) |
 | `product_variant_id` | uuid | FK, null: false for Phase 4 merchandise lines |
 | `quantity` | integer | **NOT NULL**; CHECK `quantity > 0` (Phase 4 quantity-tracked) |
 | `reference_unit_price_cents` | bigint | null: false when priced |
@@ -205,9 +210,13 @@ One row for working and completed (or cancelled) commercial state.
 | `tax_class_name_snapshot` | string | applied display name (6.4D) |
 | `merchandise_snapshot` | jsonb | **required when transaction is completed**; v1 keys plus unit keys when `inventory_unit_id` is present (see §8.1) |
 | `inventory_unit_id` | uuid | nullable FK → `inventory_units` (`on_delete: :restrict`); required for individually tracked lines; CHECK `inventory_unit_id IS NULL OR quantity = 1` |
+| `original_transaction_line_id` | uuid | 6.5 self-FK; linked return only; NULL = sale or unlinked |
+| `return_reason_code` | string | 6.5; required on return lines |
+| `return_reason_name_snapshot` | string | 6.5 |
+| `return_reason_note` | text | 6.5; required when `other` |
 | `created_at` / `updated_at` | timestamptz | |
 
-Unique `(pos_transaction_id, line_number)`.
+Unique `(pos_transaction_id, line_number)`. 6.5 also `UNIQUE (pos_transaction_id, original_transaction_line_id) WHERE original_transaction_line_id IS NOT NULL`.
 
 ### Explicitly absent on the line
 
@@ -276,14 +285,14 @@ Do **not** use abstract `tax_component_id`, treatment enums, or `rate_basis_poin
 | `tender_type` | string | identity **code snapshot** |
 | `tender_name` | string | display-name snapshot; 6.2 |
 | `behavioral_category` | string | `cash \| card \| check \| other` snapshot; 6.2 |
-| `direction` | string | 6.2: `payment` only |
+| `direction` | string | 6.2: `payment` only. 6.5: `payment \| refund` ([returns.md](../phase6-pos-mvp/returns.md)) |
 | `amount_cents` | bigint | positive magnitude (amount applied) |
-| `amount_presented_cents` | bigint | Cash payment only; null otherwise |
-| `change_cents` | bigint | Cash payment only; null otherwise; not a separate refund tender |
+| `amount_presented_cents` | bigint | Cash **payment** only; null on refunds and non-cash |
+| `change_cents` | bigint | Cash **payment** only; null on refunds and non-cash; not a separate refund tender |
 | `external_reference` | text | nullable; 6.2 |
 | `created_at` / `updated_at` | timestamptz | |
 
-Phase 4/5/6.1: one Cash payment tender per completed sale is sufficient. 6.2: at most one Cash **payment** (partial unique index on `pos_transaction_id` where `behavioral_category = 'cash' AND direction = 'payment'`). Multiple non-cash rows are allowed.
+Phase 4/5/6.1: one Cash payment tender per completed sale is sufficient. 6.2: at most one Cash **payment** (partial unique index on `pos_transaction_id` where `behavioral_category = 'cash' AND direction = 'payment'`). 6.5 adds the same uniqueness for one Cash **refund**. Multiple non-cash rows are allowed.
 
 ### `tender_types` (6.2)
 
@@ -297,6 +306,7 @@ Centrally mastered identities. UUIDv7 (`create_uuid_table`). Seed protected `cas
 | `behavioral_category` | string | `cash \| card \| check \| other` |
 | `active` | boolean | cashier-selectable when true; Cash cannot be deactivated |
 | `external_reference_policy` | string | `omitted \| optional \| required`; Cash is `omitted` |
+| `allows_refund` | boolean | 6.5; Cash true and not disableable; Card true; Check/Other false by default |
 | `system_protected` | boolean | true for seeded Cash/Card/Check; cannot delete or recategorize |
 | `lock_version` | integer | optimistic locking |
 | `created_at` / `updated_at` | timestamptz | |
