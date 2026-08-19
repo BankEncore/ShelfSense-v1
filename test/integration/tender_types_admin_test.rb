@@ -38,7 +38,60 @@ class TenderTypesAdminTest < ActionDispatch::IntegrationTest
     assert_equal "Cash drawer", @cash.name
     assert_equal "cash", @cash.behavioral_category
     assert @cash.active?
+    assert @cash.allows_refund?
     assert AuditEvent.exists?(action: "tender_types.update", subject_id: @cash.id)
+  end
+
+  test "admin can set Allow refunds on Card Check and Other and Cash stays true" do
+    sign_in_as("admin")
+    card = TenderType.find_by!(code: "card")
+    check_type = TenderType.find_by!(code: "check")
+
+    get new_admin_tender_type_path
+    assert_response :success
+    assert_select "input[name='tender_type[allows_refund]']"
+
+    post admin_tender_types_path, params: {
+      tender_type: {
+        code: "store_voucher",
+        name: "Store voucher",
+        external_reference_policy: "optional"
+      }
+    }
+    voucher = TenderType.find_by!(code: "store_voucher")
+    assert_not voucher.allows_refund?
+    create_audit = AuditEvent.find_by!(action: "tender_types.create", subject_id: voucher.id)
+    assert_equal false, create_audit.after_values.fetch("allows_refund")
+
+    get edit_admin_tender_type_path(@cash)
+    assert_response :success
+    assert_select "input[name='allows_refund_display'][disabled]"
+
+    patch admin_tender_type_path(@cash), params: {
+      tender_type: { name: @cash.name, allows_refund: "0", lock_version: @cash.lock_version }
+    }
+    assert @cash.reload.allows_refund?
+
+    patch admin_tender_type_path(card), params: {
+      tender_type: { name: card.name, allows_refund: "0", lock_version: card.lock_version }
+    }
+    assert_not card.reload.allows_refund?
+    card_audit = AuditEvent.where(action: "tender_types.update", subject_id: card.id).order(:created_at).last
+    assert_equal false, card_audit.after_values.fetch("allows_refund")
+
+    patch admin_tender_type_path(check_type), params: {
+      tender_type: { name: check_type.name, allows_refund: "1", lock_version: check_type.lock_version }
+    }
+    assert check_type.reload.allows_refund?
+
+    patch admin_tender_type_path(voucher), params: {
+      tender_type: { name: voucher.name, allows_refund: "1", lock_version: voucher.lock_version }
+    }
+    assert voucher.reload.allows_refund?
+
+    get admin_tender_types_path
+    assert_response :success
+    assert_select "th", text: "Refunds"
   end
 
   test "associate is denied tender type administration" do

@@ -51,7 +51,7 @@ class PosRegisterTest < ActionDispatch::IntegrationTest
     transaction.reload
     assert_equal 1, transaction.pos_transaction_lines.count
 
-    post pos_register_tender_path, params: { amount_presented: "25.00", lock_version: transaction.lock_version }
+    post pos_register_tender_path, params: { tender_amount: "25.00", lock_version: transaction.lock_version }
     assert_response :success
     transaction.reload
     assert_equal 1, transaction.pos_tenders.count
@@ -62,15 +62,18 @@ class PosRegisterTest < ActionDispatch::IntegrationTest
     post pos_transaction_complete_path(transaction), params: {
       completion_operation_id: operation_id,
       lock_version: transaction.lock_version,
-      expected_total_cents: transaction.total_cents,
+      expected_total_cents: transaction.total_cents, expected_signed_net_cents: transaction.signed_net_cents,
       amount_presented_cents: 2500
     }
     assert_redirected_to pos_completed_transaction_path(transaction)
     follow_redirect!
     assert_response :success
-    assert_match "Sale complete", response.body
+    assert_match "Transaction complete", response.body
+    assert_match "Sales subtotal", response.body
+    assert_match "Sales tax", response.body
+    assert_match "Sales total", response.body
     assert_match transaction.reload.transaction_reference, response.body
-    assert_match "New sale", response.body
+    assert_match "New transaction", response.body
     assert_match "Print receipt", response.body
     assert_match "Close register", response.body
 
@@ -118,6 +121,9 @@ class PosRegisterTest < ActionDispatch::IntegrationTest
     assert_equal "omitted", by_id.fetch(cash.id.to_s).fetch("reference_policy")
     assert_equal "omitted", by_id.fetch(voucher.id.to_s).fetch("reference_policy")
     assert_equal "required", by_id.fetch(campus.id.to_s).fetch("reference_policy")
+    assert_equal true, by_id.fetch(cash.id.to_s).fetch("allows_refund")
+    assert_equal true, by_id.fetch(card.id.to_s).fetch("allows_refund")
+    assert_equal false, by_id.fetch(voucher.id.to_s).fetch("allows_refund")
     assert_equal %w[cash card check other other], payload.map { |row| row.fetch("category") }
   end
 
@@ -129,7 +135,7 @@ class PosRegisterTest < ActionDispatch::IntegrationTest
     transaction.reload
     card = TenderType.find_by!(code: "card")
     post pos_register_tender_path, params: {
-      amount_presented: "10.00",
+      tender_amount: "10.00",
       tender_type_id: card.id,
       external_reference: "AUTH-9",
       lock_version: transaction.lock_version
@@ -140,7 +146,7 @@ class PosRegisterTest < ActionDispatch::IntegrationTest
     transaction.reload
     cash = TenderType.find_by!(code: "cash")
     post pos_register_tender_path, params: {
-      amount_presented: "25.00",
+      tender_amount: "25.00",
       tender_type_id: cash.id,
       lock_version: transaction.lock_version
     }
@@ -151,7 +157,7 @@ class PosRegisterTest < ActionDispatch::IntegrationTest
     post pos_transaction_complete_path(transaction), params: {
       completion_operation_id: operation_id,
       lock_version: transaction.lock_version,
-      expected_total_cents: transaction.total_cents
+      expected_total_cents: transaction.total_cents, expected_signed_net_cents: transaction.signed_net_cents
     }
     assert_redirected_to pos_completed_transaction_path(transaction)
     follow_redirect!
@@ -234,14 +240,14 @@ class PosRegisterTest < ActionDispatch::IntegrationTest
     transaction = PosTransaction.working.find_by!(register: @register)
     post pos_register_merchandise_path, params: { identifier: @variant.sku, lock_version: transaction.lock_version }
     transaction.reload
-    post pos_register_tender_path, params: { amount_presented: "25.00", lock_version: transaction.lock_version }
+    post pos_register_tender_path, params: { tender_amount: "25.00", lock_version: transaction.lock_version }
     transaction.reload
     post pos_register_abandon_tender_path, params: { lock_version: transaction.lock_version }
     transaction.reload
     assert_equal 0, transaction.pos_tenders.count
     assert transaction.working?
 
-    post pos_register_tender_path, params: { amount_presented: "25.00", lock_version: transaction.lock_version }
+    post pos_register_tender_path, params: { tender_amount: "25.00", lock_version: transaction.lock_version }
     transaction.reload
     post pos_register_cancel_path, params: { lock_version: transaction.lock_version }
     assert_redirected_to pos_register_workspace_path
@@ -261,13 +267,13 @@ class PosRegisterTest < ActionDispatch::IntegrationTest
     transaction = PosTransaction.working.find_by!(register: @register)
     post pos_register_merchandise_path, params: { identifier: @variant.sku, lock_version: transaction.lock_version }
     transaction.reload
-    post pos_register_tender_path, params: { amount_presented: "25.00", lock_version: transaction.lock_version }
+    post pos_register_tender_path, params: { tender_amount: "25.00", lock_version: transaction.lock_version }
     transaction.reload
     operation_id = css_select("input[name='completion_operation_id']").first["value"]
     params = {
       completion_operation_id: operation_id,
       lock_version: transaction.lock_version,
-      expected_total_cents: transaction.total_cents,
+      expected_total_cents: transaction.total_cents, expected_signed_net_cents: transaction.signed_net_cents,
       amount_presented_cents: 2500
     }
     post pos_transaction_complete_path(transaction), params: params
@@ -287,7 +293,7 @@ class PosRegisterTest < ActionDispatch::IntegrationTest
     transaction = PosTransaction.working.find_by!(register: @register)
     post pos_register_merchandise_path, params: { identifier: @variant.sku, lock_version: transaction.lock_version }
     transaction.reload
-    post pos_register_tender_path, params: { amount_presented: "25.00", lock_version: transaction.lock_version }
+    post pos_register_tender_path, params: { tender_amount: "25.00", lock_version: transaction.lock_version }
     transaction.reload
     operation_id = css_select("input[name='completion_operation_id']").first["value"]
     Pos::CompleteTransaction.call(
@@ -295,12 +301,12 @@ class PosRegisterTest < ActionDispatch::IntegrationTest
       actor: @actor,
       operation_id: operation_id,
       expected_lock_version: transaction.lock_version,
-      expected_total_cents: transaction.total_cents
+      expected_total_cents: transaction.total_cents, expected_signed_net_cents: transaction.signed_net_cents
     )
     post pos_transaction_complete_path(transaction), params: {
       completion_operation_id: operation_id,
       lock_version: transaction.lock_version,
-      expected_total_cents: transaction.total_cents,
+      expected_total_cents: transaction.total_cents, expected_signed_net_cents: transaction.signed_net_cents,
       amount_presented_cents: 2500
     }
     assert_redirected_to pos_completed_transaction_path(transaction)
@@ -326,13 +332,13 @@ class PosRegisterTest < ActionDispatch::IntegrationTest
     assert_match "quantity must be positive", response.body
     assert_select "#pos-command-field[value='0']"
 
-    post pos_register_tender_path, params: { amount_presented: "abc", lock_version: transaction.lock_version }
+    post pos_register_tender_path, params: { tender_amount: "abc", lock_version: transaction.lock_version }
     assert_response :success
     assert_match "CASH TENDER", response.body
     assert_match(/not a valid amount/i, response.body)
     assert_select "#pos-command-field[value='abc']"
 
-    post pos_register_tender_path, params: { amount_presented: "0.01", lock_version: transaction.reload.lock_version }
+    post pos_register_tender_path, params: { tender_amount: "0.01", lock_version: transaction.reload.lock_version }
     assert_response :success
     assert_match "CASH TENDER", response.body
     assert_match(/amount due/i, response.body)
@@ -344,14 +350,14 @@ class PosRegisterTest < ActionDispatch::IntegrationTest
     transaction = PosTransaction.working.find_by!(register: @register)
     post pos_register_merchandise_path, params: { identifier: @variant.sku, lock_version: transaction.lock_version }
     transaction.reload
-    post pos_register_tender_path, params: { amount_presented: "25.00", lock_version: transaction.lock_version }
+    post pos_register_tender_path, params: { tender_amount: "25.00", lock_version: transaction.lock_version }
     transaction.reload
     operation_id = SecureRandom.uuid_v7
     payload = Pos::CompleteTransaction.command_payload(
       transaction: transaction,
       operation_id: operation_id,
       expected_lock_version: transaction.lock_version,
-      expected_total_cents: transaction.total_cents
+      expected_total_cents: transaction.total_cents, expected_signed_net_cents: transaction.signed_net_cents
     )
     Pos::OperationLease.begin!(
       register_id: transaction.register_id,
@@ -415,13 +421,13 @@ class PosRegisterTest < ActionDispatch::IntegrationTest
     transaction = PosTransaction.working.find_by!(register: @register)
     post pos_register_merchandise_path, params: { identifier: @variant.sku, lock_version: transaction.lock_version }
     transaction.reload
-    post pos_register_tender_path, params: { amount_presented: "25.00", lock_version: transaction.lock_version }
+    post pos_register_tender_path, params: { tender_amount: "25.00", lock_version: transaction.lock_version }
     transaction.reload
     operation_id = css_select("input[name='completion_operation_id']").first["value"]
     post pos_transaction_complete_path(transaction), params: {
       completion_operation_id: operation_id,
       lock_version: transaction.lock_version,
-      expected_total_cents: transaction.total_cents,
+      expected_total_cents: transaction.total_cents, expected_signed_net_cents: transaction.signed_net_cents,
       amount_presented_cents: 2500
     }
     follow_redirect!
@@ -444,13 +450,13 @@ class PosRegisterTest < ActionDispatch::IntegrationTest
     transaction = PosTransaction.working.find_by!(register: @register)
     post pos_register_merchandise_path, params: { identifier: @variant.sku, lock_version: transaction.lock_version }
     transaction.reload
-    post pos_register_tender_path, params: { amount_presented: "25.00", lock_version: transaction.lock_version }
+    post pos_register_tender_path, params: { tender_amount: "25.00", lock_version: transaction.lock_version }
     transaction.reload
     operation_id = css_select("input[name='completion_operation_id']").first["value"]
     complete_params = {
       completion_operation_id: operation_id,
       lock_version: transaction.lock_version,
-      expected_total_cents: transaction.total_cents,
+      expected_total_cents: transaction.total_cents, expected_signed_net_cents: transaction.signed_net_cents,
       amount_presented_cents: 2500
     }
 

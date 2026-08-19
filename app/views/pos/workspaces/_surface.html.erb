@@ -1,18 +1,27 @@
 <%
   lines = @lines || @transaction.pos_transaction_lines.includes(:inventory_unit, product_variant: [ :product, :merchandise_condition ])
   tenders = @tenders || @transaction.pos_tenders.ordered.to_a
-  tender = @tender || tenders.find(&:cash?)
+  tender = @tender || tenders.find { |item| item.cash? && item.direction == "payment" }
   selected_tender_type = @selected_tender_type || tenders && Pos::Support.cash_tender_type
-  remaining_due_cents = @remaining_due_cents
-  remaining_due_cents = Pos::Support.remaining_due_cents(@transaction) if remaining_due_cents.nil?
+  settlement_direction = @settlement_direction || Pos::Support.settlement_direction(@transaction)
+  remaining_payment_cents = @remaining_payment_cents
+  remaining_payment_cents = Pos::Support.remaining_payment_cents(@transaction) if remaining_payment_cents.nil?
+  remaining_refund_cents = @remaining_refund_cents
+  remaining_refund_cents = Pos::Support.remaining_refund_cents(@transaction) if remaining_refund_cents.nil?
   selected_id = @selected_line&.id
   locked = %w[completion_pending completion_failed].include?(@ui_mode)
   leftover = @session_record.reporting_period.business_date != BusinessDate.for_store(current_store)
-  amount_due = remaining_due_cents
+  refund_mode = settlement_direction == :refund
+  even_exchange = @transaction.even_exchange?
+  remaining_cents = refund_mode ? remaining_refund_cents : remaining_payment_cents
   change_cents = tender&.change_cents
   completion_recovery = @ui_mode == "completion_failed"
   cash_selected = selected_tender_type&.cash?
   show_reference = @ui_mode == "tender" && selected_tender_type&.reference_captured?
+  command_value = @command_value
+  if command_value.blank? && @ui_mode == "tender" && refund_mode
+    command_value = money_field_value(remaining_refund_cents)
+  end
   command_inputmode =
     if @ui_mode == "quantity"
       "numeric"
@@ -21,21 +30,30 @@
     else
       "text"
     end
+  remaining_label = refund_mode ? "Refund due #{format_money_cents(remaining_cents)}" : "Amount due #{format_money_cents(remaining_cents)}"
   command_label =
     if @ui_mode == "quantity" && @selected_line
       "#{pos_line_description(@selected_line)} · Current quantity #{@selected_line.quantity}"
     elsif @ui_mode == "tender"
-      if cash_selected
-        "Amount due #{format_money_cents(amount_due)}. Cash presented"
+      if refund_mode
+        cash_selected ? "#{remaining_label}. Refund amount" : "#{remaining_label}. #{selected_tender_type&.name} amount"
+      elsif cash_selected
+        "#{remaining_label}. Cash presented"
       else
-        "Remaining #{format_money_cents(amount_due)}. #{selected_tender_type&.name} amount"
+        "Remaining #{format_money_cents(remaining_cents)}. #{selected_tender_type&.name} amount"
       end
     elsif locked
-      "Tender (locked)"
+      refund_mode ? "Refund (locked)" : "Tender (locked)"
     else
       "Scan or identifier"
     end
-  tender_mode_label = cash_selected || locked ? "CASH TENDER" : "TENDER"
+  tender_mode_label = if refund_mode
+    "REFUND"
+  else
+    cash_selected || locked ? "CASH TENDER" : "TENDER"
+  end
+  sale_lines = lines.select(&:sale?)
+  return_lines = lines.select(&:return?)
 %>
 
 <div id="pos_workspace"
@@ -45,6 +63,8 @@
      data-register-workspace-auto-complete-value="<%= @auto_complete ? "true" : "false" %>"
      data-register-workspace-workspace-url-value="<%= pos_register_workspace_path %>"
      data-register-workspace-tender-types-value="<%= h((@cashier_tender_types || []).map(&:cashier_payload).to_json) %>"
+     data-register-workspace-settlement-value="<%= settlement_direction %>"
+     data-register-workspace-refund-remaining-value="<%= remaining_refund_cents %>"
      data-register-workspace-policies-value="<%= h((@control_policies || {}).to_json) %>"
      data-register-workspace-reasons-value="<%= h(Pos::ControlledActionReasons::CATALOGS.to_json) %>"
      data-action="turbo:submit-end->register-workspace#onSubmitEnd">
@@ -77,10 +97,13 @@
           </thead>
           <tbody>
             <% lines.each do |line| %>
+              <% original = line.original_transaction_line&.pos_transaction %>
               <tr class="<%= [ ("is-selected" if line.id == selected_id), ("is-controlled" if pos_line_controlled?(line)) ].compact.join(" ") %>"
                   data-line-id="<%= line.id %>"
                   data-quantity="<%= line.quantity %>"
                   data-description="<%= pos_line_description(line) %>"
+                  data-direction="<%= line.direction %>"
+                  data-linked-return="<%= line.linked_return? %>"
                   data-unit-line="<%= line.unit_line? %>"
                   data-price-overridden="<%= line.price_overridden? %>"
                   data-discounted="<%= line.manually_discounted? %>"
@@ -91,13 +114,21 @@
                   aria-selected="<%= line.id == selected_id %>">
                 <td><%= line.id == selected_id ? ">" : "" %> <%= line.quantity %></td>
                 <td>
-                  <%= pos_line_description(line) %>
+                  <%= line.return? ? "RETURN · #{pos_line_description(line)}" : pos_line_description(line) %>
                   <% if pos_line_controlled?(line) %>
                     <span class="pos-line-flags"><%= pos_line_control_flags(line) %></span>
                   <% end %>
+                  <% if line.linked_return? %>
+                    <div class="muted">
+                      <% if original %>From <%= original.transaction_reference %><% end %>
+                      <% if line.return_reason_name_snapshot.present? %>
+                        <%= original ? " · " : "" %><%= line.return_reason_name_snapshot %>
+                      <% end %>
+                    </div>
+                  <% end %>
                 </td>
                 <td class="numeric"><%= format_money_cents(line.selling_unit_price_cents) %></td>
-                <td class="numeric"><%= format_money_cents(line.extended_selling_amount_cents) %></td>
+                <td class="numeric"><%= format_signed_money_cents(pos_line_amount_cents(line)) %></td>
               </tr>
             <% end %>
           </tbody>
@@ -105,33 +136,42 @@
       </div>
 
       <aside id="pos_totals" class="pos-totals">
-        <div>Subtotal  <%= format_money_cents(@transaction.subtotal_cents) %></div>
-        <% if @transaction.discount_cents.positive? %>
-          <div>Discount  <%= format_money_cents(@transaction.discount_cents) %></div>
-        <% end %>
-        <div>Tax  <%= format_money_cents(@transaction.tax_cents) %></div>
-        <div>Total  <%= format_money_cents(@transaction.total_cents) %></div>
-        <% tenders.each do |working_tender| %>
-          <div><%= working_tender.tender_name %>  <%= format_money_cents(working_tender.amount_cents) %></div>
-        <% end %>
-        <% if Pos::Support.exact_settlement?(@transaction) %>
-          <% if tender %>
-            <div>Cash presented  <%= format_money_cents(tender.amount_presented_cents) %></div>
-            <div class="pos-totals__change">CHANGE  <%= format_money_cents(change_cents) %></div>
+        <% if sale_lines.any? %>
+          <div>Sales  <%= format_money_cents(@transaction.sale_total_cents) %></div>
+          <% if @transaction.discount_cents.positive? %>
+            <div>Discount  <%= format_money_cents(@transaction.discount_cents) %></div>
           <% end %>
-        <% else %>
-          <div class="pos-totals__due">Amount due  <%= format_money_cents(amount_due) %></div>
+        <% end %>
+        <% if return_lines.any? %>
+          <div>Returns  <%= format_signed_money_cents(-@transaction.return_total_cents) %></div>
+          <% if @transaction.return_discount_cents.positive? %>
+            <div>Discount reversal  <%= format_signed_money_cents(@transaction.return_discount_cents) %></div>
+          <% end %>
+        <% end %>
+        <div>Net  <%= format_signed_money_cents(@transaction.signed_net_cents) %></div>
+        <% tenders.each do |working_tender| %>
+          <div><%= pos_tender_label(working_tender) %>  <%= format_money_cents(working_tender.amount_cents) %></div>
+        <% end %>
+        <% if Pos::Support.exact_settlement?(@transaction) && tender %>
+          <div>Cash presented  <%= format_money_cents(tender.amount_presented_cents) %></div>
+          <div class="pos-totals__change">CHANGE  <%= format_money_cents(change_cents) %></div>
+        <% elsif even_exchange && @ui_mode == "sale_entry" %>
+          <div>Even exchange</div>
+        <% elsif settlement_direction == :refund %>
+          <div class="pos-totals__due">Refund due  <%= format_money_cents(remaining_cents) %></div>
+        <% elsif settlement_direction == :payment %>
+          <div class="pos-totals__due">Amount due  <%= format_money_cents(remaining_cents) %></div>
         <% end %>
       </aside>
     </div>
 
     <div id="pos_feedback" class="pos-feedback" data-register-workspace-target="feedback" role="<%= @feedback.present? ? "alert" : "status" %>" aria-live="<%= @feedback.present? ? "assertive" : "polite" %>">
       <% if @ui_mode == "completion_pending" && @feedback.blank? %>
-        Completing sale…
+        Completing transaction…
       <% elsif @feedback.present? %>
         <%= @feedback %>
         <% if @ui_mode == "completion_failed" %>
-          Tender is kept. Retry does not take Cash again.
+          Tender is kept. Retry does not take it again.
         <% end %>
       <% end %>
     </div>
@@ -142,7 +182,7 @@
       <input id="pos-command-field"
              class="pos-command__field"
              data-register-workspace-target="field"
-             value="<%= @command_value %>"
+             value="<%= command_value %>"
              inputmode="<%= command_inputmode %>"
              autocomplete="off"
              <%= "disabled" if locked || @ui_mode == "completion_pending" %>
@@ -171,7 +211,7 @@
         <button type="button" class="btn btn--secondary" data-action="register-workspace#openPriceOverride" data-register-workspace-target="overrideButton" disabled>Price override (F5)</button>
         <button type="button" class="btn btn--secondary" data-action="register-workspace#openLineDiscount" data-register-workspace-target="discountButton" disabled>Discount (F6)</button>
         <button type="button" class="btn btn--secondary" data-action="register-workspace#openTaxClassOverride" data-register-workspace-target="taxClassButton" disabled>Tax Class (F7)</button>
-        <button type="button" class="btn btn--secondary" data-action="register-workspace#enterTender" data-register-workspace-target="tenderButton" disabled>Tender (+)</button>
+        <button type="button" class="btn btn--secondary" data-action="register-workspace#enterTender" data-register-workspace-target="tenderButton" disabled><%= even_exchange ? "Complete (+)" : (refund_mode ? "Refund (+)" : "Tender (+)") %></button>
         <button type="button" class="btn btn--secondary" data-action="register-workspace#removeSelected" data-register-workspace-target="removeButton" disabled>Remove (F8)</button>
         <% if @ui_mode == "tender" && tenders.any? %>
           <%= button_to "Return to sale", pos_register_abandon_tender_path, method: :post,
@@ -216,7 +256,7 @@
 
     <%= form_with url: pos_register_tender_path, method: :post, html: { class: "pos-hidden", data: { register_workspace_target: "tenderForm", turbo: true } } do %>
       <%= hidden_field_tag :lock_version, @transaction.lock_version %>
-      <%= hidden_field_tag :amount_presented, "", data: { register_workspace_target: "presentedInput" } %>
+      <%= hidden_field_tag :tender_amount, "", data: { register_workspace_target: "presentedInput" } %>
       <%= hidden_field_tag :tender_type_id, selected_tender_type&.id, data: { register_workspace_target: "tenderTypeInput" } %>
       <%= hidden_field_tag :external_reference, "", data: { register_workspace_target: "referenceInput" } %>
     <% end %>
@@ -230,6 +270,7 @@
       <%= hidden_field_tag :lock_version, @transaction.lock_version %>
       <%= hidden_field_tag :completion_operation_id, @completion_operation_id %>
       <%= hidden_field_tag :expected_total_cents, @transaction.total_cents %>
+      <%= hidden_field_tag :expected_signed_net_cents, @transaction.signed_net_cents %>
     <% end %>
 
     <%= form_with url: pos_register_controlled_action_path, method: :post, html: { class: "pos-hidden", data: { register_workspace_target: "controlForm", turbo: true } } do %>
@@ -259,10 +300,10 @@
        aria-modal="true"
        aria-labelledby="pos-cancel-title">
     <div class="pos-overlay__panel">
-      <h2 id="pos-cancel-title">Cancel this sale?</h2>
-      <p>Lines will not be sold. No receipt. No inventory movement.</p>
+      <h2 id="pos-cancel-title">Cancel this transaction?</h2>
+      <p>Lines will not be sold or returned. No receipt. No inventory movement.</p>
       <button type="button" class="btn btn--secondary" data-action="register-workspace#closeOverlay" data-register-workspace-target="dontCancel">Don't cancel (Esc)</button>
-      <button type="button" class="btn btn--danger" data-action="register-workspace#confirmCancel" data-register-workspace-target="confirmCancel">Cancel sale (F9)</button>
+      <button type="button" class="btn btn--danger" data-action="register-workspace#confirmCancel" data-register-workspace-target="confirmCancel">Cancel transaction (F9)</button>
     </div>
   </div>
 

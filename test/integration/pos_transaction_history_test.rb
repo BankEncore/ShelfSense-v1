@@ -104,6 +104,33 @@ class PosTransactionHistoryTest < ActionDispatch::IntegrationTest
     assert_equal @register.id.to_s, session[:pos_register_id].to_s
   end
 
+  test "history list shows signed net and detail offers Return items without opening a session" do
+    transaction = complete_cash_sale!
+    Pos::CloseSession.call(
+      session: @context[:session],
+      actor: @actor,
+      expected_lock_version: @context[:session].lock_version,
+      closing_count_cents: 0
+    )
+    assert_nil session[:pos_register_id]
+
+    get pos_transactions_path
+    assert_response :success
+    assert_select "th", text: "Net"
+    assert_match format_signed(transaction.signed_net_cents), response.body
+    assert_nil session[:pos_register_id]
+
+    get pos_transaction_path(transaction)
+    assert_response :success
+    assert_match "Sales tax", response.body
+    assert_match "Sales total", response.body
+    assert_match "Sold 1", response.body
+    assert_match "Remaining 1", response.body
+    assert_select "a", text: "Return items"
+    assert_nil session[:pos_register_id]
+    refute PosSession.open.exists?
+  end
+
   test "history keeps snapshots after live catalog and user changes and reprint has no commercial effect" do
     used_variant, unit = pos_on_hand_unit(store: @store, actor: @actor, tax_class: @tax, name: "Used Book")
     transaction = Pos::StartTransaction.call(session: @context[:session], actor: @actor)
@@ -243,6 +270,14 @@ class PosTransactionHistoryTest < ActionDispatch::IntegrationTest
 
   def pos_cashier_name_for(transaction)
     transaction.cashier_name_snapshot.presence || "Not captured"
+  end
+
+  def format_signed(cents)
+    return "$0.00" if cents.to_i.zero?
+
+    prefix = cents.positive? ? "+" : "-"
+    absolute = cents.abs
+    "#{prefix}$#{absolute / 100}.#{format("%02d", absolute % 100)}"
   end
 
   def commercial_counts

@@ -40,7 +40,7 @@ where errors appear
 how completion-pending looks
 visible button arrangement
 receipt confirmation layout
-completed-receipt New sale shortcut (not Enter)
+completed-receipt New transaction shortcut (not Enter)
 ```
 
 ---
@@ -253,25 +253,25 @@ Direct unauthorized requests must fail, including a second cashier operating ano
 
 ## 6. Tender vs complete (blocker)
 
-`TenderCash` replaces the Cash tender **in place** (same `id` / `tender_number`) and advances `lock_version`. `AddTender` / `RemoveWorkingTender` also advance `lock_version`. `CompleteTransaction` command hash is `transaction_id`, `operation_id`, `expected_lock_version`, `expected_total_cents` — presented lives on the Cash row, not the command. Re-running `TenderCash` on a completion retry changes `lock_version` and raises `PayloadMismatch`.
+`TenderCash` replaces the Cash tender **in place** (same `id` / `tender_number`) and advances `lock_version`. `AddTender` / `AddRefundTender` / `RemoveWorkingTender` also advance `lock_version`. `CompleteTransaction` command hash is `transaction_id`, `operation_id`, `expected_lock_version`, `expected_total_cents`, `expected_signed_net_cents` — presented lives on the Cash payment row, not the command. Re-running `TenderCash` on a completion retry changes `lock_version` and raises `PayloadMismatch`.
 
 Ordinary cashier Enter in `TENDER` (Phase 5 all-Cash path unchanged):
 
 ```text
 disable input
-POST tender (Cash; expected_lock_version = v5)
+POST tender (param tender_amount; Cash payment → TenderCash; non-cash payment → AddTender; refund → AddRefundTender)
   → applied + change + lock_version = v6
   → completion_operation_id = A   (Rails: SecureRandom.uuid_v7) when remaining = 0
 POST complete (
     /pos/transactions/:transaction_id/complete
     operation_id = A,
     expected_lock_version = v6,
-    expected_total_cents from the tender response
+    expected_total_cents and expected_signed_net_cents from Core
   )
   → GET /pos/transactions/:id/completed
 ```
 
-F2 cycles **active** identities (Cash, Card, Check, then active Other). Other appears only when an active Other identity exists. The workspace passes those identities to Stimulus as one JSON array (`id`, `name`, `category`, `reference_policy`) so display names may contain commas or pipes without desynchronizing the submitted `tender_type_id`. The Reference field follows `external_reference_policy` **before** the tender is added: `omitted` hides it, `optional` shows `Reference (optional)`, `required` shows `Reference (required)`. Remaining due and working tenders (by `tender_number`, snapshot names) render in `pos_totals`. Enter adds the selected tender (amount from the primary field, reference from the visible field when captured). Remaining `> 0` stays TENDER. Remaining `= 0` → completion-pending + auto-complete.
+F2 cycles **active** identities (Cash, Card, Check, then active Other). In refund settlement it cycles `TenderType.refund_selectable` (`allows_refund`). Other appears only when an active Other identity exists. The workspace passes those identities to Stimulus as one JSON array (`id`, `name`, `category`, `reference_policy`, `allows_refund`) so display names may contain commas or pipes without desynchronizing the submitted `tender_type_id`. The Reference field follows `external_reference_policy` **before** the tender is added: `omitted` hides it, `optional` shows `Reference (optional)`, `required` shows `Reference (required)`. Amount due vs Refund due and working tenders (by `tender_number`, snapshot names) render in `pos_totals`. Enter adds the selected tender (amount from `tender_amount`, reference from the visible field when captured). Remaining `> 0` stays TENDER. Remaining `= 0` on a **payment or refund** → completion-pending + auto-complete. Mixed sale+return with `signed_net = 0` (even exchange) stays `SALE_ENTRY` so more sale lines can be added; **Complete (+)** confirms with no tenders. Sale-only or return-only zero-net retains completion-pending / auto-complete and is not labeled Even exchange. Refund mode uses Refund (+) / Refund amount and prefills remaining refund; Cash refund has no presented/change.
 
 Escape before any tender: SALE_ENTRY. After tenders: Escape is a no-op; Return to sale is `AbandonTender`; F8 removes the last working tender.
 
@@ -319,7 +319,7 @@ Do **not** unconditionally mint a new id on refresh. Minting B while A is `in_fl
 - Reuse the token only for retries of that same post-tender payload (`expected_lock_version`, expected total).
 - A new `TenderCash` or `AddTender` (changed settlement, or re-tender after `AbandonTender`) returns a **new** `completion_operation_id`.
 - After exact settlement succeeds, do not `POST tender` again unless the cashier is changing tenders. That requires `POST abandon_tender` (Return to sale) or F8 / remove. Then a new tender and a new token.
-- Stimulus sends `expected_total_cents` from the **last exact-settlement / completion-pending render**, not a client-side recompute. Recovery on GET workspace uses **persisted** transaction + tenders, not those browser fields.
+- Stimulus sends `expected_total_cents` and `expected_signed_net_cents` from the **last exact-settlement / completion-pending render**, not a client-side recompute. Recovery on GET workspace uses **persisted** transaction + tenders, not those browser fields.
 - Abandoned `in_flight` leases expire in 2 minutes (`PosOperation::LEASE_DURATION`). Do not reuse an old token after a new tender.
 
 If completion fails recoverably: keep the working transaction **and** the tender; show a completion error; offer retry complete with the **same** token. **Return to sale** is `POST abandon_tender`, then `SALE_ENTRY` with no working tender (`lock_version` advances only if a tender was removed). Changing Cash presented after a failed complete: Return to sale, then `+` / Tender (new `TenderCash`, new token).
@@ -362,7 +362,7 @@ Intercept `*` and `+` on keydown so they never become identifier text. Do not in
 
 | Mode | Enter | Escape | Other |
 |---|---|---|---|
-| `SALE_ENTRY` | identifier → `AddMerchandise`. Empty Enter is a no-op. Digits alone are an identifier, not quantity | clear input; stay `SALE_ENTRY` | `*` → `QUANTITY` if a line is selected; `+` → `TENDER` if merchandise exists; F8 removes selected line |
+| `SALE_ENTRY` | identifier → `AddMerchandise`. Empty Enter is a no-op. Digits alone are an identifier, not quantity | clear input; stay `SALE_ENTRY` | `*` → `QUANTITY` if a line is selected; `+` → `TENDER` if merchandise exists and `signed_net ≠ 0`; mixed even exchange `+` confirms complete ([returns.md](../phase6-pos-mvp/returns.md)); F8 removes selected line |
 | `QUANTITY` | `ChangeQuantity` on selected line → `SALE_ENTRY` | abandon → `SALE_ENTRY` | quantity `0` is invalid (service requires positive); F8 is not used here — Escape then F8 in `SALE_ENTRY` |
 | `TENDER` (before `TenderCash` succeeds) | `POST tender` only | → `SALE_ENTRY` | insufficient Cash: remain `TENDER` |
 | completion pending (`TenderCash` succeeded, including GET workspace restore) | not a fourth named mode; input locked until complete response | do not silently return to `SALE_ENTRY` | retry is `POST complete` only; **Return to sale** is `POST abandon_tender` |
@@ -418,7 +418,7 @@ Complete        → tender becomes completed immutable fact
 
 Inventory shortage is a **completion** error (Phase 4 posts on complete, not on add-line). The scan path will not catch oversell.
 
-Cancel: explicit confirmation overlay (see keyboard map). Slice 2 **disables the control** when the working transaction has no lines; that is operator UX, not a `CancelTransaction` invariant. Escape / Don't cancel returns to the prior mode and focus. Scanner Enter must not confirm. Cancel from the recoverable completion-error screen (working + tender) uses this same `CancelTransaction` rule.
+Cancel: explicit confirmation overlay (see keyboard map). Copy is transaction-generic (`Cancel this transaction?`), not sale-only. Slice 2 **disables the control** when the working transaction has no lines; that is operator UX, not a `CancelTransaction` invariant. Escape / Don't cancel returns to the prior mode and focus. Scanner Enter must not confirm. Cancel from the recoverable completion-error screen (working + tender) uses this same `CancelTransaction` rule.
 
 ---
 
@@ -453,18 +453,20 @@ A cashier can:
 8. Enter Cash presented; insufficient Cash stays in `TENDER`; valid settlement calls `TenderCash` then `CompleteTransaction` as two HTTP requests.
 9. Retry completion without calling `TenderCash` again; one receipt and one inventory posting. Refresh while working+tender restores a matching `in_flight`/`failed` `operation_id` from **persisted** settlement rather than minting a second attempt.
 10. Refresh the workspace and resume the same working transaction (GET does not create another). Working + Cash tender restores completion-pending. No working transaction redirects to the enter gate — never to an inferred “latest” receipt.
-11. See a completion receipt/confirmation from completed facts at `GET /pos/transactions/:id/completed`, then continue to a fresh `SALE_ENTRY` via the **New sale** control. Enter on the receipt is a no-op (scanner-safe). A lost complete response or complete retry against an already-completed transaction routes to **that** id's receipt.
+11. See a completion receipt/confirmation from completed facts at `GET /pos/transactions/:id/completed`, then continue to a fresh `SALE_ENTRY` via the **New transaction** control. Enter on the receipt is a no-op (scanner-safe). A lost complete response or complete retry against an already-completed transaction routes to **that** id's receipt.
 12. Return to sale after a recoverable complete failure via `AbandonTender` (persisted tender is gone; GET workspace stays `SALE_ENTRY`).
 13. Receive inline feedback for unknown identifier, unsupported merchandise, stale `lock_version`, unresolved tax, insufficient Cash, inventory failure on complete, and recoverable completion/network errors, with the working transaction preserved.
 14. Be denied when a second cashier attempts to operate another cashier's Session.
 15. Never mutate receipt, inventory, tax, or totals in controller or Stimulus code.
 
-System tests (when the workspace is implemented) must cover at least: scan → focus restored → rescan increment; quantity mode; tender then complete; Escape; double Enter; insufficient Cash; refresh/re-entry; refresh with an existing tender restores completion-pending and the matching `operation_id`; completion retry without re-tender; complete succeeds / response lost / retry of that transaction's complete shows that receipt; GET workspace with no working transaction goes to enter; Return to sale clears the tender; cancel of a working sale with a Cash tender leaves no tenders on the cancelled row; empty-basket Cancel is disabled; cancel overlay ignores Enter and confirms on second F9; completed-receipt Enter does not start New sale; `pos_feedback` does not move the primary field.
+System tests (when the workspace is implemented) must cover at least: scan → focus restored → rescan increment; quantity mode; tender then complete; Escape; double Enter; insufficient Cash; refresh/re-entry; refresh with an existing tender restores completion-pending and the matching `operation_id`; completion retry without re-tender; complete succeeds / response lost / retry of that transaction's complete shows that receipt; GET workspace with no working transaction goes to enter; Return to sale clears the tender; cancel of a working sale with a Cash tender leaves no tenders on the cancelled row; empty-basket Cancel is disabled; cancel overlay ignores Enter and confirms on second F9; completed-receipt Enter does not start New transaction; `pos_feedback` does not move the primary field.
 
 ---
 
 ## 11. Out of this contract
 
-Split tender, discounts, returns, suspend/recall, drawers, Terminal, new permissions, close/Z outbox, polished visual design, mobile POS, customer display.
+This Slice 2 contract does not define split tender, discounts, returns, suspend/recall, drawers, Terminal, new permissions, close/Z outbox, polished visual design, mobile POS, or customer display.
+
+Later slices that reuse this workspace: 6.2 mixed tender, 6.4 controlled actions, 6.5B linked returns and refunds ([returns.md](../phase6-pos-mvp/returns.md)). 6.5C unlinked return is next.
 
 Receipt print, blind close, and Z screens are Slice 3: [close-z-screens.md](close-z-screens.md).

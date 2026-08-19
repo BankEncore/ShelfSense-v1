@@ -22,7 +22,7 @@ reason always required; reason_code is material to the fingerprint
 net merchandise is always present; tax uses net
 zero-cent rounded discounts are rejected
 signed net = 0 → no tenders; completion allowed
-signed net < 0 still 6.5 ([returns.md](returns.md))
+signed net < 0 is 6.5B refund settlement ([returns.md](returns.md))
 F8/F9 are not controlled actions
 history/receipt read Core + effective rows; envelope is provenance
 Phase 5 ordinary Cash sale unchanged when unused

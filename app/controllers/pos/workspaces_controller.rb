@@ -122,21 +122,13 @@ module Pos
     def tender
       rescue_workspace(error_mode: "tender") do
         type = selected_tender_type_from_params
-        if type.cash?
-          presented = Money::ParseCents.call(params[:amount_presented])
-          raise Pos::Error, "cash presented is required" if presented.nil?
+        amount = Money::ParseCents.call(params[:tender_amount])
+        raise Pos::Error, "tender amount is required" if amount.nil?
 
-          Pos::TenderCash.call(
-            transaction: @transaction,
-            actor: current_user,
-            expected_lock_version: expected_lock_version,
-            amount_presented_cents: presented
-          )
-        else
-          amount = Money::ParseCents.call(params[:amount_presented])
-          raise Pos::Error, "tender amount is required" if amount.nil?
-
-          Pos::AddTender.call(
+        direction = Pos::Support.settlement_direction(@transaction)
+        case direction
+        when :refund
+          Pos::AddRefundTender.call(
             transaction: @transaction,
             actor: current_user,
             expected_lock_version: expected_lock_version,
@@ -144,6 +136,26 @@ module Pos
             amount_cents: amount,
             external_reference: params[:external_reference]
           )
+        when :payment
+          if type.cash?
+            Pos::TenderCash.call(
+              transaction: @transaction,
+              actor: current_user,
+              expected_lock_version: expected_lock_version,
+              amount_presented_cents: amount
+            )
+          else
+            Pos::AddTender.call(
+              transaction: @transaction,
+              actor: current_user,
+              expected_lock_version: expected_lock_version,
+              tender_type: type,
+              amount_cents: amount,
+              external_reference: params[:external_reference]
+            )
+          end
+        else
+          raise Pos::Error, "transaction does not require a tender"
         end
         @transaction.reload
         apply_post_tender_view!
@@ -175,13 +187,14 @@ module Pos
         end
 
         expected_total = params.require(:expected_total_cents)
+        expected_signed_net = params.require(:expected_signed_net_cents)
         result = Pos::CompleteTransaction.call(
           transaction: @transaction,
           actor: current_user,
           operation_id: params.require(:completion_operation_id),
           expected_lock_version: expected_lock_version,
           expected_total_cents: expected_total,
-          expected_signed_net_cents: expected_total
+          expected_signed_net_cents: expected_signed_net
         )
         redirect_to pos_completed_transaction_path(result.transaction)
       end
@@ -245,11 +258,23 @@ module Pos
 
     def prepare_view_state
       @period = @session_record.reporting_period
-      @lines = @transaction.pos_transaction_lines.includes(:inventory_unit, :pos_controlled_actions, product_variant: [ :product, :merchandise_condition ])
+      @lines = @transaction.pos_transaction_lines.includes(
+        :inventory_unit,
+        :pos_controlled_actions,
+        product_variant: [ :product, :merchandise_condition ],
+        original_transaction_line: :pos_transaction
+      )
       @tenders = @transaction.pos_tenders.ordered.to_a
-      @tender = @tenders.find(&:cash?)
-      @remaining_due_cents = Pos::Support.remaining_due_cents(@transaction)
-      @cashier_tender_types = TenderType.cashier_selectable.to_a
+      @tender = @tenders.find { |tender| pos_workspace_cash_payment?(tender) }
+      @settlement_direction = Pos::Support.settlement_direction(@transaction)
+      @remaining_payment_cents = Pos::Support.remaining_payment_cents(@transaction)
+      @remaining_refund_cents = Pos::Support.remaining_refund_cents(@transaction)
+      @cashier_tender_types =
+        if @settlement_direction == :refund
+          TenderType.refund_selectable.to_a
+        else
+          TenderType.cashier_selectable.to_a
+        end
       @selected_tender_type = resolve_selected_tender_type
       @selected_line ||= default_selected_line
       @tax_classes = TaxClass.active.order(:code)
@@ -262,7 +287,12 @@ module Pos
       @command_value ||= nil
       if Pos::Support.exact_settlement?(@transaction)
         mint_or_restore_completion!
-        apply_completion_view_state
+        if even_exchange_pending?
+          @ui_mode ||= "sale_entry"
+          @auto_complete = false
+        else
+          apply_completion_view_state
+        end
       elsif @tenders.any?
         @ui_mode ||= "tender"
         @auto_complete = false
@@ -334,7 +364,7 @@ module Pos
     def recover_from_workspace_error(message, error_mode)
       @feedback = message
       @transaction.reload
-      @command_value = params[:identifier] || params[:quantity] || params[:amount_presented]
+      @command_value = params[:identifier] || params[:quantity] || params[:tender_amount]
       if @transaction.completed?
         redirect_to pos_completed_transaction_path(@transaction)
         return
@@ -345,10 +375,16 @@ module Pos
     end
 
     def apply_error_mode(error_mode)
-      return if Pos::Support.exact_settlement?(@transaction)
       return if error_mode == "derive"
+      if Pos::Support.exact_settlement?(@transaction)
+        return unless @transaction.even_exchange?
+      end
 
       @ui_mode = error_mode
+    end
+
+    def even_exchange_pending?
+      @transaction.even_exchange? && @completion_status == "pending"
     end
 
     def controlled_action_commercial_attrs
@@ -414,9 +450,14 @@ module Pos
 
     def selected_tender_type_from_params
       id = params[:tender_type_id].presence
+      selectable = if Pos::Support.settlement_direction(@transaction) == :refund
+        TenderType.refund_selectable
+      else
+        TenderType.cashier_selectable
+      end
       return Pos::Support.cash_tender_type if id.blank?
 
-      TenderType.cashier_selectable.find_by(id: id) || raise(Pos::Error, "tender is not available")
+      selectable.find_by(id: id) || raise(Pos::Error, "tender is not available")
     end
 
     def resolve_selected_tender_type
@@ -424,6 +465,10 @@ module Pos
       (@cashier_tender_types.find { |type| type.id.to_s == id.to_s }) ||
         @cashier_tender_types.find(&:cash?) ||
         @cashier_tender_types.first
+    end
+
+    def pos_workspace_cash_payment?(tender)
+      tender.cash? && tender.direction == "payment"
     end
   end
 end

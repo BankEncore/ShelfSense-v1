@@ -75,7 +75,9 @@ export default class extends Controller {
     workspaceUrl: String,
     tenderTypes: Array,
     policies: Object,
-    reasons: Object
+    reasons: Object,
+    settlement: String,
+    refundRemaining: Number
   }
 
   connect() {
@@ -300,14 +302,19 @@ export default class extends Controller {
     if (this.inFlight) return
     if (this.modeValue !== "sale_entry") return
     if (!this.element.querySelector(".pos-lines tbody tr")) return
-    this.setMode("tender", "CASH TENDER")
+    if (this.settlementValue === "none") {
+      this.submitComplete()
+      return
+    }
+    const refund = this.settlementValue === "refund"
+    this.setMode("tender", refund ? "REFUND" : "CASH TENDER")
     this.selectTenderType(this.cashTenderIndex())
     const due = this.element.querySelector(".pos-totals__due")
-    const dueText = due ? due.textContent.trim() : "Amount due"
-    this.setFieldLabel(`${dueText}. Cash presented`)
+    const dueText = due ? due.textContent.trim() : (refund ? "Refund due" : "Amount due")
+    this.setFieldLabel(refund ? `${dueText}. Refund amount` : `${dueText}. Cash presented`)
     this.fieldTarget.disabled = false
     this.fieldTarget.inputMode = "decimal"
-    this.fieldTarget.value = ""
+    this.fieldTarget.value = refund ? this.formatCents(this.refundRemainingValue) : ""
     this.setActionEnabled("quantityButton", false)
     this.setActionEnabled("overrideButton", false)
     this.setActionEnabled("discountButton", false)
@@ -315,6 +322,7 @@ export default class extends Controller {
     this.setActionEnabled("tenderButton", false)
     this.setActionEnabled("removeButton", false)
     this.fieldTarget.focus()
+    if (refund) this.fieldTarget.select()
   }
 
   removeSelected() {
@@ -340,11 +348,16 @@ export default class extends Controller {
     const type = types[safeIndex]
     if (this.hasTenderTypeInputTarget) this.tenderTypeInputTarget.value = type.id
     const cash = type.category === "cash"
+    const refund = this.settlementValue === "refund"
     const name = type.name || (cash ? "Cash" : "Tender")
-    this.setMode("tender", cash ? "CASH TENDER" : "TENDER")
+    this.setMode("tender", refund ? "REFUND" : (cash ? "CASH TENDER" : "TENDER"))
     const due = this.element.querySelector(".pos-totals__due")
-    const dueText = due ? due.textContent.trim() : "Amount due"
-    this.setFieldLabel(cash ? `${dueText}. Cash presented` : `${dueText}. ${name} amount`)
+    const dueText = due ? due.textContent.trim() : (refund ? "Refund due" : "Amount due")
+    if (refund) {
+      this.setFieldLabel(cash ? `${dueText}. Refund amount` : `${dueText}. ${name} amount`)
+    } else {
+      this.setFieldLabel(cash ? `${dueText}. Cash presented` : `${dueText}. ${name} amount`)
+    }
     this.toggleReferenceField(type.reference_policy)
   }
 
@@ -354,7 +367,11 @@ export default class extends Controller {
   }
 
   cashierTenderTypes() {
-    return Array.isArray(this.tenderTypesValue) ? this.tenderTypesValue : []
+    const types = Array.isArray(this.tenderTypesValue) ? this.tenderTypesValue : []
+    if (this.settlementValue === "refund") {
+      return types.filter((type) => type.allows_refund)
+    }
+    return types
   }
 
   toggleReferenceField(policy) {
@@ -430,6 +447,7 @@ export default class extends Controller {
     if (this.inFlight) return
     if (this.modeValue !== "sale_entry") return
     if (this.policyFor(actionType) === "prohibited") return
+    if (this.selectedReturnLine()) return
     const row = this.selectedRow()
     if (!row || !this.hasControlOverlayTarget) return
 
@@ -585,11 +603,12 @@ export default class extends Controller {
     if (this.modeValue === "sale_entry") {
       const hasSelection = Boolean(this.selectedRow())
       const hasLines = Boolean(this.element.querySelector(".pos-lines tbody tr"))
+      const returnLine = this.selectedReturnLine()
       const quantityOk = hasSelection && !this.selectedUnitLine() && !this.selectedQuantityBlocked()
       this.setActionEnabled("quantityButton", quantityOk)
-      this.setActionEnabled("overrideButton", hasSelection && this.policyFor("price_override") !== "prohibited")
-      this.setActionEnabled("discountButton", hasSelection && this.policyFor("line_discount") !== "prohibited")
-      this.setActionEnabled("taxClassButton", hasSelection && this.policyFor("tax_class_override") !== "prohibited")
+      this.setActionEnabled("overrideButton", hasSelection && !returnLine && this.policyFor("price_override") !== "prohibited")
+      this.setActionEnabled("discountButton", hasSelection && !returnLine && this.policyFor("line_discount") !== "prohibited")
+      this.setActionEnabled("taxClassButton", hasSelection && !returnLine && this.policyFor("tax_class_override") !== "prohibited")
       this.setActionEnabled("tenderButton", hasLines)
       this.setActionEnabled("removeButton", hasSelection)
       this.setActionEnabled("cancelButton", hasLines)
@@ -781,9 +800,16 @@ export default class extends Controller {
     return policies[actionType] || "prohibited"
   }
 
+  selectedReturnLine() {
+    const row = this.selectedRow()
+    return Boolean(row && row.dataset.direction === "return")
+  }
+
   selectedQuantityBlocked() {
     const row = this.selectedRow()
-    return Boolean(row && (row.dataset.priceOverridden === "true" || row.dataset.discounted === "true"))
+    if (!row) return false
+    if (row.dataset.direction === "return") return row.dataset.linkedReturn !== "true"
+    return Boolean(row.dataset.priceOverridden === "true" || row.dataset.discounted === "true")
   }
 
   lineHasAction(row, actionType) {

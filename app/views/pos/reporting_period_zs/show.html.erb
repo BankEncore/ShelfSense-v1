@@ -8,19 +8,25 @@
 
   <dl class="pos-z__facts">
     <div><dt>Transactions</dt><dd><%= @period.finalized_transaction_count %></dd></div>
-    <div><dt>Subtotal</dt><dd><%= format_money_cents(@period.finalized_subtotal_cents) %></dd></div>
-    <div><dt>Discount</dt><dd><%= pos_optional_money_cents(@period.finalized_discount_cents) %></dd></div>
-    <div><dt>Tax</dt><dd><%= format_money_cents(@period.finalized_tax_cents) %></dd></div>
-    <div><dt>Total</dt><dd><%= format_money_cents(@period.finalized_total_cents) %></dd></div>
+    <div><dt>Sales subtotal</dt><dd><%= format_money_cents(@period.finalized_subtotal_cents) %></dd></div>
+    <div><dt>Sales discount</dt><dd><%= pos_optional_money_cents(@period.finalized_discount_cents) %></dd></div>
+    <div><dt>Sales tax</dt><dd><%= format_money_cents(@period.finalized_tax_cents) %></dd></div>
+    <div><dt>Sales total</dt><dd><%= format_money_cents(@period.finalized_total_cents) %></dd></div>
+    <div><dt>Returns total</dt><dd><%= pos_optional_money_cents(@period.finalized_return_total_cents) %></dd></div>
+    <div><dt>Net</dt><dd><%= @period.finalized_net_cents.nil? ? pos_optional_money_cents(nil) : format_signed_money_cents(@period.finalized_net_cents) %></dd></div>
     <div><dt>Cash payments</dt><dd><%= format_money_cents(@period.finalized_cash_payment_cents) %></dd></div>
+    <div><dt>Cash refunds</dt><dd><%= pos_optional_money_cents(@period.finalized_cash_refund_cents) %></dd></div>
     <div><dt>Card payments</dt><dd><%= pos_optional_money_cents(@period.finalized_card_payment_cents) %></dd></div>
+    <div><dt>Card refunds</dt><dd><%= pos_optional_money_cents(@period.finalized_card_refund_cents) %></dd></div>
     <div><dt>Check payments</dt><dd><%= pos_optional_money_cents(@period.finalized_check_payment_cents) %></dd></div>
+    <div><dt>Check refunds</dt><dd><%= pos_optional_money_cents(@period.finalized_check_refund_cents) %></dd></div>
     <div><dt>Other payments</dt><dd><%= pos_optional_money_cents(@period.finalized_other_payment_cents) %></dd></div>
+    <div><dt>Other refunds</dt><dd><%= pos_optional_money_cents(@period.finalized_other_refund_cents) %></dd></div>
     <div><dt>Sessions</dt><dd><%= @period.finalized_session_count %></dd></div>
     <div><dt>Opening floats total</dt><dd><%= format_money_cents(@period.finalized_opening_float_cents_sum) %></dd></div>
-    <div><dt>Expected closing Cash</dt><dd><%= format_money_cents(@period.finalized_closing_expected_cash_cents_sum) %></dd></div>
+    <div><dt>Expected closing Cash</dt><dd><%= format_signed_money_cents(@period.finalized_closing_expected_cash_cents_sum) %></dd></div>
     <div><dt>Counted closing Cash</dt><dd><%= format_money_cents(@period.finalized_closing_count_cents_sum) %></dd></div>
-    <div><dt>Closing variance</dt><dd><%= format_money_cents(@period.finalized_closing_variance_cents_sum) %></dd></div>
+    <div><dt>Closing variance</dt><dd><%= format_signed_money_cents(@period.finalized_closing_variance_cents_sum) %></dd></div>
   </dl>
 
   <p>Finalized  <%= format_store_timestamp(@period.closed_at, @period.store) %></p>

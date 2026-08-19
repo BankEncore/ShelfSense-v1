@@ -708,6 +708,18 @@ input[type="submit"]:hover {
   margin-bottom: var(--space-3);
 }
 
+.pos-return-items__fields {
+  display: grid;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+
+.pos-return-items__row label {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+
 .pos-receipt__reprint {
   font-weight: 700;
   letter-spacing: 0.08em;

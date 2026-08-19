@@ -15,7 +15,8 @@
        type.name,
        type.behavioral_category.humanize,
        type.external_reference_policy.humanize,
+       type.allows_refund? ? "Yes" : "No",
        configuration_status_badge(type.active?)
      ]
    } %>
-<%= render "shared/data_table", headers: ["Code", "Name", "Category", "Reference", "Status"], rows: rows %>
+<%= render "shared/data_table", headers: ["Code", "Name", "Category", "Reference", "Refunds", "Status"], rows: rows %>

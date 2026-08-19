@@ -22,6 +22,7 @@
   <%= render "shared/definition_list", rows: [
         ["Category", @tender_type.behavioral_category.humanize],
         ["Reference policy", @tender_type.external_reference_policy.humanize],
+        ["Allow refunds", @tender_type.allows_refund? ? "Yes" : "No"],
         ["System identity", @tender_type.system_protected? ? "Yes" : "No"]
       ] %>
 </section>

@@ -10,15 +10,19 @@
       <div><dt>Completed</dt><dd><%= format_store_timestamp(@transaction.completed_at, @transaction.store) %></dd></div>
       <div><dt>Register</dt><dd><%= pos_padded_register_snapshot(@transaction.register_number_snapshot) %></dd></div>
       <div><dt>Cashier</dt><dd><%= pos_cashier_name(@transaction) %></dd></div>
-      <% if @transaction.discount_cents.positive? %>
-        <div><dt>Discount</dt><dd><%= format_money_cents(@transaction.discount_cents) %></dd></div>
-      <% end %>
-      <div><dt>Total</dt><dd><%= format_money_cents(@transaction.total_cents) %></dd></div>
     </dl>
+
+    <dl class="pos-history__header">
+      <%= render "pos/receipts/directional_totals", transaction: @transaction %>
+    </dl>
+
+    <% if @returnable %>
+      <p><%= link_to "Return items", pos_transaction_return_items_path(@transaction), class: "btn" %></p>
+    <% end %>
 
     <section aria-label="Lines">
       <% @lines.each do |line| %>
-        <%= render "pos/transactions/line", line: line %>
+        <%= render "pos/transactions/line", line: line, summary: @summaries[line.id] %>
       <% end %>
     </section>
 
@@ -28,10 +32,10 @@
         <div class="pos-history__tender">
           <div>
             <%= tender.tender_number %>
-            <%= tender.tender_name %>
+            <%= pos_tender_label(tender) %>
             <%= format_money_cents(tender.amount_cents) %>
           </div>
-          <% if tender.cash? %>
+          <% if pos_cash_payment?(tender) %>
             <div>Presented  <%= format_money_cents(tender.amount_presented_cents) %></div>
             <div>Change  <%= format_money_cents(tender.change_cents) %></div>
           <% elsif tender.external_reference.present? %>

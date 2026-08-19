@@ -23,6 +23,13 @@ module ApplicationHelper
     "#{sign}#{currency_prefix}#{dollars}.#{format("%02d", remainder)}"
   end
 
+  def format_signed_money_cents(cents, currency_prefix: "$")
+    return missing_value if cents.nil?
+    return format_money_cents(cents, currency_prefix: currency_prefix) unless cents.positive?
+
+    "+#{format_money_cents(cents, currency_prefix: currency_prefix)}"
+  end
+
   def money_field_value(cents)
     return if cents.nil?
 

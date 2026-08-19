@@ -1,7 +1,7 @@
 # POS Domain Specification: Returns
 
 **Design status:** Core linked-return, historical-reversal, exchange, and inventory behavior decided; eligibility, unlinked-return basis, offline breadth, and post-void details remain pending in this draft
-**Implementation status:** Phase 6 MVP contract locked in [returns.md](../../../planning/phase4-6-point-of-sale/phase6-pos-mvp/returns.md); not yet implemented
+**Implementation status:** Phase 6 MVP 6.5A/B implemented in [returns.md](../../../planning/phase4-6-point-of-sale/phase6-pos-mvp/returns.md); 6.5C unlinked return is next
 **Required decision gate:** Finalize/supersede ADR-016 before **offline** returns; online MVP does not wait on ADR-016
 **Related specifications:** Transactions, Transaction Lines, Pricing, Discounts, Tax, Tenders, Approvals, Inventory Integration, Receipts, Operation Synchronization, Reconciliation
 **Related workflows:** Linked Return, Partial Return, Individually Tracked Return, Unlinked Return, Exchange, Post-Void

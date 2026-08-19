@@ -1,4 +1,4 @@
-<% content_for :title, "Sale complete" %>
+<% content_for :title, "Transaction complete" %>
 
 <main class="pos-receipt" data-controller="pos-receipt" data-action="keydown@document->pos-receipt#onKeydown">
   <div class="pos-receipt__screen">
@@ -11,14 +11,14 @@
       <div class="pos-header__date">Business date  <%= @transaction.business_date.iso8601 %></div>
     </header>
 
-    <h1 tabindex="-1" autofocus>Sale complete</h1>
+    <h1 tabindex="-1" autofocus>Transaction complete</h1>
     <p class="pos-receipt__ref"><%= @transaction.transaction_reference %></p>
 
     <dl class="pos-receipt__totals">
-      <div><dt>Total</dt><dd><%= format_money_cents(@transaction.total_cents) %></dd></div>
+      <%= render "pos/receipts/directional_totals", transaction: @transaction %>
       <% @tenders.each do |tender| %>
-        <div><dt><%= tender.tender_name %></dt><dd><%= format_money_cents(tender.amount_cents) %></dd></div>
-        <% if tender.cash? %>
+        <div><dt><%= pos_tender_label(tender) %></dt><dd><%= format_money_cents(tender.amount_cents) %></dd></div>
+        <% if pos_cash_payment?(tender) %>
           <div><dt>Cash presented</dt><dd><%= format_money_cents(tender.amount_presented_cents) %></dd></div>
           <div><dt>Change</dt><dd><%= format_money_cents(tender.change_cents) %></dd></div>
         <% elsif tender.external_reference.present? %>
@@ -29,15 +29,18 @@
 
     <ul class="pos-receipt__lines">
       <% @transaction.pos_transaction_lines.each do |line| %>
-        <li><%= line.quantity %> × <%= pos_line_description(line) %>  <%= format_money_cents(line.extended_selling_amount_cents) %></li>
-        <% if line.manually_discounted? %>
-          <li>Discount  <%= format_money_cents(line.manual_discount_cents) %></li>
+        <li>
+          <%= line.quantity %> ×
+          <%= line.return? ? "RETURN #{pos_line_description(line)}" : pos_line_description(line) %>
+          <%= format_signed_money_cents(pos_line_amount_cents(line)) %>
+        </li>
+        <% if line.linked_return? && line.original_transaction_line&.pos_transaction %>
+          <li class="muted">Return from <%= line.original_transaction_line.pos_transaction.transaction_reference %></li>
+        <% end %>
+        <% if line.manual_discount_cents.to_i.positive? %>
+          <li><%= line.return? ? "Discount reversal" : "Discount" %>  <%= format_signed_money_cents(pos_line_discount_cents(line)) %></li>
         <% end %>
       <% end %>
-      <% if @transaction.discount_cents.positive? %>
-        <li>Discount  <%= format_money_cents(@transaction.discount_cents) %></li>
-      <% end %>
-      <li>Tax  <%= format_money_cents(@transaction.tax_cents) %></li>
     </ul>
   </div>
 
@@ -46,7 +49,7 @@
   <div class="pos-receipt__actions pos-no-print">
     <button type="button" class="btn" data-action="pos-receipt#print">Print receipt</button>
     <%= link_to "Transactions", pos_transactions_path, class: "btn btn--secondary" %>
-    <%= button_to "New sale", pos_register_continue_path, method: :post, class: "btn pos-receipt__new" %>
+    <%= button_to "New transaction", pos_register_continue_path, method: :post, class: "btn pos-receipt__new" %>
     <%= button_to "Close register", pos_register_close_path, method: :post,
           params: { session_id: @session_record.id }, class: "btn btn--secondary" %>
   </div>

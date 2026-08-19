@@ -20,14 +20,29 @@
       <% transaction.pos_transaction_lines.each do |line| %>
         <tr>
           <td><%= line.quantity %></td>
-          <td><%= pos_print_line_description(line) %></td>
-          <td><%= format_money_cents(line.extended_selling_amount_cents) %></td>
+          <td>
+            <%= line.return? ? "RETURN #{pos_print_line_description(line)}" : pos_print_line_description(line) %>
+          </td>
+          <td><%= format_signed_money_cents(pos_line_amount_cents(line)) %></td>
         </tr>
-        <% if line.manually_discounted? %>
+        <% if line.linked_return? && line.original_transaction_line&.pos_transaction %>
           <tr>
             <td></td>
-            <td>Discount <%= number_with_precision(line.manual_discount_basis_points / 100.0, precision: 2) %>%</td>
-            <td><%= format_money_cents(-line.manual_discount_cents) %></td>
+            <td>Return from <%= line.original_transaction_line.pos_transaction.transaction_reference %></td>
+            <td></td>
+          </tr>
+        <% end %>
+        <% if line.manual_discount_cents.to_i.positive? %>
+          <tr>
+            <td></td>
+            <td>
+              <% if line.return? %>
+                Discount reversal
+              <% else %>
+                Discount <%= number_with_precision(line.manual_discount_basis_points / 100.0, precision: 2) %>%
+              <% end %>
+            </td>
+            <td><%= format_signed_money_cents(pos_line_discount_cents(line)) %></td>
           </tr>
         <% end %>
       <% end %>
@@ -35,15 +50,10 @@
   </table>
 
   <dl class="pos-receipt__print-totals">
-    <div><dt>Subtotal</dt><dd><%= format_money_cents(transaction.subtotal_cents) %></dd></div>
-    <% if transaction.discount_cents.positive? %>
-      <div><dt>Discount</dt><dd><%= format_money_cents(transaction.discount_cents) %></dd></div>
-    <% end %>
-    <div><dt>Tax</dt><dd><%= format_money_cents(transaction.tax_cents) %></dd></div>
-    <div><dt>Total</dt><dd><%= format_money_cents(transaction.total_cents) %></dd></div>
+    <%= render "pos/receipts/directional_totals", transaction: transaction %>
     <% tenders.each do |tender| %>
-      <div><dt><%= tender.tender_name %></dt><dd><%= format_money_cents(tender.amount_cents) %></dd></div>
-      <% if tender.cash? %>
+      <div><dt><%= pos_tender_label(tender) %></dt><dd><%= format_money_cents(tender.amount_cents) %></dd></div>
+      <% if pos_cash_payment?(tender) %>
         <div><dt>Cash presented</dt><dd><%= format_money_cents(tender.amount_presented_cents) %></dd></div>
         <div><dt>Change</dt><dd><%= format_money_cents(tender.change_cents) %></dd></div>
       <% end %>

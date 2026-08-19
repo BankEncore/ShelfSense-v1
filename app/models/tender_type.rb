@@ -29,6 +29,7 @@ class TenderType < ApplicationRecord
       :code
     )
   }
+  scope :refund_selectable, -> { cashier_selectable.where(allows_refund: true) }
 
   def admin_label
     name
@@ -63,7 +64,8 @@ class TenderType < ApplicationRecord
       id: id.to_s,
       name: name,
       category: behavioral_category,
-      reference_policy: external_reference_policy
+      reference_policy: external_reference_policy,
+      allows_refund: allows_refund
     }
   end
 

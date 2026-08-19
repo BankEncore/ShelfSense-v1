@@ -37,12 +37,12 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     field.send_keys :enter
     send_keys :enter
 
-    assert_text "Sale complete", wait: 10
+    assert_text "Transaction complete", wait: 10
     assert_equal 1, PosTransaction.completed.where(register: @register).count
-    assert_text "New sale"
+    assert_text "New transaction"
     send_keys :enter
-    assert_text "Sale complete"
-    click_on "New sale"
+    assert_text "Transaction complete"
+    click_on "New transaction"
     assert_text "SALE ENTRY"
     assert_no_text "Example Book"
   end
@@ -84,7 +84,7 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     field.send_keys :enter
     send_keys :enter
 
-    assert_text "Sale complete", wait: 10
+    assert_text "Transaction complete", wait: 10
     assert_text "External Card"
     assert_text "Cash"
     completed = PosTransaction.completed.find_by!(register: @register)
@@ -202,9 +202,9 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     open_register
     add_current_sku
     send_keys :f9
-    assert_text "Cancel this sale?"
+    assert_text "Cancel this transaction?"
     send_keys :enter
-    assert_text "Cancel this sale?"
+    assert_text "Cancel this transaction?"
     assert_text "Example Book"
     send_keys :f9
     assert_text "SALE ENTRY"
@@ -218,9 +218,9 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     field = find("#pos-command-field")
     field.fill_in with: "50.00"
     field.send_keys :enter
-    assert_text "Sale complete", wait: 10
+    assert_text "Transaction complete", wait: 10
     send_keys :enter
-    assert_text "Sale complete"
+    assert_text "Transaction complete"
     visit pos_register_workspace_path
     assert_text "Open register"
   end
@@ -251,7 +251,7 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     assert_button "Cancel (F9)", disabled: true
     assert_text "SALE ENTRY"
     assert_no_text "CASH TENDER"
-    assert_no_text "Cancel this sale?"
+    assert_no_text "Cancel this transaction?"
     assert_text "Example Book"
   end
 
@@ -336,7 +336,7 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
 
     open_quantity_stock(store: @store, variant: @variant, actor: @actor, quantity: 5)
     click_on "Retry complete"
-    assert_text "Sale complete", wait: 10
+    assert_text "Transaction complete", wait: 10
     completed = PosTransaction.completed.find_by!(register: @register)
     assert_equal 1, completed.pos_tenders.count
     assert_equal 1, OutboxMessage.where(event_type: "pos.transaction_completed").count
@@ -379,7 +379,7 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     field.send_keys :enter
     send_keys :enter
 
-    assert_text "Sale complete", wait: 10
+    assert_text "Transaction complete", wait: 10
     assert_text unit.unit_identifier
     assert_text condition_code
     assert_text "Used Book"
@@ -395,7 +395,7 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     field.fill_in with: "50.00"
     field.send_keys :enter
     send_keys :enter
-    assert_text "Sale complete", wait: 10
+    assert_text "Transaction complete", wait: 10
     completed = PosTransaction.completed.find_by!(register: @register)
     counts = {
       transactions: PosTransaction.count,
