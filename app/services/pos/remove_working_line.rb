@@ -27,6 +27,7 @@ module Pos
           line.destroy!
         end
         Pos::Support.refresh_totals!(transaction)
+        Pos::Support.touch_working_transaction!(transaction)
         transaction
       end
     end

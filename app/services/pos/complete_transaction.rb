@@ -14,8 +14,25 @@ module Pos
         "operation_id" => operation_id.to_s,
         "expected_lock_version" => expected_lock_version.to_i,
         "expected_total_cents" => expected_total_cents.to_i,
-        "expected_signed_net_cents" => (expected_signed_net_cents.nil? ? expected_total_cents : expected_signed_net_cents).to_i
+        "expected_signed_net_cents" => resolve_expected_signed_net_cents!(
+          transaction: transaction,
+          expected_total_cents: expected_total_cents,
+          expected_signed_net_cents: expected_signed_net_cents
+        )
       }
+    end
+
+    def self.resolve_expected_signed_net_cents!(transaction:, expected_total_cents:, expected_signed_net_cents:)
+      expected_total_cents = expected_total_cents.to_i
+      if expected_signed_net_cents.nil?
+        unless transaction.signed_net_cents == transaction.total_cents
+          raise Pos::Error, "expected signed net is required"
+        end
+
+        expected_total_cents
+      else
+        expected_signed_net_cents.to_i
+      end
     end
 
     def self.payload_hash_matches?(stored_hash, command_payload)
@@ -33,13 +50,18 @@ module Pos
       @operation_id = operation_id
       @expected_lock_version = expected_lock_version.to_i
       @expected_total_cents = expected_total_cents.to_i
-      @expected_signed_net_cents = (expected_signed_net_cents.nil? ? expected_total_cents : expected_signed_net_cents).to_i
+      @expected_signed_net_cents = expected_signed_net_cents
     end
 
     def call
       lease = nil
       Pos::Support.authorize!(@actor, @transaction.store)
       Pos::Support.require_transaction_cashier!(@actor, @transaction)
+      @expected_signed_net_cents = self.class.resolve_expected_signed_net_cents!(
+        transaction: @transaction,
+        expected_total_cents: @expected_total_cents,
+        expected_signed_net_cents: @expected_signed_net_cents
+      )
 
       lease = Pos::OperationLease.begin!(
         register_id: @transaction.register_id,

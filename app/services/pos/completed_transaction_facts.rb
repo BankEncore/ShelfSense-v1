@@ -51,6 +51,7 @@ module Pos
       signed_net = @envelope.fetch("transaction")["signed_net_cents"]
       raise Pos::Error, "completed envelope is missing signed_net_cents" unless signed_net.is_a?(Integer)
       verify_return_keys!
+      verify_return_arithmetic!
       verify_origin_name!
       verify_tenders!
       verify_controlled_actions!
@@ -61,13 +62,16 @@ module Pos
 
     V2_TENDER_KEYS = %w[behavioral_category tender_name tender_number].freeze
 
+    RETURN_TOTAL_KEYS = %w[return_subtotal_cents return_discount_cents return_tax_cents return_total_cents].freeze
+
     def verify_return_keys!
       transaction = @envelope.fetch("transaction")
-      keys = %w[return_subtotal_cents return_discount_cents return_tax_cents return_total_cents]
-      present = keys.select { |key| transaction.key?(key) }
-      unless present.empty?
-        raise Pos::Error, "completed envelope is missing return totals" unless present.size == keys.size
-        keys.each do |key|
+      present = RETURN_TOTAL_KEYS.select { |key| transaction.key?(key) }
+      lines = @envelope["lines"]
+      has_return_line = lines.is_a?(Array) && lines.any? { |line| line.is_a?(Hash) && line["direction"] == "return" }
+      if has_return_line || present.any?
+        raise Pos::Error, "completed envelope is missing return totals" unless present.size == RETURN_TOTAL_KEYS.size
+        RETURN_TOTAL_KEYS.each do |key|
           raise Pos::Error, "completed envelope is missing #{key}" unless transaction[key].is_a?(Integer)
         end
       end
@@ -75,8 +79,6 @@ module Pos
       if @envelope.dig("corrections", "return_of_transaction_id").present?
         raise Pos::Error, "completed envelope cannot include corrections.return_of_transaction_id"
       end
-
-      lines = @envelope["lines"]
       return unless lines.is_a?(Array)
 
       lines.each do |line|
@@ -87,6 +89,47 @@ module Pos
         raise Pos::Error, "completed envelope is missing return reason code" if reason["code"].blank?
         raise Pos::Error, "completed envelope is missing return reason name" if reason["name"].blank?
       end
+    end
+
+    def verify_return_arithmetic!
+      transaction = @envelope.fetch("transaction")
+      return unless RETURN_TOTAL_KEYS.all? { |key| transaction.key?(key) }
+
+      subtotal = required_integer!(transaction, "subtotal_cents")
+      discount = optional_integer!(transaction, "discount_cents")
+      tax = required_integer!(transaction, "tax_cents")
+      return_subtotal = required_integer!(transaction, "return_subtotal_cents")
+      return_discount = required_integer!(transaction, "return_discount_cents")
+      return_tax = required_integer!(transaction, "return_tax_cents")
+      return_total = required_integer!(transaction, "return_total_cents")
+      signed_net = required_integer!(transaction, "signed_net_cents")
+      total = required_integer!(transaction, "total_cents")
+
+      computed_return_total = return_subtotal - return_discount + return_tax
+      unless return_total == computed_return_total
+        raise Pos::Error, "completed envelope return_total_cents is invalid"
+      end
+
+      sale_total = subtotal - discount + tax
+      unless signed_net == sale_total - return_total
+        raise Pos::Error, "completed envelope signed_net_cents is invalid"
+      end
+      unless total == signed_net.abs
+        raise Pos::Error, "completed envelope total_cents is invalid"
+      end
+    end
+
+    def required_integer!(hash, key)
+      value = hash[key]
+      raise Pos::Error, "completed envelope is missing #{key}" unless value.is_a?(Integer)
+
+      value
+    end
+
+    def optional_integer!(hash, key)
+      return 0 unless hash.key?(key)
+
+      required_integer!(hash, key)
     end
 
     def verify_origin_name!

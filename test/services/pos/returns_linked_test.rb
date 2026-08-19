@@ -407,6 +407,223 @@ class PosReturnsLinkedTest < ActiveSupport::TestCase
     assert_includes @cash.errors[:allows_refund], "must remain true for Cash"
   end
 
+  test "omitting expected_signed_net_cents on a return-only basket fails before leasing" do
+    original = complete_quantity_sale!(quantity: 1)
+    transaction = start_return_transaction
+    Pos::AddLinkedReturnLine.call(
+      transaction: transaction,
+      actor: @actor,
+      expected_lock_version: transaction.lock_version,
+      original_line: original.pos_transaction_lines.first,
+      quantity: 1,
+      reason_code: "changed_mind"
+    )
+    transaction.reload
+    Pos::AddRefundTender.call(
+      transaction: transaction,
+      actor: @actor,
+      expected_lock_version: transaction.lock_version,
+      tender_type: @cash,
+      amount_cents: -transaction.signed_net_cents
+    )
+    transaction.reload
+    refute_equal transaction.signed_net_cents, transaction.total_cents
+    operation_count = PosOperation.count
+
+    error = assert_raises(Pos::Error) do
+      Pos::CompleteTransaction.call(
+        transaction: transaction,
+        actor: @actor,
+        operation_id: SecureRandom.uuid_v7,
+        expected_lock_version: transaction.lock_version,
+        expected_total_cents: transaction.total_cents
+      )
+    end
+
+    assert_match(/expected signed net is required/, error.message)
+    assert_equal operation_count, PosOperation.count
+    assert transaction.reload.working?
+  end
+
+  test "linked return fails closed when the original depletion is missing" do
+    original = complete_quantity_sale!(quantity: 1)
+    original_line = original.pos_transaction_lines.first
+    InventoryValuationEntry.where(
+      source_type: "PosTransactionLine",
+      source_id: original_line.id,
+      entry_type: "depletion"
+    ).delete_all
+    working = start_return_transaction
+
+    error = assert_raises(Pos::Error) do
+      Pos::AddLinkedReturnLine.call(
+        transaction: working,
+        actor: @actor,
+        expected_lock_version: working.lock_version,
+        original_line: original_line,
+        quantity: 1,
+        reason_code: "changed_mind"
+      )
+    end
+    assert_match(/inventory valuation is missing/, error.message)
+  end
+
+  test "linked return fails closed when the original depletion increases value" do
+    original = complete_quantity_sale!(quantity: 1)
+    original_line = original.pos_transaction_lines.first
+    InventoryValuationEntry.where(
+      source_type: "PosTransactionLine",
+      source_id: original_line.id,
+      entry_type: "depletion"
+    ).update_all(value_delta_cents: 50)
+    working = start_return_transaction
+
+    error = assert_raises(Pos::Error) do
+      Pos::AddLinkedReturnLine.call(
+        transaction: working,
+        actor: @actor,
+        expected_lock_version: working.lock_version,
+        original_line: original_line,
+        quantity: 1,
+        reason_code: "changed_mind"
+      )
+    end
+    assert_match(/inventory valuation is malformed/, error.message)
+  end
+
+  test "zero-value sale and linked return mutations advance lock_version" do
+    @variant.update!(regular_price_cents: 0)
+    sale = Pos::StartTransaction.call(session: open_session, actor: @actor)
+    before_add = sale.lock_version
+    Pos::AddMerchandise.call(
+      transaction: sale,
+      actor: @actor,
+      expected_lock_version: sale.lock_version,
+      identifier: @variant.sku,
+      quantity: 2
+    )
+    sale.reload
+    assert_operator sale.lock_version, :>, before_add
+    assert_equal 0, sale.total_cents
+    assert_equal 0, sale.signed_net_cents
+
+    original_line = complete_current!(sale).transaction.pos_transaction_lines.first
+    working = start_return_transaction
+    before_return = working.lock_version
+    line = Pos::AddLinkedReturnLine.call(
+      transaction: working,
+      actor: @actor,
+      expected_lock_version: working.lock_version,
+      original_line: original_line,
+      quantity: 1,
+      reason_code: "changed_mind"
+    )
+    working.reload
+    assert_operator working.lock_version, :>, before_return
+    assert_equal 0, working.total_cents
+    assert_equal 0, working.signed_net_cents
+
+    before_quantity = working.lock_version
+    Pos::ChangeQuantity.call(
+      transaction: working,
+      line: line,
+      actor: @actor,
+      expected_lock_version: working.lock_version,
+      quantity: 2
+    )
+    working.reload
+    assert_operator working.lock_version, :>, before_quantity
+
+    before_remove = working.lock_version
+    Pos::RemoveWorkingLine.call(
+      transaction: working,
+      line: line,
+      actor: @actor,
+      expected_lock_version: working.lock_version
+    )
+    working.reload
+    assert_operator working.lock_version, :>, before_remove
+  end
+
+  test "linked non-inventory return completes without inventory effects" do
+    service = pos_sellable_variant(
+      actor: @actor,
+      tax_class: @tax,
+      inventory_mode: "non_inventory",
+      name: "Store Service"
+    )
+    transaction = Pos::StartTransaction.call(session: open_session, actor: @actor)
+    Pos::AddMerchandise.call(
+      transaction: transaction,
+      actor: @actor,
+      expected_lock_version: transaction.lock_version,
+      identifier: service.sku
+    )
+    transaction.reload
+    Pos::TenderCash.call(
+      transaction: transaction,
+      actor: @actor,
+      expected_lock_version: transaction.lock_version,
+      amount_presented_cents: transaction.total_cents
+    )
+    original_line = complete_current!(transaction.reload).transaction.pos_transaction_lines.first
+    assert_equal 0, InventoryLedgerEntry.where(source_type: "PosTransactionLine", source_id: original_line.id).count
+
+    result = complete_linked_return!(original_line: original_line, quantity: 1)
+    return_line = result.transaction.pos_transaction_lines.first
+    assert result.transaction.completed?
+    assert_equal 0, InventoryLedgerEntry.where(source_type: "PosTransactionLine", source_id: return_line.id).count
+    assert_equal 0, InventoryValuationEntry.where(source_type: "PosTransactionLine", source_id: return_line.id).count
+    assert_nil InventoryBalance.find_by(store: @store, product_variant: service)
+    assert_equal 0, OutboxMessage.where(event_type: "inventory.return_posted").count
+    Pos::CompletedTransactionFacts.new(result.operation.envelope).verify!
+  end
+
+  test "linked return copies the original snapshot after the variant is discontinued" do
+    original = complete_quantity_sale!(quantity: 1)
+    original_line = original.pos_transaction_lines.first
+    snapshot = original_line.merchandise_snapshot
+    variant = original_line.product_variant
+    variant.update!(status: "discontinued")
+    variant.product.update!(status: "discontinued")
+    refute variant.reload.sellable?
+
+    result = complete_linked_return!(original_line: original_line, quantity: 1)
+    return_line = result.transaction.pos_transaction_lines.first
+    assert result.transaction.completed?
+    assert_equal snapshot, return_line.merchandise_snapshot
+    assert_equal variant.id, return_line.product_variant_id
+  end
+
+  test "exact_settlement is false when applied tenders exceed signed net" do
+    original = complete_quantity_sale!(quantity: 1)
+    working = start_return_transaction
+    Pos::AddLinkedReturnLine.call(
+      transaction: working,
+      actor: @actor,
+      expected_lock_version: working.lock_version,
+      original_line: original.pos_transaction_lines.first,
+      quantity: 1,
+      reason_code: "changed_mind"
+    )
+    working.reload
+    Pos::AddRefundTender.call(
+      transaction: working,
+      actor: @actor,
+      expected_lock_version: working.lock_version,
+      tender_type: @cash,
+      amount_cents: -working.signed_net_cents
+    )
+    working.reload
+    assert Pos::Support.exact_settlement?(working)
+    assert_equal 0, Pos::Support.remaining_refund_cents(working)
+
+    working.pos_tenders.first.update_columns(amount_cents: working.pos_tenders.first.amount_cents + 1)
+    working.reload
+    assert_equal 0, Pos::Support.remaining_refund_cents(working)
+    assert_not Pos::Support.exact_settlement?(working)
+  end
+
   private
 
   def start_sale_with_cash(quantity: 1, session: open_session)

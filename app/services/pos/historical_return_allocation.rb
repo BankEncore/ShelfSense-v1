@@ -115,12 +115,19 @@ module Pos
     end
 
     def original_inventory_value
+      tracking = @original.product_variant.derived_inventory_tracking
+      return 0 if tracking == "non_inventory"
+      unless %w[quantity individual].include?(tracking)
+        raise Pos::Error, "merchandise tracking is not supported"
+      end
+
       valuation = InventoryValuationEntry.find_by(
         source_type: "PosTransactionLine",
         source_id: @original.id,
         entry_type: "depletion"
       )
-      return 0 if valuation.nil?
+      raise Pos::Error, "original sale inventory valuation is missing" if valuation.nil?
+      raise Pos::Error, "original sale inventory valuation is malformed" if valuation.value_delta_cents.positive?
 
       -valuation.value_delta_cents
     end

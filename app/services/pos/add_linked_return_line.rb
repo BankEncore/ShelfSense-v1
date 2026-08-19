@@ -53,6 +53,7 @@ module Pos
         line = build_line!(transaction, original, allocation, reason_name)
         replace_tax_components!(line, allocation)
         Pos::Support.refresh_totals!(transaction)
+        Pos::Support.touch_working_transaction!(transaction)
         record_added_audit!(transaction, line, original)
         line
       end

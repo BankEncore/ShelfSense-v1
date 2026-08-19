@@ -107,11 +107,11 @@ module Pos
       when :payment
         tenders.any? &&
           tenders.all? { |tender| tender.direction == "payment" } &&
-          remaining_payment_cents(transaction).zero?
+          applied_payment_cents(transaction) == transaction.signed_net_cents
       when :refund
         tenders.any? &&
           tenders.all? { |tender| tender.direction == "refund" } &&
-          remaining_refund_cents(transaction).zero?
+          applied_refund_cents(transaction) == -transaction.signed_net_cents
       end
     end
 

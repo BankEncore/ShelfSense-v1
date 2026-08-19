@@ -143,6 +143,42 @@ class PosGoldenFixturesTest < ActiveSupport::TestCase
     end
   end
 
+  test "v2 verify accepts envelopes without return keys and well-formed return totals" do
+    payload = v2_cash_sale_payload
+    refute payload.fetch("transaction").key?("return_total_cents")
+    Pos::CompletedTransactionFacts.new(payload).verify!
+    Pos::CompletedTransactionFacts.new(v2_envelope_with_return_keys).verify!
+  end
+
+  test "v2 verify rejects return_total that does not match return components" do
+    payload = v2_envelope_with_return_keys
+    payload.fetch("transaction")["return_total_cents"] = 1
+    error = assert_raises(Pos::Error) { Pos::CompletedTransactionFacts.new(payload).verify! }
+    assert_match(/return_total_cents is invalid/, error.message)
+  end
+
+  test "v2 verify rejects signed_net that does not match sale total minus return total" do
+    payload = v2_envelope_with_return_keys
+    payload.fetch("transaction")["signed_net_cents"] = 0
+    error = assert_raises(Pos::Error) { Pos::CompletedTransactionFacts.new(payload).verify! }
+    assert_match(/signed_net_cents is invalid/, error.message)
+  end
+
+  test "v2 verify rejects total that is not the absolute signed net" do
+    payload = v2_envelope_with_return_keys
+    payload.fetch("transaction")["total_cents"] = 1
+    error = assert_raises(Pos::Error) { Pos::CompletedTransactionFacts.new(payload).verify! }
+    assert_match(/total_cents is invalid/, error.message)
+  end
+
+  test "v2 verify requires return totals when a return line is present" do
+    payload = v2_cash_sale_payload
+    payload.fetch("lines").first["direction"] = "return"
+    payload.fetch("lines").first["return_reason"] = { "code" => "changed_mind", "name" => "Changed mind" }
+    error = assert_raises(Pos::Error) { Pos::CompletedTransactionFacts.new(payload).verify! }
+    assert_match(/missing return totals/, error.message)
+  end
+
   test "null applies case is marked as blocking completion" do
     catalog = JSON.parse(File.read(FIXTURES.join("tax_cases.json")))
     blocking = catalog.fetch("cases").find { |tax_case| tax_case["id"] == "07_null_applies_blocks" }
@@ -152,6 +188,20 @@ class PosGoldenFixturesTest < ActiveSupport::TestCase
   end
 
   private
+
+  def v2_cash_sale_payload
+    JSON.parse(File.read(FIXTURES.join("completed_pos_operation_v2/cash_sale.json")))
+  end
+
+  def v2_envelope_with_return_keys
+    payload = v2_cash_sale_payload
+    transaction = payload.fetch("transaction")
+    transaction["return_subtotal_cents"] = 0
+    transaction["return_discount_cents"] = 0
+    transaction["return_tax_cents"] = 0
+    transaction["return_total_cents"] = 0
+    payload
+  end
 
   def half_up_tax(basis_cents, rate_percent)
     (BigDecimal(basis_cents.to_s) * BigDecimal(rate_percent.to_s) / 100).round(0, half: :up).to_i

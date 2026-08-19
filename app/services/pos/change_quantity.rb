@@ -41,6 +41,7 @@ module Pos
           line.save!
         end
         Pos::Support.refresh_totals!(transaction)
+        Pos::Support.touch_working_transaction!(transaction)
         line.reload
       end
     rescue Pos::Tax::UnresolvedApplicability => e
