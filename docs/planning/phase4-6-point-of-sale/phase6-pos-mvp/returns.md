@@ -385,7 +385,7 @@ Do not share one “recalculate tax” helper for historical reversal and curren
 
 Named boundary `Inventory::PostReturn`, parallel to `Inventory::PostSale`. Joins the caller’s transaction. Do not call `PostAdjustment`. Lock order: `InventoryBalance` then `InventoryUnit`. Skip `non_inventory`. Duplicate protection remains `(source_type, source_id, effect_sequence)` with `source_type = PosTransactionLine` and `source_id =` **return** line id.
 
-Ledger `entry_type = return`. Valuation increase uses `acquisition` (stock in). Outbox/audit `inventory.return_posted`.
+Ledger `entry_type = return`. Valuation increase uses `acquisition` (stock in). Outbox/audit `inventory.return_posted` include `linked` and `valuation_basis`.
 
 **Every linked return restores inventory using the valuation actually relieved by the original completed sale.** Do not use today’s moving average. Do not treat live `InventoryUnit.carrying_value_cents` as historical authority.
 

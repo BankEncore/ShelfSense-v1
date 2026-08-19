@@ -105,7 +105,7 @@ entry_type  = return
 valuation   = acquisition (stock in)
 ```
 
-`Pos::CompleteTransaction` skips `Inventory::PostReturn` for `non_inventory` lines. Customer refund price never writes inventory value. Outbox/audit `inventory.return_posted`.
+`Pos::CompleteTransaction` skips `Inventory::PostReturn` for `non_inventory` lines. Customer refund price never writes inventory value. Outbox/audit `inventory.return_posted` include `linked` and `valuation_basis`.
 
 ## `Inventory::PostAdjustment` required inputs
 

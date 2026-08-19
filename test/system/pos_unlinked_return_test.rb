@@ -37,6 +37,7 @@ class PosUnlinkedReturnTest < ApplicationSystemTestCase
     assert_equal 0, PosTransaction.working.find_by!(register: @register).pos_transaction_lines.count
 
     fill_in "Return unit price", with: "18.00"
+    select "Defective", from: "Return reason"
     find("#pos-unlinked-approver-username", visible: true).fill_in with: "mgr_sys65c"
     password = find("#pos-unlinked-approver-password", visible: :all)
     scroll_to password
@@ -82,6 +83,7 @@ class PosUnlinkedReturnTest < ApplicationSystemTestCase
     identifier.send_keys :enter
     assert_text used_variant.product.name, wait: 5
     assert_no_selector "#pos-unlinked-quantity", visible: true
+    select "Changed mind", from: "Return reason"
     click_on "Add return"
     assert_text "Unlinked return", wait: 10
 

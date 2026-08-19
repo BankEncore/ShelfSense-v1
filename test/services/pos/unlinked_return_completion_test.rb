@@ -122,6 +122,73 @@ class PosUnlinkedReturnCompletionTest < ActiveSupport::TestCase
     assert_match(/unlinked_return fact/, error.message)
   end
 
+  test "completion refuses an unlinked line whose return reason drifted from the approved fact" do
+    transaction = start_transaction
+    line = add_unlinked!(transaction, requested_return_unit_price_cents: 1999)
+    line.update_columns(
+      return_reason_code: "defective",
+      return_reason_name_snapshot: "Defective"
+    )
+    transaction.reload
+    Pos::AddRefundTender.call(
+      transaction: transaction,
+      actor: @actor,
+      expected_lock_version: transaction.lock_version,
+      tender_type: @cash,
+      amount_cents: -transaction.signed_net_cents
+    )
+    error = assert_raises(Pos::Error) { complete_current!(transaction.reload) }
+    assert_match(/return reason/, error.message)
+  end
+
+  test "freeze refuses a manual discount on an unlinked return" do
+    transaction = start_transaction
+    line = add_unlinked!(transaction)
+    line.update_columns(manual_discount_basis_points: 1000)
+    error = assert_raises(Pos::Error) do
+      Pos::FreezeUnlinkedReturnLine.call(transaction: transaction.reload, line: line.reload)
+    end
+    assert_match(/sale discount/, error.message)
+
+    error = assert_raises(Pos::Error) { Pos::CompletedTransactionIntegrity.verify!(transaction.reload) }
+    assert_match(/sale discount/, error.message)
+  end
+
+  test "envelope forbids override discount and extra actions on an unlinked return" do
+    transaction = start_transaction
+    add_unlinked!(transaction, requested_return_unit_price_cents: 1800)
+    envelope = refund_and_complete!(transaction.reload).operation.envelope.deep_dup
+    Pos::CompletedTransactionFacts.new(envelope).verify!
+
+    with_discount = envelope.deep_dup
+    with_discount["lines"].first["discount"] = {
+      "source" => "manual",
+      "method" => "percentage",
+      "basis_points" => 1000,
+      "discount_cents" => 180,
+      "net_merchandise_amount_cents" => 1620
+    }
+    error = assert_raises(Pos::Error) { Pos::CompletedTransactionFacts.new(with_discount).verify! }
+    assert_match(/cannot include discount/, error.message)
+
+    with_override = envelope.deep_dup
+    with_override["lines"].first["override"] = {
+      "reference_unit_price_cents" => 1999,
+      "selling_unit_price_cents" => 1800,
+      "unit_variance_cents" => -199,
+      "line_variance_cents" => -199
+    }
+    error = assert_raises(Pos::Error) { Pos::CompletedTransactionFacts.new(with_override).verify! }
+    assert_match(/cannot include override/, error.message)
+
+    extra_action = envelope.deep_dup
+    extra_action["controlled_actions"] << extra_action["controlled_actions"].first.merge(
+      "action" => "price_override"
+    )
+    error = assert_raises(Pos::Error) { Pos::CompletedTransactionFacts.new(extra_action).verify! }
+    assert_match(/other controlled actions/, error.message)
+  end
+
   test "malformed return_price_adjustment arithmetic is rejected" do
     transaction = start_transaction
     add_unlinked!(transaction, requested_return_unit_price_cents: 1800)

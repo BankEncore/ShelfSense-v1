@@ -605,6 +605,10 @@ export default class extends Controller {
     if (!this.hasUnlinkedReasonFieldTarget) return
     const entries = this.returnReasonsValue || []
     this.unlinkedReasonFieldTarget.innerHTML = ""
+    const blank = document.createElement("option")
+    blank.value = ""
+    blank.textContent = "Select…"
+    this.unlinkedReasonFieldTarget.append(blank)
     entries.forEach((entry) => {
       const option = document.createElement("option")
       option.value = entry.code
@@ -631,14 +635,20 @@ export default class extends Controller {
       const payload = await response.json()
       if (!response.ok) {
         this.showUnlinkedFeedback(payload.error || "merchandise not found")
-        this.toggleHidden(this.hasUnlinkedPreviewTarget && this.unlinkedPreviewTarget, true)
-        if (this.hasUnlinkedApplyTarget) this.unlinkedApplyTarget.hidden = true
+        this.clearUnlinkedPreviewState()
         return
       }
       this.applyUnlinkedPreview(payload)
     } catch (_error) {
       this.showUnlinkedFeedback("merchandise not found")
+      this.clearUnlinkedPreviewState()
     }
+  }
+
+  clearUnlinkedPreviewState() {
+    this.unlinkedPreviewPayload = null
+    this.toggleHidden(this.hasUnlinkedPreviewTarget && this.unlinkedPreviewTarget, true)
+    if (this.hasUnlinkedApplyTarget) this.unlinkedApplyTarget.hidden = true
   }
 
   applyUnlinkedPreview(payload) {

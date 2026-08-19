@@ -14,6 +14,9 @@ module Pos
     def call
       raise Pos::Error, "line is not an unlinked return" unless @line.unlinked_return?
       raise Pos::Error, "regular price is required" if @line.selling_unit_price_cents.nil?
+      if @line.manual_discount_basis_points.present? || @line.manual_discount_cents.to_i != 0
+        raise Pos::Error, "unlinked returns cannot have a sale discount"
+      end
 
       variant = @line.product_variant
       tracking = variant.derived_inventory_tracking

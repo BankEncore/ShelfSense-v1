@@ -95,6 +95,7 @@ class InventoryPostReturnTest < ActiveSupport::TestCase
     assert_equal "current_moving_average", event.after_values["valuation_basis"]
     outbox = OutboxMessage.find_by!(event_type: "inventory.return_posted", aggregate_id: line.id)
     assert_equal false, outbox.payload["linked"]
+    assert_equal "current_moving_average", outbox.payload["valuation_basis"]
   end
 
   test "unlinked used restore posts the unit carrying value" do
@@ -123,6 +124,9 @@ class InventoryPostReturnTest < ActiveSupport::TestCase
 
     assert_equal 500, result.fetch(:valuation).value_delta_cents
     assert_equal "unit_carrying_value", result.fetch(:valuation).calculation_metadata["valuation_basis"]
+    outbox = OutboxMessage.where(event_type: "inventory.return_posted", aggregate_id: line.id).order(:created_at).last
+    assert_equal false, outbox.payload["linked"]
+    assert_equal "unit_carrying_value", outbox.payload["valuation_basis"]
     assert unit.reload.on_hand?
     assert_equal 500, unit.carrying_value_cents
     assert_equal used_variant.id, line.product_variant_id

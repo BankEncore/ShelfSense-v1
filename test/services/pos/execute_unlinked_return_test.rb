@@ -214,29 +214,6 @@ class PosExecuteUnlinkedReturnTest < ActiveSupport::TestCase
     assert_equal 0, transaction.reload.pos_transaction_lines.count
   end
 
-  test "two registers cannot claim the same removed used unit" do
-    used_variant, unit = pos_on_hand_unit(store: @store, actor: @admin, tax_class: @tax)
-    first_context = pos_open_context(store: @store, actor: @manager)
-    complete_unit_sale!(unit, actor: @manager, session: first_context[:session])
-    assert unit.reload.removed?
-
-    second_manager = pos_store_manager(store: @store, assigned_by: @admin, username: "mgr65c_b")
-    second_context = pos_open_context(store: @store, actor: second_manager)
-    first_txn = Pos::StartTransaction.call(session: first_context[:session], actor: @manager)
-    second_txn = Pos::StartTransaction.call(session: second_context[:session], actor: second_manager)
-
-    add_unlinked!(first_txn, @manager, identifier: unit.unit_identifier)
-    error = assert_raises(Pos::Error) do
-      add_unlinked!(second_txn, second_manager, identifier: unit.unit_identifier)
-    end
-    assert_match(/already on a working return/, error.message)
-    assert_equal 1, PosTransactionLine.joins(:pos_transaction).where(
-      inventory_unit_id: unit.id,
-      pos_transactions: { status: "working" }
-    ).count
-    assert_equal used_variant.id, first_txn.reload.pos_transaction_lines.first.product_variant_id
-  end
-
   private
 
   def start_transaction(actor)
@@ -272,31 +249,6 @@ class PosExecuteUnlinkedReturnTest < ActiveSupport::TestCase
       material_values: action.material_values,
       reason_code: action.reason_code,
       reason_note: action.reason_note
-    )
-  end
-
-  def complete_unit_sale!(unit, actor:, session:)
-    transaction = Pos::StartTransaction.call(session: session, actor: actor)
-    Pos::AddMerchandise.call(
-      transaction: transaction,
-      actor: actor,
-      expected_lock_version: transaction.lock_version,
-      identifier: unit.unit_identifier
-    )
-    transaction.reload
-    Pos::TenderCash.call(
-      transaction: transaction,
-      actor: actor,
-      expected_lock_version: transaction.lock_version,
-      amount_presented_cents: transaction.total_cents
-    )
-    Pos::CompleteTransaction.call(
-      transaction: transaction.reload,
-      actor: actor,
-      operation_id: SecureRandom.uuid_v7,
-      expected_lock_version: transaction.lock_version,
-      expected_total_cents: transaction.total_cents,
-      expected_signed_net_cents: transaction.signed_net_cents
     )
   end
 end

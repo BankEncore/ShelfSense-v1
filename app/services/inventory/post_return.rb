@@ -197,7 +197,8 @@ module Inventory
           original_transaction_line_id: original_line&.id,
           quantity_delta: quantity_delta,
           value_delta_cents: effects[:value_delta_cents],
-          linked: linked?
+          linked: linked?,
+          valuation_basis: @valuation_basis
         }.compact
       )
       Audit::Recorder.record!(

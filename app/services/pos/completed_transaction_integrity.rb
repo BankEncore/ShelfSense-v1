@@ -50,6 +50,18 @@ module Pos
       action = actions["unlinked_return"]
       raise Pos::Error, "unlinked return is missing the unlinked_return fact" if action.nil?
       raise Pos::Error, "unlinked return must have exactly one controlled action" if actions.size != 1
+      if line.manual_discount_basis_points.present? || line.manual_discount_cents.to_i != 0
+        raise Pos::Error, "unlinked returns cannot have a sale discount"
+      end
+      if line.return_reason_code != action.reason_code ||
+         line.return_reason_name_snapshot != action.reason_name_snapshot ||
+         line.return_reason_note.to_s != action.reason_note.to_s
+        raise Pos::Error, "unlinked return reason does not match the approved fact"
+      end
+      expected_name = Pos::ReturnReasons.name_for!(line.return_reason_code)
+      unless line.return_reason_name_snapshot == expected_name
+        raise Pos::Error, "unlinked return reason does not match the approved fact"
+      end
 
       verify_fingerprint!(line, action)
     end
@@ -64,15 +76,24 @@ module Pos
       expected_material = Idempotency::CanonicalJson.normalize(material)
       raise Pos::Error, "controlled action material values do not match" unless stored == expected_material
 
+      reason_code, reason_note = fingerprint_reason(line, action)
       expected = Pos::ControlledActionFingerprint.call(
         action_type: action.action_type,
         transaction_id: line.pos_transaction_id,
         line_id: line.id,
         material_values: material,
-        reason_code: action.reason_code,
-        reason_note: action.reason_note
+        reason_code: reason_code,
+        reason_note: reason_note
       )
       raise Pos::Error, "controlled action fingerprint does not match" unless expected == action.action_fingerprint
+    end
+
+    def fingerprint_reason(line, action)
+      if action.action_type == "unlinked_return"
+        [ line.return_reason_code, line.return_reason_note ]
+      else
+        [ action.reason_code, action.reason_note ]
+      end
     end
 
     def reconstructed_material(line, action)

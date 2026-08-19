@@ -206,6 +206,11 @@ module Pos
       lines.each do |line|
         next unless line.is_a?(Hash)
 
+        unlinked = line["direction"] == "return" && line["original_transaction_line_id"].blank?
+        if unlinked
+          raise Pos::Error, "completed envelope cannot include override" if line.key?("override")
+          raise Pos::Error, "completed envelope cannot include discount" if line.key?("discount")
+        end
         if line.key?("override")
           override = line["override"]
           raise Pos::Error, "completed envelope override is invalid" unless override.is_a?(Hash)
@@ -262,17 +267,21 @@ module Pos
 
       actions = @envelope["controlled_actions"]
       actions = [] unless actions.is_a?(Array)
-      unlinked_actions = actions.select { |action| action.is_a?(Hash) && action["action"] == "unlinked_return" }
+      actions = actions.select { |action| action.is_a?(Hash) }
 
       lines.each do |line|
         next unless line.is_a?(Hash)
 
         line_id = line["line_id"].to_s
-        matching = unlinked_actions.select { |action| action.dig("subject", "line_id").to_s == line_id }
+        targeting = actions.select { |action| action.dig("subject", "line_id").to_s == line_id }
         if line["direction"] == "return" && line["original_transaction_line_id"].blank?
-          raise Pos::Error, "completed envelope is missing unlinked_return action" unless matching.one?
-        else
-          raise Pos::Error, "completed envelope cannot include unlinked_return action" if matching.any?
+          unlinked_matches = targeting.select { |action| action["action"] == "unlinked_return" }
+          raise Pos::Error, "completed envelope is missing unlinked_return action" unless unlinked_matches.one?
+          unless targeting.one?
+            raise Pos::Error, "completed envelope cannot include other controlled actions on an unlinked return"
+          end
+        elsif targeting.any? { |action| action["action"] == "unlinked_return" }
+          raise Pos::Error, "completed envelope cannot include unlinked_return action"
         end
       end
     end
