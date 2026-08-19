@@ -2,7 +2,7 @@
 
 ShelfSense is an inventory, purchasing, customer-service, and point-of-sale system for independent bookstores. It is designed for one organization operating one or more stores, with a central organization server and store Registers. A future standalone Terminal (ADR-021) may continue ordinary checkout during temporary connectivity loss.
 
-Phases 0–5 are implemented. Phase 6 is the operational POS MVP: slices 6.0–6.4 and 6.5A/B (linked-return Core and cashier workflow) are implemented. Next is 6.5C unlinked return.
+Phases 0–5 are implemented. Phase 6 is the operational POS MVP: slices 6.0–6.5 are implemented (through mixed returns and closeout hardening). Next is 6.6 post-void.
 
 ## Goals
 
@@ -208,7 +208,7 @@ Authoritative plan: [phase5-plan.md](docs/planning/phase4-6-point-of-sale/phase5
 
 ### Phase 6: Operational POS MVP
 
-Status: slices 6.0–6.4 and 6.5A/B implemented (CompletedPosOperation v2, Used/non-inventory sales, mixed tenders, history/reprint, controlled pricing, linked returns and refunds). Next: 6.5C unlinked return.
+Status: slices 6.0–6.5 implemented (CompletedPosOperation v2, Used/non-inventory sales, mixed tenders, history/reprint, controlled pricing, linked and unlinked returns, mixed baskets, refunds, direction-aware Session/Z). Next: 6.6 post-void.
 
 Phase 6 extends the Phase 5 Cash register with Used/non-inventory sales, mixed tenders, history/reprint, controlled pricing, returns, post-void, and closeout reporting. Each slice merges independently to `main`.
 

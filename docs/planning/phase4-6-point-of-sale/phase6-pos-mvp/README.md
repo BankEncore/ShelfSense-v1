@@ -1,6 +1,6 @@
 # Phase 6 — Operational POS MVP
 
-**Status:** Slice 6.0 contract locked. Slice 6.1 merchandise breadth is implemented. Slice 6.2 tender breadth is implemented ([tender-breadth.md](tender-breadth.md)). Slice 6.3 transaction history is implemented ([transaction-history.md](transaction-history.md)). Slice 6.4 controlled actions are implemented ([controlled-actions.md](controlled-actions.md)). Slice 6.5A directional Core, 6.5B linked-return operator workflow, and 6.5C unlinked return are implemented ([returns.md](returns.md)). Next: 6.5D mixed/unlinked closeout hardening.
+**Status:** Slice 6.0 contract locked. Slice 6.1 merchandise breadth is implemented. Slice 6.2 tender breadth is implemented ([tender-breadth.md](tender-breadth.md)). Slice 6.3 transaction history is implemented ([transaction-history.md](transaction-history.md)). Slice 6.4 controlled actions are implemented ([controlled-actions.md](controlled-actions.md)). Slice 6.5 returns are implemented (6.5A–D; [returns.md](returns.md)). Next: 6.6 post-void.
 
 | Document | Purpose |
 |---|---|
@@ -10,7 +10,7 @@
 | [tender-breadth.md](tender-breadth.md) | Slice 6.2: Cash/Card/Check/Other settlement (implemented) |
 | [transaction-history.md](transaction-history.md) | Slice 6.3: completed lookup, detail, reprint (implemented) |
 | [controlled-actions.md](controlled-actions.md) | Slice 6.4: price override, line discount, Tax Class override (implemented) |
-| [returns.md](returns.md) | Slice 6.5: linked/unlinked returns, refunds, mixed sale+return (6.5A/B/C implemented; 6.5D next) |
+| [returns.md](returns.md) | Slice 6.5: linked/unlinked returns, refunds, mixed sale+return (6.5A–D implemented) |
 
 Parent multi-phase sequencing: [../spec.md](../spec.md). Phase 4 completion kernel: [../phase4-point-of-sale/](../phase4-point-of-sale/). Phase 5 cash register: [../phase5-cash-register/](../phase5-cash-register/).
 

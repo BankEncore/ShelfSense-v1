@@ -93,7 +93,7 @@ module Inventory
     end
 
     def lock_inventory_unit!
-      InventoryUnit.lock.find(@line.inventory_unit_id)
+      InventoryUnit.uncached { InventoryUnit.lock.find(@line.inventory_unit_id) }
     rescue ActiveRecord::RecordNotFound
       raise Error, "unit must be on hand"
     end
