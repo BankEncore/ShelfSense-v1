@@ -1035,7 +1035,7 @@ For Header and independently for Footer:
 
 The current effective inherited text should be visible without requiring navigation to System Settings.
 
-Selecting `custom` enables the Store textarea. Selecting `inherit` or `none` leaves any saved custom value dormant.
+Selecting `custom` enables the Store textarea. Selecting `inherit` or `none` leaves any saved custom value dormant. Admin implements that enable/disable with a small vanilla script on the Store form, not the POS Stimulus pack.
 
 ---
 

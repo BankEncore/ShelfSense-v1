@@ -137,9 +137,9 @@ module Pos
       stale ||= expected_unit.present? && expected_unit != actual_unit.to_s
       stale ||= !expected_reference.nil? && expected_reference != resolved.reference_unit_price_cents
       stale ||= @expected_tax_class_id.present? && @expected_tax_class_id != resolved.tax_class.id.to_s
-      raise Pos::Error, STALE_PREVIEW_MESSAGE if stale
+      raise Pos::InvalidatedDialogBasis, STALE_PREVIEW_MESSAGE if stale
     rescue ArgumentError, TypeError
-      raise Pos::Error, STALE_PREVIEW_MESSAGE
+      raise Pos::InvalidatedDialogBasis, STALE_PREVIEW_MESSAGE
     end
 
     def preflight_valuation!(transaction, resolved)

@@ -45,8 +45,9 @@ module Admin
     def update
       rescue_stale do
         before = @store.attributes.slice(
-          "name", "legal_name", "timezone", "receipt_header_mode", "receipt_header",
-          "receipt_footer_mode", "receipt_footer"
+          "name", "legal_name", "phone", "street_address_1", "street_address_2",
+          "city", "region_code", "postal_code", "country_code", "timezone",
+          "receipt_header_mode", "receipt_header", "receipt_footer_mode", "receipt_footer"
         )
         if @store.update(store_params)
           Audit::Recorder.record!(

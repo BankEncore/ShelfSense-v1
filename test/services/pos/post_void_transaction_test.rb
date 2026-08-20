@@ -215,7 +215,7 @@ class PosPostVoidTransactionTest < ActiveSupport::TestCase
     original_line = sale.pos_transaction_lines.first
     post_void!(sale)
     working = Pos::StartTransaction.call(session: open_session, actor: @actor)
-    error = assert_raises(Pos::Error) do
+    error = assert_raises(Pos::InvalidatedDialogBasis) do
       Pos::AddLinkedReturnLine.call(
         transaction: working,
         actor: @actor,

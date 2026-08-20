@@ -491,6 +491,8 @@ module Pos
       redirect_to root_path, alert: "You are not authorized to perform that action."
     rescue Pos::StaleObject
       recover_from_workspace_error("This sale was changed. Reload and try again.", error_mode, persist_overlay: false)
+    rescue Pos::InvalidatedDialogBasis => e
+      recover_from_workspace_error(e.message, error_mode, persist_overlay: false)
     rescue Money::ParseCents::Error, Pos::Error => e
       recover_from_workspace_error(e.message, error_mode)
     end
