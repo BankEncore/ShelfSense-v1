@@ -133,6 +133,8 @@ Values come from the completed transaction snapshots, not current Store/Register
 
 Render from completed facts: Store / Reg / Trans, transaction reference, business date, completed timestamp (Store IANA zone), line snapshots, subtotal, tax, total, Cash presented, change. Printed line descriptions use the completed merchandise snapshot only. If that snapshot is missing, render `Description unavailable` — do not substitute current Product metadata.
 
+Phase 6 closeout customer-print layout, Store identity/header/footer, omitted `business_date` on customer paper, and legal-name enforcement are [receipt-presentation.md](../phase6-pos-mvp/receipt-presentation.md) / [mvp-closeout.md](../phase6-pos-mvp/mvp-closeout.md). Print trigger, print-after-commit, and print-failure lifecycle in this document still apply. X Report is 6.7 ([pos-workflow.md](../phase6-pos-mvp/pos-workflow.md) §11), on-screen only — not thermal Z/X print.
+
 The ordinary on-screen completion screen does not have to adopt the printed header format.
 
 `@media print` hides POS chrome and the three actions, uses a narrow monochrome receipt format, and avoids reliance on background colors.

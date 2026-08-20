@@ -2,7 +2,7 @@
 
 **Status:** Draft. Low-fidelity interaction proposal. Not implemented. Does not change the HTTP/domain contract in [register-workspace.md](register-workspace.md).
 
-**Purpose:** Validate where the cashier's eyes are, where keyboard focus is, and what the next keystroke does — before Hotwire. Bindings, layout, error placement, and completion-pending presentation are **wireframe-validatable**; changing them here is not an architectural reversal.
+**Purpose:** Validate where the cashier's eyes are, where keyboard focus is, and what the next keystroke does — before Hotwire. Bindings, layout, error placement, and completion-pending presentation were **wireframe-validatable** for Phase 5. Slice 6.7 ([pos-workflow.md](../phase6-pos-mvp/pos-workflow.md)) supersedes the F-key / `+` / `-` / `/` map; these frames remain historical for layout intent.
 
 HTTP, GET-does-not-mutate, one working transaction, tender/complete split, Rails-issued `completion_operation_id`, and the Slice 2 vs Slice 3 receipt split stay in [register-workspace.md](register-workspace.md).
 

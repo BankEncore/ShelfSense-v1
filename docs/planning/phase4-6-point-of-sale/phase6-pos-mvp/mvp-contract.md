@@ -4,9 +4,9 @@
 
 **Authority:** Cross-cutting completed-operation shape for the Phase 6 MVP. Dual authority with normalized Core remains [ADR-020](../../../adr/ADR-020-pos-operation-envelope-and-core-facts.md) / [operation-and-core-facts.md](../phase4-point-of-sale/operation-and-core-facts.md). Commercial base is [CompletedPosOperation v1](../phase4-point-of-sale/completed-pos-operation-v1.md).
 
-Companions: [phase6-plan.md](phase6-plan.md), [merchandise-breadth.md](merchandise-breadth.md), [tender-breadth.md](tender-breadth.md), [transaction-history.md](transaction-history.md), [controlled-actions.md](controlled-actions.md), [returns.md](returns.md), [post-void.md](post-void.md). Tax: [pos-tax-contract.md](../phase4-point-of-sale/pos-tax-contract.md). Cash/Z: [phase5-plan.md](../phase5-cash-register/phase5-plan.md).
+Companions: [phase6-plan.md](phase6-plan.md), [merchandise-breadth.md](merchandise-breadth.md), [tender-breadth.md](tender-breadth.md), [transaction-history.md](transaction-history.md), [controlled-actions.md](controlled-actions.md), [returns.md](returns.md), [post-void.md](post-void.md), [pos-workflow.md](pos-workflow.md), [mvp-closeout.md](mvp-closeout.md). Tax: [pos-tax-contract.md](../phase4-point-of-sale/pos-tax-contract.md). Cash/Z: [phase5-plan.md](../phase5-cash-register/phase5-plan.md).
 
-This slice does **not** implement capabilities. It locks meaning so 6.1–6.7 do not each invent a new completion shape. Do not add unused Core columns here ([AGENTS.md](../../../../AGENTS.md) §10). Columns appear in the owning slice.
+This slice does **not** implement capabilities. It locks meaning so 6.1–6.8 do not each invent a new completion shape. Do not add unused Core columns here ([AGENTS.md](../../../../AGENTS.md) §10). Columns appear in the owning slice.
 
 No new ADR. Envelope versioning already fits ADR-020.
 
@@ -264,7 +264,7 @@ SUM(total_cents)     = 125   # not net commercial activity
 
 **6.2 must add basic Card / Check / Other tender totals to Session/Z** when those tenders become completable. Overall sale totals can remain correct without them, but a register that takes Card with only Cash on the Z is not usable.
 
-6.7 may add or reorganize additive snapshot columns and presentation. It does **not** repair knowingly inaccurate intermediate reporting. Already-finalized periods stay immutable.
+6.8 may add or reorganize additive snapshot columns and presentation. It does **not** repair knowingly inaccurate intermediate reporting. Already-finalized periods stay immutable.
 
 ---
 
@@ -289,7 +289,7 @@ When `inventory_unit_id` is present, also snapshot (6.1):
 }
 ```
 
-`condition_code` comes from the parent Used variant’s condition at completion. Do not add a unit condition column.
+`condition_code` comes from the parent Used variant’s condition at completion. Do not add a unit condition column. **6.8** also snapshots `condition_name` on new completions ([mvp-closeout.md](mvp-closeout.md) §2.3). Historical rows without it print `condition_code`.
 
 Completed history and reprint use these snapshots. Live Product / variant / unit rows must not rewrite them.
 
@@ -348,7 +348,7 @@ Expected Cash may be negative (accounting fact, not a physical drawer cap; [retu
 
 ## 9. Z snapshots
 
-Already-finalized periods stay immutable. Live Session/Z **previews** and new-period snapshots must represent each slice’s facts truthfully (§5.1). 6.7 consolidates additive `finalized_*` columns and presentation; owning slices (6.2 tenders, 6.4 discounts, 6.5 returns/Cash refunds) change calculations first.
+Already-finalized periods stay immutable. Live Session/Z **previews** and new-period snapshots must represent each slice’s facts truthfully (§5.1). 6.8 consolidates additive `finalized_*` **presentation**; owning slices (6.2 tenders, 6.4 discounts, 6.5 returns/Cash refunds, 6.6 post-void) change calculations first.
 
 Existing Phase 5 fields keep their sale-only / Cash-payment meanings until the owning slice replaces the **calculation** (not the historical column meaning on already-finalized rows):
 
@@ -468,7 +468,7 @@ Reprint never assigns a new receipt number, never mutates `printed_at` as commer
 
 ## 15. Slice-local representation
 
-Every slice that adds a completed commercial fact must update, in that same slice: completed snapshot, customer-relevant receipt, history/detail, audit, and reporting where totals change. 6.7 consolidates; it does not repair knowingly inaccurate intermediate figures.
+Every slice that adds a completed commercial fact must update, in that same slice: completed snapshot, customer-relevant receipt, history/detail, audit, and reporting where totals change. 6.8 consolidates presentation; it does not repair knowingly inaccurate intermediate figures.
 
 ---
 
@@ -477,5 +477,5 @@ Every slice that adds a completed commercial fact must update, in that same slic
 - Any migration or application code
 - Unused Core columns “for later”
 - New permission keys
-- Changing Phase 5 expected-Cash or Z snapshot CHECKs in this docs slice (6.2 / 6.5 change live calculations; 6.7 may add additive snapshot columns)
+- Changing Phase 5 expected-Cash or Z snapshot CHECKs in this docs slice (6.2 / 6.5 change live calculations; 6.8 may add additive snapshot columns)
 - Terminal / standalone provenance (still a later compatible envelope version before offline completion)

@@ -1,6 +1,6 @@
 # Phase 6 — Operational POS MVP
 
-**Status:** Slice 6.0 contract locked ([mvp-contract.md](mvp-contract.md)). Slice 6.1 merchandise breadth implemented ([merchandise-breadth.md](merchandise-breadth.md)). Slice 6.2 tender breadth implemented ([tender-breadth.md](tender-breadth.md)). Slice 6.3 transaction history implemented ([transaction-history.md](transaction-history.md)). Slice 6.4 controlled actions implemented ([controlled-actions.md](controlled-actions.md)). Slice 6.5 returns implemented (6.5A–D; [returns.md](returns.md)). Slice 6.6 post-void implemented ([post-void.md](post-void.md)).
+**Status:** Slice 6.0 contract locked ([mvp-contract.md](mvp-contract.md)). Slice 6.1 merchandise breadth implemented ([merchandise-breadth.md](merchandise-breadth.md)). Slice 6.2 tender breadth implemented ([tender-breadth.md](tender-breadth.md)). Slice 6.3 transaction history implemented ([transaction-history.md](transaction-history.md)). Slice 6.4 controlled actions implemented ([controlled-actions.md](controlled-actions.md)). Slice 6.5 returns implemented (6.5A–D; [returns.md](returns.md)). Slice 6.6 post-void implemented ([post-void.md](post-void.md)). Slice 6.7 workflow contract locked ([pos-workflow.md](pos-workflow.md)). Slice 6.8 closeout contract locked ([mvp-closeout.md](mvp-closeout.md) / [receipt-presentation.md](receipt-presentation.md)).
 
 **Authority**
 
@@ -13,6 +13,9 @@
 | [Controlled actions](controlled-actions.md) | Slice 6.4: price override, line discount, Tax Class override |
 | [Returns](returns.md) | Slice 6.5: linked/unlinked returns, refunds, mixed sale+return (6.5A–D implemented) |
 | [Post-void](post-void.md) | Slice 6.6: whole-transaction compensating fact (implemented) |
+| [POS workflow](pos-workflow.md) | Slice 6.7: cashier Home, keys, pickers, open-price Standard, return entry, X Report (locked) |
+| [MVP closeout](mvp-closeout.md) | Slice 6.8: presentation, regression; no new commercial behavior (locked) |
+| [Receipt presentation](receipt-presentation.md) | Customer print/reprint layout (locked; implement in 6.8) |
 | [Phase 4 plan](../phase4-point-of-sale/phase4-plan.md) | Completion, receipt allocation, inventory posting |
 | [CompletedPosOperation v1](../phase4-point-of-sale/completed-pos-operation-v1.md) | Commercial base; v2 is additive |
 | [POS tax contract](../phase4-point-of-sale/pos-tax-contract.md) | Tax Class / Store Tax; linked-return reversal ([§10](../phase4-point-of-sale/pos-tax-contract.md)) |
@@ -32,7 +35,7 @@ Deliver a cashier-usable online register for ordinary bookstore checkout beyond 
 
 > Can a cashier sell Used units and non-inventory, take mixed tenders, look up and reprint completed history, apply controlled price/discount/Tax Class changes, take linked and unlinked returns (including mixed sale/return), post-void a whole transaction, and still close and finalize Z?
 
-Slice 6.0 locks the completed-operation shape so later slices do not each invent a new completion contract. Slices 6.1–6.7 are independently mergeable to `main` and must leave the register usable.
+Slice 6.0 locks the completed-operation shape so later slices do not each invent a new completion contract. Slices 6.1–6.8 are independently mergeable to `main` and must leave the register usable.
 
 ---
 
@@ -78,7 +81,7 @@ audit
 reporting where the new fact changes totals
 ```
 
-6.7 consolidates and polishes. It does not repair knowingly inaccurate intermediate receipt, history, or Session/Z figures.
+6.8 consolidates presentation. It does not repair knowingly inaccurate intermediate receipt, history, or Session/Z figures. 6.7 is operator workflow, not polish.
 
 ---
 
@@ -95,12 +98,13 @@ main
   ├── 6.4  controlled pricing / actions
   ├── 6.5  returns
   ├── 6.6  post-void
-  └── 6.7  MVP closeout
+  ├── 6.7  POS operator workflow
+  └── 6.8  POS presentation & MVP closeout
 ```
 
-Letter a slice (6.1A/B, 6.2A–E, 6.4A–D, 6.5A–D) only when a single PR would not stay reviewable. A stacked branch is allowed while a predecessor is still in review; the integration target remains `main`.
+Letter a slice (6.1A/B, 6.2A–E, 6.4A–D, 6.5A–D, 6.7A–E) only when a single PR would not stay reviewable. A stacked branch is allowed while a predecessor is still in review; the integration target remains `main`.
 
-Write the detailed implementation contract for slices 6.6–6.7 immediately before building each slice, the same way Phase 5 locked [register-workspace.md](../phase5-cash-register/register-workspace.md) and [close-z-screens.md](../phase5-cash-register/close-z-screens.md) before those screens. 6.2–6.5 contracts are already written.
+6.2–6.8 contracts are written. Build 6.7 next ([pos-workflow.md](pos-workflow.md)), then 6.8.
 
 ---
 
@@ -115,7 +119,8 @@ Write the detailed implementation contract for slices 6.6–6.7 immediately befo
 | **6.4** | Controlled pricing/actions | Approval framework, price override, line discount, Tax Class override | **Implemented.** Ordinary path stays `direct` unless policy requires a second actor |
 | **6.5** | Returns | Linked, unlinked, price adjustment, mixed sale/return | **Implemented** ([returns.md](returns.md)). Sale-only baskets still complete the same way; Session/Z is direction-aware |
 | **6.6** | Post-void | Controlled whole-transaction correction | Implemented ([post-void.md](post-void.md)). Entry is from history; sale path untouched |
-| **6.7** | MVP closeout | Receipts, Z/tender reporting polish, audit/history UX, regression | Additive snapshots; already-finalized periods stay immutable |
+| **6.7** | POS operator workflow | Home, keys, pickers, open-price Standard, return entry, X Report | Contract locked ([pos-workflow.md](pos-workflow.md)). Phase 5 all-Cash Standard path stays green |
+| **6.8** | Presentation & closeout | Customer print, Session/Z/history chrome, regression | Contract locked ([mvp-closeout.md](mvp-closeout.md)). Additive snapshots only; already-finalized periods stay immutable |
 
 ---
 
@@ -153,7 +158,7 @@ One settlement redesign, not three unrelated tender implementations.
 - Mixed tender accumulator; completion requires exact settlement (`SUM(payments) − SUM(refunds) = signed net`). 6.2 is payment-only; refunds wait for 6.5.
 - Cash retains presented / applied / change. Replacement remaining due excludes the existing Cash row.
 - Until Cash refunds exist, expected Cash stays the Phase 5 formula.
-- Session/Z must show basic Card / Check / Other tender totals **before** those tenders are cashier-completable. Do not wait for 6.7.
+- Session/Z must show basic Card / Check / Other tender totals **before** those tenders are cashier-completable. Do not wait for 6.8.
 
 **6.2E merge gate:** ordinary all-Cash behavior remains exactly equivalent to Phase 5.
 
@@ -194,7 +199,7 @@ MVP linked-return eligibility is limited to authoritative original-line linkage,
 - **Unlinked:** creates the return line (`ExecuteUnlinkedReturn`); current merchandise valued under current POS rules. Cashier may enter a return unit price (`>= 0`, above or below reference). That difference is commercial history inside the single `unlinked_return` action, not a sale discount/override and not a second permission. No historical price/tax/tender claim. Unlinked Used requires an existing known **removed** `InventoryUnit`; unknown identifiers are intake/buyback, not this slice.
 - **Mixed sale + return:** transaction `signed_net` determines payment, refund, or no tender. Do not overload Phase 4/5 unsigned `subtotal` / `tax` / `total`.
 - **Refunds:** tender settlement, not return valuation. External Card refund is cashier-confirmed outside ShelfSense. Expected Cash becomes `float + Cash payments − Cash refunds` and **may be negative** (not a physical drawer cap).
-- **Session/Z:** this slice must make commercial and Cash calculations direction-aware in the same change that first completes a return. `SUM(transaction.total_cents)` must not treat refund magnitude as sales. 6.7 may reorganize snapshot columns; it does not fix a knowingly wrong Z.
+- **Session/Z:** this slice must make commercial and Cash calculations direction-aware in the same change that first completes a return. `SUM(transaction.total_cents)` must not treat refund magnitude as sales. 6.8 may reorganize snapshot **presentation**; it does not fix a knowingly wrong Z.
 
 Working/cancelled returns do not consume eligibility. Concurrency must prevent two Registers from both returning the final eligible quantity. Delivery: 6.5A Core, 6.5B operator workflow, 6.5C unlinked return, and 6.5D mixed/closeout hardening are implemented as specified in [returns.md](returns.md) §32.
 
@@ -212,14 +217,37 @@ Correct a transaction that should never have been completed. Distinct from custo
 
 Partial correction uses return workflows.
 
-### 6.7 — MVP closeout
+### 6.7 — POS operator workflow
 
-No new business domain. Verify and polish facts **already represented truthfully** by earlier slices:
+**Contract locked.** Authority: [pos-workflow.md](pos-workflow.md).
 
-- Receipt/reprint: Used-unit identity, sale vs return, override, discount, return price adjustment, Tax Class/tax, multiple tenders, refunds, Cash presented/change. Customer copies omit unnecessary external Card/Check references.
-- Session/Z presentation: gross sales, returns, discounts, net, tax; tender breakdown; Cash custody = float + Cash payments − Cash refunds. Additive snapshot columns if 6.2/6.5 left previews correct but snapshot shape incomplete. Already-finalized periods stay immutable.
-- History/audit: enough to explain who changed price/discount/Tax Class, why, who approved, return linkage, return price adjustment, post-void relationship, tender settlement. Audit is implemented with each capability; 6.7 verifies completeness and presentation.
-- Full keyboard register workflow pass across 6.1–6.6 plus close/Z.
+Make all MVP capabilities practical to operate from one coherent cashier workflow. This is **not** closeout polish.
+
+```text
+POS Home / sparse Register chrome
+preferred Register cookie
+X Report (interim; does not close)
+breaking keyboard remap (F5 left for the browser)
+variant / unit pickers and / search
+open-price quantity-tracked and non-inventory Standard
+- linked/unlinked return chooser
+F1–F4 tenders; + = Cash remaining
+```
+
+Open-price Used/individual is deferred (explicit POS refusal). Post-void stays history-only. Customer print is 6.8.
+
+Delivery letters: 6.7A docs (this lock), 6.7B Home/X, 6.7C keys, 6.7D pickers/open-price, 6.7E returns+tenders.
+
+### 6.8 — POS presentation and MVP closeout
+
+**Contract locked.** Authority: [mvp-closeout.md](mvp-closeout.md) and [receipt-presentation.md](receipt-presentation.md).
+
+No new commercial behavior. Verify and present facts **already represented truthfully** by earlier slices, after 6.7 is usable:
+
+- Receipt/reprint: customer copy per [receipt-presentation.md](receipt-presentation.md). Operator history stays [transaction-history.md](transaction-history.md). Do not unify those grammars.
+- Session/X/Z **on-screen** grouping (Sales / Returns / Post-void / Net / tenders / Cash custody). No thermal Z print. Additive snapshot columns only if a correct preview cannot be reproduced. Already-finalized periods stay immutable.
+- History/audit: enough to explain who/why/approver, return linkage, unlinked prices, post-void, tender settlement. Customer print omitting a field does not remove it from history.
+- Regression: ordinary path through 6.7 modes plus blind close and immutable Z.
 
 Do not add paid-ins, drops, safe, drawer custody, denomination counts, or Store Close.
 
@@ -230,16 +258,17 @@ Do not add paid-ins, drops, safe, drawer custody, denomination counts, or Store 
 A cashier can complete one ordinary path:
 
 ```text
-open Register
+open Register (from POS Home)
   → confirm business date / opening float
-  → scan Standard, Used unit, and non-inventory
-  → price override / line discount / Tax Class override where policy allows
+  → scan Standard, Used unit, non-inventory, open-price Standard
+  → price / line discount / Tax Class where policy allows
   → mixed tender to exact settlement
   → complete
   → print / reprint from snapshots
   → lookup yesterday’s transaction after catalog change
   → linked return and/or unlinked return / mixed sale+return
-  → post-void a whole transaction that has no prior return
+  → post-void a whole transaction that has no prior return (from history)
+  → X Report (session remains open)
   → blind close
   → persisted expected / count / variance (Cash payments minus Cash refunds)
   → finalize immutable Z
@@ -272,6 +301,8 @@ Customer display
 Customer / reservation integration
 Configurable return windows / merchandise exclusions
 Unknown Used-item intake / buyback through returns
+Open-price Used / individual merchandise
+Z printing on thermal paper
 Cross-register work handoff
 Offline / standalone Terminal
 Deposits / bank reconciliation
@@ -290,7 +321,8 @@ Fractional quantities
 5. Lock 6.4 controlled-action contract → framework, then override / discount / Tax Class
 6. 6.5A–D implemented ([returns.md](returns.md)); Phase 6.5 complete
 7. Lock 6.6 post-void contract ([post-void.md](post-void.md)) → compensating whole-transaction fact
-8. Lock 6.7 closeout contract → receipt/Z/audit/keyboard regression (polish, not first truthful reporting)
+8. Lock 6.7 workflow ([pos-workflow.md](pos-workflow.md)) → Home, keys, pickers, open-price Standard, return entry, X Report
+9. Lock 6.8 closeout ([mvp-closeout.md](mvp-closeout.md)) → customer print, Session/Z/history presentation, regression
 ```
 
 Schema columns appear in the owning slice. 6.0 does not migrate unused fields.

@@ -2,7 +2,7 @@
 
 ShelfSense is an inventory, purchasing, customer-service, and point-of-sale system for independent bookstores. It is designed for one organization operating one or more stores, with a central organization server and store Registers. A future standalone Terminal (ADR-021) may continue ordinary checkout during temporary connectivity loss.
 
-Phases 0–5 are implemented. Phase 6 is the operational POS MVP: slices 6.0–6.6 are implemented (through whole-transaction post-void). Slice 6.7 closeout polish is next.
+Phases 0–5 are implemented. Phase 6 is the operational POS MVP: slices 6.0–6.6 are implemented (through whole-transaction post-void). Slice 6.7 operator workflow is next ([pos-workflow.md](docs/planning/phase4-6-point-of-sale/phase6-pos-mvp/pos-workflow.md)); slice 6.8 is presentation and closeout.
 
 ## Goals
 
@@ -208,11 +208,11 @@ Authoritative plan: [phase5-plan.md](docs/planning/phase4-6-point-of-sale/phase5
 
 ### Phase 6: Operational POS MVP
 
-Status: slices 6.0–6.6 implemented (CompletedPosOperation v2, Used/non-inventory sales, mixed tenders, history/reprint, controlled pricing, linked and unlinked returns, mixed baskets, refunds, whole-transaction post-void, direction-aware Session/Z). Slice 6.7 closeout polish is next.
+Status: slices 6.0–6.6 implemented (CompletedPosOperation v2, Used/non-inventory sales, mixed tenders, history/reprint, controlled pricing, linked and unlinked returns, mixed baskets, refunds, whole-transaction post-void, direction-aware Session/Z). Slice 6.7 operator workflow is next; slice 6.8 is presentation and closeout.
 
-Phase 6 extends the Phase 5 Cash register with Used/non-inventory sales, mixed tenders, history/reprint, controlled pricing, returns, post-void, and closeout reporting. Each slice merges independently to `main`.
+Phase 6 extends the Phase 5 Cash register with Used/non-inventory sales, mixed tenders, history/reprint, controlled pricing, returns, post-void, cashier workflow, and closeout presentation. Each slice merges independently to `main`.
 
-Authoritative plan: [phase6-plan.md](docs/planning/phase4-6-point-of-sale/phase6-pos-mvp/phase6-plan.md). Contract: [mvp-contract.md](docs/planning/phase4-6-point-of-sale/phase6-pos-mvp/mvp-contract.md). Returns: [returns.md](docs/planning/phase4-6-point-of-sale/phase6-pos-mvp/returns.md). Post-void: [post-void.md](docs/planning/phase4-6-point-of-sale/phase6-pos-mvp/post-void.md).
+Authoritative plan: [phase6-plan.md](docs/planning/phase4-6-point-of-sale/phase6-pos-mvp/phase6-plan.md). Contract: [mvp-contract.md](docs/planning/phase4-6-point-of-sale/phase6-pos-mvp/mvp-contract.md). Workflow: [pos-workflow.md](docs/planning/phase4-6-point-of-sale/phase6-pos-mvp/pos-workflow.md). Closeout: [mvp-closeout.md](docs/planning/phase4-6-point-of-sale/phase6-pos-mvp/mvp-closeout.md). Returns: [returns.md](docs/planning/phase4-6-point-of-sale/phase6-pos-mvp/returns.md). Post-void: [post-void.md](docs/planning/phase4-6-point-of-sale/phase6-pos-mvp/post-void.md).
 
 ## Phase 1 authorization model
 

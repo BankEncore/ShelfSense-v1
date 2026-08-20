@@ -256,6 +256,10 @@ Closed-session and Z views show the breakdown. Blind count still exposes no tota
 
 Only after 6.2D. Extend [register-workspace.md](../phase5-cash-register/register-workspace.md); do not invent a new chrome.
 
+**6.7 supersedes F2 cycling and the `+` default path** ([pos-workflow.md](pos-workflow.md) §12): F1 Cash / F2 Card / F3 Check / F4 Other; `+` is Cash with remaining prefilled.
+
+Until 6.7 ships, 6.2E remains:
+
 - `+` still enters TENDER; default identity **Cash** (Phase 5 keyboard: amount → Enter → `TenderCash` → auto-complete when Cash closes the sale).
 - Cycle among **active** types (F2). Other appears only when an active Other identity exists.
 - Cashier identities are one JSON array (`id`, `name`, `category`, `reference_policy`), not delimiter-separated strings.
