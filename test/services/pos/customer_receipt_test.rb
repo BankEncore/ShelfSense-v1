@@ -32,6 +32,7 @@ class Pos::CustomerReceiptTest < ActiveSupport::TestCase
     assert_equal "Example Books LLC", receipt.legal_name
     refute_includes receipt.address_lines, @store.name
     refute_equal receipt.completed_at_label, transaction.business_date.iso8601
+    assert_match(/\A\d{1,2} [A-Z][a-z]{2} \d{2} \d{1,2}:\d{2}(am|pm)\z/, receipt.completed_at_label)
   end
 
   test "fails closed when legal_name is blank" do

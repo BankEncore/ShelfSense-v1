@@ -75,7 +75,7 @@ module Pos
 
     def completed_at_label
       zone = ActiveSupport::TimeZone[@store.timezone] || ActiveSupport::TimeZone["UTC"]
-      @transaction.completed_at.in_time_zone(zone).strftime("%-d %b %Y %-l:%M %p")
+      @transaction.completed_at.in_time_zone(zone).strftime("%-d %b %y %-l:%M%P")
     end
 
     def identity_header

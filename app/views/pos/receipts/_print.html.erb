@@ -18,18 +18,22 @@
       <p class="pos-receipt__reprint">*** REPRINT ***</p>
     <% end %>
 
-    <p class="pos-receipt__legal-name"><%= receipt.legal_name %></p>
-    <% receipt.address_lines.each do |line| %>
-      <p class="pos-receipt__address"><%= line %></p>
-    <% end %>
+    <div class="pos-receipt__store">
+      <p class="pos-receipt__legal-name"><%= receipt.legal_name %></p>
+      <% receipt.address_lines.each do |line| %>
+        <p class="pos-receipt__address"><%= line %></p>
+      <% end %>
+    </div>
 
     <% if receipt.header_message.present? %>
       <pre class="pos-receipt__message"><%= receipt.header_message %></pre>
     <% end %>
 
-    <p><%= receipt.completed_at_label %></p>
-    <p class="pos-receipt__print-header"><%= receipt.identity_header %></p>
-    <p>Cashier: <%= receipt.cashier_name %></p>
+    <div class="pos-receipt__identity">
+      <p><%= receipt.completed_at_label %></p>
+      <p class="pos-receipt__print-header"><%= receipt.identity_header %></p>
+      <p>Cashier: <%= receipt.cashier_name %></p>
+    </div>
 
     <div class="pos-receipt__print-lines">
       <% receipt.lines.each do |line| %>
@@ -51,26 +55,28 @@
               <% end %>
             </span>
           </p>
-          <p class="pos-receipt__line-description"><%= line.description %></p>
-          <% if line.quantity > 1 %>
-            <p class="pos-receipt__line-detail"><%= line.quantity %> @ <%= format_money_cents(line.unit_price_cents) %></p>
-          <% elsif line.discount_cents.negative? %>
-            <p class="pos-receipt__line-main">
-              <span>Price:</span>
-              <span class="pos-receipt__amount"><%= pos_print_amount(line.extended_price_cents) %></span>
-            </p>
-          <% end %>
-          <% if line.discount_cents.negative? %>
-            <p class="pos-receipt__line-main">
-              <span><%= line.discount_label %></span>
-              <span class="pos-receipt__amount"><%= pos_print_amount(line.discount_cents) %></span>
-            </p>
-          <% end %>
-          <% if line.unlinked %>
-            <p class="pos-receipt__line-detail">Original receipt: Not provided</p>
-          <% elsif line.original_reference.present? %>
-            <p class="pos-receipt__line-detail">Original: <%= line.original_reference %></p>
-          <% end %>
+          <div class="pos-receipt__line-rest">
+            <p class="pos-receipt__line-description"><%= line.description %></p>
+            <% if line.quantity > 1 %>
+              <p class="pos-receipt__line-detail"><%= line.quantity %> @ <%= format_money_cents(line.unit_price_cents) %></p>
+            <% elsif line.discount_cents.negative? %>
+              <p class="pos-receipt__line-main">
+                <span>Price:</span>
+                <span class="pos-receipt__amount"><%= pos_print_amount(line.extended_price_cents) %></span>
+              </p>
+            <% end %>
+            <% if line.discount_cents.negative? %>
+              <p class="pos-receipt__line-main">
+                <span><%= line.discount_label %></span>
+                <span class="pos-receipt__amount"><%= pos_print_amount(line.discount_cents) %></span>
+              </p>
+            <% end %>
+            <% if line.unlinked %>
+              <p class="pos-receipt__line-detail">Original receipt: Not provided</p>
+            <% elsif line.original_reference.present? %>
+              <p class="pos-receipt__line-detail">Original: <%= line.original_reference %></p>
+            <% end %>
+          </div>
         </div>
       <% end %>
     </div>
@@ -89,7 +95,7 @@
       <% end %>
       <div><dt>Subtotal</dt><dd><%= pos_print_amount(receipt.subtotal_cents) %></dd></div>
       <% receipt.tax_groups.each do |group| %>
-        <div>
+        <div class="pos-receipt__tax">
           <dt>
             Tax <%= group.letter %>
             <% if receipt.tax_groups.size > 1 %>
@@ -118,11 +124,15 @@
     </dl>
 
     <% unless receipt.post_void_reversal? %>
-      <% if receipt.items_sold.positive? %>
-        <p>Items Sold: <%= receipt.items_sold %></p>
-      <% end %>
-      <% if receipt.items_returned.positive? %>
-        <p>Items Returned: <%= receipt.items_returned %></p>
+      <% if receipt.items_sold.positive? || receipt.items_returned.positive? %>
+        <div class="pos-receipt__counts">
+          <% if receipt.items_sold.positive? %>
+            <p>Items Sold: <%= receipt.items_sold %></p>
+          <% end %>
+          <% if receipt.items_returned.positive? %>
+            <p>Items Returned: <%= receipt.items_returned %></p>
+          <% end %>
+        </div>
       <% end %>
       <% if receipt.you_saved_cents.positive? %>
         <p class="pos-receipt__saved">You Saved: <%= format_money_cents(receipt.you_saved_cents) %></p>

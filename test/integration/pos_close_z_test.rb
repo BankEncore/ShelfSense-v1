@@ -34,6 +34,12 @@ class PosCloseZTest < ActionDispatch::IntegrationTest
     assert_select ".pos-print-only"
     assert_select ".pos-no-print"
     assert_select ".pos-receipt__legal-name", text: "Example Books LLC"
+    assert_select ".pos-receipt__print .pos-receipt__store"
+    assert_select ".pos-receipt__print .pos-receipt__identity"
+    assert_select ".pos-receipt__print .pos-receipt__counts", text: /Items Sold:/
+    assert_select ".pos-receipt__print .pos-receipt__total"
+    assert_select ".pos-receipt__print .pos-receipt__line-rest"
+    assert_select ".pos-receipt__print .pos-receipt__tax"
     assert_select ".pos-receipt__print", text: /Business date/, count: 0
     assert_select ".pos-receipt__barcode"
     assert_select "input[name='session_id'][value='#{transaction.pos_session_id}']"
