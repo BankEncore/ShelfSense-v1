@@ -9,6 +9,7 @@ class Authorization::PermissionEvaluatorTest < ActiveSupport::TestCase
       store_number: "1",
       store_code: "main",
       store_name: "Main Store",
+      store_legal_name: "Example Books LLC",
       store_timezone: "America/New_York",
       store_country_code: "US",
       admin_username: "admin",
@@ -19,7 +20,7 @@ class Authorization::PermissionEvaluatorTest < ActiveSupport::TestCase
     @second_store = Store.create!(
       store_number: "2",
       code: "east",
-      name: "East Store",
+      name: "East Store", legal_name: "Example Books LLC",
       timezone: "America/New_York",
       country_code: "US"
     )

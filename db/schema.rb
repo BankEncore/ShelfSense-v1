@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_19_203000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_20_020000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -584,6 +584,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_19_203000) do
     t.uuid "original_transaction_line_id"
     t.uuid "pos_transaction_id", null: false
     t.uuid "post_void_source_line_id"
+    t.string "pricing_method_snapshot", default: "configured", null: false
     t.uuid "product_variant_id", null: false
     t.integer "quantity", null: false
     t.bigint "reference_unit_price_cents", null: false
@@ -612,6 +613,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_19_203000) do
     t.check_constraint "original_transaction_line_id IS NULL OR direction::text = 'return'::text", name: "pos_transaction_lines_original_requires_return"
     t.check_constraint "original_transaction_line_id IS NULL OR post_void_source_line_id IS NULL", name: "pos_transaction_lines_lineage_exclusive"
     t.check_constraint "post_void_source_line_id IS NULL OR post_void_source_line_id <> id", name: "pos_transaction_lines_post_void_source_not_self"
+    t.check_constraint "pricing_method_snapshot::text = ANY (ARRAY['open_price'::character varying, 'configured'::character varying]::text[])", name: "pos_transaction_lines_pricing_method_snapshot_valid"
     t.check_constraint "quantity > 0", name: "pos_transaction_lines_quantity_positive"
   end
 
@@ -819,7 +821,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_19_203000) do
     t.string "phone"
     t.string "postal_code"
     t.text "receipt_footer"
+    t.string "receipt_footer_mode", default: "inherit", null: false
     t.text "receipt_header"
+    t.string "receipt_header_mode", default: "inherit", null: false
     t.string "region_code"
     t.string "san"
     t.integer "store_number", null: false
@@ -829,6 +833,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_19_203000) do
     t.timestamptz "updated_at", null: false
     t.index "lower((code)::text)", name: "index_stores_on_lower_code", unique: true
     t.index ["store_number"], name: "index_stores_on_store_number", unique: true
+    t.check_constraint "receipt_footer_mode::text <> 'custom'::text OR receipt_footer IS NOT NULL AND length(btrim(receipt_footer)) > 0", name: "stores_receipt_footer_custom_text"
+    t.check_constraint "receipt_footer_mode::text = ANY (ARRAY['inherit'::character varying, 'custom'::character varying, 'none'::character varying]::text[])", name: "stores_receipt_footer_mode_valid"
+    t.check_constraint "receipt_header_mode::text <> 'custom'::text OR receipt_header IS NOT NULL AND length(btrim(receipt_header)) > 0", name: "stores_receipt_header_custom_text"
+    t.check_constraint "receipt_header_mode::text = ANY (ARRAY['inherit'::character varying, 'custom'::character varying, 'none'::character varying]::text[])", name: "stores_receipt_header_mode_valid"
     t.check_constraint "store_number > 0", name: "stores_store_number_positive"
   end
 

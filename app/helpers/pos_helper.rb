@@ -17,6 +17,18 @@ module PosHelper
     time.in_time_zone(zone).strftime("%Y-%m-%d %H:%M")
   end
 
+  def pos_print_amount(cents)
+    return if cents.nil?
+
+    sign = cents.negative? ? "-" : ""
+    absolute = cents.abs
+    "#{sign}#{absolute / 100}.#{format("%02d", absolute % 100)}"
+  end
+
+  def pos_code128_svg(payload)
+    Pos::Code128.svg(payload).html_safe
+  end
+
   def pos_receipt_print_header(transaction)
     Pos::ReceiptIdentity.header(
       store_number: transaction.store_number_snapshot,
@@ -118,6 +130,21 @@ module PosHelper
     return "not captured" if cents.nil?
 
     format_signed_money_cents(cents)
+  end
+
+  def pos_report_row_value(row)
+    case row.format
+    when :count
+      row.cents.nil? ? "not captured" : row.cents
+    when :optional_money
+      pos_optional_money_cents(row.cents)
+    when :optional_signed
+      pos_optional_signed_money_cents(row.cents)
+    when :signed
+      format_signed_money_cents(row.cents)
+    else
+      format_money_cents(row.cents)
+    end
   end
 
   def pos_line_kind_prefix(line)

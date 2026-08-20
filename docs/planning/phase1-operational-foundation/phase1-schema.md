@@ -27,8 +27,8 @@ One row representing installation-wide configuration.
 | `fiscal_year_start_month` | smallint | null: false; default `1`; check 1–12 |  |
 | `default_supplier_cancellation_days` | smallint | null: false; default `20`; check `>= 0` | Default used when supplier-specific policy is absent |
 | `default_customer_reservation_expiration_days` | smallint | null: false; default `7`; check `>= 0` | Default for customer reservations |
-| `default_receipt_header` | text |  |  |
-| `default_receipt_footer` | text |  |  |
+| `default_receipt_header` | text | max 500 after trim | Organization default; inherit target |
+| `default_receipt_footer` | text | max 500 after trim | Organization default; inherit target |
 | `initialized_at` | timestamptz |  | Set only as the final successful bootstrap step; null means install incomplete / retryable |
 | `lock_version` | integer | null: false; default `0` | Optimistic concurrency |
 | `created_at` | timestamptz | null: false |  |
@@ -50,7 +50,7 @@ Defines an operational store and reporting boundary.
 | `store_number` | integer | null: false; unique; CHECK `> 0` | Business-facing identifier; leading zeroes are display-only |
 | `code` | varchar | null: false; unique | Short, stable operational code |
 | `name` | varchar | null: false | Display name |
-| `legal_name` | varchar |  | Optional store-specific legal name |
+| `legal_name` | varchar | required while `active`; not copied from `name` | Customer receipt identity |
 | `street_address_1` | varchar |  |  |
 | `street_address_2` | varchar |  |  |
 | `city` | varchar |  |  |
@@ -60,8 +60,10 @@ Defines an operational store and reporting boundary.
 | `phone` | varchar |  | Store contact number |
 | `san` | varchar |  | Standard Address Number, where applicable |
 | `timezone` | varchar | null: false | IANA timezone |
-| `receipt_header` | text |  | Overrides the system default |
-| `receipt_footer` | text |  | Overrides the system default |
+| `receipt_header` | text |  | Custom header text when `receipt_header_mode = custom`; dormant otherwise |
+| `receipt_footer` | text |  | Custom footer text when `receipt_footer_mode = custom`; dormant otherwise |
+| `receipt_header_mode` | varchar | null: false; default `inherit`; CHECK `inherit \| custom \| none` | Independent of footer |
+| `receipt_footer_mode` | varchar | null: false; default `inherit`; CHECK `inherit \| custom \| none` | Independent of header |
 | `active` | boolean | null: false; default `true` | Inactive stores cannot be selected operationally |
 | `deactivated_at` | timestamptz |  |  |
 | `deactivated_by_id` | uuid | FK: `users`; nullable |  |

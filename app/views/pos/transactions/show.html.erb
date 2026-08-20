@@ -70,7 +70,12 @@
   <%= render "pos/receipts/print", transaction: @transaction, tenders: @tenders, reprint: true %>
 
   <div class="pos-receipt__actions pos-no-print">
-    <button type="button" class="btn" data-action="pos-receipt#print">Reprint receipt</button>
+    <% receipt = Pos::CustomerReceipt.build(@transaction) %>
+    <% if receipt.printable? %>
+      <button type="button" class="btn" data-action="pos-receipt#print">Reprint receipt</button>
+    <% else %>
+      <p class="pos-enter__alert" role="alert"><%= receipt.error %></p>
+    <% end %>
     <%= link_to "Back to transactions", pos_transactions_path, class: "btn btn--secondary" %>
   </div>
 </main>

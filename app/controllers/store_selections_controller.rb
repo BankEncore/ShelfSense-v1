@@ -13,6 +13,7 @@ class StoreSelectionsController < ApplicationController
     end
 
     session[:current_store_id] = store.id
+    session.delete(:pos_register_id)
     redirect_to root_path, notice: "Working in #{store.name}."
   end
 end

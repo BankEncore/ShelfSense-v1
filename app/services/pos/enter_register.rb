@@ -17,6 +17,7 @@ module Pos
     end
 
     def call
+      raise Pos::Error, "This Store cannot use POS until its legal name is configured." if @store.legal_name.blank?
       Pos::Support.authorize!(@actor, @store)
       raise Pos::Error, "register does not belong to store" unless @register.store_id == @store.id
       Pos::Support.require_active_context!(@store, @register)

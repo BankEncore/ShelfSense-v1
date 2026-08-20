@@ -25,10 +25,12 @@ module Installation
       base_currency_code: "USD",
       default_timezone: nil,
       default_country_code: nil,
-      legal_name: nil
+      legal_name: nil,
+      store_legal_name: nil
     )
       @organization_name = organization_name
       @legal_name = legal_name
+      @store_legal_name = store_legal_name
       @store_number = store_number
       @store_code = store_code
       @store_name = store_name
@@ -123,13 +125,14 @@ module Installation
 
     private
 
-    attr_reader :organization_name, :legal_name, :store_number, :store_code, :store_name,
+    attr_reader :organization_name, :legal_name, :store_legal_name, :store_number, :store_code, :store_name,
                 :store_timezone, :store_country_code, :admin_username, :admin_display_name,
                 :admin_password, :admin_email, :base_currency_code, :default_timezone, :default_country_code
 
     def validate_input!
       raise InvalidInput, "admin password is required" if admin_password.blank?
       raise InvalidInput, "organization name is required" if organization_name.blank?
+      raise InvalidInput, "store legal name is required" if store_legal_name.blank?
     end
 
     def acquire_advisory_lock!
@@ -164,6 +167,7 @@ module Installation
         store_number: store_number,
         code: store_code,
         name: store_name,
+        legal_name: store_legal_name,
         timezone: store_timezone,
         country_code: store_country_code
       )

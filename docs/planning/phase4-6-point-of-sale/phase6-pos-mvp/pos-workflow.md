@@ -72,7 +72,7 @@ post-void from the selling surface or POS Home
 Store Close, paid-in, drop, drawer
 integrated Card
 customer print layout (6.8)
-Session/Z print on the receipt printer (out of MVP)
+ESC/POS / printer discovery (out of MVP)
 reprint audit
 ```
 
@@ -376,11 +376,20 @@ open-price sale line
   both reference and selling become the new cents
 ```
 
-If a percentage discount already exists on the open-price line, recalculate `manual_discount_cents` from the **same basis points** on the new selling basis, then tax.
+If a percentage discount already exists on the open-price line, **block the price edit**. Do not recalculate discount cents in place. The approved discount fingerprints selling basis, quantity, and basis points; changing the base after approval must not silently rebase.
 
-This is the opposite of 6.4 price override, which cannot change while a discount exists. Spell the exception in tests so an open-price correction never inserts `price_override`.
+```text
+open-price, no discount
+  F6 → edit reference and selling to the new cents
+     → clear working tenders
+     → recalc tax from the line’s current Tax Class
+     → no price_override row
 
-If the new basis rounds the discount to `$0.00`, keep the 6.4 rejection of zero-cent discounts: **block the price edit** with a message to remove the discount first (do not leave a phantom percent).
+open-price, discount present
+  F6 → "Remove the line discount before changing the price."
+```
+
+Any existing discount blocks the open-price edit (including a `$0.00` rounded discount). Reapply the discount through the normal controlled-action path after the price edit. Spell this in tests so an open-price correction never inserts `price_override`.
 
 F6 on return lines stays disabled. Unlinked return price remains the `unlinked_return` action, not F6.
 
@@ -461,7 +470,7 @@ this cashier’s open Session     → pos.transact
 another cashier’s open Session  → pos.sessions.view
 ```
 
-Seed `pos.sessions.view` (`either` scope): associate **no**; store manager and system administrator **yes**. `pos.transact` alone must not browse other live Registers.
+Seed `pos.sessions.view` (`either` scope): associate **no**; store manager and system administrator **yes**. `pos.transact` alone must not browse other live Registers. Existing databases need `./dev/rails-docker bin/rails shelfsense:seed_permissions`.
 
 Closed Sessions use the existing Session report, not X.
 
@@ -564,9 +573,9 @@ Letter so each PR stays reviewable:
 
 - **6.7A** — this contract + [phase6-plan.md](phase6-plan.md) / companions (docs-only).
 - **6.7B** — `/pos` home, preferred Register cookie, Session-free reporting nav, X Report + `pos.sessions.view`.
-- **6.7C** — keyboard remap, modal/error contract, Keyboard Lock set (selling workspace still sparse).
-- **6.7D** — variant/unit pickers, `/` search, open-price Standard (no derived cost).
-- **6.7E** — `-` return lookup (multi-origin) + F1–F4 / remaining Cash.
+- **6.7C** — keyboard remap, F1–F4 (including Other picker and remaining prefill), modal/error contract, Keyboard Lock set (selling workspace still sparse). Do **not** intercept `/` or `-`.
+- **6.7D** — variant/unit pickers, `/` search, open-price Standard (no derived cost). F6 on an open-price line with a discount is refused.
+- **6.7E** — `-` return lookup (multi-origin). Tender keys remain 6.7C.
 
 Merge gate each letter: Phase 5 all-Cash Standard path still green; GET still does not mutate; scanners still Enter-terminated keyboard input.
 
@@ -584,7 +593,7 @@ Merge gate each letter: Phase 5 all-Cash Standard path still green; GET still do
 8. Open-price Used is refused with the locked message; quantity and non-inventory Standard open-price complete.
 9. Open-price confirmation sets reference = selling; no `price_override`; rescan does not merge those lines.
 10. F6 on an open-price line edits price without a controlled override; F6 on an ordinary line remains override; F6 on a return line stays disabled.
-11. Open-price edit with an existing percent discount recalculates discount cents; `$0.00` rounded discount is blocked.
+11. F6 on an open-price line with any existing discount is refused until the discount is removed; F6 never inserts `price_override` on an open-price line.
 12. `$0` sale-only baskets complete with no tender; mixed even exchange still uses `+` to confirm.
 13. `-` is a keyboard Linked/Unlinked chooser; Unlinked is not button-only.
 14. Receipt barcode lookup is exact `transaction_reference`; lines are chosen, not auto-returned.
@@ -607,5 +616,6 @@ open-price Used
 Ctrl/Cmd/Alt
 suspend / recall / open ring
 post-void hotkey
-Z numbering / Z print
+Z numbering
+ESC/POS
 ```

@@ -9,6 +9,7 @@ class Installation::BootstrapTest < ActiveSupport::TestCase
       store_number: "1",
       store_code: "main",
       store_name: "Main Store",
+      store_legal_name: "Example Books LLC",
       store_timezone: "America/New_York",
       store_country_code: "US",
       admin_username: "admin",
@@ -24,6 +25,8 @@ class Installation::BootstrapTest < ActiveSupport::TestCase
     assert SystemSettings.initialized?
     assert_equal "Example Books", result[:settings].organization_name
     assert_equal "main", result[:store].code
+    assert_equal "Example Books LLC", result[:store].legal_name
+    refute_equal result[:store].name, result[:store].legal_name
     assert result[:system_user].system_actor?
     assert_nil result[:system_user].password_digest
     assert result[:administrator].authenticate("correct-horse-battery")
@@ -111,5 +114,13 @@ class Installation::BootstrapTest < ActiveSupport::TestCase
 
     assert_match(/at least one active global system administrator/, error.message)
     assert_nil assignment.reload.revoked_at
+  end
+
+  test "requires a store legal name and does not copy the operational store name" do
+    error = assert_raises(Installation::Bootstrap::InvalidInput) do
+      Installation::Bootstrap.call(**@attrs.merge(store_legal_name: nil))
+    end
+    assert_match(/store legal name is required/, error.message)
+    assert_not SystemSettings.initialized?
   end
 end

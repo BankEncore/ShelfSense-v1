@@ -47,7 +47,7 @@ class PosLinkedReturnTest < ApplicationSystemTestCase
     assert_text "REFUND"
     send_keys :f2
     assert_selector "[data-register-workspace-target='fieldLabel']", text: /External Card/
-    send_keys :f2
+    send_keys :f1
     assert_selector "[data-register-workspace-target='fieldLabel']", text: /Refund amount/
     field = find("#pos-command-field")
     field.send_keys :enter

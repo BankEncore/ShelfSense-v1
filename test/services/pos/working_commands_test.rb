@@ -80,7 +80,7 @@ class PosWorkingCommandsTest < ActiveSupport::TestCase
     assert_raises(ActiveRecord::ReadOnlyRecord) { transaction.update!(subtotal_cents: 1) }
   end
 
-  test "open_price merchandise is rejected" do
+  test "open_price merchandise requires an entered selling price" do
     open_price = pos_sellable_variant(actor: @actor, tax_class: @tax, pricing_method: "open_price")
     transaction = Pos::StartTransaction.call(session: @context[:session], actor: @actor)
     error = assert_raises(Pos::Error) do
@@ -91,7 +91,8 @@ class PosWorkingCommandsTest < ActiveSupport::TestCase
         identifier: open_price.sku
       )
     end
-    assert_match(/open-price|sellable|regular price/i, error.message)
+    assert_match(/open price is required/i, error.message)
+    assert_equal 0, transaction.reload.pos_transaction_lines.count
   end
 
   test "unauthorized actor cannot start a transaction" do

@@ -93,7 +93,7 @@ class PosControlledActionsTest < ActiveSupport::TestCase
   end
 
   test "a manager assigned only to another store cannot approve" do
-    east = Store.create!(store_number: "2", code: "east", name: "East", timezone: "America/New_York", country_code: "US")
+    east = Store.create!(store_number: "2", code: "east", name: "East", legal_name: "Example Books LLC", timezone: "America/New_York", country_code: "US")
     other = pos_store_manager(store: east, assigned_by: @admin, username: "eastmgr")
     transaction, line = start_sale(@associate)
 

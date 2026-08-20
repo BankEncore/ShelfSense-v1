@@ -1,0 +1,34 @@
+<% content_for :title, "Active Sessions" %>
+
+<main class="pos-home">
+  <%= render "pos/shared/report_nav" %>
+
+  <h1>Active Sessions</h1>
+
+  <% if @sessions.empty? %>
+    <p>No open Sessions at this store.</p>
+  <% else %>
+    <table class="pos-history__table">
+      <thead>
+        <tr>
+          <th>Register</th>
+          <th>Cashier</th>
+          <th>Business date</th>
+          <th>Opened</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @sessions.each do |session_record| %>
+          <tr>
+            <td><%= session_record.register.admin_label %></td>
+            <td><%= session_record.cashier_user.display_name %></td>
+            <td><%= session_record.reporting_period.business_date.iso8601 %></td>
+            <td><%= format_store_timestamp(session_record.opened_at, current_store) %></td>
+            <td><%= link_to "X Report", pos_session_x_report_path(session_record) %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  <% end %>
+</main>

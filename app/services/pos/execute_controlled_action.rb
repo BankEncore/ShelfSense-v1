@@ -73,6 +73,9 @@ module Pos
     def apply!(transaction, line, existing)
       policy = Pos::ControlledActionPolicy.result(user: @actor, store: transaction.store, action_type: @action_type)
       raise Pos::Denied, "not authorized to perform this action" if policy == :prohibited
+      if @action_type == "price_override" && line.pricing_method_snapshot == "open_price"
+        raise Pos::Error, "open-price lines cannot use a price override"
+      end
       raise Pos::Error, "remove the line discount before changing the price override" if @action_type == "price_override" && line.manually_discounted?
 
       reason_name = Pos::ControlledActionReasons.name_for!(@action_type, @reason_code)

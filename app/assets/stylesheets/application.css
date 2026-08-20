@@ -567,6 +567,29 @@ input[type="submit"]:hover {
   margin-top: var(--space-3);
 }
 
+.pos-picker {
+  list-style: none;
+  margin: var(--space-3) 0;
+  padding: 0;
+  max-height: 16rem;
+  overflow: auto;
+}
+
+.pos-picker li {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  margin-bottom: var(--space-2);
+}
+
+.pos-picker li.is-disabled {
+  opacity: 0.55;
+}
+
+.pos-picker li.is-selected {
+  background: color-mix(in srgb, var(--color-action) 12%, var(--color-surface));
+  font-weight: 600;
+}
+
 .pos-line-flags {
   display: block;
   font-size: 0.8rem;
@@ -644,8 +667,45 @@ input[type="submit"]:hover {
   margin-top: var(--space-5);
 }
 
+.pos-header__nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin-left: auto;
+}
+
+.pos-header__nav .pos-header__link {
+  margin-left: 0;
+}
+
 .pos-header__link {
   margin-left: auto;
+}
+
+.pos-home {
+  width: min(100% - 2rem, 48rem);
+  margin: var(--space-6) auto;
+}
+
+.pos-home__facts {
+  display: grid;
+  gap: var(--space-2);
+  margin: var(--space-4) 0;
+}
+
+.pos-home__facts div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.pos-home__actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
 }
 
 .pos-history {
@@ -722,9 +782,73 @@ input[type="submit"]:hover {
   align-items: center;
 }
 
-.pos-receipt__reprint {
+.pos-receipt__legal-name,
+.pos-receipt__address,
+.pos-receipt__message,
+.pos-receipt__barcode-text {
+  text-align: center;
+}
+
+.pos-receipt__message {
+  font-family: 'Courier New', Courier, monospace;
+  white-space: pre-wrap;
+  margin: var(--space-3) 0;
+}
+
+.pos-receipt__line-group {
+  break-inside: avoid;
+  margin-bottom: var(--space-2);
+}
+
+.pos-receipt__line-main {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.pos-receipt__line-description {
+  margin: 0 0 0 1rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.pos-receipt__line-detail,
+.pos-receipt__line-banner {
+  margin: 0 0 0 1rem;
+}
+
+.pos-receipt__amount {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.pos-receipt__barcode {
+  text-align: center;
+  margin-top: var(--space-4);
+}
+
+.pos-receipt__barcode svg {
+  max-width: 100%;
+  height: 40px;
+}
+
+.pos-receipt__saved {
+  text-align: center;
+}
+
+.pos-receipt__print-error {
   font-weight: 700;
-  letter-spacing: 0.08em;
+}
+
+.pos-report-group {
+  margin-top: var(--space-4);
+}
+
+.pos-report-group h2 {
+  margin-bottom: var(--space-2);
 }
 
 .pos-receipt__post-void-note {
@@ -739,6 +863,11 @@ input[type="submit"]:hover {
 }
 
 @media print {
+  @page {
+    size: 80mm auto;
+    margin: 4mm 3mm;
+  }
+
   .pos-no-print,
   .pos-receipt__screen,
   .pos-receipt__actions {
@@ -746,16 +875,46 @@ input[type="submit"]:hover {
   }
 
   .pos-print-only,
-  .pos-receipt__print {
+  .pos-receipt__print,
+  .pos-report-print {
     display: block !important;
   }
 
   .pos-body,
-  .pos-receipt {
+  .pos-receipt,
+  .pos-report-print {
     width: 72mm;
     margin: 0;
     background: #fff;
     color: #000;
+  }
+
+  .pos-receipt__print,
+  .pos-report-print {
+    font-size: 10pt;
+    line-height: 1.15;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .pos-receipt__print p,
+  .pos-receipt__print pre,
+  .pos-receipt__print h2,
+  .pos-receipt__print dt,
+  .pos-receipt__print dd,
+  .pos-report-print p,
+  .pos-report-print pre,
+  .pos-report-print h2,
+  .pos-report-print dt,
+  .pos-report-print dd {
+    margin: 0;
+  }
+
+  .pos-receipt__legal-name {
+    font-weight: 700;
+  }
+
+  .pos-receipt__print .pos-receipt__message {
+    margin: 0.35em 0;
   }
 
   .pos-receipt__print-header {
@@ -767,8 +926,13 @@ input[type="submit"]:hover {
     letter-spacing: 0.08em;
   }
 
+  .pos-receipt__print .pos-receipt__post-void-note {
+    margin: 0 0 0.2em;
+  }
+
   .pos-receipt__print-lines {
     width: 100%;
+    margin-top: 0.4em;
     border-collapse: collapse;
   }
 
@@ -785,8 +949,42 @@ input[type="submit"]:hover {
     text-align: right;
   }
 
+  .pos-receipt__print .pos-receipt__line-group {
+    margin-bottom: 0.25em;
+    break-inside: avoid;
+  }
+
+  .pos-receipt__print-totals {
+    margin-top: 0.4em;
+    break-inside: avoid;
+  }
+
   .pos-receipt__print-totals div {
     display: flex;
     justify-content: space-between;
+    gap: 0.5em;
+  }
+
+  .pos-receipt__print .pos-receipt__barcode {
+    margin: 0.4em 0 0.2em;
+  }
+
+  .pos-receipt__print .pos-receipt__barcode svg {
+    max-width: 100%;
+    height: 30px;
+  }
+
+  .pos-report-print .pos-report-group {
+    margin-top: 0.45em;
+  }
+
+  .pos-report-print .pos-report-group h2 {
+    margin: 0 0 0.15em;
+    font-size: 1em;
+  }
+
+  .pos-report-print .pos-close__facts,
+  .pos-report-print .pos-z__facts {
+    gap: 0;
   }
 }

@@ -1,0 +1,33 @@
+<% content_for :title, "Switch register" %>
+
+<main class="pos-home">
+  <h1>Switch register</h1>
+
+  <% if alert.present? %>
+    <p class="pos-enter__alert" role="alert"><%= alert %></p>
+  <% end %>
+
+  <% if @open_session %>
+    <p class="pos-banner" role="status">
+      <strong>Register <%= pos_padded_register_number(@open_session.register) %> is still open under your Session. Changing your preferred Register will not close it.</strong>
+    </p>
+  <% end %>
+
+  <% if @registers.blank? %>
+    <p>No active register is available in this store.</p>
+    <%= link_to "Cancel", pos_path, class: "btn btn--secondary" %>
+  <% else %>
+    <%= form_with url: pos_preferred_register_path, method: :post, class: "pos-enter__form" do %>
+      <div class="form-field">
+        <label for="register_id">Preferred register</label>
+        <%= select_tag :register_id,
+              options_from_collection_for_select(@registers, :id, :admin_label, @register&.id),
+              include_blank: (@registers.many? ? "Select a register" : false) %>
+      </div>
+      <div class="pos-enter__actions">
+        <%= submit_tag "Change Preferred Register", class: "btn" %>
+        <%= link_to "Cancel", pos_path, class: "btn btn--secondary" %>
+      </div>
+    <% end %>
+  <% end %>
+</main>

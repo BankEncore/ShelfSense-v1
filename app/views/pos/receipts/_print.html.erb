@@ -1,85 +1,141 @@
+<%#
+  locals: transaction:, tenders: nil, reprint: false
+%>
+<% receipt = Pos::CustomerReceipt.build(transaction) %>
 <section class="pos-receipt__print pos-print-only" aria-hidden="true">
-  <% if local_assigns.fetch(:reprint, false) %>
-    <p class="pos-receipt__reprint">REPRINT</p>
-  <% end %>
-  <%= render "pos/receipts/post_void_banner", transaction: transaction, linked: false %>
-  <p class="pos-receipt__print-header"><%= pos_receipt_print_header(transaction) %></p>
-  <p><%= transaction.transaction_reference %></p>
-  <p>Business date  <%= transaction.business_date.iso8601 %></p>
-  <p>Completed  <%= format_store_timestamp(transaction.completed_at, transaction.store) %></p>
-  <p>Cashier  <%= pos_cashier_name(transaction) %></p>
+  <% unless receipt.printable? %>
+    <p class="pos-receipt__print-error" role="alert"><%= receipt.error %></p>
+  <% else %>
+    <% if receipt.post_voided_original? %>
+      <p class="pos-receipt__reprint">*** POST-VOIDED ***</p>
+      <p class="pos-receipt__post-void-note">This transaction has been post-voided and is no longer valid.</p>
+      <p>Post-voided by: <%= receipt.reversing_reference %></p>
+    <% elsif receipt.post_void_reversal? %>
+      <p class="pos-receipt__reprint">*** POST-VOID ***</p>
+      <p>Original: <%= receipt.original_reference %></p>
+    <% end %>
+    <% if local_assigns.fetch(:reprint, false) %>
+      <p class="pos-receipt__reprint">*** REPRINT ***</p>
+    <% end %>
 
-  <table class="pos-receipt__print-lines">
-    <thead>
-      <tr>
-        <th>Qty</th>
-        <th>Description</th>
-        <th>Amount</th>
-      </tr>
-    </thead>
-    <tbody>
-      <% transaction.pos_transaction_lines.each do |line| %>
-        <tr>
-          <td><%= line.quantity %></td>
-          <td>
-            <%= pos_line_kind_prefix(line).present? ? "#{pos_line_kind_prefix(line)} #{pos_print_line_description(line)}" : pos_print_line_description(line) %>
-          </td>
-          <td><%= format_signed_money_cents(pos_line_amount_cents(line)) %></td>
-        </tr>
-        <% if line.post_void_generated? && line.post_void_source_line&.pos_transaction %>
-          <tr>
-            <td></td>
-            <td>Post-void of <%= line.post_void_source_line.pos_transaction.transaction_reference %></td>
-            <td></td>
-          </tr>
-        <% elsif line.linked_return? && line.original_transaction_line&.pos_transaction %>
-          <tr>
-            <td></td>
-            <td>Return from <%= line.original_transaction_line.pos_transaction.transaction_reference %></td>
-            <td></td>
-          </tr>
-        <% elsif line.unlinked_return? %>
-          <tr>
-            <td></td>
-            <td>Unlinked return</td>
-            <td></td>
-          </tr>
-          <% if pos_unlinked_return_price_adjusted?(line) %>
-            <tr>
-              <td></td>
-              <td>
-                Reference <%= format_money_cents(line.reference_unit_price_cents) %>
-                · Return <%= format_money_cents(line.selling_unit_price_cents) %>
-              </td>
-              <td></td>
-            </tr>
+    <p class="pos-receipt__legal-name"><%= receipt.legal_name %></p>
+    <% receipt.address_lines.each do |line| %>
+      <p class="pos-receipt__address"><%= line %></p>
+    <% end %>
+
+    <% if receipt.header_message.present? %>
+      <pre class="pos-receipt__message"><%= receipt.header_message %></pre>
+    <% end %>
+
+    <p><%= receipt.completed_at_label %></p>
+    <p class="pos-receipt__print-header"><%= receipt.identity_header %></p>
+    <p>Cashier: <%= receipt.cashier_name %></p>
+
+    <div class="pos-receipt__print-lines">
+      <% receipt.lines.each do |line| %>
+        <div class="pos-receipt__line-group">
+          <% if line.kind_banner.present? %>
+            <p class="pos-receipt__line-banner"><%= line.kind_banner %></p>
+          <% end %>
+          <p class="pos-receipt__line-main">
+            <span>
+              <%= line.identifier %>
+              <% if line.condition.present? %>
+                <%= line.condition %>
+              <% end %>
+            </span>
+            <span class="pos-receipt__amount">
+              <%= pos_print_amount(line.amount_cents) %>
+              <% if line.tax_indicators.present? %>
+                <%= line.tax_indicators %>
+              <% end %>
+            </span>
+          </p>
+          <p class="pos-receipt__line-description"><%= line.description %></p>
+          <% if line.quantity > 1 %>
+            <p class="pos-receipt__line-detail"><%= line.quantity %> @ <%= format_money_cents(line.unit_price_cents) %></p>
+          <% elsif line.discount_cents.negative? %>
+            <p class="pos-receipt__line-main">
+              <span>Price:</span>
+              <span class="pos-receipt__amount"><%= pos_print_amount(line.extended_price_cents) %></span>
+            </p>
+          <% end %>
+          <% if line.discount_cents.negative? %>
+            <p class="pos-receipt__line-main">
+              <span><%= line.discount_label %></span>
+              <span class="pos-receipt__amount"><%= pos_print_amount(line.discount_cents) %></span>
+            </p>
+          <% end %>
+          <% if line.unlinked %>
+            <p class="pos-receipt__line-detail">Original receipt: Not provided</p>
+          <% elsif line.original_reference.present? %>
+            <p class="pos-receipt__line-detail">Original: <%= line.original_reference %></p>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+
+    <dl class="pos-receipt__print-totals">
+      <% if receipt.show_detail_totals? %>
+        <% if receipt.merchandise_cents != 0 %>
+          <div><dt>Merchandise</dt><dd><%= pos_print_amount(receipt.merchandise_cents) %></dd></div>
+        <% end %>
+        <% if receipt.discounts_cents != 0 %>
+          <div><dt>Discounts</dt><dd><%= pos_print_amount(receipt.discounts_cents) %></dd></div>
+        <% end %>
+        <% if receipt.returns_cents != 0 %>
+          <div><dt>Returns</dt><dd><%= pos_print_amount(receipt.returns_cents) %></dd></div>
+        <% end %>
+      <% end %>
+      <div><dt>Subtotal</dt><dd><%= pos_print_amount(receipt.subtotal_cents) %></dd></div>
+      <% receipt.tax_groups.each do |group| %>
+        <div>
+          <dt>
+            Tax <%= group.letter %>
+            <% if receipt.tax_groups.size > 1 %>
+              (<%= format_money_cents(group.basis_cents) %> @ <%= number_with_precision(group.rate_percent, precision: 3) %>%)
+            <% end %>
+          </dt>
+          <dd><%= pos_print_amount(group.tax_cents) %></dd>
+        </div>
+      <% end %>
+      <% if receipt.tax_groups.size > 1 %>
+        <div><dt>Total Tax</dt><dd><%= pos_print_amount(receipt.total_tax_cents) %></dd></div>
+      <% end %>
+      <div class="pos-receipt__total">
+        <dt><%= receipt.total_label %></dt>
+        <dd><%= pos_print_amount(receipt.total_display_cents) %></dd>
+      </div>
+      <% if receipt.show_tenders? %>
+        <% receipt.tenders.each do |tender| %>
+          <div><dt><%= tender.label %></dt><dd><%= pos_print_amount(tender.amount_cents) %></dd></div>
+          <% if tender.presented_cents %>
+            <div><dt>Cash presented</dt><dd><%= pos_print_amount(tender.presented_cents) %></dd></div>
+            <div><dt>Change</dt><dd><%= pos_print_amount(tender.change_cents) %></dd></div>
           <% end %>
         <% end %>
-        <% if line.manual_discount_cents.to_i.positive? %>
-          <tr>
-            <td></td>
-            <td>
-              <% if line.return? %>
-                Discount reversal
-              <% else %>
-                Discount <%= number_with_precision(line.manual_discount_basis_points / 100.0, precision: 2) %>%
-              <% end %>
-            </td>
-            <td><%= format_signed_money_cents(pos_line_discount_cents(line)) %></td>
-          </tr>
-        <% end %>
       <% end %>
-    </tbody>
-  </table>
+    </dl>
 
-  <dl class="pos-receipt__print-totals">
-    <%= render "pos/receipts/directional_totals", transaction: transaction %>
-    <% tenders.each do |tender| %>
-      <div><dt><%= pos_tender_label(tender) %></dt><dd><%= format_money_cents(tender.amount_cents) %></dd></div>
-      <% if pos_cash_payment?(tender) %>
-        <div><dt>Cash presented</dt><dd><%= format_money_cents(tender.amount_presented_cents) %></dd></div>
-        <div><dt>Change</dt><dd><%= format_money_cents(tender.change_cents) %></dd></div>
+    <% unless receipt.post_void_reversal? %>
+      <% if receipt.items_sold.positive? %>
+        <p>Items Sold: <%= receipt.items_sold %></p>
+      <% end %>
+      <% if receipt.items_returned.positive? %>
+        <p>Items Returned: <%= receipt.items_returned %></p>
+      <% end %>
+      <% if receipt.you_saved_cents.positive? %>
+        <p class="pos-receipt__saved">You Saved: <%= format_money_cents(receipt.you_saved_cents) %></p>
       <% end %>
     <% end %>
-  </dl>
+
+    <div class="pos-receipt__barcode">
+      <%= pos_code128_svg(receipt.compact_reference) %>
+      <p class="pos-receipt__barcode-text"><%= receipt.compact_reference %></p>
+    </div>
+
+    <% if receipt.footer_message.present? %>
+      <pre class="pos-receipt__message"><%= receipt.footer_message %></pre>
+    <% end %>
+  <% end %>
 </section>

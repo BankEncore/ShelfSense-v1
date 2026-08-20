@@ -10,7 +10,7 @@ class InventoryStoreAuthzTest < ActionDispatch::IntegrationTest
     @east = Store.create!(
       store_number: "2",
       code: "east",
-      name: "East Store",
+      name: "East Store", legal_name: "Example Books LLC",
       timezone: "America/New_York",
       country_code: "US"
     )

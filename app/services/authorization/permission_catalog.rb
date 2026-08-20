@@ -83,6 +83,7 @@ module Authorization
       { key: "store_taxes.update", group_key: "store_taxes", name: "Update store taxes", scope_type: "either" },
       { key: "store_taxes.deactivate", group_key: "store_taxes", name: "Deactivate store taxes", scope_type: "either" },
       { key: "pos.transact", group_key: "pos", name: "Operate POS transactions", scope_type: "either" },
+      { key: "pos.sessions.view", group_key: "pos", name: "View other open POS sessions", scope_type: "either" },
       { key: "pos.manage_tender_types", group_key: "pos", name: "Manage tender types", scope_type: "global" },
       { key: "pos.price_override.perform", group_key: "pos", name: "Perform price override", scope_type: "either" },
       { key: "pos.price_override.approve", group_key: "pos", name: "Approve price override", scope_type: "either" },
@@ -122,6 +123,7 @@ module Authorization
       store_taxes.update
       store_taxes.deactivate
       pos.transact
+      pos.sessions.view
       pos.price_override.perform
       pos.price_override.approve
       pos.line_discount.perform

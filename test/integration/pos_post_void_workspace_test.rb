@@ -51,7 +51,7 @@ class PosPostVoidWorkspaceTest < ActionDispatch::IntegrationTest
     follow_redirect!
     assert_response :success
     assert_select ".pos-receipt__screen .pos-receipt__reprint", text: /POST-VOID of/
-    assert_select ".pos-receipt__print .pos-receipt__reprint", text: /POST-VOID of/
+    assert_select ".pos-receipt__print .pos-receipt__reprint", text: "*** POST-VOID ***"
     refute_match(/RETURN #{Regexp.escape("Example Book")}/, response.body)
     assert_match sale.transaction_reference, response.body
 
@@ -61,10 +61,10 @@ class PosPostVoidWorkspaceTest < ActionDispatch::IntegrationTest
     assert_select ".pos-history__detail .pos-receipt__post-void-note",
                   text: "This transaction has been post-voided and is no longer valid."
     assert_select ".pos-history__detail", text: /Post-voided by/
-    assert_select ".pos-receipt__print .pos-receipt__reprint", text: "POST-VOIDED"
+    assert_select ".pos-receipt__print .pos-receipt__reprint", text: "*** POST-VOIDED ***"
     assert_select ".pos-receipt__print .pos-receipt__post-void-note",
                   text: "This transaction has been post-voided and is no longer valid."
-    assert_select ".pos-receipt__print", text: /Post-voided by/, count: 0
+    assert_select ".pos-receipt__print", text: /Post-voided by:/
     assert_select "a", text: reversal.transaction_reference
     assert_select "a", text: "Return items", count: 0
     assert_select "a", text: "Post-void", count: 0
@@ -108,7 +108,7 @@ class PosPostVoidWorkspaceTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
     assert_match "Open a register before processing a post-void.", response.body
 
-    east = Store.create!(store_number: "2", code: "east", name: "East Store", timezone: "America/New_York", country_code: "US")
+    east = Store.create!(store_number: "2", code: "east", name: "East Store", legal_name: "Example Books LLC", timezone: "America/New_York", country_code: "US")
     pos_transacting_user(store: east, assigned_by: @actor, username: "east_pv")
     delete session_path
     sign_in_as("east_pv")

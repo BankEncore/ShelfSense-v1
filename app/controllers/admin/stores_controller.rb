@@ -44,7 +44,10 @@ module Admin
 
     def update
       rescue_stale do
-        before = @store.attributes.slice("name", "timezone", "receipt_header", "receipt_footer")
+        before = @store.attributes.slice(
+          "name", "legal_name", "timezone", "receipt_header_mode", "receipt_header",
+          "receipt_footer_mode", "receipt_footer"
+        )
         if @store.update(store_params)
           Audit::Recorder.record!(
             action: "stores.update",
@@ -95,7 +98,7 @@ module Admin
       permitted = [
         :code, :name, :legal_name, :street_address_1, :street_address_2,
         :city, :region_code, :postal_code, :country_code, :phone, :san, :timezone,
-        :receipt_header, :receipt_footer, :lock_version
+        :receipt_header, :receipt_footer, :receipt_header_mode, :receipt_footer_mode, :lock_version
       ]
       permitted.unshift(:store_number) unless @store&.store_number_locked?
       params.require(:store).permit(*permitted)

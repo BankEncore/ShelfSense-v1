@@ -19,7 +19,7 @@ legal_name required; admin + Register enter + print fail closed
 Session/Z = labels/layout unless an additive snapshot is missing
 history/audit fields stay operator-visible
 no reprint audit
-no Z print on the 80-mm receipt printer
+80-mm browser print for X / closed Session / Z (explicit Print; never on GET)
 already-finalized periods stay immutable
 ```
 
@@ -95,8 +95,9 @@ All three layers, after preflight of existing rows (identify blanks; **do not** 
 
 ```text
 Store administration
-→ legal_name required on create/update, including deactivate
+→ legal_name required on create/update while the Store is active, and on activation
   (reprints use current Store presentation)
+  Deactivate of a legacy blank legal_name is allowed; do not invent a name.
 
 Register enter / open
 → refuse if legal_name blank:
@@ -106,15 +107,17 @@ Receipt renderer
 → fail closed if somehow blank
 ```
 
-Inactive Stores keep a nonblank `legal_name` so historical reprints still have a customer name.
+Inactive Stores may remain blank only as a legacy exception. Historical reprints still fail closed rather than substituting `stores.name`.
 
 ---
 
 ## 3. Session / X / Z presentation
 
-6.8 owns **on-screen** labels, grouping, layout, navigation, and visual hierarchy.
+6.8 owns **on-screen** labels, grouping, layout, navigation, and visual hierarchy, plus **80-mm browser print** for X, closed Session, and Z (operator report grammar, not customer receipt grammar).
 
-It does **not** print Session or Z reports on the 80-mm receipt printer (Phase 5 deferred Z printing; still out of MVP). Customer 80-mm belongs only to [receipt-presentation.md](receipt-presentation.md).
+Print uses the same lifecycle as customer receipts: explicit Print, never on GET, `window.print` + CSS, failure does not close a Session, unfinalize Z, or rewrite snapshots. Do not print expected Cash on a blind count screen. No ESC/POS, printer discovery, or print-attempt audit.
+
+Customer 80-mm belongs to [receipt-presentation.md](receipt-presentation.md) (6.8B). Report print is 6.8C.
 
 Conceptual grouping (existing formulas):
 
@@ -202,7 +205,7 @@ Schema that belongs here: `receipt_header_mode` / `receipt_footer_mode`, 500-cha
 
 1. Customer print matches [receipt-presentation.md](receipt-presentation.md) acceptance, including U1–U3 as locked here.
 2. Visible completion and history screens still use operator directional totals and provenance.
-3. Session/X/Z on-screen grouping matches §3; no 80-mm Z print.
+3. Session/X/Z on-screen grouping matches §3; 80-mm browser print for X / closed Session / Z uses the same grouping and explicit Print.
 4. History still shows performer, reason, approver, return linkage, unlinked prices, post-void relationship, and tender references.
 5. Additive snapshots only if a preview cannot be reproduced; old finalized Z rows remain valid.
 6. The §5 path is cashier-completable; Phase 5 all-Cash Standard remains green.
@@ -217,7 +220,6 @@ new keymap (6.7)
 post-void from the selling surface
 paid-ins / drops / drawer / Store Close
 Z numbering
-Z / Session print on thermal paper
 electronic receipts
 ESC/POS
 reprint audit

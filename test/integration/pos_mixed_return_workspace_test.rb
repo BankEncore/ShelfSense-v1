@@ -180,8 +180,10 @@ class PosMixedReturnWorkspaceTest < ActionDispatch::IntegrationTest
     assert_match snapshot_title, response.body
     refute_match "Renamed Mixed Title", response.body
     assert_match "Unlinked return", response.body
-    assert_match "Return from #{original.transaction_reference}", response.body
-    assert_select ".pos-receipt__reprint", text: "REPRINT"
+    assert_match original.transaction_reference, response.body
+    assert_select ".pos-history__detail", text: /Original receipt/
+    assert_select ".pos-receipt__print", text: /Original: #{Regexp.escape(original.transaction_reference)}/
+    assert_select ".pos-receipt__reprint", text: "*** REPRINT ***"
     assert_equal 0, Pos::Returnability.remaining_quantity(original.pos_transaction_lines.first)
   end
 
@@ -195,7 +197,7 @@ class PosMixedReturnWorkspaceTest < ActionDispatch::IntegrationTest
     complete_working!(working.reload)
     sale = working.reload
 
-    east = Store.create!(store_number: "2", code: "east", name: "East Store", timezone: "America/New_York", country_code: "US")
+    east = Store.create!(store_number: "2", code: "east", name: "East Store", legal_name: "Example Books LLC", timezone: "America/New_York", country_code: "US")
     pos_transacting_user(store: east, assigned_by: @actor, username: "east_clerk")
     east_register = Register.create!(store: east, register_number: 1, name: "East Front")
     delete session_path

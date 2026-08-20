@@ -11,7 +11,9 @@ class SystemSettings < ApplicationRecord
             numericality: { only_integer: true, greater_than_or_equal_to: 0 }
   validates :default_customer_reservation_expiration_days,
             numericality: { only_integer: true, greater_than: 0 }
+  validates :default_receipt_header, :default_receipt_footer, length: { maximum: Store::RECEIPT_MESSAGE_LIMIT }
   validate :singleton_row
+  before_validation :normalize_receipt_messages
 
   def self.current
     record = order(:created_at).first
@@ -30,6 +32,11 @@ class SystemSettings < ApplicationRecord
   end
 
   private
+
+  def normalize_receipt_messages
+    self.default_receipt_header = default_receipt_header&.strip
+    self.default_receipt_footer = default_receipt_footer&.strip
+  end
 
   def singleton_row
     errors.add(:singleton_key, "must be true") unless singleton_key == true

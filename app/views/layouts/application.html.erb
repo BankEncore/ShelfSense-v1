@@ -87,7 +87,7 @@
               <%= link_to "Audit", admin_audit_events_path %>
             <% end %>
             <% if effective_permissions.include?("pos.transact") && current_store.present? %>
-              <%= link_to "Register", pos_register_enter_path %>
+              <%= link_to "POS", pos_path %>
               <%= link_to "Transactions", pos_transactions_path %>
             <% end %>
             <% if accessible_stores.many? %>

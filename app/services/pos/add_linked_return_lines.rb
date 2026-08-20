@@ -114,6 +114,7 @@ module Pos
         default_tax_class_code_snapshot: original.default_tax_class_code_snapshot,
         default_tax_class_name_snapshot: original.default_tax_class_name_snapshot,
         merchandise_snapshot: original.merchandise_snapshot.deep_dup,
+        pricing_method_snapshot: original.pricing_method_snapshot,
         return_reason_code: item[:reason_code],
         return_reason_name_snapshot: item[:reason_name],
         return_reason_note: item[:reason_note]

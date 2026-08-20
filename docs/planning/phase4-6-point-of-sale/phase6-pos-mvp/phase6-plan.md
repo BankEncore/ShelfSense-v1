@@ -245,7 +245,7 @@ Delivery letters: 6.7A docs (this lock), 6.7B Home/X, 6.7C keys, 6.7D pickers/op
 No new commercial behavior. Verify and present facts **already represented truthfully** by earlier slices, after 6.7 is usable:
 
 - Receipt/reprint: customer copy per [receipt-presentation.md](receipt-presentation.md). Operator history stays [transaction-history.md](transaction-history.md). Do not unify those grammars.
-- Session/X/Z **on-screen** grouping (Sales / Returns / Post-void / Net / tenders / Cash custody). No thermal Z print. Additive snapshot columns only if a correct preview cannot be reproduced. Already-finalized periods stay immutable.
+- Session/X/Z **on-screen** grouping (Sales / Returns / Post-void / Net / tenders / Cash custody) and **80-mm browser print** for those reports (explicit Print; never on GET). Additive snapshot columns only if a correct preview cannot be reproduced. Already-finalized periods stay immutable.
 - History/audit: enough to explain who/why/approver, return linkage, unlinked prices, post-void, tender settlement. Customer print omitting a field does not remove it from history.
 - Regression: ordinary path through 6.7 modes plus blind close and immutable Z.
 
@@ -302,7 +302,6 @@ Customer / reservation integration
 Configurable return windows / merchandise exclusions
 Unknown Used-item intake / buyback through returns
 Open-price Used / individual merchandise
-Z printing on thermal paper
 Cross-register work handoff
 Offline / standalone Terminal
 Deposits / bank reconciliation

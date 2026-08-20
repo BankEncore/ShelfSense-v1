@@ -80,15 +80,28 @@ Rails.application.routes.draw do
     resource :inventory_reconciliation, only: %i[show], controller: "inventory_reconciliations"
   end
 
+  get "/pos", to: "pos/homes#show", as: :pos
+
   namespace :pos do
+    get "switch_register", to: "preferred_registers#new", as: :switch_register
+    post "preferred_register", to: "preferred_registers#create", as: :preferred_register
+    get "x_report", to: "x_reports#show", as: :x_report
+    get "sessions/:id/x_report", to: "x_reports#show", as: :session_x_report
+    get "active_sessions", to: "active_sessions#index", as: :active_sessions
+    get "reports", to: "reports#index", as: :reports
     resources :transactions, only: %i[index show]
     get "register/enter", to: "enters#show", as: :register_enter
     post "register/enter", to: "enters#create"
     get "register", to: "workspaces#show", as: :register_workspace
+    get "register/merchandise_search", to: "workspaces#search", as: :register_merchandise_search
+    get "register/merchandise_resolve", to: "workspaces#resolve", as: :register_merchandise_resolve
     post "register/merchandise", to: "workspaces#merchandise"
+    post "register/open_price", to: "workspaces#open_price"
     post "register/quantity", to: "workspaces#quantity"
     post "register/remove", to: "workspaces#remove"
     post "register/controlled_action", to: "workspaces#controlled_action"
+    get "register/linked_return_lookup", to: "workspaces#linked_return_lookup", as: :register_linked_return_lookup
+    post "register/linked_return", to: "workspaces#linked_return"
     post "register/unlinked_return_lookup", to: "workspaces#unlinked_return_lookup"
     post "register/unlinked_return", to: "workspaces#unlinked_return"
     post "register/abandon_tender", to: "workspaces#abandon_tender"

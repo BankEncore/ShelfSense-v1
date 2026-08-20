@@ -216,6 +216,7 @@ One row for working and completed (or cancelled) commercial state.
 | `return_reason_code` | string | 6.5; required on ordinary return lines; absent on post-void generated lines |
 | `return_reason_name_snapshot` | string | 6.5 |
 | `return_reason_note` | text | 6.5; required when `other` |
+| `pricing_method_snapshot` | string | 6.7D; `open_price \| configured`; frozen at line creation. F6 uses this snapshot, never the live Merchandise Class. |
 | `created_at` / `updated_at` | timestamptz | |
 
 Unique `(pos_transaction_id, line_number)`. 6.5 also `UNIQUE (pos_transaction_id, original_transaction_line_id) WHERE original_transaction_line_id IS NOT NULL`.
@@ -242,7 +243,7 @@ Minimum v1 shape:
 }
 ```
 
-Optional keys may be added in later operation versions without expanding the relational line schema. Slice 6.1 unit lines also snapshot `unit_identifier` and `condition_code`. While `status = working`, snapshot may be absent or provisional; completion **must** refuse to finish without a valid required snapshot.
+Optional keys may be added in later operation versions without expanding the relational line schema. Slice 6.1 unit lines also snapshot `unit_identifier` and `condition_code`. Slice 6.8 snapshots `condition_name` on **new** Used/unit freezes; historical rows without it print `condition_code`. `condition_name` is not required on old snapshots. While `status = working`, snapshot may be absent or provisional; completion **must** refuse to finish without a valid required snapshot.
 
 ### 8.2 `pos_controlled_actions` (6.4)
 

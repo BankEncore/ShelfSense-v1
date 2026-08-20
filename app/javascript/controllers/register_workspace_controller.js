@@ -95,6 +95,46 @@ export default class extends Controller {
     "tenderButton",
     "removeButton",
     "cancelButton",
+    "cashButton",
+    "cardButton",
+    "checkButton",
+    "otherButton",
+    "otherOverlay",
+    "otherList",
+    "searchOverlay",
+    "searchList",
+    "searchSkuField",
+    "searchNameField",
+    "searchQueryLabel",
+    "variantOverlay",
+    "variantList",
+    "unitOverlay",
+    "unitList",
+    "openPriceOverlay",
+    "openPricePrompt",
+    "openPriceField",
+    "openPriceForm",
+    "openPriceLineInput",
+    "openPriceEditInput",
+    "variantInput",
+    "unitInput",
+    "openPriceInput",
+    "returnButton",
+    "returnChooserOverlay",
+    "returnChooserList",
+    "linkedOverlay",
+    "linkedLookupField",
+    "linkedFeedback",
+    "linkedList",
+    "linkedQuantityField",
+    "linkedReasonField",
+    "linkedNoteWrap",
+    "linkedNoteField",
+    "linkedReturnForm",
+    "linkedOriginalInput",
+    "linkedQuantityInput",
+    "linkedReasonInput",
+    "linkedNoteInput",
     "feedback",
     "clientRecovery"
   ]
@@ -108,8 +148,14 @@ export default class extends Controller {
     reasons: Object,
     returnReasons: Array,
     unlinkedLookupUrl: String,
+    linkedLookupUrl: String,
+    resolveUrl: String,
+    searchUrl: String,
+    openPriceUrl: String,
     settlement: String,
-    refundRemaining: Number
+    refundRemaining: Number,
+    paymentRemaining: Number,
+    transactionsUrl: String
   }
 
   connect() {
@@ -142,13 +188,54 @@ export default class extends Controller {
     const key = functionKey || event.key
     if (this.claimedFunctionKey(functionKey)) this.claimFunctionKey(event)
 
+    if (key === "F10") {
+      event.preventDefault()
+      this.openTransactions()
+      return
+    }
+
     if (this.unlinkedOverlayOpen()) {
       this.onUnlinkedOverlayKeydown(event, key)
       return
     }
 
+    if (this.returnChooserOpen()) {
+      this.onReturnChooserKeydown(event, key)
+      return
+    }
+
+    if (this.linkedOverlayOpen()) {
+      this.onLinkedOverlayKeydown(event, key)
+      return
+    }
+
     if (this.controlOverlayOpen()) {
       this.onControlOverlayKeydown(event, key)
+      return
+    }
+
+    if (this.otherOverlayOpen()) {
+      this.onOtherOverlayKeydown(event, key)
+      return
+    }
+
+    if (this.searchOverlayOpen()) {
+      this.onSearchOverlayKeydown(event, key)
+      return
+    }
+
+    if (this.variantOverlayOpen()) {
+      this.onVariantOverlayKeydown(event, key)
+      return
+    }
+
+    if (this.unitOverlayOpen()) {
+      this.onUnitOverlayKeydown(event, key)
+      return
+    }
+
+    if (this.openPriceOverlayOpen()) {
+      this.onOpenPriceOverlayKeydown(event, key)
       return
     }
 
@@ -201,32 +288,54 @@ export default class extends Controller {
     }
     if (this.modeValue !== "sale_entry" && this.modeValue !== "tender") return
 
+    if (key === "F1") {
+      event.preventDefault()
+      this.chooseCash()
+      return
+    }
+    if (key === "F2") {
+      event.preventDefault()
+      this.chooseCard()
+      return
+    }
+    if (key === "F3") {
+      event.preventDefault()
+      this.chooseCheck()
+      return
+    }
+    if (key === "F4") {
+      event.preventDefault()
+      this.chooseOther()
+      return
+    }
+
     if (this.modeValue === "tender") {
-      if (key === "F2") {
-        event.preventDefault()
-        this.cycleTenderType()
-      } else if (key === "F8") {
+      if (key === "F8") {
         event.preventDefault()
         this.removeLastTender()
       }
       return
     }
 
-    if (key === "*") {
+    const fieldEmpty = this.commandFieldEmpty()
+    if (key === "*" && fieldEmpty) {
       event.preventDefault()
       this.enterQuantity()
-    } else if (key === "+") {
+    } else if (key === "+" && fieldEmpty) {
       event.preventDefault()
       this.enterTender()
-    } else if (key === "F5") {
+    } else if (key === "/" && fieldEmpty) {
       event.preventDefault()
-      this.openPriceOverride()
+      this.openSearchOverlay()
+    } else if ((key === "-" || event.code === "Minus") && fieldEmpty) {
+      event.preventDefault()
+      this.openReturnChooser()
     } else if (key === "F6") {
       event.preventDefault()
-      this.openLineDiscount()
+      this.openPriceOverride()
     } else if (key === "F7") {
       event.preventDefault()
-      this.openTaxClassOverride()
+      this.openLineDiscount()
     } else if (key === "F8") {
       event.preventDefault()
       this.removeSelected()
@@ -318,12 +427,10 @@ export default class extends Controller {
     else if (this.modeValue === "tender") this.submitTender()
   }
 
-  submitMerchandise() {
+  async submitMerchandise() {
     const value = this.fieldTarget.value.trim()
     if (!value) return
-    this.identifierInputTarget.value = value
-    this.beginFlight()
-    this.merchandiseFormTarget.requestSubmit()
+    await this.resolveAndHandle({ identifier: value })
   }
 
   submitQuantity() {
@@ -338,6 +445,10 @@ export default class extends Controller {
   submitTender() {
     const value = this.fieldTarget.value.trim()
     if (!value) return
+    if (this.referenceRequired() && this.hasReferenceFieldTarget && this.referenceFieldTarget.value.trim() === "") {
+      this.referenceFieldTarget.focus()
+      return
+    }
     this.presentedInputTarget.value = value
     if (this.hasReferenceInputTarget) {
       const capture = this.hasReferenceWrapTarget && !this.referenceWrapTarget.hidden && this.hasReferenceFieldTarget
@@ -378,28 +489,755 @@ export default class extends Controller {
   enterTender() {
     if (this.inFlight) return
     if (this.modeValue !== "sale_entry") return
-    if (!this.element.querySelector(".pos-lines tbody tr")) return
+    if (!this.element.querySelector(".pos-lines tbody tr")) {
+      this.showFeedback("Add merchandise before taking a tender.")
+      return
+    }
     if (this.settlementValue === "none") {
       this.submitComplete()
       return
     }
+    this.beginTenderMode()
+    this.applyTenderType(this.typesForCategory("cash")[0] || this.cashierTenderTypes()[this.cashTenderIndex()])
+    this.prefillRemaining()
+  }
+
+  chooseCash() {
+    this.chooseTenderCategory("cash")
+  }
+
+  chooseCard() {
+    this.chooseTenderCategory("card")
+  }
+
+  chooseCheck() {
+    this.chooseTenderCategory("check")
+  }
+
+  chooseOther() {
+    if (this.inFlight) return
+    if (this.modeValue !== "sale_entry" && this.modeValue !== "tender") return
+    if (!this.ensureTenderable()) return
+    const types = this.otherTypes()
+    if (types.length === 0) {
+      this.showFeedback("No Other tender types are configured.")
+      return
+    }
+    if (types.length === 1) {
+      this.beginTenderMode()
+      this.applyTenderType(types[0])
+      this.prefillRemaining()
+      return
+    }
+    this.openOtherPicker(types)
+  }
+
+  chooseTenderCategory(category) {
+    if (this.inFlight) return
+    if (this.modeValue !== "sale_entry" && this.modeValue !== "tender") return
+    if (!this.ensureTenderable()) return
+    const types = this.typesForCategory(category)
+    const label = this.categoryLabel(category)
+    if (types.length === 0) {
+      if (this.settlementValue === "refund") {
+        this.showFeedback(`${label} refunds are not enabled.`)
+      } else {
+        this.showFeedback(`${label} tender is not available.`)
+      }
+      return
+    }
+    this.beginTenderMode()
+    this.applyTenderType(types[0])
+    this.prefillRemaining()
+  }
+
+  ensureTenderable() {
+    if (this.modeValue === "tender") return true
+    if (!this.element.querySelector(".pos-lines tbody tr")) {
+      this.showFeedback("Add merchandise before taking a tender.")
+      return false
+    }
+    if (this.settlementValue === "none") {
+      this.submitComplete()
+      return false
+    }
+    return true
+  }
+
+  beginTenderMode() {
+    if (this.modeValue === "tender") return
     const refund = this.settlementValue === "refund"
     this.setMode("tender", refund ? "REFUND" : "CASH TENDER")
-    this.selectTenderType(this.cashTenderIndex())
-    const due = this.element.querySelector(".pos-totals__due")
-    const dueText = due ? due.textContent.trim() : (refund ? "Refund due" : "Amount due")
-    this.setFieldLabel(refund ? `${dueText}. Refund amount` : `${dueText}. Cash presented`)
     this.fieldTarget.disabled = false
     this.fieldTarget.inputMode = "decimal"
-    this.fieldTarget.value = refund ? this.formatCents(this.refundRemainingValue) : ""
     this.setActionEnabled("quantityButton", false)
     this.setActionEnabled("overrideButton", false)
     this.setActionEnabled("discountButton", false)
     this.setActionEnabled("taxClassButton", false)
     this.setActionEnabled("tenderButton", false)
     this.setActionEnabled("removeButton", false)
+    this.enableTenderIdentityButtons()
+  }
+
+  applyTenderType(type) {
+    if (!type) return
+    const types = this.cashierTenderTypes()
+    const index = types.findIndex((item) => item.id === type.id)
+    this.selectTenderType(index >= 0 ? index : 0)
+  }
+
+  prefillRemaining() {
+    this.fieldTarget.value = this.formatCents(this.remainingCents())
     this.fieldTarget.focus()
-    if (refund) this.fieldTarget.select()
+    this.fieldTarget.select()
+  }
+
+  remainingCents() {
+    return this.settlementValue === "refund" ? this.refundRemainingValue : this.paymentRemainingValue
+  }
+
+  typesForCategory(category) {
+    return this.cashierTenderTypes().filter((type) => type.category === category)
+  }
+
+  otherTypes() {
+    return this.typesForCategory("other").slice().sort((left, right) => (left.code || "").localeCompare(right.code || ""))
+  }
+
+  categoryLabel(category) {
+    if (category === "cash") return "Cash"
+    if (category === "card") return "Card"
+    if (category === "check") return "Check"
+    return "Other"
+  }
+
+  commandFieldEmpty() {
+    return this.hasFieldTarget && this.fieldTarget.value.trim() === ""
+  }
+
+  referenceRequired() {
+    const type = this.selectedTenderType()
+    return Boolean(type && type.reference_policy === "required")
+  }
+
+  selectedTenderType() {
+    const types = this.cashierTenderTypes()
+    const id = this.hasTenderTypeInputTarget ? this.tenderTypeInputTarget.value : null
+    return types.find((type) => type.id === id) || types[0]
+  }
+
+  openTransactions() {
+    if (this.overlayOpen()) {
+      this.showFeedback("Finish or cancel the current dialog before opening Transactions.")
+      return
+    }
+    if (this.modeValue !== "sale_entry" && this.modeValue !== "tender") return
+    if (!this.transactionsUrlValue) return
+    window.location.assign(this.transactionsUrlValue)
+  }
+
+  showFeedback(message) {
+    if (!this.hasFeedbackTarget) return
+    this.feedbackTarget.textContent = message
+    this.feedbackTarget.setAttribute("role", "alert")
+  }
+
+  openOtherPicker(types) {
+    if (!this.hasOtherOverlayTarget || !this.hasOtherListTarget) return
+    this.otherListTarget.replaceChildren()
+    types.forEach((type, index) => {
+      const item = document.createElement("li")
+      item.dataset.tenderTypeId = type.id
+      item.textContent = type.name
+      item.classList.toggle("is-selected", index === 0)
+      item.setAttribute("aria-selected", index === 0 ? "true" : "false")
+      this.otherListTarget.append(item)
+    })
+    this.otherOverlayTarget.hidden = false
+    if (this.hasChromeTarget) this.chromeTarget.inert = true
+  }
+
+  closeOtherOverlay() {
+    if (!this.hasOtherOverlayTarget) return
+    this.otherOverlayTarget.hidden = true
+    if (this.hasChromeTarget) this.chromeTarget.inert = false
+    this.restoreFocus()
+  }
+
+  onOtherOverlayKeydown(event, key) {
+    if (key === "Escape") {
+      event.preventDefault()
+      this.closeOtherOverlay()
+      return
+    }
+    if (key === "ArrowUp" || key === "ArrowDown") {
+      event.preventDefault()
+      this.moveOtherPicker(key === "ArrowUp" ? -1 : 1)
+      return
+    }
+    if (key === "Enter") {
+      event.preventDefault()
+      this.selectHighlightedOther()
+    }
+  }
+
+  moveOtherPicker(delta) {
+    if (!this.hasOtherListTarget) return
+    const items = Array.from(this.otherListTarget.querySelectorAll("li"))
+    if (items.length === 0) return
+    const current = items.findIndex((item) => item.classList.contains("is-selected"))
+    const nextIndex = Math.min(items.length - 1, Math.max(0, (current < 0 ? 0 : current) + delta))
+    items.forEach((item, index) => {
+      const selected = index === nextIndex
+      item.classList.toggle("is-selected", selected)
+      item.setAttribute("aria-selected", selected ? "true" : "false")
+    })
+  }
+
+  selectHighlightedOther() {
+    if (!this.hasOtherListTarget) return
+    const selected = this.otherListTarget.querySelector("li.is-selected")
+    if (!selected) return
+    const type = this.cashierTenderTypes().find((item) => item.id === selected.dataset.tenderTypeId)
+    this.closeOtherOverlay()
+    if (!type) return
+    this.beginTenderMode()
+    this.applyTenderType(type)
+    this.prefillRemaining()
+  }
+
+  async resolveAndHandle(params) {
+    if (this.inFlight) return
+    this.inFlight = true
+    try {
+      const result = await this.fetchResolve(params)
+      this.inFlight = false
+      this.handleResolution(result)
+    } catch (error) {
+      this.inFlight = false
+      this.showFeedback(error?.message || "merchandise not found")
+      this.enableReadyActions()
+      this.restoreFocus()
+    }
+  }
+
+  async fetchResolve(params) {
+    const url = new URL(this.resolveUrlValue, window.location.origin)
+    if (params.identifier) url.searchParams.set("identifier", params.identifier)
+    if (params.product_variant_id) url.searchParams.set("product_variant_id", params.product_variant_id)
+    if (params.inventory_unit_id) url.searchParams.set("inventory_unit_id", params.inventory_unit_id)
+    const response = await fetch(url, { headers: { Accept: "application/json" }, credentials: "same-origin" })
+    const payload = await response.json()
+    if (!response.ok) throw new Error(payload.message || "merchandise not found")
+    return payload
+  }
+
+  handleResolution(result) {
+    switch (result.outcome) {
+      case "addable_variant":
+        this.postAddMerchandise({ variantId: result.variant.id })
+        return
+      case "addable_unit":
+        this.postAddMerchandise({ unitId: result.unit.id })
+        return
+      case "variant_choice_required":
+        this.openVariantPicker(result.variants || [])
+        return
+      case "unit_choice_required":
+        this.openUnitPicker(result.units || [])
+        return
+      case "open_price_required":
+        this.openOpenPriceOverlay({
+          kind: "add",
+          variantId: result.variant?.id,
+          prompt: this.variantLabel(result.variant)
+        })
+        return
+      default:
+        this.showFeedback(result.message || "merchandise not found")
+        this.enableReadyActions()
+        this.restoreFocus()
+    }
+  }
+
+  postAddMerchandise({ variantId, unitId, sellingPrice } = {}) {
+    if (this.hasIdentifierInputTarget) this.identifierInputTarget.value = ""
+    if (this.hasVariantInputTarget) this.variantInputTarget.value = variantId || ""
+    if (this.hasUnitInputTarget) this.unitInputTarget.value = unitId || ""
+    if (this.hasOpenPriceInputTarget) this.openPriceInputTarget.value = sellingPrice || ""
+    this.beginFlight()
+    this.merchandiseFormTarget.requestSubmit()
+  }
+
+  variantLabel(variant) {
+    if (!variant) return "Open price"
+    const parts = [variant.sku, variant.name, variant.condition].filter(Boolean)
+    return parts.join(" · ") || "Open price"
+  }
+
+  openSearchOverlay() {
+    if (this.inFlight || this.modeValue !== "sale_entry") return
+    if (!this.hasSearchOverlayTarget) return
+    this.searchResultsReady = false
+    if (this.hasSearchSkuFieldTarget) this.searchSkuFieldTarget.value = ""
+    if (this.hasSearchNameFieldTarget) this.searchNameFieldTarget.value = ""
+    if (this.hasSearchListTarget) this.searchListTarget.replaceChildren()
+    if (this.hasSearchQueryLabelTarget) this.searchQueryLabelTarget.textContent = ""
+    this.searchOverlayTarget.hidden = false
+    if (this.hasChromeTarget) this.chromeTarget.inert = true
+    if (this.hasSearchSkuFieldTarget) this.searchSkuFieldTarget.focus()
+  }
+
+  closeSearchOverlay() {
+    if (!this.hasSearchOverlayTarget) return
+    this.searchOverlayTarget.hidden = true
+    if (this.hasChromeTarget) this.chromeTarget.inert = false
+    this.restoreFocus()
+  }
+
+  onSearchOverlayKeydown(event, key) {
+    if (key === "Escape") {
+      event.preventDefault()
+      this.closeSearchOverlay()
+      return
+    }
+    if (key === "ArrowUp" || key === "ArrowDown") {
+      event.preventDefault()
+      this.movePickerList(this.searchListTarget, key === "ArrowUp" ? -1 : 1)
+      return
+    }
+    if (key !== "Enter") return
+    event.preventDefault()
+    const inField = event.target === this.searchSkuFieldTarget || event.target === this.searchNameFieldTarget
+    if (inField && !this.searchResultsReady) {
+      this.runMerchandiseSearch()
+      return
+    }
+    if (inField) {
+      this.runMerchandiseSearch()
+      return
+    }
+    this.selectHighlightedSearch()
+  }
+
+  async runMerchandiseSearch() {
+    const sku = this.hasSearchSkuFieldTarget ? this.searchSkuFieldTarget.value.trim() : ""
+    const name = this.hasSearchNameFieldTarget ? this.searchNameFieldTarget.value.trim() : ""
+    if (!sku && !name) return
+    const url = new URL(this.searchUrlValue, window.location.origin)
+    if (sku) url.searchParams.set("sku", sku)
+    if (name) url.searchParams.set("name", name)
+    try {
+      const response = await fetch(url, { headers: { Accept: "application/json" }, credentials: "same-origin" })
+      const payload = await response.json()
+      this.renderSearchResults(payload.results || [])
+    } catch (_error) {
+      this.renderSearchResults([])
+      if (this.hasSearchQueryLabelTarget) this.searchQueryLabelTarget.textContent = "Search failed."
+    }
+  }
+
+  renderSearchResults(rows) {
+    if (!this.hasSearchListTarget) return
+    this.searchListTarget.replaceChildren()
+    this.searchResultsReady = true
+    if (this.hasSearchQueryLabelTarget) {
+      this.searchQueryLabelTarget.textContent = rows.length === 0 ? "No matching merchandise." : ""
+    }
+    rows.forEach((row, index) => {
+      const item = document.createElement("li")
+      item.dataset.variantId = row.id
+      item.dataset.disabled = row.disabled ? "true" : "false"
+      item.dataset.reason = row.reason || ""
+      const availability = row.available == null ? "" : ` · ${row.available}`
+      const reason = row.disabled && row.reason ? ` — ${row.reason}` : ""
+      item.textContent = [row.sku, row.name, row.condition, row.price_label].filter(Boolean).join(" · ") + availability + reason
+      item.classList.toggle("is-disabled", Boolean(row.disabled))
+      item.classList.toggle("is-selected", index === 0)
+      item.setAttribute("aria-selected", index === 0 ? "true" : "false")
+      item.tabIndex = index === 0 ? 0 : -1
+      this.searchListTarget.append(item)
+    })
+    const first = this.searchListTarget.querySelector("li")
+    if (first) first.focus()
+  }
+
+  selectHighlightedSearch() {
+    const selected = this.hasSearchListTarget && this.searchListTarget.querySelector("li.is-selected")
+    if (!selected) return
+    if (selected.dataset.disabled === "true") {
+      this.showFeedback(selected.dataset.reason || "merchandise is not sellable")
+      return
+    }
+    const variantId = selected.dataset.variantId
+    this.closeSearchOverlay()
+    this.resolveAndHandle({ product_variant_id: variantId })
+  }
+
+  openVariantPicker(variants) {
+    if (!this.hasVariantOverlayTarget || !this.hasVariantListTarget) return
+    this.variantListTarget.replaceChildren()
+    variants.forEach((variant, index) => {
+      const item = document.createElement("li")
+      item.dataset.variantId = variant.id
+      const price = variant.price_label || this.formatCents(variant.price_cents)
+      const availability = variant.available == null ? "" : ` · ${variant.available}`
+      item.textContent = [variant.sku, variant.name, variant.condition, price].filter(Boolean).join(" · ") + availability
+      item.classList.toggle("is-selected", index === 0)
+      item.setAttribute("aria-selected", index === 0 ? "true" : "false")
+      this.variantListTarget.append(item)
+    })
+    this.variantOverlayTarget.hidden = false
+    if (this.hasChromeTarget) this.chromeTarget.inert = true
+  }
+
+  closeVariantOverlay() {
+    if (!this.hasVariantOverlayTarget) return
+    this.variantOverlayTarget.hidden = true
+    if (this.hasChromeTarget) this.chromeTarget.inert = false
+    this.restoreFocus()
+  }
+
+  onVariantOverlayKeydown(event, key) {
+    if (key === "Escape") {
+      event.preventDefault()
+      this.closeVariantOverlay()
+      return
+    }
+    if (key === "ArrowUp" || key === "ArrowDown") {
+      event.preventDefault()
+      this.movePickerList(this.variantListTarget, key === "ArrowUp" ? -1 : 1)
+      return
+    }
+    if (key === "Enter") {
+      event.preventDefault()
+      this.selectHighlightedVariant()
+    }
+  }
+
+  selectHighlightedVariant() {
+    const selected = this.hasVariantListTarget && this.variantListTarget.querySelector("li.is-selected")
+    if (!selected) return
+    const variantId = selected.dataset.variantId
+    this.closeVariantOverlay()
+    this.resolveAndHandle({ product_variant_id: variantId })
+  }
+
+  openUnitPicker(units) {
+    if (!this.hasUnitOverlayTarget || !this.hasUnitListTarget) return
+    this.unitListTarget.replaceChildren()
+    if (units.length === 0) {
+      const item = document.createElement("li")
+      item.textContent = "No units available."
+      item.classList.add("is-disabled")
+      this.unitListTarget.append(item)
+    }
+    units.forEach((unit, index) => {
+      const item = document.createElement("li")
+      item.dataset.unitId = unit.id
+      item.textContent = [unit.unit_identifier, unit.condition, this.formatCents(unit.price_cents)].filter(Boolean).join(" · ")
+      item.classList.toggle("is-selected", index === 0)
+      item.setAttribute("aria-selected", index === 0 ? "true" : "false")
+      this.unitListTarget.append(item)
+    })
+    this.unitOverlayTarget.hidden = false
+    if (this.hasChromeTarget) this.chromeTarget.inert = true
+  }
+
+  closeUnitOverlay() {
+    if (!this.hasUnitOverlayTarget) return
+    this.unitOverlayTarget.hidden = true
+    if (this.hasChromeTarget) this.chromeTarget.inert = false
+    this.restoreFocus()
+  }
+
+  onUnitOverlayKeydown(event, key) {
+    if (key === "Escape") {
+      event.preventDefault()
+      this.closeUnitOverlay()
+      return
+    }
+    if (key === "ArrowUp" || key === "ArrowDown") {
+      event.preventDefault()
+      this.movePickerList(this.unitListTarget, key === "ArrowUp" ? -1 : 1)
+      return
+    }
+    if (key === "Enter") {
+      event.preventDefault()
+      this.selectHighlightedUnit()
+    }
+  }
+
+  selectHighlightedUnit() {
+    const selected = this.hasUnitListTarget && this.unitListTarget.querySelector("li.is-selected")
+    if (!selected || !selected.dataset.unitId) return
+    const unitId = selected.dataset.unitId
+    this.closeUnitOverlay()
+    this.resolveAndHandle({ inventory_unit_id: unitId })
+  }
+
+  movePickerList(list, delta) {
+    if (!list) return
+    const items = Array.from(list.querySelectorAll("li")).filter((item) => !item.classList.contains("is-disabled") || item.dataset.variantId)
+    if (items.length === 0) return
+    const current = items.findIndex((item) => item.classList.contains("is-selected"))
+    const nextIndex = Math.min(items.length - 1, Math.max(0, (current < 0 ? 0 : current) + delta))
+    items.forEach((item, index) => {
+      const selected = index === nextIndex
+      item.classList.toggle("is-selected", selected)
+      item.setAttribute("aria-selected", selected ? "true" : "false")
+      item.tabIndex = selected ? 0 : -1
+    })
+    items[nextIndex].focus()
+  }
+
+  openOpenPriceOverlay({ kind, variantId, lineId, prompt, currentCents }) {
+    if (!this.hasOpenPriceOverlayTarget) return
+    this.pendingOpenPrice = { kind, variantId, lineId }
+    if (this.hasOpenPricePromptTarget) this.openPricePromptTarget.textContent = prompt || "Enter the selling price."
+    if (this.hasOpenPriceFieldTarget) {
+      this.openPriceFieldTarget.value = currentCents ? this.formatCents(currentCents) : ""
+    }
+    this.openPriceOverlayTarget.hidden = false
+    if (this.hasChromeTarget) this.chromeTarget.inert = true
+    if (this.hasOpenPriceFieldTarget) this.openPriceFieldTarget.focus()
+  }
+
+  closeOpenPriceOverlay() {
+    if (!this.hasOpenPriceOverlayTarget) return
+    this.pendingOpenPrice = null
+    this.openPriceOverlayTarget.hidden = true
+    if (this.hasChromeTarget) this.chromeTarget.inert = false
+    this.restoreFocus()
+  }
+
+  onOpenPriceOverlayKeydown(event, key) {
+    if (key === "Escape") {
+      event.preventDefault()
+      this.closeOpenPriceOverlay()
+      return
+    }
+    if (key === "Enter") {
+      event.preventDefault()
+      this.submitOpenPricePrompt()
+    }
+  }
+
+  submitOpenPricePrompt() {
+    if (this.inFlight || !this.pendingOpenPrice) return
+    const value = this.hasOpenPriceFieldTarget ? this.openPriceFieldTarget.value.trim() : ""
+    if (value === "") return
+    const pending = this.pendingOpenPrice
+    this.pendingOpenPrice = null
+    this.openPriceOverlayTarget.hidden = true
+    if (this.hasChromeTarget) this.chromeTarget.inert = false
+    if (pending.kind === "edit") {
+      if (this.hasOpenPriceLineInputTarget) this.openPriceLineInputTarget.value = pending.lineId
+      if (this.hasOpenPriceEditInputTarget) this.openPriceEditInputTarget.value = value
+      this.beginFlight()
+      this.openPriceFormTarget.requestSubmit()
+      return
+    }
+    this.postAddMerchandise({ variantId: pending.variantId, sellingPrice: value })
+  }
+
+  priceActionEnabled() {
+    const row = this.selectedRow()
+    if (!row) return false
+    if (row.dataset.pricingMethodSnapshot === "open_price") return true
+    return this.policyFor("price_override") !== "prohibited"
+  }
+
+  openReturnChooser() {
+    if (this.inFlight || this.modeValue !== "sale_entry") return
+    if (!this.hasReturnChooserOverlayTarget) return
+    const items = Array.from(this.returnChooserListTarget.querySelectorAll("li"))
+    items.forEach((item, index) => {
+      const selected = index === 0
+      item.classList.toggle("is-selected", selected)
+      item.setAttribute("aria-selected", selected ? "true" : "false")
+    })
+    this.returnChooserOverlayTarget.hidden = false
+    if (this.hasChromeTarget) this.chromeTarget.inert = true
+  }
+
+  closeReturnChooser() {
+    if (!this.hasReturnChooserOverlayTarget) return
+    this.returnChooserOverlayTarget.hidden = true
+    if (this.hasChromeTarget) this.chromeTarget.inert = false
+    this.restoreFocus()
+  }
+
+  onReturnChooserKeydown(event, key) {
+    if (key === "Escape") {
+      event.preventDefault()
+      this.closeReturnChooser()
+      return
+    }
+    if (key === "ArrowUp" || key === "ArrowDown") {
+      event.preventDefault()
+      this.movePickerList(this.returnChooserListTarget, key === "ArrowUp" ? -1 : 1)
+      return
+    }
+    if (key === "Enter") {
+      event.preventDefault()
+      this.selectReturnChooser()
+    }
+  }
+
+  selectReturnChooser() {
+    const selected = this.hasReturnChooserListTarget && this.returnChooserListTarget.querySelector("li.is-selected")
+    if (!selected) return
+    const choice = selected.dataset.choice
+    this.closeReturnChooser()
+    if (choice === "unlinked") {
+      if (this.policyFor("unlinked_return") === "prohibited") {
+        this.showFeedback("Return without receipt is not available.")
+        return
+      }
+      this.openUnlinkedOverlay()
+      return
+    }
+    this.openLinkedOverlay()
+  }
+
+  openLinkedOverlay() {
+    if (this.inFlight || this.modeValue !== "sale_entry") return
+    if (!this.hasLinkedOverlayTarget) return
+    this.linkedMode = "lookup"
+    if (this.hasLinkedLookupFieldTarget) this.linkedLookupFieldTarget.value = ""
+    if (this.hasLinkedFeedbackTarget) this.linkedFeedbackTarget.textContent = ""
+    if (this.hasLinkedListTarget) this.linkedListTarget.replaceChildren()
+    if (this.hasLinkedQuantityFieldTarget) this.linkedQuantityFieldTarget.value = "1"
+    this.populateLinkedReasons()
+    this.toggleHidden(this.hasLinkedNoteWrapTarget && this.linkedNoteWrapTarget, true)
+    this.linkedOverlayTarget.hidden = false
+    if (this.hasChromeTarget) this.chromeTarget.inert = true
+    if (this.hasLinkedLookupFieldTarget) this.linkedLookupFieldTarget.focus()
+  }
+
+  closeLinkedOverlay() {
+    if (!this.hasLinkedOverlayTarget) return
+    this.linkedOverlayTarget.hidden = true
+    if (this.hasChromeTarget) this.chromeTarget.inert = false
+    this.restoreFocus()
+  }
+
+  populateLinkedReasons() {
+    if (!this.hasLinkedReasonFieldTarget) return
+    const entries = this.returnReasonsValue || []
+    this.linkedReasonFieldTarget.replaceChildren()
+    const blank = document.createElement("option")
+    blank.value = ""
+    blank.textContent = "Select…"
+    this.linkedReasonFieldTarget.append(blank)
+    entries.forEach((entry) => {
+      const option = document.createElement("option")
+      option.value = entry.code
+      option.textContent = entry.name
+      this.linkedReasonFieldTarget.append(option)
+    })
+  }
+
+  onLinkedOverlayKeydown(event, key) {
+    if (key === "Escape") {
+      event.preventDefault()
+      this.closeLinkedOverlay()
+      return
+    }
+    if (key === "ArrowUp" || key === "ArrowDown") {
+      event.preventDefault()
+      this.movePickerList(this.linkedListTarget, key === "ArrowUp" ? -1 : 1)
+      return
+    }
+    if (key !== "Enter") return
+    event.preventDefault()
+    if (event.target === this.linkedLookupFieldTarget) {
+      this.runLinkedLookup()
+      return
+    }
+    this.selectHighlightedLinked()
+  }
+
+  async runLinkedLookup(params = {}) {
+    const query = this.hasLinkedLookupFieldTarget ? this.linkedLookupFieldTarget.value.trim() : ""
+    const url = new URL(this.linkedLookupUrlValue, window.location.origin)
+    if (params.transaction_id) url.searchParams.set("transaction_id", params.transaction_id)
+    else if (query) url.searchParams.set("q", query)
+    else return
+    try {
+      const response = await fetch(url, { headers: { Accept: "application/json" }, credentials: "same-origin" })
+      const payload = await response.json()
+      this.renderLinkedLookup(payload)
+    } catch (_error) {
+      if (this.hasLinkedFeedbackTarget) this.linkedFeedbackTarget.textContent = "no returnable original found"
+    }
+  }
+
+  renderLinkedLookup(payload) {
+    if (this.hasLinkedFeedbackTarget) this.linkedFeedbackTarget.textContent = payload.message || ""
+    if (!this.hasLinkedListTarget) return
+    this.linkedListTarget.replaceChildren()
+    if (payload.outcome === "receipts") {
+      this.linkedMode = "receipts"
+      ;(payload.receipts || []).forEach((receipt, index) => {
+        const item = document.createElement("li")
+        item.dataset.transactionId = receipt.id
+        item.textContent = receipt.transaction_reference
+        item.classList.toggle("is-selected", index === 0)
+        item.setAttribute("aria-selected", index === 0 ? "true" : "false")
+        this.linkedListTarget.append(item)
+      })
+    } else if (payload.outcome === "lines") {
+      this.linkedMode = "lines"
+      ;(payload.lines || []).forEach((line, index) => {
+        const item = document.createElement("li")
+        item.dataset.lineId = line.id
+        item.dataset.remaining = String(line.remaining)
+        item.dataset.quantityFixed = line.quantity_fixed ? "true" : "false"
+        const unit = line.unit_identifier ? ` · ${line.unit_identifier}` : ""
+        item.textContent = `${line.description} · remaining ${line.remaining}${unit}`
+        item.classList.toggle("is-selected", index === 0)
+        item.setAttribute("aria-selected", index === 0 ? "true" : "false")
+        this.linkedListTarget.append(item)
+      })
+    }
+    const first = this.linkedListTarget.querySelector("li")
+    if (first) first.focus()
+  }
+
+  selectHighlightedLinked() {
+    const selected = this.hasLinkedListTarget && this.linkedListTarget.querySelector("li.is-selected")
+    if (!selected) return
+    if (this.linkedMode === "receipts") {
+      this.runLinkedLookup({ transaction_id: selected.dataset.transactionId })
+      return
+    }
+    if (this.linkedMode !== "lines") return
+    const reason = this.hasLinkedReasonFieldTarget ? this.linkedReasonFieldTarget.value : ""
+    if (!reason) {
+      if (this.hasLinkedFeedbackTarget) this.linkedFeedbackTarget.textContent = "Select a return reason."
+      if (this.hasLinkedReasonFieldTarget) this.linkedReasonFieldTarget.focus()
+      return
+    }
+    if (reason === "other" && this.hasLinkedNoteFieldTarget && this.linkedNoteFieldTarget.value.trim() === "") {
+      this.toggleHidden(this.hasLinkedNoteWrapTarget && this.linkedNoteWrapTarget, false)
+      if (this.hasLinkedFeedbackTarget) this.linkedFeedbackTarget.textContent = "reason note is required"
+      this.linkedNoteFieldTarget.focus()
+      return
+    }
+    const quantity = selected.dataset.quantityFixed === "true"
+      ? "1"
+      : (this.hasLinkedQuantityFieldTarget ? this.linkedQuantityFieldTarget.value.trim() : "1")
+    if (this.hasLinkedOriginalInputTarget) this.linkedOriginalInputTarget.value = selected.dataset.lineId
+    if (this.hasLinkedQuantityInputTarget) this.linkedQuantityInputTarget.value = quantity
+    if (this.hasLinkedReasonInputTarget) this.linkedReasonInputTarget.value = reason
+    if (this.hasLinkedNoteInputTarget) {
+      this.linkedNoteInputTarget.value = this.hasLinkedNoteFieldTarget ? this.linkedNoteFieldTarget.value.trim() : ""
+    }
+    this.closeLinkedOverlay()
+    this.beginFlight()
+    this.linkedReturnFormTarget.requestSubmit()
   }
 
   removeSelected() {
@@ -408,14 +1246,6 @@ export default class extends Controller {
     this.syncSelectedLine()
     this.beginFlight()
     this.removeFormTarget.requestSubmit()
-  }
-
-  cycleTenderType() {
-    const types = this.cashierTenderTypes()
-    if (types.length === 0) return
-    const current = this.hasTenderTypeInputTarget ? this.tenderTypeInputTarget.value : types[0].id
-    const index = Math.max(0, types.findIndex((type) => type.id === current))
-    this.selectTenderType((index + 1) % types.length)
   }
 
   selectTenderType(index) {
@@ -509,6 +1339,28 @@ export default class extends Controller {
   }
 
   openPriceOverride() {
+    const row = this.selectedRow()
+    if (!row) {
+      this.showFeedback("Select a sale line first.")
+      return
+    }
+    if (this.selectedReturnLine()) {
+      this.showFeedback("Price is not available on a return line.")
+      return
+    }
+    if (row.dataset.pricingMethodSnapshot === "open_price") {
+      if (row.dataset.discounted === "true") {
+        this.showFeedback("Remove the line discount before changing the price.")
+        return
+      }
+      this.openOpenPriceOverlay({
+        kind: "edit",
+        lineId: row.dataset.lineId,
+        prompt: row.dataset.description || "Selected line",
+        currentCents: row.dataset.sellingCents
+      })
+      return
+    }
     this.openControlOverlay("price_override", "Price override")
   }
 
@@ -523,10 +1375,19 @@ export default class extends Controller {
   openControlOverlay(actionType, title) {
     if (this.inFlight) return
     if (this.modeValue !== "sale_entry") return
-    if (this.policyFor(actionType) === "prohibited") return
-    if (this.selectedReturnLine()) return
+    if (this.policyFor(actionType) === "prohibited") {
+      this.showFeedback(`${title} is not available.`)
+      return
+    }
+    if (this.selectedReturnLine()) {
+      this.showFeedback(`${title} is not available on a return line.`)
+      return
+    }
     const row = this.selectedRow()
-    if (!row || !this.hasControlOverlayTarget) return
+    if (!row || !this.hasControlOverlayTarget) {
+      this.showFeedback("Select a sale line first.")
+      return
+    }
 
     this.currentControlAction = actionType
     if (this.hasControlTitleTarget) this.controlTitleTarget.textContent = title
@@ -817,7 +1678,10 @@ export default class extends Controller {
   }
 
   overlayOpen() {
-    return this.cancelOverlayOpen() || this.controlOverlayOpen() || this.unlinkedOverlayOpen()
+    return this.cancelOverlayOpen() || this.controlOverlayOpen() || this.unlinkedOverlayOpen() ||
+      this.otherOverlayOpen() || this.searchOverlayOpen() || this.variantOverlayOpen() ||
+      this.unitOverlayOpen() || this.openPriceOverlayOpen() || this.returnChooserOpen() ||
+      this.linkedOverlayOpen()
   }
 
   cancelOverlayOpen() {
@@ -830,6 +1694,34 @@ export default class extends Controller {
 
   unlinkedOverlayOpen() {
     return this.hasUnlinkedOverlayTarget && !this.unlinkedOverlayTarget.hidden
+  }
+
+  otherOverlayOpen() {
+    return this.hasOtherOverlayTarget && !this.otherOverlayTarget.hidden
+  }
+
+  searchOverlayOpen() {
+    return this.hasSearchOverlayTarget && !this.searchOverlayTarget.hidden
+  }
+
+  variantOverlayOpen() {
+    return this.hasVariantOverlayTarget && !this.variantOverlayTarget.hidden
+  }
+
+  unitOverlayOpen() {
+    return this.hasUnitOverlayTarget && !this.unitOverlayTarget.hidden
+  }
+
+  openPriceOverlayOpen() {
+    return this.hasOpenPriceOverlayTarget && !this.openPriceOverlayTarget.hidden
+  }
+
+  returnChooserOpen() {
+    return this.hasReturnChooserOverlayTarget && !this.returnChooserOverlayTarget.hidden
+  }
+
+  linkedOverlayOpen() {
+    return this.hasLinkedOverlayTarget && !this.linkedOverlayTarget.hidden
   }
 
   selectedRow() {
@@ -848,6 +1740,7 @@ export default class extends Controller {
     if (this.hasQuantityLineInputTarget) this.quantityLineInputTarget.value = id
     if (this.hasRemoveLineInputTarget) this.removeLineInputTarget.value = id
     if (this.hasControlLineInputTarget) this.controlLineInputTarget.value = id
+    if (this.hasOpenPriceLineInputTarget) this.openPriceLineInputTarget.value = id
   }
 
   beginFlight() {
@@ -858,9 +1751,18 @@ export default class extends Controller {
   }
 
   disableMutationControls() {
-    ["unlinkedButton", "quantityButton", "overrideButton", "discountButton", "taxClassButton", "tenderButton", "removeButton", "cancelButton", "retry", "abandonButton"].forEach((name) => {
+    ["unlinkedButton", "returnButton", "quantityButton", "overrideButton", "discountButton", "taxClassButton", "tenderButton", "removeButton", "cancelButton", "retry", "abandonButton", "cashButton", "cardButton", "checkButton", "otherButton"].forEach((name) => {
       this.setActionEnabled(name, false)
     })
+  }
+
+  enableTenderIdentityButtons() {
+    const hasLines = Boolean(this.element.querySelector(".pos-lines tbody tr"))
+    const enabled = hasLines && (this.modeValue === "sale_entry" || this.modeValue === "tender")
+    this.setActionEnabled("cashButton", enabled && this.typesForCategory("cash").length > 0)
+    this.setActionEnabled("cardButton", enabled && this.typesForCategory("card").length > 0)
+    this.setActionEnabled("checkButton", enabled && this.typesForCategory("check").length > 0)
+    this.setActionEnabled("otherButton", enabled && this.otherTypes().length > 0)
   }
 
   enableReadyActions() {
@@ -870,13 +1772,19 @@ export default class extends Controller {
       const returnLine = this.selectedReturnLine()
       const quantityOk = hasSelection && !this.selectedUnitLine() && !this.selectedQuantityBlocked()
       this.setActionEnabled("unlinkedButton", this.policyFor("unlinked_return") !== "prohibited")
+      this.setActionEnabled("returnButton", true)
       this.setActionEnabled("quantityButton", quantityOk)
-      this.setActionEnabled("overrideButton", hasSelection && !returnLine && this.policyFor("price_override") !== "prohibited")
+      this.setActionEnabled("overrideButton", hasSelection && !returnLine && this.priceActionEnabled())
       this.setActionEnabled("discountButton", hasSelection && !returnLine && this.policyFor("line_discount") !== "prohibited")
       this.setActionEnabled("taxClassButton", hasSelection && !returnLine && this.policyFor("tax_class_override") !== "prohibited")
       this.setActionEnabled("tenderButton", hasLines)
       this.setActionEnabled("removeButton", hasSelection)
       this.setActionEnabled("cancelButton", hasLines)
+      this.enableTenderIdentityButtons()
+      return
+    }
+    if (this.modeValue === "tender") {
+      this.enableTenderIdentityButtons()
       return
     }
     if (this.modeValue === "completion_failed") {
@@ -1036,7 +1944,7 @@ export default class extends Controller {
   requestFunctionKeyLock() {
     const keyboard = navigator.keyboard
     if (!keyboard || typeof keyboard.lock !== "function") return
-    keyboard.lock(["F2", "F5", "F6", "F7", "F8", "F9"]).catch(() => {})
+    keyboard.lock(["F1", "F2", "F3", "F4", "F6", "F7", "F8", "F9", "F10"]).catch(() => {})
   }
 
   releaseFunctionKeyLock() {
@@ -1052,7 +1960,7 @@ export default class extends Controller {
   }
 
   claimedFunctionKey(key) {
-    return key === "F2" || key === "F5" || key === "F6" || key === "F7" || key === "F8" || key === "F9"
+    return key === "F1" || key === "F2" || key === "F3" || key === "F4" || key === "F6" || key === "F7" || key === "F8" || key === "F9" || key === "F10"
   }
 
   claimFunctionKey(event) {

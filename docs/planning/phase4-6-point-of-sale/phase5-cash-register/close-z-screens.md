@@ -71,7 +71,7 @@ Invariants:
 | Period with no Session | If an open period has no open Session, the enter gate offers **Finalize Z** or **Open session** |
 | Unused period Z | A period with zero Sessions may be finalized as an all-zero Z (Slice 1 empty-Z rule) |
 | Leave period open | Returns to the enter gate for that Register |
-| Authorization | Close flow: Session cashier + `pos.transact`; Z: `pos.transact` at current Store |
+| Authorization | Close flow: Session cashier + `pos.transact`; closed Session *view* and Z: `pos.transact` at current Store (6.7B; no open Session required to view) |
 | Permissions | No new permission key |
 | Period lock on enter Finalize Z | Hidden `expected_lock_version` is the period's `lock_version` |
 | Stale period while still open | Re-render the page they posted from; do not finalize; do not show `finalized_*` |
@@ -133,7 +133,7 @@ Values come from the completed transaction snapshots, not current Store/Register
 
 Render from completed facts: Store / Reg / Trans, transaction reference, business date, completed timestamp (Store IANA zone), line snapshots, subtotal, tax, total, Cash presented, change. Printed line descriptions use the completed merchandise snapshot only. If that snapshot is missing, render `Description unavailable` — do not substitute current Product metadata.
 
-Phase 6 closeout customer-print layout, Store identity/header/footer, omitted `business_date` on customer paper, and legal-name enforcement are [receipt-presentation.md](../phase6-pos-mvp/receipt-presentation.md) / [mvp-closeout.md](../phase6-pos-mvp/mvp-closeout.md). Print trigger, print-after-commit, and print-failure lifecycle in this document still apply. X Report is 6.7 ([pos-workflow.md](../phase6-pos-mvp/pos-workflow.md) §11), on-screen only — not thermal Z/X print.
+Phase 6 closeout customer-print layout, Store identity/header/footer, omitted `business_date` on customer paper, and legal-name enforcement are [receipt-presentation.md](../phase6-pos-mvp/receipt-presentation.md) / [mvp-closeout.md](../phase6-pos-mvp/mvp-closeout.md). Print trigger, print-after-commit, and print-failure lifecycle in this document still apply. X Report is 6.7 ([pos-workflow.md](../phase6-pos-mvp/pos-workflow.md) §11). **80-mm browser print** of X, closed Session, and Z reports is 6.8C ([mvp-closeout.md](../phase6-pos-mvp/mvp-closeout.md) §3): explicit Print, never on GET, same CSS target as receipts, operator report grammar. Do not print expected Cash on the blind count screen.
 
 The ordinary on-screen completion screen does not have to adopt the printed header format.
 
@@ -229,7 +229,7 @@ invokes `Pos::ResumeOrStartTransaction` and redirects to `GET /pos/register`. No
 GET /pos/sessions/:id/closed
 ```
 
-Session must be closed. Authorization remains current Store, `pos.transact`, and Session cashier.
+Session must be closed. Authorization is current Store and `pos.transact`. Session cashier is **not** required to *view* a closed Session (6.7B Session-free reporting, same idea as 6.3 history). Close, blind count, and resume-sales remain Session cashier. Viewing a closed Session does not rebind `session[:pos_register_id]` unless this user is that Session’s cashier.
 
 Only now expose opening float, Cash / Card / Check / Other payments, expected closing Cash, counted Cash, and variance. Cash-close fields are read from persisted `closing_*` columns. Do not recompute expected Cash after close. Card/Check/Other payments are live sums of completed payment tenders in that session.
 
@@ -311,7 +311,7 @@ Session-custody wording reflects independent Session custody intervals (sums), n
 | Initiate close | yes | yes | yes |
 | Blind-count GET | yes | yes | yes |
 | Blind-count POST | yes | yes | yes |
-| Closed Session summary | yes | yes | yes |
+| Closed Session summary | yes | yes | no |
 | Return to sales | yes | yes | yes |
 | Finalize Z | yes | yes | no |
 | Finalized Z GET | yes | yes | no |
@@ -375,8 +375,7 @@ cash transfers
 manager approval workflow
 dedicated Z-finalize permission
 Z numbering
-Z printing
-X reports
+X reports   # 6.7 on-screen; 6.8C adds 80-mm browser print
 reopen Session
 reopen/fix finalized Z
 offline POS

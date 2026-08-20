@@ -189,7 +189,7 @@ class PosRegisterTest < ActionDispatch::IntegrationTest
     Store.create!(
       store_number: "2",
       code: "east",
-      name: "East Store",
+      name: "East Store", legal_name: "Example Books LLC",
       timezone: "America/New_York",
       country_code: "US"
     )
@@ -436,7 +436,7 @@ class PosRegisterTest < ActionDispatch::IntegrationTest
     east = Store.create!(
       store_number: "2",
       code: "east",
-      name: "East Store",
+      name: "East Store", legal_name: "Example Books LLC",
       timezone: "America/New_York",
       country_code: "US"
     )
@@ -492,9 +492,9 @@ class PosRegisterTest < ActionDispatch::IntegrationTest
     transaction = PosTransaction.working.find_by!(register: @register)
     post pos_register_merchandise_path, params: { identifier: @variant.sku, lock_version: transaction.lock_version }
     assert_response :success
-    assert_select "button", text: "Price override (F5)"
-    assert_select "button", text: "Discount (F6)"
-    assert_select "button", text: "Tax Class (F7)"
+    assert_select "button", text: "Price (F6)"
+    assert_select "button", text: "Discount (F7)"
+    assert_select "button", text: "Tax Class"
     assert_select "#pos_control_overlay"
     assert_select "#pos-approver-username"
     assert_select "#pos-approver-password"
@@ -610,6 +610,104 @@ class PosRegisterTest < ActionDispatch::IntegrationTest
     line.reload
     assert_equal line.reference_unit_price_cents, line.selling_unit_price_cents
     assert_equal 0, line.pos_controlled_actions.count
+  end
+
+  test "resolve and search are read-only and open-price apply does not write a price_override" do
+    open_price = pos_sellable_variant(actor: @actor, tax_class: @tax, pricing_method: "open_price", name: "Open Book")
+    open_quantity_stock(store: @store, variant: open_price, actor: @actor, quantity: 3)
+    post pos_register_enter_path, params: enter_params
+    follow_redirect!
+    transaction = PosTransaction.working.find_by!(register: @register)
+    post pos_register_merchandise_path, params: { identifier: @variant.sku, lock_version: transaction.lock_version }
+    transaction.reload
+    post pos_register_tender_path, params: {
+      tender_amount: "10.00",
+      tender_type_id: TenderType.find_by!(code: "card").id,
+      external_reference: "AUTH-9",
+      lock_version: transaction.lock_version
+    }
+    transaction.reload
+    assert_equal 1, transaction.pos_tenders.count
+
+    get pos_register_merchandise_resolve_path, params: { identifier: open_price.sku }, as: :json
+    assert_response :success
+    body = response.parsed_body
+    assert_equal "open_price_required", body.fetch("outcome")
+    transaction.reload
+    assert_equal 1, transaction.pos_tenders.count
+    assert_equal 1, transaction.pos_transaction_lines.count
+
+    get pos_register_merchandise_search_path, params: { name: "Open Book" }, as: :json
+    assert_response :success
+    results = response.parsed_body.fetch("results")
+    assert results.is_a?(Array)
+    assert results.any? { |row| row.fetch("id") == open_price.id }
+
+    post pos_register_merchandise_path, params: {
+      product_variant_id: open_price.id,
+      selling_price: "5.00",
+      lock_version: transaction.lock_version
+    }
+    assert_response :success
+    transaction.reload
+    open_line = transaction.pos_transaction_lines.find_by!(product_variant_id: open_price.id)
+    assert_equal "open_price", open_line.pricing_method_snapshot
+    assert_equal 500, open_line.reference_unit_price_cents
+    assert_equal 500, open_line.selling_unit_price_cents
+    assert_equal 0, open_line.pos_controlled_actions.where(action_type: "price_override").count
+    assert_equal 0, transaction.pos_tenders.count
+  end
+
+  test "linked return lookup is read-only get" do
+    post pos_register_enter_path, params: enter_params
+    follow_redirect!
+    transaction = PosTransaction.working.find_by!(register: @register)
+    lock = transaction.lock_version
+    get pos_register_linked_return_lookup_path, params: { q: "not-a-receipt" }, as: :json
+    assert_response :success
+    assert_equal "empty", response.parsed_body.fetch("outcome")
+    transaction.reload
+    assert_equal lock, transaction.lock_version
+    assert_equal 0, transaction.pos_transaction_lines.count
+  end
+
+  test "resolve after store switch does not treat a sellable sku as missing" do
+    west = Store.create!(
+      store_number: "2",
+      code: "west",
+      name: "West Store",
+      legal_name: "Example Books LLC",
+      timezone: "America/New_York",
+      country_code: "US"
+    )
+    west_register = Register.create!(store: west, register_number: 1, name: "West Front")
+    post store_selection_path, params: { store_id: west.id }
+    post pos_register_enter_path, params: {
+      register_id: west_register.id,
+      opening_float: "0.00",
+      confirmed_business_date: BusinessDate.for_store(west).iso8601
+    }
+    assert_equal west_register.id.to_s, session[:pos_register_id].to_s
+
+    post store_selection_path, params: { store_id: @store.id }
+    assert_nil session[:pos_register_id]
+
+    post pos_register_enter_path, params: enter_params
+    follow_redirect!
+    assert_response :success
+    assert_match "register/merchandise_resolve?register_id=#{@register.id}", response.body
+
+    session[:pos_register_id] = west_register.id
+    get pos_register_workspace_path, params: { register_id: @register.id }
+    assert_response :success
+    assert_equal @register.id.to_s, session[:pos_register_id].to_s
+
+    session[:pos_register_id] = west_register.id
+    get pos_register_merchandise_resolve_path, params: { identifier: @variant.sku }, as: :json
+    assert_response :success
+    assert_equal "addable_variant", response.parsed_body.fetch("outcome")
+    assert_equal @variant.id, response.parsed_body.dig("variant", "id")
+    assert_equal @register.id.to_s, session[:pos_register_id].to_s
   end
 
   private

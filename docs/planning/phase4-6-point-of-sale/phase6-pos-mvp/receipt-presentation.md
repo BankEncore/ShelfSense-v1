@@ -239,7 +239,7 @@ Country-specific address-format redesign is outside this contract.
 
 Never fall back to `stores.name` or System Settings names.
 
-After preflight of existing rows (identify blanks; **do not** copy `name` into `legal_name`), require `legal_name` on Store create/update **including deactivate** — reprints use current Store presentation.
+After preflight of existing rows (identify blanks; **do not** copy `name` into `legal_name`), require `legal_name` on Store create/update **while the Store is active**, and on activation. Deactivate of a legacy blank `legal_name` is allowed — do not invent a name. Reprints use current Store presentation and still fail closed if blank.
 
 Register enter/open refuses a blank legal name:
 

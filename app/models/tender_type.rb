@@ -62,6 +62,7 @@ class TenderType < ApplicationRecord
   def cashier_payload
     {
       id: id.to_s,
+      code: code,
       name: name,
       category: behavioral_category,
       reference_policy: external_reference_policy,

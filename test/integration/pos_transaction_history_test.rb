@@ -39,7 +39,7 @@ class PosTransactionHistoryTest < ActionDispatch::IntegrationTest
     assert_match transaction.transaction_reference, response.body
     assert_match "Example Book", response.body
     assert_match "REPRINT", response.body
-    assert_select ".pos-receipt__reprint", text: "REPRINT"
+    assert_select ".pos-receipt__reprint", text: "*** REPRINT ***"
     assert_nil session[:pos_register_id]
   end
 
@@ -64,7 +64,7 @@ class PosTransactionHistoryTest < ActionDispatch::IntegrationTest
 
   test "other store and missing pos.transact cannot view history" do
     transaction = complete_cash_sale!
-    east = Store.create!(store_number: "2", code: "east", name: "East Store", timezone: "America/New_York", country_code: "US")
+    east = Store.create!(store_number: "2", code: "east", name: "East Store", legal_name: "Example Books LLC", timezone: "America/New_York", country_code: "US")
     pos_transacting_user(store: east, assigned_by: @actor, username: "east_clerk")
     delete session_path
     sign_in_as("east_clerk")
@@ -179,7 +179,7 @@ class PosTransactionHistoryTest < ActionDispatch::IntegrationTest
     refute_match "Bank Card", response.body
     assert_select ".pos-history__header dd", text: "Not captured"
     assert_select ".pos-receipt__print", text: /AUTH-77/, count: 0
-    assert_select ".pos-receipt__reprint", text: "REPRINT"
+    assert_select ".pos-receipt__reprint", text: "*** REPRINT ***"
     assert_equal counts, commercial_counts
     assert_equal transaction.receipt_sequence, transaction.reload.receipt_sequence
   end
@@ -210,7 +210,8 @@ class PosTransactionHistoryTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_match "Description not captured", response.body
     refute_match "Live Catalog Name After History", response.body
-    refute_match "Example Book", response.body
+    assert_select ".pos-history__line-main", text: /Example Book/, count: 0
+    assert_select ".pos-receipt__line-description", text: /Example Book/, count: 0
     assert_select ".pos-receipt__print", text: /Description unavailable/
   end
 

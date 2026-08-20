@@ -33,6 +33,9 @@ class PosCloseZTest < ActionDispatch::IntegrationTest
     assert_match "Example Book", response.body
     assert_select ".pos-print-only"
     assert_select ".pos-no-print"
+    assert_select ".pos-receipt__legal-name", text: "Example Books LLC"
+    assert_select ".pos-receipt__print", text: /Business date/, count: 0
+    assert_select ".pos-receipt__barcode"
     assert_select "input[name='session_id'][value='#{transaction.pos_session_id}']"
     assert transaction.reload.completed?
     assert_equal 1, PosTransaction.completed.where(id: transaction.id).count
@@ -328,7 +331,8 @@ class PosCloseZTest < ActionDispatch::IntegrationTest
     get pos_session_close_path(session_record)
     assert_response :not_found
     get pos_session_closed_path(session_record)
-    assert_response :not_found
+    assert_response :success
+    assert_match "Session closed", response.body
     post pos_session_close_path(session_record), params: {
       closing_count: "0.00",
       expected_lock_version: session_record.lock_version
@@ -365,7 +369,7 @@ class PosCloseZTest < ActionDispatch::IntegrationTest
     east = Store.create!(
       store_number: 2,
       code: "east",
-      name: "East Store",
+      name: "East Store", legal_name: "Example Books LLC",
       timezone: "America/New_York",
       country_code: "US"
     )

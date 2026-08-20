@@ -197,6 +197,7 @@ module Pos
         default_tax_class: resolved.tax_class,
         default_tax_class_code_snapshot: resolved.tax_class.code,
         default_tax_class_name_snapshot: resolved.tax_class.name,
+        pricing_method_snapshot: "configured",
         manual_discount_cents: 0,
         return_reason_code: @reason_code,
         return_reason_name_snapshot: @reason_name,
