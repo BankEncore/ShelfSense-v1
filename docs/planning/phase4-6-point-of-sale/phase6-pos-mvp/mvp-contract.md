@@ -4,7 +4,7 @@
 
 **Authority:** Cross-cutting completed-operation shape for the Phase 6 MVP. Dual authority with normalized Core remains [ADR-020](../../../adr/ADR-020-pos-operation-envelope-and-core-facts.md) / [operation-and-core-facts.md](../phase4-point-of-sale/operation-and-core-facts.md). Commercial base is [CompletedPosOperation v1](../phase4-point-of-sale/completed-pos-operation-v1.md).
 
-Companions: [phase6-plan.md](phase6-plan.md), [merchandise-breadth.md](merchandise-breadth.md), [tender-breadth.md](tender-breadth.md), [transaction-history.md](transaction-history.md), [controlled-actions.md](controlled-actions.md), [returns.md](returns.md). Tax: [pos-tax-contract.md](../phase4-point-of-sale/pos-tax-contract.md). Cash/Z: [phase5-plan.md](../phase5-cash-register/phase5-plan.md).
+Companions: [phase6-plan.md](phase6-plan.md), [merchandise-breadth.md](merchandise-breadth.md), [tender-breadth.md](tender-breadth.md), [transaction-history.md](transaction-history.md), [controlled-actions.md](controlled-actions.md), [returns.md](returns.md), [post-void.md](post-void.md). Tax: [pos-tax-contract.md](../phase4-point-of-sale/pos-tax-contract.md). Cash/Z: [phase5-plan.md](../phase5-cash-register/phase5-plan.md).
 
 This slice does **not** implement capabilities. It locks meaning so 6.1–6.7 do not each invent a new completion shape. Do not add unused Core columns here ([AGENTS.md](../../../../AGENTS.md) §10). Columns appear in the owning slice.
 
@@ -392,9 +392,9 @@ original rows are never updated
 
 **Linked return** references `original_transaction_line_id` (line linkage is authority). 6.5 does **not** set envelope `corrections.return_of_transaction_id` ([returns.md](returns.md) §30). Remaining returnable uses only **completed** linked return quantities. Working and cancelled returns do not consume eligibility. Database uniqueness / locking must prevent two Registers from both completing the last eligible quantity.
 
-**Post-void** is 6.6. 6.5 eligibility does not yet see post-voids; 6.6 will refuse post-void if a completed linked return exists, and refuse a linked return against a post-voided original.
+**Post-void** is 6.6 ([post-void.md](post-void.md)). Correction lineage is `post_void_of_transaction_id` plus line/tender `post_void_source_*` FKs — not `original_transaction_line_id`. 6.6 refuses post-void if an effective completed linked return exists, and refuses a linked return against a post-voided original.
 
-**Post-void** creates one compensating completed transaction that reverses the whole original (sale lines → return-direction corrections, return lines → sale-direction corrections, payments ↔ refunds, inventory opposite effects, tax/reporting as **new-period** facts).
+**Post-void** creates one compensating completed transaction that reverses the whole original (sale lines → return-direction corrections, return lines → sale-direction corrections, payments ↔ refunds, inventory exact inverse via `Inventory::PostPostVoid`, tax/reporting as **new-period** facts). Session/Z Sales and Returns exclude post-void transactions; additive `finalized_post_void_*` snapshots ship in 6.6.
 
 Post-void is **prohibited** when:
 
@@ -432,7 +432,7 @@ return_price_adjustment
 post_void
 ```
 
-Permission keys: 6.1–6.3 keep `pos.transact` only. Perform/approve keys for `price_override`, `line_discount`, and `tax_class_override` arrive in 6.4 ([controlled-actions.md](controlled-actions.md)). 6.5 seeds only `unlinked_return` ([returns.md](returns.md) §16). `return_price_adjustment` and `post_void` remain reserved. Z finalize stays on `pos.transact` until a later controlled-action decision. Reason is material to the fingerprint. 6.4 completion integrity is sale-direction; 6.5 is direction-aware. 6.4 sale actions are prohibited on return lines.
+Permission keys: 6.1–6.3 keep `pos.transact` only. Perform/approve keys for `price_override`, `line_discount`, and `tax_class_override` arrive in 6.4 ([controlled-actions.md](controlled-actions.md)). 6.5 seeds only `unlinked_return` ([returns.md](returns.md) §16). 6.6 seeds `post_void` ([post-void.md](post-void.md)). `return_price_adjustment` remains reserved. Z finalize stays on `pos.transact` until a later controlled-action decision. Reason is material to the fingerprint. 6.4 completion integrity is sale-direction; 6.5 is direction-aware. 6.4 sale actions are prohibited on return lines.
 
 ---
 
@@ -448,7 +448,7 @@ Completion must not share one “recalculate tax” helper for historical revers
 
 ## 13. Inventory
 
-Inventory movement occurs only at completion, through the named posting boundary ([inventory-posting-contract.md](../../phase3-inventory-foundation/inventory-posting-contract.md)). 6.5 adds `Inventory::PostReturn` ([returns.md](returns.md) §12 / §15).
+Inventory movement occurs only at completion, through the named posting boundary ([inventory-posting-contract.md](../../phase3-inventory-foundation/inventory-posting-contract.md)). 6.5 adds `Inventory::PostReturn` ([returns.md](returns.md) §12 / §15). 6.6 adds `Inventory::PostPostVoid` ([post-void.md](post-void.md) §9).
 
 Working transactions still do **not** create `reserved`. Unique Used units serialize `AddMerchandise` on the `InventoryUnit` row and re-lock at completion ([merchandise-breadth.md](merchandise-breadth.md) §4.4). Do not introduce a reservation ledger in this MVP.
 

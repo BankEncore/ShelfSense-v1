@@ -467,6 +467,6 @@ System tests (when the workspace is implemented) must cover at least: scan → f
 
 This Slice 2 contract does not define split tender, discounts, returns, suspend/recall, drawers, Terminal, new permissions, close/Z outbox, polished visual design, mobile POS, or customer display.
 
-Later slices that reuse this workspace: 6.2 mixed tender, 6.4 controlled actions, 6.5B linked returns and refunds ([returns.md](../phase6-pos-mvp/returns.md)), 6.5C unlinked return (Return without receipt overlay; no F-key), 6.5D mixed sale+unlinked closeout. Next: 6.6 post-void.
+Later slices that reuse this workspace: 6.2 mixed tender, 6.4 controlled actions, 6.5B linked returns and refunds ([returns.md](../phase6-pos-mvp/returns.md)), 6.5C unlinked return (Return without receipt overlay; no F-key), 6.5D mixed sale+unlinked closeout. Post-void is history-entry, not this workspace ([post-void.md](../phase6-pos-mvp/post-void.md)).
 
 Receipt print, blind close, and Z screens are Slice 3: [close-z-screens.md](close-z-screens.md).

@@ -2,6 +2,7 @@
   <% if local_assigns.fetch(:reprint, false) %>
     <p class="pos-receipt__reprint">REPRINT</p>
   <% end %>
+  <%= render "pos/receipts/post_void_banner", transaction: transaction, linked: false %>
   <p class="pos-receipt__print-header"><%= pos_receipt_print_header(transaction) %></p>
   <p><%= transaction.transaction_reference %></p>
   <p>Business date  <%= transaction.business_date.iso8601 %></p>
@@ -21,11 +22,17 @@
         <tr>
           <td><%= line.quantity %></td>
           <td>
-            <%= line.return? ? "RETURN #{pos_print_line_description(line)}" : pos_print_line_description(line) %>
+            <%= pos_line_kind_prefix(line).present? ? "#{pos_line_kind_prefix(line)} #{pos_print_line_description(line)}" : pos_print_line_description(line) %>
           </td>
           <td><%= format_signed_money_cents(pos_line_amount_cents(line)) %></td>
         </tr>
-        <% if line.linked_return? && line.original_transaction_line&.pos_transaction %>
+        <% if line.post_void_generated? && line.post_void_source_line&.pos_transaction %>
+          <tr>
+            <td></td>
+            <td>Post-void of <%= line.post_void_source_line.pos_transaction.transaction_reference %></td>
+            <td></td>
+          </tr>
+        <% elsif line.linked_return? && line.original_transaction_line&.pos_transaction %>
           <tr>
             <td></td>
             <td>Return from <%= line.original_transaction_line.pos_transaction.transaction_reference %></td>

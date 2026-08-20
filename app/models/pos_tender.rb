@@ -8,6 +8,7 @@ class PosTender < ApplicationRecord
 
   belongs_to :pos_transaction
   belongs_to :configured_tender_type, class_name: "TenderType", foreign_key: :tender_type_id
+  belongs_to :post_void_source_tender, class_name: "PosTender", optional: true
 
   validates :configured_tender_type, :tender_number, :tender_type, :tender_name, :behavioral_category,
             :direction, :amount_cents, presence: true

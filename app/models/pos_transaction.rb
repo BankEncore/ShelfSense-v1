@@ -8,6 +8,8 @@ class PosTransaction < ApplicationRecord
   belongs_to :pos_session
   belongs_to :reporting_period, class_name: "PosReportingPeriod"
   belongs_to :cashier_user, class_name: "User"
+  belongs_to :post_void_of, class_name: "PosTransaction", foreign_key: :post_void_of_transaction_id, optional: true
+  has_one :post_void, class_name: "PosTransaction", foreign_key: :post_void_of_transaction_id, dependent: :restrict_with_exception
   has_many :pos_transaction_lines, -> { order(:line_number) }, dependent: :destroy
   has_many :pos_controlled_actions, dependent: :destroy
   has_many :pos_tenders, -> { ordered }, dependent: :destroy
@@ -35,6 +37,10 @@ class PosTransaction < ApplicationRecord
 
   def sale_total_cents
     subtotal_cents - discount_cents + tax_cents
+  end
+
+  def post_void?
+    post_void_of_transaction_id.present?
   end
 
   def even_exchange?

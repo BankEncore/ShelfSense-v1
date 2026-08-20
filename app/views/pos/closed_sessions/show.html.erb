@@ -17,6 +17,7 @@
     <div><dt>Return discount reversal</dt><dd><%= format_money_cents(@totals.return_discount_cents) %></dd></div>
     <div><dt>Return tax reversal</dt><dd><%= format_money_cents(@totals.return_tax_cents) %></dd></div>
     <div><dt>Returns total</dt><dd><%= format_money_cents(@totals.return_total_cents) %></dd></div>
+    <div><dt>Post-void adjustments</dt><dd><%= format_signed_money_cents(@totals.post_void_net_cents) %></dd></div>
     <div><dt>Net</dt><dd><%= format_signed_money_cents(@totals.net_cents) %></dd></div>
     <div><dt>Cash payments</dt><dd><%= format_money_cents(@totals.cash_payment_cents) %></dd></div>
     <div><dt>Cash refunds</dt><dd><%= format_money_cents(@totals.cash_refund_cents) %></dd></div>

@@ -1,6 +1,6 @@
 # Phase 6 Slice 6.5 — Returns, refunds, and exchanges
 
-**Status:** Contract locked. 6.5A–D implemented. Phase 6.5 complete. Next: 6.6 post-void.
+**Status:** Contract locked. 6.5A–D implemented. Phase 6.5 complete. Post-void is [post-void.md](post-void.md).
 
 **Authority:** Linked return, unlinked return, mixed sale+return, refund tenders, and direction-aware Session/Z on the existing POS transaction. Dual authority with Core remains [mvp-contract.md](mvp-contract.md) / [ADR-020](../../../adr/ADR-020-pos-operation-envelope-and-core-facts.md). Tax remains [pos-tax-contract.md](../phase4-point-of-sale/pos-tax-contract.md) §10. Inventory posting remains [inventory-posting-contract.md](../../phase3-inventory-foundation/inventory-posting-contract.md). Settlement extends [tender-breadth.md](tender-breadth.md). Controlled-action policy remains [controlled-actions.md](controlled-actions.md). History initiation extends [transaction-history.md](transaction-history.md).
 
@@ -259,7 +259,7 @@ Original must belong to the **current Store**. Cross-Store is out. Original Regi
 
 Cannot return a return line. `original_transaction_line_id` points at sale-direction lines only.
 
-**Post-void (6.6):** 6.5 eligibility does not yet see post-voids. 6.6 will refuse post-void if a completed linked return exists, and refuse a linked return against a post-voided original.
+**Post-void (6.6):** refuse post-void if an effective completed linked return exists, and refuse a linked return against a post-voided original. Correction lineage is `post_void_of_transaction_id`, not `original_transaction_line_id` ([post-void.md](post-void.md)).
 
 Discontinued merchandise remains returnable.
 

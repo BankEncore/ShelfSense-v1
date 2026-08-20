@@ -41,7 +41,7 @@ module Pos
       Pos::Support.require_active_context!(@transaction.store, @transaction.register)
       Pos::Support.require_transaction_cashier!(@actor, @transaction)
       raise Pos::Error, "line does not belong to transaction" unless @line.pos_transaction_id == @transaction.id
-      raise Pos::Error, "unknown controlled action" unless PosControlledAction::ACTION_TYPES.include?(@action_type)
+      raise Pos::Error, "unknown controlled action" unless %w[price_override line_discount tax_class_override].include?(@action_type)
       raise Pos::Error, "unknown operation" unless %w[apply remove].include?(@operation)
 
       PosTransaction.transaction do

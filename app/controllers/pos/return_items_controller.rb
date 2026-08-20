@@ -50,7 +50,7 @@ module Pos
     def prepare_return_items_view
       @target_session = cashier_target_session
       @working_transaction = @target_session&.pos_transactions&.working&.first
-      @sale_lines = @transaction.pos_transaction_lines.select(&:sale?)
+      @sale_lines = @transaction.pos_transaction_lines.select { |line| line.sale? && !line.post_void_generated? }
       @summaries = Pos::Returnability.summary_for(@sale_lines)
       @basket_quantities = {}
       if @working_transaction

@@ -727,6 +727,10 @@ input[type="submit"]:hover {
   letter-spacing: 0.08em;
 }
 
+.pos-receipt__post-void-note {
+  margin: 0 0 var(--space-3);
+}
+
 .pos-close__field {
   width: 100%;
   font-size: 1.25rem;

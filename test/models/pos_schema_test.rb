@@ -172,7 +172,7 @@ class PosSchemaTest < ActiveSupport::TestCase
   test "controlled-action permissions are seeded by role" do
     associate = Role.find_by!(key: "associate")
     manager = Role.find_by!(key: "store_manager")
-    %w[price_override line_discount tax_class_override unlinked_return].each do |action|
+    %w[price_override line_discount tax_class_override unlinked_return post_void].each do |action|
       assert Permission.exists?(key: "pos.#{action}.perform")
       assert Permission.exists?(key: "pos.#{action}.approve")
       assert associate.permissions.exists?(key: "pos.#{action}.perform")
@@ -181,7 +181,6 @@ class PosSchemaTest < ActiveSupport::TestCase
       assert manager.permissions.exists?(key: "pos.#{action}.approve")
     end
     assert_not Permission.exists?(key: "pos.return_price_adjustment.perform")
-    assert_not Permission.exists?(key: "pos.post_void.perform")
   end
 
   test "pos.manage_tender_types is seeded for system administrator only" do

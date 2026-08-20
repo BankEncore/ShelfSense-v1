@@ -84,7 +84,10 @@ module Pos
 
     def validate_original!(transaction, original)
       raise Pos::Error, "original line is not a completed sale" unless original.sale?
+      raise Pos::Error, "original line is not a completed sale" if original.post_void_generated?
       raise Pos::Error, "original line is not a completed sale" unless original.pos_transaction.completed?
+      raise Pos::Error, "original sale has been post-voided" if original.pos_transaction.post_void?
+      raise Pos::Error, "original sale has been post-voided" if Pos::Returnability.post_voided_source?(original.pos_transaction_id)
       raise Pos::Error, "original sale is not at this store" unless original.pos_transaction.store_id == transaction.store_id
     end
 

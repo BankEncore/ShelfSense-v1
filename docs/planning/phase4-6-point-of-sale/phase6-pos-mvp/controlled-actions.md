@@ -77,7 +77,7 @@ pos.tax_class_override.perform
 pos.tax_class_override.approve
 ```
 
-`scope_type: either`. Do **not** seed `unlinked_return` / `return_price_adjustment` / `post_void` in 6.4 (identifiers remain reserved in [mvp-contract.md](mvp-contract.md) §11). 6.5C seeds only `unlinked_return`; `return_price_adjustment` stays reserved. 6.4 completion integrity stays **sale-direction**; those three actions are prohibited on return lines ([returns.md](returns.md) §16 / §19).
+`scope_type: either`. Do **not** seed `unlinked_return` / `return_price_adjustment` / `post_void` in 6.4 (identifiers remain reserved in [mvp-contract.md](mvp-contract.md) §11). 6.5C seeds only `unlinked_return`; `return_price_adjustment` stays reserved. 6.6 seeds `post_void` ([post-void.md](post-void.md)). 6.4 completion integrity stays **sale-direction**; those three actions are prohibited on return lines ([returns.md](returns.md) §16 / §19).
 
 | Role | Perform | Approve |
 |---|---|---|
@@ -140,7 +140,7 @@ Currently **effective** executed fact on a working/completed/cancelled transacti
 |---|---|
 | `id` | UUIDv7 |
 | `pos_transaction_id` | FK, required |
-| `pos_transaction_line_id` | FK; **NOT NULL** through 6.5 (line-scoped, including unlinked return). Dropping that CHECK is 6.6 (`post_void`). |
+| `pos_transaction_line_id` | FK; **NOT NULL** through 6.5 (line-scoped, including unlinked return). 6.6 drops that CHECK for transaction-scoped `post_void` ([post-void.md](post-void.md)). |
 | `action_type` | `price_override` \| `line_discount` \| `tax_class_override` |
 | `performed_by_user_id` / `performed_by_name_snapshot` | required |
 | `approved_by_user_id` / `approved_by_name_snapshot` | required iff `approval_required`; else NULL |

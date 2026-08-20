@@ -11,8 +11,13 @@ module Pos
     end
 
     def verify!
+      verify_post_void_transaction!
       @transaction.pos_transaction_lines.each do |line|
         actions = line.pos_controlled_actions.index_by(&:action_type)
+        if line.post_void_generated?
+          raise Pos::Error, "post-void lines cannot have controlled actions" if actions.any?
+          next
+        end
         if line.linked_return?
           raise Pos::Error, "return lines cannot have controlled actions" if actions.any?
           next
@@ -42,6 +47,17 @@ module Pos
     end
 
     private
+
+    def verify_post_void_transaction!
+      actions = @transaction.pos_controlled_actions.where(action_type: "post_void")
+      if @transaction.post_void?
+        raise Pos::Error, "post-void is missing the post_void fact" unless actions.one?
+        action = actions.first
+        raise Pos::Error, "post_void cannot target a line" if action.pos_transaction_line_id.present?
+      elsif actions.exists?
+        raise Pos::Error, "ordinary transactions cannot include post_void"
+      end
+    end
 
     def verify_unlinked!(line, actions)
       if actions.key?("price_override") || actions.key?("line_discount") || actions.key?("tax_class_override")

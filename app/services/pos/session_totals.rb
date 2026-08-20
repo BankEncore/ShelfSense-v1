@@ -15,15 +15,15 @@ module Pos
     end
 
     def subtotal_cents
-      completed_transactions.sum(:subtotal_cents)
+      commercial_transactions.sum(:subtotal_cents)
     end
 
     def discount_cents
-      completed_transactions.sum(:discount_cents)
+      commercial_transactions.sum(:discount_cents)
     end
 
     def tax_cents
-      completed_transactions.sum(:tax_cents)
+      commercial_transactions.sum(:tax_cents)
     end
 
     def total_cents
@@ -31,23 +31,43 @@ module Pos
     end
 
     def return_subtotal_cents
-      completed_transactions.sum(:return_subtotal_cents)
+      commercial_transactions.sum(:return_subtotal_cents)
     end
 
     def return_discount_cents
-      completed_transactions.sum(:return_discount_cents)
+      commercial_transactions.sum(:return_discount_cents)
     end
 
     def return_tax_cents
-      completed_transactions.sum(:return_tax_cents)
+      commercial_transactions.sum(:return_tax_cents)
     end
 
     def return_total_cents
-      completed_transactions.sum(:return_total_cents)
+      commercial_transactions.sum(:return_total_cents)
     end
 
     def net_cents
       completed_transactions.sum(:signed_net_cents)
+    end
+
+    def post_void_transaction_count
+      post_void_transactions.count
+    end
+
+    def post_void_merchandise_cents
+      signed_post_void_sum("subtotal_cents - return_subtotal_cents")
+    end
+
+    def post_void_discount_cents
+      signed_post_void_sum("discount_cents - return_discount_cents")
+    end
+
+    def post_void_tax_cents
+      signed_post_void_sum("tax_cents - return_tax_cents")
+    end
+
+    def post_void_net_cents
+      post_void_transactions.sum(:signed_net_cents)
     end
 
     def cash_tender_cents
@@ -131,6 +151,18 @@ module Pos
 
     def completed_transactions
       @session.pos_transactions.completed
+    end
+
+    def commercial_transactions
+      completed_transactions.where(post_void_of_transaction_id: nil)
+    end
+
+    def post_void_transactions
+      completed_transactions.where.not(post_void_of_transaction_id: nil)
+    end
+
+    def signed_post_void_sum(expression)
+      post_void_transactions.sum(Arel.sql(expression)).to_i
     end
   end
 end

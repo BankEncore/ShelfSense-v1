@@ -84,11 +84,31 @@ module Pos
 
       lines.each do |line|
         next unless line.is_a?(Hash) && line["direction"] == "return"
+        next if line["post_void_source_line_id"].present?
 
         reason = line["return_reason"]
         raise Pos::Error, "completed envelope is missing return_reason" unless reason.is_a?(Hash)
         raise Pos::Error, "completed envelope is missing return reason code" if reason["code"].blank?
         raise Pos::Error, "completed envelope is missing return reason name" if reason["name"].blank?
+      end
+      verify_corrections!
+    end
+
+    def verify_corrections!
+      corrections = @envelope["corrections"]
+      return if corrections.nil?
+
+      raise Pos::Error, "completed envelope corrections are invalid" unless corrections.is_a?(Hash)
+      if corrections["return_of_transaction_id"].present?
+        raise Pos::Error, "completed envelope cannot include corrections.return_of_transaction_id"
+      end
+      post_void_id = corrections["post_void_of_transaction_id"]
+      original_id = corrections["original_transaction_id"]
+      if post_void_id.present?
+        raise Pos::Error, "completed envelope is missing post_void_of_transaction_id" if post_void_id.blank?
+        raise Pos::Error, "completed envelope is missing original_transaction_id" if original_id.blank?
+      elsif original_id.present?
+        raise Pos::Error, "completed envelope corrections are invalid"
       end
     end
 
@@ -178,7 +198,13 @@ module Pos
           raise Pos::Error, "completed envelope is missing #{key}" if action[key].blank?
         end
         subject = action["subject"]
-        raise Pos::Error, "completed envelope is missing subject line_id" unless subject.is_a?(Hash) && subject["line_id"].present?
+        if action["action"] == "post_void"
+          if subject.is_a?(Hash) && subject["line_id"].present?
+            raise Pos::Error, "post_void cannot include subject line_id"
+          end
+        else
+          raise Pos::Error, "completed envelope is missing subject line_id" unless subject.is_a?(Hash) && subject["line_id"].present?
+        end
         reason = action["reason"]
         raise Pos::Error, "completed envelope is missing reason" unless reason.is_a?(Hash)
         raise Pos::Error, "completed envelope is missing reason code" if reason["code"].blank?
@@ -206,7 +232,8 @@ module Pos
       lines.each do |line|
         next unless line.is_a?(Hash)
 
-        unlinked = line["direction"] == "return" && line["original_transaction_line_id"].blank?
+        unlinked = line["direction"] == "return" && line["original_transaction_line_id"].blank? &&
+                   line["post_void_source_line_id"].blank?
         if unlinked
           raise Pos::Error, "completed envelope cannot include override" if line.key?("override")
           raise Pos::Error, "completed envelope cannot include discount" if line.key?("discount")
@@ -230,6 +257,8 @@ module Pos
     end
 
     def verify_return_price_adjustment_shape!(line)
+      return if line["post_void_source_line_id"].present?
+
       adjustment = line["return_price_adjustment"]
       sale = line["direction"] != "return"
       linked = line["direction"] == "return" && line["original_transaction_line_id"].present?
@@ -274,6 +303,12 @@ module Pos
 
         line_id = line["line_id"].to_s
         targeting = actions.select { |action| action.dig("subject", "line_id").to_s == line_id }
+        if line["post_void_source_line_id"].present?
+          raise Pos::Error, "completed envelope cannot include return_reason" if line.key?("return_reason")
+          raise Pos::Error, "completed envelope cannot include original_transaction_line_id" if line["original_transaction_line_id"].present?
+          next
+        end
+
         if line["direction"] == "return" && line["original_transaction_line_id"].blank?
           unlinked_matches = targeting.select { |action| action["action"] == "unlinked_return" }
           raise Pos::Error, "completed envelope is missing unlinked_return action" unless unlinked_matches.one?

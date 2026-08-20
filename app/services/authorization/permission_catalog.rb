@@ -91,7 +91,9 @@ module Authorization
       { key: "pos.tax_class_override.perform", group_key: "pos", name: "Perform Tax Class override", scope_type: "either" },
       { key: "pos.tax_class_override.approve", group_key: "pos", name: "Approve Tax Class override", scope_type: "either" },
       { key: "pos.unlinked_return.perform", group_key: "pos", name: "Perform unlinked return", scope_type: "either" },
-      { key: "pos.unlinked_return.approve", group_key: "pos", name: "Approve unlinked return", scope_type: "either" }
+      { key: "pos.unlinked_return.approve", group_key: "pos", name: "Approve unlinked return", scope_type: "either" },
+      { key: "pos.post_void.perform", group_key: "pos", name: "Perform post-void", scope_type: "either" },
+      { key: "pos.post_void.approve", group_key: "pos", name: "Approve post-void", scope_type: "either" }
     ].freeze
 
     PERMISSIONS = (PHASE1_PERMISSIONS + PHASE2_PERMISSIONS + PHASE3_PERMISSIONS + PHASE4_PERMISSIONS).freeze
@@ -128,6 +130,8 @@ module Authorization
       pos.tax_class_override.approve
       pos.unlinked_return.perform
       pos.unlinked_return.approve
+      pos.post_void.perform
+      pos.post_void.approve
     ].freeze
 
     ROLES = [
@@ -166,6 +170,7 @@ module Authorization
           pos.line_discount.perform
           pos.tax_class_override.perform
           pos.unlinked_return.perform
+          pos.post_void.perform
         ]
       }
     ].freeze

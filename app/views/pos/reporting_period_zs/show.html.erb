@@ -13,6 +13,7 @@
     <div><dt>Sales tax</dt><dd><%= format_money_cents(@period.finalized_tax_cents) %></dd></div>
     <div><dt>Sales total</dt><dd><%= format_money_cents(@period.finalized_total_cents) %></dd></div>
     <div><dt>Returns total</dt><dd><%= pos_optional_money_cents(@period.finalized_return_total_cents) %></dd></div>
+    <div><dt>Post-void adjustments</dt><dd><%= pos_optional_signed_money_cents(@period.finalized_post_void_net_cents) %></dd></div>
     <div><dt>Net</dt><dd><%= @period.finalized_net_cents.nil? ? pos_optional_money_cents(nil) : format_signed_money_cents(@period.finalized_net_cents) %></dd></div>
     <div><dt>Cash payments</dt><dd><%= format_money_cents(@period.finalized_cash_payment_cents) %></dd></div>
     <div><dt>Cash refunds</dt><dd><%= pos_optional_money_cents(@period.finalized_cash_refund_cents) %></dd></div>

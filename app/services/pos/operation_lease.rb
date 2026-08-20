@@ -6,20 +6,21 @@ module Pos
 
     Result = Struct.new(:operation, :replayed, keyword_init: true)
 
-    def self.begin!(register_id:, operation_id:, command_payload:, store_id: nil, pos_transaction_id: nil)
+    def self.begin!(register_id:, operation_id:, command_payload:, store_id: nil, pos_transaction_id: nil, command_type: PosOperation::COMMAND_TYPE)
       new.begin!(
         register_id: register_id,
         operation_id: operation_id,
         command_payload: command_payload,
         store_id: store_id,
-        pos_transaction_id: pos_transaction_id
+        pos_transaction_id: pos_transaction_id,
+        command_type: command_type
       )
     end
 
-    def begin!(register_id:, operation_id:, command_payload:, store_id:, pos_transaction_id:)
+    def begin!(register_id:, operation_id:, command_payload:, store_id:, pos_transaction_id:, command_type:)
       hash = Idempotency::CanonicalJson.hash(command_payload)
       existing = PosOperation.find_by(id: operation_id)
-      return resolve_existing!(existing, register_id: register_id, command_payload: command_payload) if existing
+      return resolve_existing!(existing, register_id: register_id, command_payload: command_payload, command_type: command_type) if existing
 
       begin
         create_in_flight!(
@@ -27,17 +28,18 @@ module Pos
           operation_id: operation_id,
           hash: hash,
           store_id: store_id,
-          pos_transaction_id: pos_transaction_id
+          pos_transaction_id: pos_transaction_id,
+          command_type: command_type
         )
       rescue ActiveRecord::RecordNotUnique
         recovered = PosOperation.find_by(id: operation_id) || PosOperation.find_by(
           source_id: register_id,
-          command_type: PosOperation::COMMAND_TYPE,
+          command_type: command_type,
           idempotency_key: operation_id
         )
         raise Error, "could not resolve operation uniqueness collision" if recovered.nil?
 
-        resolve_existing!(recovered, register_id: register_id, command_payload: command_payload)
+        resolve_existing!(recovered, register_id: register_id, command_payload: command_payload, command_type: command_type)
       end
     end
 
@@ -48,10 +50,10 @@ module Pos
 
     private
 
-    def create_in_flight!(register_id:, operation_id:, hash:, store_id:, pos_transaction_id:)
+    def create_in_flight!(register_id:, operation_id:, hash:, store_id:, pos_transaction_id:, command_type:)
       operation = PosOperation.create!(
         id: operation_id,
-        command_type: PosOperation::COMMAND_TYPE,
+        command_type: command_type,
         source_id: register_id,
         idempotency_key: operation_id,
         command_payload_hash: hash,
@@ -64,10 +66,10 @@ module Pos
       Result.new(operation: operation, replayed: false)
     end
 
-    def resolve_existing!(existing, register_id:, command_payload:)
+    def resolve_existing!(existing, register_id:, command_payload:, command_type:)
       raise Error, "operation_id reused against another register" if existing.source_id != register_id
-      raise Error, "operation_id reused with a different command type" if existing.command_type != PosOperation::COMMAND_TYPE
-      unless Pos::CompleteTransaction.payload_hash_matches?(existing.command_payload_hash, command_payload)
+      raise Error, "operation_id reused with a different command type" if existing.command_type != command_type
+      unless payload_matches?(existing, command_payload, command_type)
         raise Pos::PayloadMismatch, "idempotency key reused with a different payload"
       end
       return Result.new(operation: existing, replayed: true) if existing.status == "completed"
@@ -85,6 +87,14 @@ module Pos
       end
 
       raise Error, "idempotency operation is in an unexpected status"
+    end
+
+    def payload_matches?(existing, command_payload, command_type)
+      if command_type == PosOperation::COMMAND_TYPE
+        Pos::CompleteTransaction.payload_hash_matches?(existing.command_payload_hash, command_payload)
+      else
+        existing.command_payload_hash == Idempotency::CanonicalJson.hash(command_payload)
+      end
     end
 
     def reclaim_stale_in_flight!(operation)

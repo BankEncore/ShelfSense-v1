@@ -1,13 +1,13 @@
 # frozen_string_literal: true
 
 class PosControlledAction < ApplicationRecord
-  ACTION_TYPES = %w[price_override line_discount tax_class_override unlinked_return].freeze
+  ACTION_TYPES = %w[price_override line_discount tax_class_override unlinked_return post_void].freeze
   POLICY_RESULTS = %w[direct approval_required].freeze
   POLICY_VERSION = "phase6_permission_tier_v1"
   FINGERPRINT_SCHEMA_VERSION = "v1"
 
   belongs_to :pos_transaction
-  belongs_to :pos_transaction_line
+  belongs_to :pos_transaction_line, optional: true
   belongs_to :performed_by_user, class_name: "User"
   belongs_to :approved_by_user, class_name: "User", optional: true
 
@@ -16,7 +16,7 @@ class PosControlledAction < ApplicationRecord
             :executed_at, presence: true
   validates :action_type, inclusion: { in: ACTION_TYPES }
   validates :policy_result, inclusion: { in: POLICY_RESULTS }
-  validates :action_type, uniqueness: { scope: :pos_transaction_line_id }
+  validates :action_type, uniqueness: { scope: :pos_transaction_line_id }, if: -> { pos_transaction_line_id.present? }
   validate :approver_matches_policy
 
   def readonly?

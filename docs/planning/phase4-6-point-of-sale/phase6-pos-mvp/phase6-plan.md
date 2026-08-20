@@ -1,6 +1,6 @@
 # Phase 6 — Operational POS MVP
 
-**Status:** Slice 6.0 contract locked ([mvp-contract.md](mvp-contract.md)). Slice 6.1 merchandise breadth implemented ([merchandise-breadth.md](merchandise-breadth.md)). Slice 6.2 tender breadth implemented ([tender-breadth.md](tender-breadth.md)). Slice 6.3 transaction history implemented ([transaction-history.md](transaction-history.md)). Slice 6.4 controlled actions implemented ([controlled-actions.md](controlled-actions.md)). Slice 6.5 returns implemented (6.5A–D; [returns.md](returns.md)). Next: 6.6 post-void.
+**Status:** Slice 6.0 contract locked ([mvp-contract.md](mvp-contract.md)). Slice 6.1 merchandise breadth implemented ([merchandise-breadth.md](merchandise-breadth.md)). Slice 6.2 tender breadth implemented ([tender-breadth.md](tender-breadth.md)). Slice 6.3 transaction history implemented ([transaction-history.md](transaction-history.md)). Slice 6.4 controlled actions implemented ([controlled-actions.md](controlled-actions.md)). Slice 6.5 returns implemented (6.5A–D; [returns.md](returns.md)). Slice 6.6 post-void implemented ([post-void.md](post-void.md)).
 
 **Authority**
 
@@ -12,6 +12,7 @@
 | [Transaction history](transaction-history.md) | Slice 6.3: completed lookup, detail, reprint |
 | [Controlled actions](controlled-actions.md) | Slice 6.4: price override, line discount, Tax Class override |
 | [Returns](returns.md) | Slice 6.5: linked/unlinked returns, refunds, mixed sale+return (6.5A–D implemented) |
+| [Post-void](post-void.md) | Slice 6.6: whole-transaction compensating fact (implemented) |
 | [Phase 4 plan](../phase4-point-of-sale/phase4-plan.md) | Completion, receipt allocation, inventory posting |
 | [CompletedPosOperation v1](../phase4-point-of-sale/completed-pos-operation-v1.md) | Commercial base; v2 is additive |
 | [POS tax contract](../phase4-point-of-sale/pos-tax-contract.md) | Tax Class / Store Tax; linked-return reversal ([§10](../phase4-point-of-sale/pos-tax-contract.md)) |
@@ -113,7 +114,7 @@ Write the detailed implementation contract for slices 6.6–6.7 immediately befo
 | **6.3** | Transaction history | Lookup, detail, receipt reprint | **Implemented.** Sale workspace does not depend on history |
 | **6.4** | Controlled pricing/actions | Approval framework, price override, line discount, Tax Class override | **Implemented.** Ordinary path stays `direct` unless policy requires a second actor |
 | **6.5** | Returns | Linked, unlinked, price adjustment, mixed sale/return | **Implemented** ([returns.md](returns.md)). Sale-only baskets still complete the same way; Session/Z is direction-aware |
-| **6.6** | Post-void | Controlled whole-transaction correction | Entry is from history; sale path untouched |
+| **6.6** | Post-void | Controlled whole-transaction correction | Implemented ([post-void.md](post-void.md)). Entry is from history; sale path untouched |
 | **6.7** | MVP closeout | Receipts, Z/tender reporting polish, audit/history UX, regression | Additive snapshots; already-finalized periods stay immutable |
 
 ---
@@ -183,7 +184,7 @@ Perform/approve permission keys arrive in this slice. Z finalize stays on `pos.t
 
 ### 6.5 — Returns and exchanges
 
-**6.5A–D implemented. Phase 6.5 complete.** Authority: [returns.md](returns.md). Next: 6.6 post-void.
+**6.5A–D implemented. Phase 6.5 complete.** Authority: [returns.md](returns.md).
 
 No Exchange entity. Returns are new facts; refunds are settlement. Directional Core keeps sale-side `subtotal_cents` / `discount_cents` / `tax_cents` and adds `return_*` plus persisted `signed_net_cents`. `total_cents = abs(signed_net_cents)`.
 
@@ -199,12 +200,14 @@ Working/cancelled returns do not consume eligibility. Concurrency must prevent t
 
 ### 6.6 — Post-void
 
-Correct a transaction that should never have been completed. Distinct from customer return.
+**Implemented (6.6A–B).** Authority: [post-void.md](post-void.md).
 
-- Entry from completed detail: reason, controlled-action authorization, confirmation.
-- Original remains untouched. One linked compensating operation reverses the whole transaction (lines, tenders, inventory, tax/reporting as new-period facts).
-- Yesterday’s Z remains immutable; today receives the correction.
-- Whole transaction only. Cannot post-void twice. Cannot post-void if a completed linked return or prior post-void exists. Cannot edit the generated reversal.
+Correct a transaction that should never have been completed. Distinct from customer return. Correction lineage is `post_void_of_transaction_id` / `post_void_source_line_id` / `post_void_source_tender_id` — not `original_transaction_line_id`.
+
+- Entry from completed detail: reason, controlled-action authorization, per-Card confirmation.
+- Original remains untouched. One compensating completed transaction reverses the whole source (exact historical freeze, `Inventory::PostPostVoid`, tax/reporting as new-period facts).
+- Yesterday’s Z remains immutable; today receives the correction. Session/Z Sales and Returns exclude post-void transactions; additive `finalized_post_void_*` snapshots ship in this slice.
+- Whole transaction only. Cannot post-void twice. Cannot post-void if an effective completed linked return or prior post-void exists. Cannot edit the generated reversal.
 - External Card reversal must be performed and confirmed outside ShelfSense before the corresponding fact is recorded.
 
 Partial correction uses return workflows.
@@ -286,7 +289,7 @@ Fractional quantities
 4. Lock 6.3 history contract → lookup / detail / reprint
 5. Lock 6.4 controlled-action contract → framework, then override / discount / Tax Class
 6. 6.5A–D implemented ([returns.md](returns.md)); Phase 6.5 complete
-7. Lock 6.6 post-void contract → compensating whole-transaction fact
+7. Lock 6.6 post-void contract ([post-void.md](post-void.md)) → compensating whole-transaction fact
 8. Lock 6.7 closeout contract → receipt/Z/audit/keyboard regression (polish, not first truthful reporting)
 ```
 

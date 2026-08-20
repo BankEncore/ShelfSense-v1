@@ -1,0 +1,81 @@
+<% content_for :title, "Post-void #{@transaction.transaction_reference}" %>
+
+<main class="pos-history">
+  <%= render "pos/transactions/chrome" %>
+
+  <h1>Post-void</h1>
+  <p class="muted">Receipt  <%= @transaction.transaction_reference %></p>
+  <p>This corrects a transaction that should not have been completed. It is not a customer return.</p>
+
+  <% if @error.present? %>
+    <p class="pos-enter__alert" role="alert"><%= @error %></p>
+  <% end %>
+
+  <% if @target_session.nil? %>
+    <p class="pos-banner" role="status">Open a register before processing a post-void.</p>
+    <p><%= link_to "Register", pos_resume_register_path, class: "btn" %></p>
+  <% elsif @blocking_working %>
+    <p class="pos-banner" role="status">Complete or cancel the current transaction before post-void.</p>
+    <p><%= link_to "Register", pos_register_workspace_path(register_id: @target_session.register_id), class: "btn" %></p>
+  <% end %>
+
+  <dl class="pos-history__header">
+    <%= render "pos/receipts/directional_totals", transaction: @transaction %>
+  </dl>
+
+  <% if @eligible && @target_session.present? && !@blocking_working && @policy != :prohibited %>
+    <%= form_with url: pos_transaction_post_void_path(@transaction), method: :post, local: true, class: "pos-return-items" do %>
+      <%= hidden_field_tag :operation_id, @operation_id %>
+      <%= hidden_field_tag :reversal_transaction_id, @reversal_transaction_id %>
+
+      <div class="form-field">
+        <%= label_tag :reason_code, "Reason" %>
+        <%= select_tag :reason_code,
+              options_for_select([["Select…", ""]] + @reasons.map { |reason| [reason[:name], reason[:code]] }, @reason_code),
+              id: "reason_code" %>
+      </div>
+      <div class="form-field">
+        <%= label_tag :reason_note, "Note (required for Other)" %>
+        <%= text_field_tag :reason_note, @reason_note, maxlength: 200, id: "reason_note", autocomplete: "off" %>
+      </div>
+
+      <% if @policy == :approval_required %>
+        <div class="form-field">
+          <%= label_tag :approver_username, "Approver username" %>
+          <%= text_field_tag :approver_username, params[:approver_username], id: "approver_username", autocomplete: "off" %>
+        </div>
+        <div class="form-field">
+          <%= label_tag :approver_password, "Approver password" %>
+          <%= password_field_tag :approver_password, nil, id: "approver_password", autocomplete: "off" %>
+        </div>
+      <% end %>
+
+      <% @card_tenders.each_with_index do |tender, index| %>
+        <fieldset class="pos-history__line">
+          <legend>Card tender <%= tender.tender_number %> · <%= format_money_cents(tender.amount_cents) %></legend>
+          <%= hidden_field_tag "card_reversals[#{index}][source_tender_id]", tender.id %>
+          <p class="muted">Confirm that the Card reversal was performed outside ShelfSense.</p>
+          <div class="form-field">
+            <label>
+              <%= check_box_tag "card_reversals[#{index}][confirmed]", "1", false, id: "card_#{tender.id}_confirmed" %>
+              Card reversal confirmed
+            </label>
+          </div>
+          <div class="form-field">
+            <%= label_tag "card_reversals_#{index}_external_reference", "New reversal reference (optional)" %>
+            <%= text_field_tag "card_reversals[#{index}][external_reference]", "",
+                  id: "card_reversals_#{index}_external_reference",
+                  autocomplete: "off" %>
+          </div>
+        </fieldset>
+      <% end %>
+
+      <div class="actions">
+        <%= submit_tag "Post-void", class: "btn" %>
+        <%= link_to "Cancel", pos_transaction_path(@transaction), class: "btn btn--ghost" %>
+      </div>
+    <% end %>
+  <% else %>
+    <p><%= link_to "Back to receipt", pos_transaction_path(@transaction), class: "btn btn--secondary" %></p>
+  <% end %>
+</main>

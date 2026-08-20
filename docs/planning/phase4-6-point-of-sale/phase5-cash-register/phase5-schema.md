@@ -106,6 +106,18 @@ finalized_other_refund_cents
 
 For 6.5+ finalized periods, `finalized_total_cents` remains the **sale-direction** customer total. Do not `SUM(transaction.total_cents)` across mixed/return rows as sales.
 
+### Post-void additions (6.6)
+
+Implemented in [post-void.md](../phase6-pos-mvp/post-void.md) §13. Same additive NULL = not-captured pattern. Signed merchandise/discount/tax/net. New finalize writes `0` when there was no post-void activity. Session/Z Sales and Returns exclude `post_void_of_transaction_id IS NOT NULL`.
+
+```text
+finalized_post_void_transaction_count
+finalized_post_void_merchandise_cents   # signed
+finalized_post_void_discount_cents      # signed
+finalized_post_void_tax_cents           # signed
+finalized_post_void_net_cents           # signed
+```
+
 ### Session-custody aggregates (from closed session snapshots)
 
 | Column | Type | Notes |
