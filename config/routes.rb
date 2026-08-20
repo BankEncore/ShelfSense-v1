@@ -98,6 +98,8 @@ Rails.application.routes.draw do
     post "register/continue", to: "workspaces#continue"
     get "transactions/:transaction_id/return_items", to: "return_items#show", as: :transaction_return_items
     post "transactions/:transaction_id/return_items", to: "return_items#create"
+    get "transactions/:transaction_id/post_void", to: "post_voids#show", as: :transaction_post_void
+    post "transactions/:transaction_id/post_void", to: "post_voids#create"
     post "transactions/:transaction_id/complete", to: "workspaces#complete", as: :transaction_complete
     get "transactions/:id/completed", to: "completed_transactions#show", as: :completed_transaction
     post "register/close", to: "register_closes#create", as: :register_close

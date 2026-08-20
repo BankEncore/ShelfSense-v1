@@ -24,7 +24,7 @@ class PosReportingPeriod < ApplicationRecord
 
   validates :status, :opened_at, :business_date, presence: true
   validates :status, inclusion: { in: STATUSES }
-  validates :finalized_transaction_count, :finalized_session_count,
+  validates :finalized_transaction_count, :finalized_session_count, :finalized_post_void_transaction_count,
             numericality: { only_integer: true, greater_than_or_equal_to: 0 }, allow_nil: true
   validates :finalized_subtotal_cents, :finalized_tax_cents, :finalized_total_cents,
             :finalized_cash_payment_cents, :finalized_opening_float_cents_sum,
@@ -35,6 +35,8 @@ class PosReportingPeriod < ApplicationRecord
             :finalized_card_refund_cents, :finalized_check_refund_cents, :finalized_other_refund_cents,
             numericality: { only_integer: true, greater_than_or_equal_to: 0 }, allow_nil: true
   validates :finalized_closing_expected_cash_cents_sum, :finalized_closing_variance_cents_sum, :finalized_net_cents,
+            :finalized_post_void_merchandise_cents, :finalized_post_void_discount_cents,
+            :finalized_post_void_tax_cents, :finalized_post_void_net_cents,
             numericality: { only_integer: true }, allow_nil: true
   validate :store_matches_register
   validate :finalized_snapshots_match_status
@@ -74,6 +76,8 @@ class PosReportingPeriod < ApplicationRecord
       finalized_return_tax_cents finalized_return_total_cents finalized_net_cents
       finalized_cash_refund_cents finalized_card_refund_cents finalized_check_refund_cents
       finalized_other_refund_cents
+      finalized_post_void_transaction_count finalized_post_void_merchandise_cents
+      finalized_post_void_discount_cents finalized_post_void_tax_cents finalized_post_void_net_cents
     ]
     if additive.any? { |attribute| !self[attribute].nil? }
       errors.add(:base, "tender category snapshots must be blank while the period is open")

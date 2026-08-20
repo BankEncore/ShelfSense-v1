@@ -1,6 +1,6 @@
 # Inventory posting service contract
 
-Status: Implemented with Phase 3 adjustments, Phase 4 quantity-tracked POS sales, Phase 6 Slice 6.1 individual unit sales, Phase 6 Slice 6.5A linked-return restore, and Phase 6 Slice 6.5C unlinked `Inventory::PostReturn` valuation ([returns.md](../phase4-6-point-of-sale/phase6-pos-mvp/returns.md) §15).
+Status: Implemented with Phase 3 adjustments, Phase 4 quantity-tracked POS sales, Phase 6 Slice 6.1 individual unit sales, Phase 6 Slice 6.5A linked-return restore, Phase 6 Slice 6.5C unlinked `Inventory::PostReturn` valuation ([returns.md](../phase4-6-point-of-sale/phase6-pos-mvp/returns.md) §15), and Phase 6 Slice 6.6 `Inventory::PostPostVoid` ([post-void.md](../phase4-6-point-of-sale/phase6-pos-mvp/post-void.md) §9).
 
 Later purchasing, POS, transfer, reservation, and disposition workflows must post physical and valuation effects only through the named inventory posting services. Controllers, callbacks, imports, and future workflows must not update `inventory_balances` directly.
 
@@ -12,6 +12,7 @@ Later purchasing, POS, transfer, reservation, and disposition workflows must pos
 | `Inventory::ReverseAdjustment` | Exact compensating reversal of a posted adjustment | (existing reversal outbox/audit) |
 | `Inventory::PostSale` | Completed POS sale-line depletion | `inventory.sale_posted` |
 | `Inventory::PostReturn` | Completed POS return-line restore (6.5) | `inventory.return_posted` |
+| `Inventory::PostPostVoid` | Exact inverse of a source POS line's posted ledger/valuation (6.6) | `inventory.post_void_posted` |
 
 `Inventory::PostSale` and `Inventory::PostReturn` must not call `Inventory::PostAdjustment`, must not emit `inventory.adjustment_posted`, and must not require `adjustment_reason`. Duplicate protection is the unique `(source_type, source_id, effect_sequence)` constraint on ledger and valuation rows.
 
@@ -107,6 +108,40 @@ valuation   = acquisition (stock in)
 
 `Pos::CompleteTransaction` skips `Inventory::PostReturn` for `non_inventory` lines. Customer refund price never writes inventory value. Outbox/audit `inventory.return_posted` include `linked` and `valuation_basis`.
 
+## `Inventory::PostPostVoid`
+
+Named 6.6 boundary. Joins the **caller's** transaction. Do not call `PostSale`, `PostReturn`, or `PostAdjustment`. Authority: [post-void.md](../phase4-6-point-of-sale/phase6-pos-mvp/post-void.md) §9.
+
+Required inputs:
+
+- generated post-void `line` (`PosTransactionLine` with `post_void_source_line_id`)
+- `occurred_at`
+- `business_date`
+- `actor`
+
+Lock order matches `PostSale`:
+
+```text
+InventoryBalance   # FOR UPDATE (lock_or_create)
+InventoryUnit      # FOR UPDATE when individual
+```
+
+Per tracked source line:
+
+```text
+locate source ledger/valuation (source_type = PosTransactionLine, source_id = source line)
+write inverse quantity_delta and value_delta_cents
+reversal_of_id = source entries (unique; cannot reverse twice)
+new source_type/source_id = generated line
+entry_type = reversal
+non_inventory: skip
+Used reversing sale: unit currently removed; restore at exact original depletion value
+Used reversing return: unit currently on_hand at exact source-return acquisition value; then remove
+quantity: inverse must leave on_hand >= 0, value >= 0, on_hand == 0 → value == 0
+```
+
+Fail rather than recost when later inventory activity makes exact inversion impossible. Outbox/audit `inventory.post_void_posted`.
+
 ## `Inventory::PostAdjustment` required inputs
 
 - `store`, `product_variant`, `adjustment_reason`, signed `quantity_delta`
@@ -121,4 +156,4 @@ One transaction writes: posted adjustment, physical ledger entry, valuation ledg
 
 ## Tracking
 
-Uses `ProductVariant#derived_inventory_tracking`. `PostAdjustment` rejects `non_inventory` / nil. `PostSale` and `PostReturn` accept `quantity` and `individual` and reject `non_inventory` / nil. Does not add a persisted tracking column. Unit lifecycle remains `on_hand | removed`; POS sales are distinguished by ledger `entry_type = sale` and `source_type = PosTransactionLine`; POS returns use `entry_type = return`.
+Uses `ProductVariant#derived_inventory_tracking`. `PostAdjustment` rejects `non_inventory` / nil. `PostSale`, `PostReturn`, and `PostPostVoid` accept `quantity` and `individual` and reject `non_inventory` / nil. Does not add a persisted tracking column. Unit lifecycle remains `on_hand | removed`; POS sales are distinguished by ledger `entry_type = sale` and `source_type = PosTransactionLine`; POS returns use `entry_type = return`; post-void uses `entry_type = reversal` with `reversal_of_id`.

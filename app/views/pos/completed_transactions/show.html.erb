@@ -13,6 +13,7 @@
 
     <h1 tabindex="-1" autofocus>Transaction complete</h1>
     <p class="pos-receipt__ref"><%= @transaction.transaction_reference %></p>
+    <%= render "pos/receipts/post_void_banner", transaction: @transaction, linked: true %>
 
     <dl class="pos-receipt__totals">
       <%= render "pos/receipts/directional_totals", transaction: @transaction %>
@@ -31,10 +32,12 @@
       <% @transaction.pos_transaction_lines.each do |line| %>
         <li>
           <%= line.quantity %> ×
-          <%= line.return? ? "RETURN #{pos_line_description(line)}" : pos_line_description(line) %>
+          <%= pos_line_kind_prefix(line).present? ? "#{pos_line_kind_prefix(line)} #{pos_line_description(line)}" : pos_line_description(line) %>
           <%= format_signed_money_cents(pos_line_amount_cents(line)) %>
         </li>
-        <% if line.linked_return? && line.original_transaction_line&.pos_transaction %>
+        <% if line.post_void_generated? && line.post_void_source_line&.pos_transaction %>
+          <li class="muted">Post-void of <%= line.post_void_source_line.pos_transaction.transaction_reference %></li>
+        <% elsif line.linked_return? && line.original_transaction_line&.pos_transaction %>
           <li class="muted">Return from <%= line.original_transaction_line.pos_transaction.transaction_reference %></li>
         <% elsif line.unlinked_return? %>
           <li class="muted">Unlinked return</li>

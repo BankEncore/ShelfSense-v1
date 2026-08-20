@@ -1,6 +1,6 @@
 # Phase 5 Slice 3 — Receipt print + blind close / Z
 
-**Status:** Implemented. HTTP/domain contract for Slice 3 print, blind close, and Z screens. 6.5B added directional returns/refunds and nullable pre-6.5 snapshots ([returns.md](../phase6-pos-mvp/returns.md) §29).
+**Status:** Implemented. HTTP/domain contract for Slice 3 print, blind close, and Z screens. 6.5B added directional returns/refunds and nullable pre-6.5 snapshots ([returns.md](../phase6-pos-mvp/returns.md) §29). 6.6 presents Post-void adjustments separately from Sales/Returns ([post-void.md](../phase6-pos-mvp/post-void.md) §13).
 
 **Authority:** Cashier-facing print, blind Session close, and immutable Z screens. Domain close and finalize remain in Slice 1 (`Pos::CloseSession`, `Pos::FinalizeReportingPeriod`, `Pos::SessionTotals`, `Pos::PeriodTotals`). Selling workspace and on-screen completion remain in [register-workspace.md](register-workspace.md). Receipt identity remains in [receipt-identity.md](../phase4-point-of-sale/receipt-identity.md).
 
@@ -378,5 +378,5 @@ X reports
 reopen Session
 reopen/fix finalized Z
 offline POS
-returns / discounts / post-void   # 6.5B added directional Session/Z; discounts are 6.4; post-void is 6.6
+returns / discounts   # 6.5B added directional Session/Z; discounts are 6.4; 6.6 Session/Z Post-void adjustments are in this contract
 ```

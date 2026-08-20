@@ -114,6 +114,32 @@ module PosHelper
     format_money_cents(cents)
   end
 
+  def pos_optional_signed_money_cents(cents)
+    return "not captured" if cents.nil?
+
+    format_signed_money_cents(cents)
+  end
+
+  def pos_line_kind_prefix(line)
+    if line.post_void_generated?
+      "POST-VOID"
+    elsif line.return?
+      "RETURN"
+    end
+  end
+
+  def pos_post_void_merchandise_cents(transaction)
+    transaction.subtotal_cents - transaction.return_subtotal_cents
+  end
+
+  def pos_post_void_discount_cents(transaction)
+    transaction.discount_cents - transaction.return_discount_cents
+  end
+
+  def pos_post_void_tax_cents(transaction)
+    transaction.tax_cents - transaction.return_tax_cents
+  end
+
   def pos_unlinked_return_price_adjusted?(line)
     line.unlinked_return? && line.selling_unit_price_cents != line.reference_unit_price_cents
   end

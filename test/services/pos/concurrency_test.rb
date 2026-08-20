@@ -839,6 +839,162 @@ class Pos::ConcurrencyTest < ActiveSupport::TestCase
     end
   end
 
+  test "two registers racing post-void of the same source yield one reversal" do
+    Pos::TenderTypes.seed!
+    open_quantity_stock(store: @store, variant: @variant, actor: @actor, quantity: 5)
+    ready = prepare_sale(register_number: 61, presented_cents: 2500)
+    source = Pos::CompleteTransaction.call(
+      transaction: ready[:transaction],
+      actor: @actor,
+      operation_id: SecureRandom.uuid_v7,
+      expected_lock_version: ready[:transaction].lock_version,
+      expected_total_cents: ready[:transaction].total_cents
+    ).transaction
+
+    first = pos_open_context(
+      store: @store,
+      actor: @actor,
+      register: Register.create!(store: @store, register_number: 62, name: "PV A"),
+      opening_float_cents: 0
+    )
+    second = pos_open_context(
+      store: @store,
+      actor: @actor,
+      register: Register.create!(store: @store, register_number: 63, name: "PV B"),
+      opening_float_cents: 0
+    )
+
+    source_id = source.id
+    actor_id = @actor.id
+    session_ids = [ first[:session].id, second[:session].id ]
+    results = Array.new(2)
+    errors = Array.new(2)
+    ready_q = Queue.new
+    go = Queue.new
+    threads = session_ids.each_with_index.map do |session_id, i|
+      Thread.new do
+        ActiveRecord::Base.connection_pool.with_connection do
+          ready_q << true
+          go.pop
+          results[i] = Pos::PostVoidTransaction.call(
+            source: PosTransaction.find(source_id),
+            actor: User.find(actor_id),
+            session: PosSession.find(session_id),
+            operation_id: SecureRandom.uuid_v7,
+            reversal_transaction_id: SecureRandom.uuid_v7,
+            reason_code: "entered_in_error"
+          )
+        rescue StandardError => e
+          errors[i] = e
+        end
+      end
+    end
+    2.times { ready_q.pop }
+    2.times { go << true }
+    threads.each { |thread| assert thread.join(30), "thread did not finish" }
+
+    successes = results.compact
+    failures = errors.compact
+    assert_equal 1, successes.size, failures.map(&:message).inspect
+    assert_equal 1, failures.size, successes.inspect
+    assert_match(/already been post-voided/, failures.first.message)
+    assert_equal 1, PosTransaction.uncached {
+      PosTransaction.completed.where(post_void_of_transaction_id: source_id).count
+    }
+    assert_equal 1, InventoryLedgerEntry.uncached {
+      InventoryLedgerEntry.where(entry_type: "reversal", source_type: "PosTransactionLine").count
+    }
+  end
+
+  test "linked return completion versus post-void never both succeed" do
+    Pos::TenderTypes.seed!
+    open_quantity_stock(store: @store, variant: @variant, actor: @actor, quantity: 5)
+    ready = prepare_sale(register_number: 64, presented_cents: 2500)
+    source = Pos::CompleteTransaction.call(
+      transaction: ready[:transaction],
+      actor: @actor,
+      operation_id: SecureRandom.uuid_v7,
+      expected_lock_version: ready[:transaction].lock_version,
+      expected_total_cents: ready[:transaction].total_cents
+    ).transaction
+    linked = prepare_linked_return(register_number: 65, original_line: source.pos_transaction_lines.first)
+    pv_context = pos_open_context(
+      store: @store,
+      actor: @actor,
+      register: Register.create!(store: @store, register_number: 66, name: "PV race"),
+      opening_float_cents: 0
+    )
+
+    source_id = source.id
+    linked_id = linked[:transaction].id
+    linked_lock = linked[:transaction].lock_version
+    linked_total = linked[:transaction].total_cents
+    linked_net = linked[:transaction].signed_net_cents
+    session_id = pv_context[:session].id
+    actor_id = @actor.id
+
+    complete_result = nil
+    post_void_result = nil
+    complete_error = nil
+    post_void_error = nil
+    ready_q = Queue.new
+    go = Queue.new
+    threads = [
+      Thread.new do
+        ActiveRecord::Base.connection_pool.with_connection do
+          ready_q << true
+          go.pop
+          complete_result = Pos::CompleteTransaction.call(
+            transaction: PosTransaction.find(linked_id),
+            actor: User.find(actor_id),
+            operation_id: SecureRandom.uuid_v7,
+            expected_lock_version: linked_lock,
+            expected_total_cents: linked_total,
+            expected_signed_net_cents: linked_net
+          )
+        rescue StandardError => e
+          complete_error = e
+        end
+      end,
+      Thread.new do
+        ActiveRecord::Base.connection_pool.with_connection do
+          ready_q << true
+          go.pop
+          post_void_result = Pos::PostVoidTransaction.call(
+            source: PosTransaction.find(source_id),
+            actor: User.find(actor_id),
+            session: PosSession.find(session_id),
+            operation_id: SecureRandom.uuid_v7,
+            reversal_transaction_id: SecureRandom.uuid_v7,
+            reason_code: "entered_in_error"
+          )
+        rescue StandardError => e
+          post_void_error = e
+        end
+      end
+    ]
+    2.times { ready_q.pop }
+    2.times { go << true }
+    threads.each { |thread| assert thread.join(30), "thread did not finish" }
+
+    successes = [ complete_result, post_void_result ].compact
+    failures = [ complete_error, post_void_error ].compact
+    assert_equal 1, successes.size, failures.map(&:message).inspect
+    assert_equal 1, failures.size, successes.inspect
+
+    linked_txn = PosTransaction.uncached { PosTransaction.find(linked_id) }
+    post_voids = PosTransaction.uncached { PosTransaction.completed.where(post_void_of_transaction_id: source_id) }
+    if complete_result
+      assert linked_txn.completed?
+      assert_equal 0, post_voids.count
+      assert_match(/linked return exists|already been post-voided/, post_void_error.message)
+    else
+      assert_equal 1, post_voids.count
+      refute linked_txn.completed?
+      assert_match(/post-voided|linked return exists/, complete_error.message)
+    end
+  end
+
   private
 
   def prepare_sale(register_number:, presented_cents:)

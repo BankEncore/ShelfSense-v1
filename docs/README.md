@@ -28,7 +28,7 @@ This directory contains the project’s technical authority, development guidanc
 | [Phase 5 cash register schema](planning/phase4-6-point-of-sale/phase5-cash-register/phase5-schema.md) | Implemented session close snapshots and reporting-period Z aggregates |
 | [Phase 5 register workspace](planning/phase4-6-point-of-sale/phase5-cash-register/register-workspace.md) | Slice 2 open gate, modes, HTTP/retry, focus, completion receipt vs print |
 | [Phase 5 register workspace UX](planning/phase4-6-point-of-sale/phase5-cash-register/register-workspace-ux.md) | Slice 2 low-fidelity wireframes (focus, keys, Turbo regions) |
-| [Phase 6 POS MVP plan](planning/phase4-6-point-of-sale/phase6-pos-mvp/phase6-plan.md) | Phase 6 slice map, deferrals, merge-to-main, and acceptance (6.0–6.5 implemented; 6.6 next) |
+| [Phase 6 POS MVP plan](planning/phase4-6-point-of-sale/phase6-pos-mvp/phase6-plan.md) | Phase 6 slice map, deferrals, merge-to-main, and acceptance (6.0–6.6 implemented; 6.7 next) |
 | [Phase 6 MVP contract](planning/phase4-6-point-of-sale/phase6-pos-mvp/mvp-contract.md) | Slice 6.0 CompletedPosOperation v2 and cross-cutting locks |
 | [Phase 6 merchandise breadth](planning/phase4-6-point-of-sale/phase6-pos-mvp/merchandise-breadth.md) | Slice 6.1 Used/individual and non-inventory sales (implemented) |
 | [Phase 6 tender breadth](planning/phase4-6-point-of-sale/phase6-pos-mvp/tender-breadth.md) | Slice 6.2 Cash/Card/Check/Other settlement (implemented) |

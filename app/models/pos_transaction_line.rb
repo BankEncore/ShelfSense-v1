@@ -11,6 +11,7 @@ class PosTransactionLine < ApplicationRecord
   belongs_to :default_tax_class, class_name: "TaxClass", optional: true
   belongs_to :inventory_unit, optional: true
   belongs_to :original_transaction_line, class_name: "PosTransactionLine", optional: true
+  belongs_to :post_void_source_line, class_name: "PosTransactionLine", optional: true
   has_many :pos_line_tax_components, dependent: :destroy
   has_many :pos_controlled_actions, dependent: :destroy
 
@@ -31,12 +32,16 @@ class PosTransactionLine < ApplicationRecord
     direction == "return"
   end
 
+  def post_void_generated?
+    post_void_source_line_id.present?
+  end
+
   def linked_return?
-    return? && original_transaction_line_id.present?
+    return? && original_transaction_line_id.present? && !post_void_generated?
   end
 
   def unlinked_return?
-    return? && original_transaction_line_id.blank?
+    return? && original_transaction_line_id.blank? && !post_void_generated?
   end
 
   def unit_line?
@@ -80,6 +85,14 @@ class PosTransactionLine < ApplicationRecord
   private
 
   def return_reason_rules
+    if post_void_generated?
+      if original_transaction_line_id.present? || return_reason_code.present? ||
+         return_reason_name_snapshot.present? || return_reason_note.present?
+        errors.add(:base, "post-void lines cannot have return fields")
+      end
+      return
+    end
+
     if sale?
       if original_transaction_line_id.present? || return_reason_code.present? ||
          return_reason_name_snapshot.present? || return_reason_note.present?

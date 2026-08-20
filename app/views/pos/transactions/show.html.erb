@@ -5,6 +5,7 @@
 
   <div class="pos-history__detail pos-no-print">
     <h1>Receipt  <%= @transaction.transaction_reference %></h1>
+    <%= render "pos/receipts/post_void_banner", transaction: @transaction, linked: true %>
     <dl class="pos-history__header">
       <div><dt>Business date</dt><dd><%= @transaction.business_date.iso8601 %></dd></div>
       <div><dt>Completed</dt><dd><%= format_store_timestamp(@transaction.completed_at, @transaction.store) %></dd></div>
@@ -15,6 +16,26 @@
     <dl class="pos-history__header">
       <%= render "pos/receipts/directional_totals", transaction: @transaction %>
     </dl>
+
+    <% if @post_void_eligible %>
+      <p><%= link_to "Post-void", pos_transaction_post_void_path(@transaction), class: "btn" %></p>
+    <% end %>
+
+    <% @transaction.pos_controlled_actions.select { |action| action.action_type == "post_void" }.each do |action| %>
+      <section aria-label="post void">
+        <h2>Post-void</h2>
+        <dl class="pos-history__header">
+          <div><dt>Performed by</dt><dd><%= action.performed_by_name_snapshot %></dd></div>
+          <% if action.approved_by_name_snapshot.present? %>
+            <div><dt>Approved by</dt><dd><%= action.approved_by_name_snapshot %></dd></div>
+          <% end %>
+          <div><dt>Reason</dt><dd><%= action.reason_name_snapshot %></dd></div>
+          <% if action.reason_note.present? %>
+            <div><dt>Note</dt><dd><%= action.reason_note %></dd></div>
+          <% end %>
+        </dl>
+      </section>
+    <% end %>
 
     <% if @returnable %>
       <p><%= link_to "Return items", pos_transaction_return_items_path(@transaction), class: "btn" %></p>

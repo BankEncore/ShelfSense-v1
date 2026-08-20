@@ -13,7 +13,12 @@ module Pos
       @period = @transaction.reporting_period
       @tenders = @transaction.pos_tenders.ordered
       @tender = @tenders.find { |tender| tender.cash? && tender.direction == "payment" }
-      @transaction.pos_transaction_lines.includes(original_transaction_line: :pos_transaction).load
+      @transaction.pos_transaction_lines.includes(
+        original_transaction_line: :pos_transaction,
+        post_void_source_line: :pos_transaction
+      ).load
+      @transaction.post_void_of
+      @transaction.post_void
       session[:pos_register_id] = @register.id
     rescue Pos::Denied
       raise ActiveRecord::RecordNotFound

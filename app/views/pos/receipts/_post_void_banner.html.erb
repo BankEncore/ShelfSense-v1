@@ -1,0 +1,19 @@
+<%#
+  locals: transaction:, linked: false
+%>
+<% if transaction.post_void? && transaction.post_void_of %>
+  <p class="pos-receipt__reprint">
+    POST-VOID of
+    <% if linked %>
+      <%= link_to transaction.post_void_of.transaction_reference, pos_transaction_path(transaction.post_void_of) %>
+    <% else %>
+      <%= transaction.post_void_of.transaction_reference %>
+    <% end %>
+  </p>
+<% elsif transaction.post_void.present? %>
+  <p class="pos-receipt__reprint">POST-VOIDED</p>
+  <p class="pos-receipt__post-void-note">This transaction has been post-voided and is no longer valid.</p>
+  <% if linked %>
+    <p>Post-voided by <%= link_to transaction.post_void.transaction_reference, pos_transaction_path(transaction.post_void) %></p>
+  <% end %>
+<% end %>

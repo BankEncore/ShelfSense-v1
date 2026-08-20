@@ -144,6 +144,7 @@ One row for working and completed (or cancelled) commercial state.
 | `reporting_period_id` | uuid | FK, null: false (denormalized for query convenience; must match session) |
 | `cashier_user_id` | uuid | FK, null: false |
 | `cashier_name_snapshot` | string | nullable; 6.3 display name at completion. Null on legacy rows → history shows “Not captured”. Not part of `pos_transactions_status_null_rules`. |
+| `post_void_of_transaction_id` | uuid | 6.6 nullable FK → `pos_transactions`; unique where present; CHECK not self |
 | `status` | string | `working`, `completed`, `cancelled` (exact enum locked in migration) |
 | `currency_code` | string(3) | null: false |
 | `occurred_at` | timestamptz | null while working; set at completion (not provisional) |
@@ -210,8 +211,9 @@ One row for working and completed (or cancelled) commercial state.
 | `tax_class_name_snapshot` | string | applied display name (6.4D) |
 | `merchandise_snapshot` | jsonb | **required when transaction is completed**; v1 keys plus unit keys when `inventory_unit_id` is present (see §8.1) |
 | `inventory_unit_id` | uuid | nullable FK → `inventory_units` (`on_delete: :restrict`); required for individually tracked lines; CHECK `inventory_unit_id IS NULL OR quantity = 1` |
-| `original_transaction_line_id` | uuid | 6.5 self-FK; linked return only; NULL = sale or unlinked |
-| `return_reason_code` | string | 6.5; required on return lines |
+| `original_transaction_line_id` | uuid | 6.5 self-FK; linked return only; NULL = sale, unlinked, or post-void generated |
+| `post_void_source_line_id` | uuid | 6.6 self-FK; generated reversal line only; exclusive with `original_transaction_line_id` |
+| `return_reason_code` | string | 6.5; required on ordinary return lines; absent on post-void generated lines |
 | `return_reason_name_snapshot` | string | 6.5 |
 | `return_reason_note` | text | 6.5; required when `other` |
 | `created_at` / `updated_at` | timestamptz | |
@@ -244,7 +246,7 @@ Optional keys may be added in later operation versions without expanding the rel
 
 ### 8.2 `pos_controlled_actions` (6.4)
 
-Currently effective executed controlled-action fact. See [controlled-actions.md](../phase6-pos-mvp/controlled-actions.md). Unique `(pos_transaction_line_id, action_type)` where the line is present. Child of `pos_transactions`; readonly when the parent is commercially immutable. `executed_at`, `created_at`, and `updated_at` are timestamptz. `audit_events` remain the activity log.
+Currently effective executed controlled-action fact. See [controlled-actions.md](../phase6-pos-mvp/controlled-actions.md). Unique `(pos_transaction_line_id, action_type)` where the line is present. 6.6 `post_void` is transaction-scoped (`pos_transaction_line_id` NULL) with unique `(pos_transaction_id, action_type)` where `action_type = 'post_void'`. Child of `pos_transactions`; readonly when the parent is commercially immutable.
 
 ---
 
@@ -289,7 +291,8 @@ Do **not** use abstract `tax_component_id`, treatment enums, or `rate_basis_poin
 | `amount_cents` | bigint | positive magnitude (amount applied) |
 | `amount_presented_cents` | bigint | Cash **payment** only; null on refunds and non-cash |
 | `change_cents` | bigint | Cash **payment** only; null on refunds and non-cash; not a separate refund tender |
-| `external_reference` | text | nullable; 6.2 |
+| `external_reference` | text | nullable; 6.2; post-void does not copy the source Card AUTH |
+| `post_void_source_tender_id` | uuid | 6.6 self-FK; generated reversal tender only |
 | `created_at` / `updated_at` | timestamptz | |
 
 Phase 4/5/6.1: one Cash payment tender per completed sale is sufficient. 6.2: at most one Cash **payment** (partial unique index on `pos_transaction_id` where `behavioral_category = 'cash' AND direction = 'payment'`). 6.5 adds the same uniqueness for one Cash **refund**. Multiple non-cash rows are allowed.
