@@ -1,6 +1,6 @@
 # Phase 6 Slice 6.7 — POS operator workflow
 
-**Status:** Locked. Implementation authority for cashier interaction: POS Home, preferred Register, X Report, keyboard contract, merchandise pickers, `/` search, open-price Standard, return entry, and tender selection.
+**Status:** Implemented. Implementation authority for cashier interaction: POS Home, preferred Register, X Report, keyboard contract, merchandise pickers, `/` search, open-price Standard, return entry, and tender selection.
 
 **Authority:** How the cashier operates MVP capabilities that 6.1–6.6 already made commercially true. Completion, inventory posting, settlement math, controlled-action *policy*, linked/unlinked return *engines*, and post-void *facts* remain those contracts. Receipt *print layout* is 6.8 ([receipt-presentation.md](receipt-presentation.md) / [mvp-closeout.md](mvp-closeout.md)).
 

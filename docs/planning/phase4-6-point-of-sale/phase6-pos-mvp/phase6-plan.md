@@ -1,6 +1,6 @@
 # Phase 6 — Operational POS MVP
 
-**Status:** Slice 6.0 contract locked ([mvp-contract.md](mvp-contract.md)). Slice 6.1 merchandise breadth implemented ([merchandise-breadth.md](merchandise-breadth.md)). Slice 6.2 tender breadth implemented ([tender-breadth.md](tender-breadth.md)). Slice 6.3 transaction history implemented ([transaction-history.md](transaction-history.md)). Slice 6.4 controlled actions implemented ([controlled-actions.md](controlled-actions.md)). Slice 6.5 returns implemented (6.5A–D; [returns.md](returns.md)). Slice 6.6 post-void implemented ([post-void.md](post-void.md)). Slice 6.7 workflow contract locked ([pos-workflow.md](pos-workflow.md)). Slice 6.8 closeout contract locked ([mvp-closeout.md](mvp-closeout.md) / [receipt-presentation.md](receipt-presentation.md)).
+**Status:** Slice 6.0 contract locked ([mvp-contract.md](mvp-contract.md)). Slice 6.1 merchandise breadth implemented ([merchandise-breadth.md](merchandise-breadth.md)). Slice 6.2 tender breadth implemented ([tender-breadth.md](tender-breadth.md)). Slice 6.3 transaction history implemented ([transaction-history.md](transaction-history.md)). Slice 6.4 controlled actions implemented ([controlled-actions.md](controlled-actions.md)). Slice 6.5 returns implemented (6.5A–D; [returns.md](returns.md)). Slice 6.6 post-void implemented ([post-void.md](post-void.md)). Slice 6.7 operator workflow implemented ([pos-workflow.md](pos-workflow.md)). Slice 6.8 closeout implemented ([mvp-closeout.md](mvp-closeout.md) / [receipt-presentation.md](receipt-presentation.md)).
 
 **Authority**
 
@@ -13,9 +13,9 @@
 | [Controlled actions](controlled-actions.md) | Slice 6.4: price override, line discount, Tax Class override |
 | [Returns](returns.md) | Slice 6.5: linked/unlinked returns, refunds, mixed sale+return (6.5A–D implemented) |
 | [Post-void](post-void.md) | Slice 6.6: whole-transaction compensating fact (implemented) |
-| [POS workflow](pos-workflow.md) | Slice 6.7: cashier Home, keys, pickers, open-price Standard, return entry, X Report (locked) |
-| [MVP closeout](mvp-closeout.md) | Slice 6.8: presentation, regression; no new commercial behavior (locked) |
-| [Receipt presentation](receipt-presentation.md) | Customer print/reprint layout (locked; implement in 6.8) |
+| [POS workflow](pos-workflow.md) | Slice 6.7: cashier Home, keys, pickers, open-price Standard, return entry, X Report (implemented) |
+| [MVP closeout](mvp-closeout.md) | Slice 6.8: presentation, regression; no new commercial behavior (implemented) |
+| [Receipt presentation](receipt-presentation.md) | Customer print/reprint layout (implemented in 6.8) |
 | [Phase 4 plan](../phase4-point-of-sale/phase4-plan.md) | Completion, receipt allocation, inventory posting |
 | [CompletedPosOperation v1](../phase4-point-of-sale/completed-pos-operation-v1.md) | Commercial base; v2 is additive |
 | [POS tax contract](../phase4-point-of-sale/pos-tax-contract.md) | Tax Class / Store Tax; linked-return reversal ([§10](../phase4-point-of-sale/pos-tax-contract.md)) |
@@ -104,7 +104,7 @@ main
 
 Letter a slice (6.1A/B, 6.2A–E, 6.4A–D, 6.5A–D, 6.7A–E) only when a single PR would not stay reviewable. A stacked branch is allowed while a predecessor is still in review; the integration target remains `main`.
 
-6.2–6.8 contracts are written. Build 6.7 next ([pos-workflow.md](pos-workflow.md)), then 6.8.
+6.2–6.8 contracts are written. Slices 6.7 and 6.8 are implemented.
 
 ---
 
@@ -119,8 +119,8 @@ Letter a slice (6.1A/B, 6.2A–E, 6.4A–D, 6.5A–D, 6.7A–E) only when a sing
 | **6.4** | Controlled pricing/actions | Approval framework, price override, line discount, Tax Class override | **Implemented.** Ordinary path stays `direct` unless policy requires a second actor |
 | **6.5** | Returns | Linked, unlinked, price adjustment, mixed sale/return | **Implemented** ([returns.md](returns.md)). Sale-only baskets still complete the same way; Session/Z is direction-aware |
 | **6.6** | Post-void | Controlled whole-transaction correction | Implemented ([post-void.md](post-void.md)). Entry is from history; sale path untouched |
-| **6.7** | POS operator workflow | Home, keys, pickers, open-price Standard, return entry, X Report | Contract locked ([pos-workflow.md](pos-workflow.md)). Phase 5 all-Cash Standard path stays green |
-| **6.8** | Presentation & closeout | Customer print, Session/Z/history chrome, regression | Contract locked ([mvp-closeout.md](mvp-closeout.md)). Additive snapshots only; already-finalized periods stay immutable |
+| **6.7** | POS operator workflow | Home, keys, pickers, open-price Standard, return entry, X Report | **Implemented** ([pos-workflow.md](pos-workflow.md)). Phase 5 all-Cash Standard path stays green |
+| **6.8** | Presentation & closeout | Customer print, Session/Z/history chrome, regression | **Implemented** ([mvp-closeout.md](mvp-closeout.md)). Additive snapshots only; already-finalized periods stay immutable |
 
 ---
 
@@ -219,7 +219,7 @@ Partial correction uses return workflows.
 
 ### 6.7 — POS operator workflow
 
-**Contract locked.** Authority: [pos-workflow.md](pos-workflow.md).
+**Implemented.** Authority: [pos-workflow.md](pos-workflow.md).
 
 Make all MVP capabilities practical to operate from one coherent cashier workflow. This is **not** closeout polish.
 
@@ -240,7 +240,7 @@ Delivery letters: 6.7A docs (this lock), 6.7B Home/X, 6.7C keys, 6.7D pickers/op
 
 ### 6.8 — POS presentation and MVP closeout
 
-**Contract locked.** Authority: [mvp-closeout.md](mvp-closeout.md) and [receipt-presentation.md](receipt-presentation.md).
+**Implemented.** Authority: [mvp-closeout.md](mvp-closeout.md) and [receipt-presentation.md](receipt-presentation.md).
 
 No new commercial behavior. Verify and present facts **already represented truthfully** by earlier slices, after 6.7 is usable:
 

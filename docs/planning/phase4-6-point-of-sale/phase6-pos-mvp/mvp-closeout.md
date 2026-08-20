@@ -1,6 +1,6 @@
 # Phase 6 Slice 6.8 — POS presentation and MVP closeout
 
-**Status:** Locked. Implementation authority for customer print, header/footer inheritance, Store legal-name enforcement, Used `condition_name` snapshots, Session/Z and history/audit **presentation**, and the final MVP regression. No new commercial behavior.
+**Status:** Implemented. Implementation authority for customer print, header/footer inheritance, Store legal-name enforcement, Used `condition_name` snapshots, Session/Z and history/audit **presentation**, and the final MVP regression. No new commercial behavior.
 
 **Authority:** Presentation of facts 6.1–6.7 already made true. Customer print layout is [receipt-presentation.md](receipt-presentation.md). Operator lookup/reprint *mechanics* remain [transaction-history.md](transaction-history.md). Workflow/keys remain [pos-workflow.md](pos-workflow.md). Session/Z *math* remains 6.2 / 6.4 / 6.5 / 6.6.
 

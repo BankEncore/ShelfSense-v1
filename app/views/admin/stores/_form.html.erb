@@ -66,46 +66,52 @@
 
   <%= render layout: "shared/form_section", locals: { title: "Receipt messages", help: "Plain text only. Messages wrap to receipt width and are not a template language. Custom text is kept when you switch away from custom mode." } do %>
     <% settings = SystemSettings.current %>
-    <fieldset class="form-field">
-      <legend>Receipt header</legend>
-      <label>
-        <%= form.radio_button :receipt_header_mode, "inherit" %>
-        Use organization default
-      </label>
-      <p class="muted">
-        Effective default:
-        <%= settings.default_receipt_header.present? ? settings.default_receipt_header : "(no organization default)" %>
-      </p>
-      <label>
-        <%= form.radio_button :receipt_header_mode, "custom" %>
-        Use custom header
-      </label>
-      <%= form.text_area :receipt_header, rows: 3, maxlength: Store::RECEIPT_MESSAGE_LIMIT %>
-      <label>
-        <%= form.radio_button :receipt_header_mode, "none" %>
-        Do not print a header message
-      </label>
-    </fieldset>
-    <fieldset class="form-field">
-      <legend>Receipt footer</legend>
-      <label>
-        <%= form.radio_button :receipt_footer_mode, "inherit" %>
-        Use organization default
-      </label>
-      <p class="muted">
-        Effective default:
-        <%= settings.default_receipt_footer.present? ? settings.default_receipt_footer : "(no organization default)" %>
-      </p>
-      <label>
-        <%= form.radio_button :receipt_footer_mode, "custom" %>
-        Use custom footer
-      </label>
-      <%= form.text_area :receipt_footer, rows: 3, maxlength: Store::RECEIPT_MESSAGE_LIMIT %>
-      <label>
-        <%= form.radio_button :receipt_footer_mode, "none" %>
-        Do not print a footer message
-      </label>
-    </fieldset>
+    <div data-controller="store-receipt-messages">
+      <fieldset class="form-field">
+        <legend>Receipt header</legend>
+        <label>
+          <%= form.radio_button :receipt_header_mode, "inherit", data: { action: "change->store-receipt-messages#sync", store_receipt_messages_target: "headerMode" } %>
+          Use organization default
+        </label>
+        <p class="muted">
+          Effective default:
+          <%= settings.default_receipt_header.present? ? settings.default_receipt_header : "(no organization default)" %>
+        </p>
+        <label>
+          <%= form.radio_button :receipt_header_mode, "custom", data: { action: "change->store-receipt-messages#sync", store_receipt_messages_target: "headerMode" } %>
+          Use custom header
+        </label>
+        <%= form.text_area :receipt_header, rows: 3, maxlength: Store::RECEIPT_MESSAGE_LIMIT,
+              disabled: store.receipt_header_mode != "custom",
+              data: { store_receipt_messages_target: "header" } %>
+        <label>
+          <%= form.radio_button :receipt_header_mode, "none", data: { action: "change->store-receipt-messages#sync", store_receipt_messages_target: "headerMode" } %>
+          Do not print a header message
+        </label>
+      </fieldset>
+      <fieldset class="form-field">
+        <legend>Receipt footer</legend>
+        <label>
+          <%= form.radio_button :receipt_footer_mode, "inherit", data: { action: "change->store-receipt-messages#sync", store_receipt_messages_target: "footerMode" } %>
+          Use organization default
+        </label>
+        <p class="muted">
+          Effective default:
+          <%= settings.default_receipt_footer.present? ? settings.default_receipt_footer : "(no organization default)" %>
+        </p>
+        <label>
+          <%= form.radio_button :receipt_footer_mode, "custom", data: { action: "change->store-receipt-messages#sync", store_receipt_messages_target: "footerMode" } %>
+          Use custom footer
+        </label>
+        <%= form.text_area :receipt_footer, rows: 3, maxlength: Store::RECEIPT_MESSAGE_LIMIT,
+              disabled: store.receipt_footer_mode != "custom",
+              data: { store_receipt_messages_target: "footer" } %>
+        <label>
+          <%= form.radio_button :receipt_footer_mode, "none", data: { action: "change->store-receipt-messages#sync", store_receipt_messages_target: "footerMode" } %>
+          Do not print a footer message
+        </label>
+      </fieldset>
+    </div>
   <% end %>
 
   <div class="actions">

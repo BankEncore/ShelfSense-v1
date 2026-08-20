@@ -1,6 +1,6 @@
 # Phase 6 — POS receipt presentation and printing
 
-**Status:** Locked. Implementation authority for customer-facing POS receipt rendering, reprints, post-void receipt presentation, receipt header/footer configuration, and 80-mm browser printing. Implement in slice 6.8 ([mvp-closeout.md](mvp-closeout.md)).
+**Status:** Implemented. Implementation authority for customer-facing POS receipt rendering, reprints, post-void receipt presentation, receipt header/footer configuration, and 80-mm browser printing. Implemented in slice 6.8 ([mvp-closeout.md](mvp-closeout.md)).
 
 **Authority:** Customer print copy only. Receipt identity remains [receipt-identity.md](../phase4-point-of-sale/receipt-identity.md) / [ADR-006](../../../adr/ADR-006-receipt-numbering.md). Operator lookup, detail, and reprint *mechanics* remain [transaction-history.md](transaction-history.md). Post-void lineage remains [post-void.md](post-void.md). Dual authority with Core remains [mvp-contract.md](mvp-contract.md) / [ADR-020](../../../adr/ADR-020-pos-operation-envelope-and-core-facts.md). Browser print lifecycle remains [close-z-screens.md](../phase5-cash-register/close-z-screens.md) except where this document supersedes the printed *layout*. Workflow remains [pos-workflow.md](pos-workflow.md).
 
@@ -30,6 +30,7 @@ no reprint audit (6.3 stands)
 print after commit; print failure does not reopen the transaction
 80-mm browser print; no ESC/POS in this slice
 omit business_date on customer paper
+one-line description clamp; CSS width is authoritative
 condition_name on new Used snapshots; old rows fall back to condition_code
 legal_name required; admin + Register enter + print fail closed
 ```
@@ -500,7 +501,7 @@ Never live-lookup `merchandise_conditions`. Standard merchandise does not print 
 
 Print the completed merchandise description snapshot. Do not use the current Product name.
 
-Description occupies a separate indented line. Wrap to at most two printed lines; truncate with an ellipsis rather than letting arbitrarily long titles dominate the receipt. Do not lock a character-per-line count; CSS width is authoritative.
+Description occupies a separate indented line. Clamp to one printed line and truncate with an ellipsis rather than letting arbitrarily long titles dominate the receipt. Do not lock a character-per-line count; CSS width is authoritative.
 
 If the snapshot is missing or the description is blank, print `Description unavailable`. Never substitute live catalog data.
 

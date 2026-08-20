@@ -5,6 +5,10 @@
     <%= render "pos/shared/report_nav" %>
 
     <h1>Session closed</h1>
+    <p>Store  <%= current_store.admin_label %></p>
+    <p>Register  <%= @register.admin_label %></p>
+    <p>Cashier  <%= @session_record.cashier_user.display_name %></p>
+    <p>Business date  <%= @period.business_date.iso8601 %></p>
 
     <% if flash.now[:alert].present? || alert.present? %>
       <p class="pos-enter__alert" role="alert"><%= flash.now[:alert] || alert %></p>

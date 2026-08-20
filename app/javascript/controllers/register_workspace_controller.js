@@ -56,7 +56,6 @@ export default class extends Controller {
     "controlCancel",
     "controlApply",
     "controlRemove",
-    "unlinkedButton",
     "unlinkedIdentifierField",
     "unlinkedIdentifierInput",
     "unlinkedQuantityInput",
@@ -1810,7 +1809,7 @@ export default class extends Controller {
   }
 
   disableMutationControls() {
-    ["unlinkedButton", "returnButton", "quantityButton", "overrideButton", "discountButton", "taxClassButton", "tenderButton", "removeButton", "cancelButton", "retry", "abandonButton", "cashButton", "cardButton", "checkButton", "otherButton"].forEach((name) => {
+    ["returnButton", "quantityButton", "overrideButton", "discountButton", "taxClassButton", "tenderButton", "removeButton", "cancelButton", "retry", "abandonButton", "cashButton", "cardButton", "checkButton", "otherButton"].forEach((name) => {
       this.setActionEnabled(name, false)
     })
   }
@@ -1830,7 +1829,6 @@ export default class extends Controller {
       const hasLines = Boolean(this.element.querySelector(".pos-lines tbody tr"))
       const returnLine = this.selectedReturnLine()
       const quantityOk = hasSelection && !this.selectedUnitLine() && !this.selectedQuantityBlocked()
-      this.setActionEnabled("unlinkedButton", this.policyFor("unlinked_return") !== "prohibited")
       this.setActionEnabled("returnButton", true)
       this.setActionEnabled("quantityButton", quantityOk)
       this.setActionEnabled("overrideButton", hasSelection && !returnLine && this.priceActionEnabled())

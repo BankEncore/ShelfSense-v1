@@ -51,6 +51,20 @@
         <% if line.manual_discount_cents.to_i.positive? %>
           <li><%= line.return? ? "Discount reversal" : "Discount" %>  <%= format_signed_money_cents(pos_line_discount_cents(line)) %></li>
         <% end %>
+        <% if line.tax_class_overridden? && line.tax_class_name_snapshot.present? %>
+          <li class="muted">Applied Tax Class  <%= line.tax_class_name_snapshot %></li>
+        <% end %>
+        <% line.pos_controlled_actions.each do |action| %>
+          <li class="muted">
+            Performed by <%= action.performed_by_name_snapshot %>
+            <% if action.approved_by_name_snapshot.present? %>
+              · Approved by <%= action.approved_by_name_snapshot %>
+            <% end %>
+            <% if action.reason_name_snapshot.present? %>
+              · <%= action.reason_name_snapshot %>
+            <% end %>
+          </li>
+        <% end %>
       <% end %>
     </ul>
   </div>

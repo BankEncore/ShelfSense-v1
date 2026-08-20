@@ -14,6 +14,7 @@ module Pos
       @tenders = @transaction.pos_tenders.ordered
       @tender = @tenders.find { |tender| tender.cash? && tender.direction == "payment" }
       @transaction.pos_transaction_lines.includes(
+        :pos_controlled_actions,
         original_transaction_line: :pos_transaction,
         post_void_source_line: :pos_transaction
       ).load

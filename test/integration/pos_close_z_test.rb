@@ -134,6 +134,10 @@ class PosCloseZTest < ActionDispatch::IntegrationTest
     assert_match format_money(session_record.closing_expected_cash_cents), response.body
     assert_match format_money(session_record.closing_count_cents), response.body
     assert_match format_money(session_record.closing_variance_cents), response.body
+    assert_match "Store  #{@store.admin_label}", response.body
+    assert_match "Register  #{@register.admin_label}", response.body
+    assert_match "Cashier  #{@actor.display_name}", response.body
+    assert_match "Business date  #{session_record.reporting_period.business_date.iso8601}", response.body
     assert_match "Finalize Z", response.body
     assert_match "Leave period open", response.body
     assert PosReportingPeriod.open.exists?(register: @register)

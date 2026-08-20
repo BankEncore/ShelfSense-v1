@@ -802,6 +802,58 @@ class PosRegisterTest < ActionDispatch::IntegrationTest
     assert_equal bound, session[:pos_register_id].to_s
   end
 
+  test "completion and history keep performer and approver provenance" do
+    clerk = pos_transacting_user(store: @store, assigned_by: @actor, username: "clerk_prov")
+    manager = pos_store_manager(store: @store, assigned_by: @actor, username: "mgr_prov")
+    delete session_path
+    sign_in_as("clerk_prov")
+
+    post pos_register_enter_path, params: enter_params
+    follow_redirect!
+    transaction = PosTransaction.working.find_by!(register: @register)
+    post pos_register_merchandise_path, params: { identifier: @variant.sku, lock_version: transaction.lock_version }
+    line = transaction.reload.pos_transaction_lines.first
+
+    post pos_register_controlled_action_path, params: {
+      lock_version: transaction.lock_version,
+      line_id: line.id,
+      action_type: "price_override",
+      operation: "apply",
+      reason_code: "damaged",
+      selling_price: "15.00",
+      approver_username: "mgr_prov",
+      approver_password: "correct-horse-battery"
+    }
+    assert_response :success
+    transaction.reload
+    post pos_register_tender_path, params: { tender_amount: "25.00", lock_version: transaction.lock_version }
+    transaction.reload
+    operation_id = css_select("input[name='completion_operation_id']").first["value"]
+    post pos_transaction_complete_path(transaction), params: {
+      completion_operation_id: operation_id,
+      lock_version: transaction.lock_version,
+      expected_total_cents: transaction.total_cents,
+      expected_signed_net_cents: transaction.signed_net_cents,
+      amount_presented_cents: 2500
+    }
+    assert_redirected_to pos_completed_transaction_path(transaction)
+    follow_redirect!
+    assert_response :success
+    assert_match "Performed by", response.body
+    assert_match clerk.display_name, response.body
+    assert_match "Approved by", response.body
+    assert_match manager.display_name, response.body
+    assert_select ".pos-receipt__print", text: /Performed by/, count: 0
+    assert_select ".pos-receipt__print", text: /Approved by/, count: 0
+
+    get pos_transaction_path(transaction)
+    assert_response :success
+    assert_match "Performed by", response.body
+    assert_match clerk.display_name, response.body
+    assert_match "Approved by", response.body
+    assert_match manager.display_name, response.body
+  end
+
   private
 
   def sign_in_as(username)

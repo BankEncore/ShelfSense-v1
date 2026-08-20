@@ -25,8 +25,8 @@ class PosUnlinkedReturnTest < ApplicationSystemTestCase
 
   test "associate return without receipt needs manager credentials then cash refunds" do
     open_register_as("clerk_sys65c")
-    assert_button "Return without receipt", disabled: false
-    click_on "Return without receipt"
+    assert_no_button "Return without receipt"
+    open_unlinked_overlay
     assert_text "Return without receipt"
 
     identifier = find("#pos-unlinked-identifier")
@@ -77,7 +77,7 @@ class PosUnlinkedReturnTest < ApplicationSystemTestCase
 
     click_on "New transaction"
     assert_text "SALE ENTRY"
-    click_on "Return without receipt"
+    open_unlinked_overlay
     identifier = find("#pos-unlinked-identifier")
     identifier.fill_in with: unit.unit_identifier
     identifier.send_keys :enter
@@ -107,5 +107,12 @@ class PosUnlinkedReturnTest < ApplicationSystemTestCase
     fill_in "Opening float", with: "0.00"
     click_on "Open register"
     assert_text "SALE ENTRY"
+  end
+
+  def open_unlinked_overlay
+    click_on "Return (-)"
+    send_keys :arrow_down
+    send_keys :enter
+    assert_selector "#pos_unlinked_overlay", visible: true
   end
 end

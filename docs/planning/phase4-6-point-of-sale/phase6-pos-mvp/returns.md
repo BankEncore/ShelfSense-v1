@@ -556,7 +556,7 @@ Approval for qty 1 / $24 reference / $18 return / defective does not authorize q
 
 ### Overlay
 
-Visible control: **Return without receipt**. 6.7 adds `-` Linked/Unlinked chooser so Unlinked is not button-only ([pos-workflow.md](pos-workflow.md) §10).
+Visible control: **Return (-)**. Unlinked is a chooser option (and the `-` key), not a dedicated Sale Entry button ([pos-workflow.md](pos-workflow.md) §10).
 
 One overlay, one submit (identifier already resolved, or resolved in step 1):
 
@@ -858,7 +858,7 @@ Implementation notes:
 
 ### 6.5C — Unlinked return
 
-**Implemented.** Merge gate: cashier-usable return-only unlinked workflow — Return without receipt, identify known merchandise, quantity/reason/return price, manager approval when required, Cash refund complete.
+**Implemented.** Merge gate: cashier-usable return-only unlinked workflow — Return (-) Unlinked, identify known merchandise, quantity/reason/return price, manager approval when required, Cash refund complete.
 
 Implementation notes:
 

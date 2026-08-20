@@ -76,6 +76,25 @@ class Pos::CustomerReceiptTest < ActiveSupport::TestCase
     assert_includes svg, "S001-R01-T0000001"
   end
 
+  test "old used snapshot with only condition_code prints Used code" do
+    _variant, unit = pos_on_hand_unit(store: @store, actor: @actor, tax_class: @tax)
+    transaction = Pos::StartTransaction.call(session: @context[:session], actor: @actor)
+    Pos::AddMerchandise.call(
+      transaction: transaction,
+      actor: @actor,
+      expected_lock_version: transaction.lock_version,
+      identifier: unit.unit_identifier
+    )
+    cash_and_complete!(transaction.reload)
+    line = transaction.reload.pos_transaction_lines.first
+    snapshot = line.merchandise_snapshot.merge("condition_code" => "VG")
+    snapshot.delete("condition_name")
+    PosTransactionLine.where(id: line.id).update_all(merchandise_snapshot: snapshot)
+
+    receipt = Pos::CustomerReceipt.build(transaction.reload)
+    assert_equal "Used VG", receipt.lines.first.condition
+  end
+
   private
 
   def complete_sale!

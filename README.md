@@ -2,7 +2,7 @@
 
 ShelfSense is an inventory, purchasing, customer-service, and point-of-sale system for independent bookstores. It is designed for one organization operating one or more stores, with a central organization server and store Registers. A future standalone Terminal (ADR-021) may continue ordinary checkout during temporary connectivity loss.
 
-Phases 0–5 are implemented. Phase 6 is the operational POS MVP: slices 6.0–6.6 are implemented (through whole-transaction post-void). Slice 6.7 operator workflow is next ([pos-workflow.md](docs/planning/phase4-6-point-of-sale/phase6-pos-mvp/pos-workflow.md)); slice 6.8 is presentation and closeout.
+Phases 0–6 are implemented. Phase 6 is the operational POS MVP: slices 6.0–6.8 are implemented (through cashier workflow, customer print, and closeout).
 
 ## Goals
 
@@ -208,7 +208,7 @@ Authoritative plan: [phase5-plan.md](docs/planning/phase4-6-point-of-sale/phase5
 
 ### Phase 6: Operational POS MVP
 
-Status: slices 6.0–6.6 implemented (CompletedPosOperation v2, Used/non-inventory sales, mixed tenders, history/reprint, controlled pricing, linked and unlinked returns, mixed baskets, refunds, whole-transaction post-void, direction-aware Session/Z). Slice 6.7 operator workflow is next; slice 6.8 is presentation and closeout.
+Status: slices 6.0–6.8 implemented (CompletedPosOperation v2, Used/non-inventory sales, mixed tenders, history/reprint, controlled pricing, linked and unlinked returns, mixed baskets, refunds, whole-transaction post-void, direction-aware Session/Z, cashier workflow, customer print, and closeout presentation).
 
 Phase 6 extends the Phase 5 Cash register with Used/non-inventory sales, mixed tenders, history/reprint, controlled pricing, returns, post-void, cashier workflow, and closeout presentation. Each slice merges independently to `main`.
 
