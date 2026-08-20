@@ -541,7 +541,11 @@ Every blocking POS overlay must render its contents on an opaque, visually disti
 
 **Replace** 6.4 “Enter does not submit” except where a scan could confirm (lookup/identifier fields, cancel overlay).
 
+Picker overlays (Other tender, variant, unit, return chooser) focus the highlighted option. Options are keyboard-focusable (`tabindex`, `role="option"`). Arrow keys move the highlight; Tab cycles only within the open dialog.
+
 Errors: transient above scan (next input replaces); blocking inside the current dialog.
+
+Recoverable field/action errors (invalid price, missing reason/note, approver credentials, policy denial until approval is supplied) keep the current dialog open: same non-secret values, error inside the overlay, password fields cleared and never echoed. Stale lock, completed transaction, or other invalidated commercial basis close the dialog and refresh the workspace.
 
 Disable F10 while a blocking modal is open:
 

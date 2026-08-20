@@ -2,6 +2,13 @@
 
 module Pos
   class WorkspacesController < BaseController
+    OVERLAY_ERROR_TARGETS = {
+      "controlled_action" => "pos-control-feedback",
+      "unlinked_return" => "pos-unlinked-feedback",
+      "open_price" => "pos-open-price-feedback",
+      "linked_return" => "pos-linked-feedback"
+    }.freeze
+
     before_action :require_register!, except: :complete
     before_action :prepare_workspace!, except: %i[show continue complete]
     before_action :prepare_session!, only: :continue
@@ -483,12 +490,12 @@ module Pos
     rescue Pos::Denied
       redirect_to root_path, alert: "You are not authorized to perform that action."
     rescue Pos::StaleObject
-      recover_from_workspace_error("This sale was changed. Reload and try again.", error_mode)
+      recover_from_workspace_error("This sale was changed. Reload and try again.", error_mode, persist_overlay: false)
     rescue Money::ParseCents::Error, Pos::Error => e
       recover_from_workspace_error(e.message, error_mode)
     end
 
-    def recover_from_workspace_error(message, error_mode)
+    def recover_from_workspace_error(message, error_mode, persist_overlay: persist_overlay_error?)
       @feedback = message
       @transaction.reload
       @command_value = params[:identifier] || params[:quantity] || params[:tender_amount]
@@ -497,8 +504,36 @@ module Pos
         return
       end
 
+      if persist_overlay
+        respond_overlay_error(error_mode)
+        return
+      end
+
       apply_error_mode(error_mode)
       respond_workspace
+    end
+
+    def persist_overlay_error?
+      overlay_error_dom_id.present?
+    end
+
+    def overlay_error_dom_id
+      return OVERLAY_ERROR_TARGETS[action_name] if OVERLAY_ERROR_TARGETS.key?(action_name)
+      return "pos-open-price-feedback" if action_name == "merchandise" && params[:selling_price].present?
+
+      nil
+    end
+
+    def respond_overlay_error(error_mode)
+      @overlay_error_dom_id = overlay_error_dom_id
+      respond_to do |format|
+        format.turbo_stream { render "pos/workspaces/dialog_error", status: :unprocessable_entity }
+        format.html do
+          apply_error_mode(error_mode)
+          prepare_view_state
+          render :show
+        end
+      end
     end
 
     def apply_error_mode(error_mode)

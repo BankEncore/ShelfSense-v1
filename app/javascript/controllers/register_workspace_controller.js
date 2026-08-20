@@ -194,6 +194,12 @@ export default class extends Controller {
       return
     }
 
+    const overlay = this.activeOverlayElement()
+    if (overlay && key === "Tab") {
+      this.trapTabInOverlay(overlay, event)
+      return
+    }
+
     if (this.unlinkedOverlayOpen()) {
       this.onUnlinkedOverlayKeydown(event, key)
       return
@@ -240,10 +246,6 @@ export default class extends Controller {
     }
 
     if (this.cancelOverlayOpen()) {
-      if (key === "Tab") {
-        this.trapOverlayTab(event)
-        return
-      }
       event.preventDefault()
       if (key === "Escape") this.closeOverlay()
       if (key === "F9") this.confirmCancel()
@@ -350,10 +352,6 @@ export default class extends Controller {
   }
 
   onControlOverlayKeydown(event, key = this.functionKey(event) || event.key) {
-    if (key === "Tab") {
-      this.trapControlOverlayTab(event)
-      return
-    }
     if (key === "Escape") {
       event.preventDefault()
       this.closeControlOverlay()
@@ -413,10 +411,6 @@ export default class extends Controller {
   }
 
   onUnlinkedOverlayKeydown(event, key = this.functionKey(event) || event.key) {
-    if (key === "Tab") {
-      this.trapUnlinkedOverlayTab(event)
-      return
-    }
     if (key === "Escape") {
       event.preventDefault()
       this.closeUnlinkedOverlay()
@@ -480,6 +474,10 @@ export default class extends Controller {
   onSubmitEnd(event) {
     if (event.detail?.success) return
     if (!this.inFlight) return
+    if (this.overlayOpen()) {
+      this.recoverDialogRejection()
+      return
+    }
     this.recoverFromTransportFailure(event.target)
   }
 
@@ -712,19 +710,14 @@ export default class extends Controller {
       const item = document.createElement("li")
       item.dataset.tenderTypeId = type.id
       item.textContent = type.name
-      item.classList.toggle("is-selected", index === 0)
-      item.setAttribute("aria-selected", index === 0 ? "true" : "false")
+      this.decoratePickerItem(item, { selected: index === 0 })
       this.otherListTarget.append(item)
     })
-    this.otherOverlayTarget.hidden = false
-    if (this.hasChromeTarget) this.chromeTarget.inert = true
+    this.showOverlay(this.otherOverlayTarget, this.otherListTarget.querySelector("li.is-selected"))
   }
 
   closeOtherOverlay() {
-    if (!this.hasOtherOverlayTarget) return
-    this.otherOverlayTarget.hidden = true
-    if (this.hasChromeTarget) this.chromeTarget.inert = false
-    this.restoreFocus()
+    this.hideOverlay(this.hasOtherOverlayTarget && this.otherOverlayTarget)
   }
 
   onOtherOverlayKeydown(event, key) {
@@ -735,26 +728,13 @@ export default class extends Controller {
     }
     if (key === "ArrowUp" || key === "ArrowDown") {
       event.preventDefault()
-      this.moveOtherPicker(key === "ArrowUp" ? -1 : 1)
+      this.movePickerList(this.otherListTarget, key === "ArrowUp" ? -1 : 1)
       return
     }
     if (key === "Enter") {
       event.preventDefault()
       this.selectHighlightedOther()
     }
-  }
-
-  moveOtherPicker(delta) {
-    if (!this.hasOtherListTarget) return
-    const items = Array.from(this.otherListTarget.querySelectorAll("li"))
-    if (items.length === 0) return
-    const current = items.findIndex((item) => item.classList.contains("is-selected"))
-    const nextIndex = Math.min(items.length - 1, Math.max(0, (current < 0 ? 0 : current) + delta))
-    items.forEach((item, index) => {
-      const selected = index === nextIndex
-      item.classList.toggle("is-selected", selected)
-      item.setAttribute("aria-selected", selected ? "true" : "false")
-    })
   }
 
   selectHighlightedOther() {
@@ -846,16 +826,11 @@ export default class extends Controller {
     if (this.hasSearchNameFieldTarget) this.searchNameFieldTarget.value = ""
     if (this.hasSearchListTarget) this.searchListTarget.replaceChildren()
     if (this.hasSearchQueryLabelTarget) this.searchQueryLabelTarget.textContent = ""
-    this.searchOverlayTarget.hidden = false
-    if (this.hasChromeTarget) this.chromeTarget.inert = true
-    if (this.hasSearchSkuFieldTarget) this.searchSkuFieldTarget.focus()
+    this.showOverlay(this.searchOverlayTarget, this.hasSearchSkuFieldTarget && this.searchSkuFieldTarget)
   }
 
   closeSearchOverlay() {
-    if (!this.hasSearchOverlayTarget) return
-    this.searchOverlayTarget.hidden = true
-    if (this.hasChromeTarget) this.chromeTarget.inert = false
-    this.restoreFocus()
+    this.hideOverlay(this.hasSearchOverlayTarget && this.searchOverlayTarget)
   }
 
   onSearchOverlayKeydown(event, key) {
@@ -915,13 +890,10 @@ export default class extends Controller {
       const availability = row.available == null ? "" : ` · ${row.available}`
       const reason = row.disabled && row.reason ? ` — ${row.reason}` : ""
       item.textContent = [row.sku, row.name, row.condition, row.price_label].filter(Boolean).join(" · ") + availability + reason
-      item.classList.toggle("is-disabled", Boolean(row.disabled))
-      item.classList.toggle("is-selected", index === 0)
-      item.setAttribute("aria-selected", index === 0 ? "true" : "false")
-      item.tabIndex = index === 0 ? 0 : -1
+      this.decoratePickerItem(item, { selected: index === 0, disabled: Boolean(row.disabled) })
       this.searchListTarget.append(item)
     })
-    const first = this.searchListTarget.querySelector("li")
+    const first = this.searchListTarget.querySelector("li.is-selected")
     if (first) first.focus()
   }
 
@@ -946,19 +918,14 @@ export default class extends Controller {
       const price = variant.price_label || this.formatCents(variant.price_cents)
       const availability = variant.available == null ? "" : ` · ${variant.available}`
       item.textContent = [variant.sku, variant.name, variant.condition, price].filter(Boolean).join(" · ") + availability
-      item.classList.toggle("is-selected", index === 0)
-      item.setAttribute("aria-selected", index === 0 ? "true" : "false")
+      this.decoratePickerItem(item, { selected: index === 0 })
       this.variantListTarget.append(item)
     })
-    this.variantOverlayTarget.hidden = false
-    if (this.hasChromeTarget) this.chromeTarget.inert = true
+    this.showOverlay(this.variantOverlayTarget, this.variantListTarget.querySelector("li.is-selected"))
   }
 
   closeVariantOverlay() {
-    if (!this.hasVariantOverlayTarget) return
-    this.variantOverlayTarget.hidden = true
-    if (this.hasChromeTarget) this.chromeTarget.inert = false
-    this.restoreFocus()
+    this.hideOverlay(this.hasVariantOverlayTarget && this.variantOverlayTarget)
   }
 
   onVariantOverlayKeydown(event, key) {
@@ -992,26 +959,21 @@ export default class extends Controller {
     if (units.length === 0) {
       const item = document.createElement("li")
       item.textContent = "No units available."
-      item.classList.add("is-disabled")
+      this.decoratePickerItem(item, { disabled: true })
       this.unitListTarget.append(item)
     }
     units.forEach((unit, index) => {
       const item = document.createElement("li")
       item.dataset.unitId = unit.id
       item.textContent = [unit.unit_identifier, unit.condition, this.formatCents(unit.price_cents)].filter(Boolean).join(" · ")
-      item.classList.toggle("is-selected", index === 0)
-      item.setAttribute("aria-selected", index === 0 ? "true" : "false")
+      this.decoratePickerItem(item, { selected: index === 0 })
       this.unitListTarget.append(item)
     })
-    this.unitOverlayTarget.hidden = false
-    if (this.hasChromeTarget) this.chromeTarget.inert = true
+    this.showOverlay(this.unitOverlayTarget, this.unitListTarget.querySelector("li.is-selected"))
   }
 
   closeUnitOverlay() {
-    if (!this.hasUnitOverlayTarget) return
-    this.unitOverlayTarget.hidden = true
-    if (this.hasChromeTarget) this.chromeTarget.inert = false
-    this.restoreFocus()
+    this.hideOverlay(this.hasUnitOverlayTarget && this.unitOverlayTarget)
   }
 
   onUnitOverlayKeydown(event, key) {
@@ -1061,17 +1023,13 @@ export default class extends Controller {
     if (this.hasOpenPriceFieldTarget) {
       this.openPriceFieldTarget.value = currentCents ? this.formatCents(currentCents) : ""
     }
-    this.openPriceOverlayTarget.hidden = false
-    if (this.hasChromeTarget) this.chromeTarget.inert = true
-    if (this.hasOpenPriceFieldTarget) this.openPriceFieldTarget.focus()
+    this.showOverlay(this.openPriceOverlayTarget, this.hasOpenPriceFieldTarget && this.openPriceFieldTarget)
   }
 
   closeOpenPriceOverlay() {
     if (!this.hasOpenPriceOverlayTarget) return
     this.pendingOpenPrice = null
-    this.openPriceOverlayTarget.hidden = true
-    if (this.hasChromeTarget) this.chromeTarget.inert = false
-    this.restoreFocus()
+    this.hideOverlay(this.openPriceOverlayTarget)
   }
 
   onOpenPriceOverlayKeydown(event, key) {
@@ -1091,9 +1049,7 @@ export default class extends Controller {
     const value = this.hasOpenPriceFieldTarget ? this.openPriceFieldTarget.value.trim() : ""
     if (value === "") return
     const pending = this.pendingOpenPrice
-    this.pendingOpenPrice = null
-    this.openPriceOverlayTarget.hidden = true
-    if (this.hasChromeTarget) this.chromeTarget.inert = false
+    this.clearOverlayError(this.openPriceOverlayTarget)
     if (pending.kind === "edit") {
       if (this.hasOpenPriceLineInputTarget) this.openPriceLineInputTarget.value = pending.lineId
       if (this.hasOpenPriceEditInputTarget) this.openPriceEditInputTarget.value = value
@@ -1116,19 +1072,13 @@ export default class extends Controller {
     if (!this.hasReturnChooserOverlayTarget) return
     const items = Array.from(this.returnChooserListTarget.querySelectorAll("li"))
     items.forEach((item, index) => {
-      const selected = index === 0
-      item.classList.toggle("is-selected", selected)
-      item.setAttribute("aria-selected", selected ? "true" : "false")
+      this.decoratePickerItem(item, { selected: index === 0 })
     })
-    this.returnChooserOverlayTarget.hidden = false
-    if (this.hasChromeTarget) this.chromeTarget.inert = true
+    this.showOverlay(this.returnChooserOverlayTarget, this.returnChooserListTarget.querySelector("li.is-selected"))
   }
 
   closeReturnChooser() {
-    if (!this.hasReturnChooserOverlayTarget) return
-    this.returnChooserOverlayTarget.hidden = true
-    if (this.hasChromeTarget) this.chromeTarget.inert = false
-    this.restoreFocus()
+    this.hideOverlay(this.hasReturnChooserOverlayTarget && this.returnChooserOverlayTarget)
   }
 
   onReturnChooserKeydown(event, key) {
@@ -1174,16 +1124,11 @@ export default class extends Controller {
     if (this.hasLinkedQuantityFieldTarget) this.linkedQuantityFieldTarget.value = "1"
     this.populateLinkedReasons()
     this.toggleHidden(this.hasLinkedNoteWrapTarget && this.linkedNoteWrapTarget, true)
-    this.linkedOverlayTarget.hidden = false
-    if (this.hasChromeTarget) this.chromeTarget.inert = true
-    if (this.hasLinkedLookupFieldTarget) this.linkedLookupFieldTarget.focus()
+    this.showOverlay(this.linkedOverlayTarget, this.hasLinkedLookupFieldTarget && this.linkedLookupFieldTarget)
   }
 
   closeLinkedOverlay() {
-    if (!this.hasLinkedOverlayTarget) return
-    this.linkedOverlayTarget.hidden = true
-    if (this.hasChromeTarget) this.chromeTarget.inert = false
-    this.restoreFocus()
+    this.hideOverlay(this.hasLinkedOverlayTarget && this.linkedOverlayTarget)
   }
 
   populateLinkedReasons() {
@@ -1247,8 +1192,7 @@ export default class extends Controller {
         const item = document.createElement("li")
         item.dataset.transactionId = receipt.id
         item.textContent = receipt.transaction_reference
-        item.classList.toggle("is-selected", index === 0)
-        item.setAttribute("aria-selected", index === 0 ? "true" : "false")
+        this.decoratePickerItem(item, { selected: index === 0 })
         this.linkedListTarget.append(item)
       })
     } else if (payload.outcome === "lines") {
@@ -1260,12 +1204,11 @@ export default class extends Controller {
         item.dataset.quantityFixed = line.quantity_fixed ? "true" : "false"
         const unit = line.unit_identifier ? ` · ${line.unit_identifier}` : ""
         item.textContent = `${line.description} · remaining ${line.remaining}${unit}`
-        item.classList.toggle("is-selected", index === 0)
-        item.setAttribute("aria-selected", index === 0 ? "true" : "false")
+        this.decoratePickerItem(item, { selected: index === 0 })
         this.linkedListTarget.append(item)
       })
     }
-    const first = this.linkedListTarget.querySelector("li")
+    const first = this.linkedListTarget.querySelector("li.is-selected")
     if (first) first.focus()
   }
 
@@ -1298,7 +1241,7 @@ export default class extends Controller {
     if (this.hasLinkedNoteInputTarget) {
       this.linkedNoteInputTarget.value = this.hasLinkedNoteFieldTarget ? this.linkedNoteFieldTarget.value.trim() : ""
     }
-    this.closeLinkedOverlay()
+    this.clearOverlayError(this.linkedOverlayTarget)
     this.beginFlight()
     this.linkedReturnFormTarget.requestSubmit()
   }
@@ -1390,15 +1333,11 @@ export default class extends Controller {
     if (this.inFlight || this.controlOverlayOpen()) return
     const cancel = this.hasCancelButtonTarget ? this.cancelButtonTarget : this.element.querySelector(".pos-actions .btn--danger")
     if (!cancel || cancel.disabled) return
-    this.overlayTarget.hidden = false
-    if (this.hasChromeTarget) this.chromeTarget.inert = true
-    this.dontCancelTarget.focus()
+    this.showOverlay(this.overlayTarget, this.dontCancelTarget)
   }
 
   closeOverlay() {
-    this.overlayTarget.hidden = true
-    if (this.hasChromeTarget) this.chromeTarget.inert = false
-    this.restoreFocus()
+    this.hideOverlay(this.hasOverlayTarget && this.overlayTarget)
   }
 
   openPriceOverride() {
@@ -1479,16 +1418,11 @@ export default class extends Controller {
     const hasExisting = this.lineHasAction(row, actionType)
     if (this.hasControlRemoveTarget) this.controlRemoveTarget.hidden = !hasExisting
 
-    this.controlOverlayTarget.hidden = false
-    if (this.hasChromeTarget) this.chromeTarget.inert = true
-    this.focusControlOverlay()
+    this.showOverlay(this.controlOverlayTarget)
   }
 
   closeControlOverlay() {
-    if (!this.hasControlOverlayTarget) return
-    this.controlOverlayTarget.hidden = true
-    if (this.hasChromeTarget) this.chromeTarget.inert = false
-    this.restoreFocus()
+    this.hideOverlay(this.hasControlOverlayTarget && this.controlOverlayTarget)
   }
 
   openUnlinkedOverlay() {
@@ -1501,16 +1435,11 @@ export default class extends Controller {
     this.populateUnlinkedReasons()
     const needsApprover = this.policyFor("unlinked_return") === "approval_required"
     this.toggleHidden(this.hasUnlinkedApproverWrapTarget && this.unlinkedApproverWrapTarget, !needsApprover)
-    this.unlinkedOverlayTarget.hidden = false
-    if (this.hasChromeTarget) this.chromeTarget.inert = true
-    if (this.hasUnlinkedIdentifierFieldTarget) this.unlinkedIdentifierFieldTarget.focus()
+    this.showOverlay(this.unlinkedOverlayTarget, this.hasUnlinkedIdentifierFieldTarget && this.unlinkedIdentifierFieldTarget)
   }
 
   closeUnlinkedOverlay() {
-    if (!this.hasUnlinkedOverlayTarget) return
-    this.unlinkedOverlayTarget.hidden = true
-    if (this.hasChromeTarget) this.chromeTarget.inert = false
-    this.restoreFocus()
+    this.hideOverlay(this.hasUnlinkedOverlayTarget && this.unlinkedOverlayTarget)
   }
 
   resetUnlinkedOverlay() {
@@ -1648,35 +1577,15 @@ export default class extends Controller {
         ? this.unlinkedApproverPasswordTarget.value
         : ""
     }
+    this.clearOverlayError(this.unlinkedOverlayTarget)
     this.beginFlight()
     this.unlinkedFormTarget.requestSubmit()
-  }
-
-  trapUnlinkedOverlayTab(event) {
-    const controls = this.unlinkedOverlayControls()
-    if (controls.length === 0) return
-    event.preventDefault()
-    const current = controls.indexOf(document.activeElement)
-    let next = current
-    if (event.shiftKey) {
-      next = current <= 0 ? controls.length - 1 : current - 1
-    } else {
-      next = current === controls.length - 1 || current < 0 ? 0 : current + 1
-    }
-    controls[next].focus()
-  }
-
-  unlinkedOverlayControls() {
-    if (!this.hasUnlinkedOverlayTarget) return []
-    return Array.from(this.unlinkedOverlayTarget.querySelectorAll("input, select, button")).filter((el) => {
-      if (el.disabled || el.hidden) return false
-      return !el.closest("[hidden]")
-    })
   }
 
   submitControlApply() {
     if (this.inFlight || !this.hasControlFormTarget) return
     this.fillControlForm("apply")
+    this.clearOverlayError(this.controlOverlayTarget)
     this.beginFlight()
     this.controlFormTarget.requestSubmit()
   }
@@ -1684,6 +1593,7 @@ export default class extends Controller {
   submitControlRemove() {
     if (this.inFlight || !this.hasControlFormTarget) return
     this.fillControlForm("remove")
+    this.clearOverlayError(this.controlOverlayTarget)
     this.beginFlight()
     this.controlFormTarget.requestSubmit()
   }
@@ -1741,10 +1651,96 @@ export default class extends Controller {
   }
 
   overlayOpen() {
-    return this.cancelOverlayOpen() || this.controlOverlayOpen() || this.unlinkedOverlayOpen() ||
-      this.otherOverlayOpen() || this.searchOverlayOpen() || this.variantOverlayOpen() ||
-      this.unitOverlayOpen() || this.openPriceOverlayOpen() || this.returnChooserOpen() ||
-      this.linkedOverlayOpen()
+    return this.activeOverlayElement() != null
+  }
+
+  activeOverlayElement() {
+    const overlays = [
+      this.hasUnlinkedOverlayTarget && this.unlinkedOverlayTarget,
+      this.hasReturnChooserOverlayTarget && this.returnChooserOverlayTarget,
+      this.hasLinkedOverlayTarget && this.linkedOverlayTarget,
+      this.hasControlOverlayTarget && this.controlOverlayTarget,
+      this.hasOtherOverlayTarget && this.otherOverlayTarget,
+      this.hasSearchOverlayTarget && this.searchOverlayTarget,
+      this.hasVariantOverlayTarget && this.variantOverlayTarget,
+      this.hasUnitOverlayTarget && this.unitOverlayTarget,
+      this.hasOpenPriceOverlayTarget && this.openPriceOverlayTarget,
+      this.hasOverlayTarget && this.overlayTarget
+    ]
+    return overlays.find((el) => el && !el.hidden) || null
+  }
+
+  showOverlay(overlay, initial) {
+    if (!overlay) return
+    this.clearOverlayError(overlay)
+    overlay.hidden = false
+    if (this.hasChromeTarget) this.chromeTarget.inert = true
+    const target = initial || this.overlayFocusables(overlay)[0]
+    if (target) target.focus()
+  }
+
+  hideOverlay(overlay) {
+    if (!overlay) return
+    overlay.hidden = true
+    if (this.hasChromeTarget) this.chromeTarget.inert = false
+    this.restoreFocus()
+  }
+
+  clearOverlayError(overlay) {
+    const node = overlay?.querySelector("[data-overlay-error]")
+    if (node) node.textContent = ""
+  }
+
+  overlayFocusables(overlay) {
+    if (!overlay) return []
+    return Array.from(overlay.querySelectorAll("input, select, textarea, button, [tabindex]:not([tabindex='-1'])")).filter((el) => {
+      if (el.disabled || el.hidden) return false
+      return !el.closest("[hidden]")
+    })
+  }
+
+  trapTabInOverlay(overlay, event) {
+    const controls = this.overlayFocusables(overlay)
+    if (controls.length === 0) return
+    event.preventDefault()
+    const current = controls.indexOf(document.activeElement)
+    let next
+    if (event.shiftKey) {
+      next = current <= 0 ? controls.length - 1 : current - 1
+    } else {
+      next = current === controls.length - 1 || current < 0 ? 0 : current + 1
+    }
+    controls[next].focus()
+  }
+
+  decoratePickerItem(item, { selected = false, disabled = false } = {}) {
+    item.setAttribute("role", "option")
+    item.classList.toggle("is-selected", selected)
+    item.classList.toggle("is-disabled", disabled)
+    item.setAttribute("aria-selected", selected ? "true" : "false")
+    item.tabIndex = selected ? 0 : -1
+  }
+
+  recoverDialogRejection() {
+    this.inFlight = false
+    if (this.hasFieldTarget) this.fieldTarget.disabled = false
+    if (this.hasReferenceFieldTarget) this.referenceFieldTarget.disabled = false
+    this.enableReadyActions()
+    if (this.hasControlApproverPasswordInputTarget) this.controlApproverPasswordInputTarget.value = ""
+    if (this.hasUnlinkedApproverPasswordInputTarget) this.unlinkedApproverPasswordInputTarget.value = ""
+    const overlay = this.activeOverlayElement()
+    if (!overlay) return
+    overlay.querySelectorAll("input[type='password']").forEach((field) => {
+      field.value = ""
+    })
+    const password = this.overlayFocusables(overlay).find((el) => el.type === "password")
+    if (password) {
+      password.focus()
+      return
+    }
+    if (overlay.contains(document.activeElement)) return
+    const first = this.overlayFocusables(overlay)[0]
+    if (first) first.focus()
   }
 
   cancelOverlayOpen() {
@@ -1918,51 +1914,6 @@ export default class extends Controller {
   isActionableControl(target) {
     if (!target || !target.closest) return false
     return Boolean(target.closest("button, [type=submit], a[href], [role=button]"))
-  }
-
-  trapOverlayTab(event) {
-    const controls = this.overlayControls()
-    if (controls.length === 0) return
-    event.preventDefault()
-    const current = controls.indexOf(document.activeElement)
-    let next = current
-    if (event.shiftKey) {
-      next = current <= 0 ? controls.length - 1 : current - 1
-    } else {
-      next = current === controls.length - 1 || current < 0 ? 0 : current + 1
-    }
-    controls[next].focus()
-  }
-
-  overlayControls() {
-    return [this.dontCancelTarget, this.confirmCancelTarget].filter(Boolean)
-  }
-
-  trapControlOverlayTab(event) {
-    const controls = this.controlOverlayControls()
-    if (controls.length === 0) return
-    event.preventDefault()
-    const current = controls.indexOf(document.activeElement)
-    let next = current
-    if (event.shiftKey) {
-      next = current <= 0 ? controls.length - 1 : current - 1
-    } else {
-      next = current === controls.length - 1 || current < 0 ? 0 : current + 1
-    }
-    controls[next].focus()
-  }
-
-  controlOverlayControls() {
-    if (!this.hasControlOverlayTarget) return []
-    return Array.from(this.controlOverlayTarget.querySelectorAll("input, select, button")).filter((el) => {
-      if (el.disabled || el.hidden) return false
-      return !el.closest("[hidden]")
-    })
-  }
-
-  focusControlOverlay() {
-    const first = this.controlOverlayControls()[0]
-    if (first) first.focus()
   }
 
   populateReasons(actionType) {

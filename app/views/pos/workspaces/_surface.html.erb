@@ -392,6 +392,7 @@
     <div class="pos-overlay__panel pos-overlay__panel--control">
       <h2 id="pos-control-title" data-register-workspace-target="controlTitle">Controlled action</h2>
       <p data-register-workspace-target="controlLineLabel"></p>
+      <p id="pos-control-feedback" class="pos-overlay__error" data-overlay-error role="alert"></p>
 
       <div data-register-workspace-target="controlPriceWrap">
         <label for="pos-control-price">Selling price</label>
@@ -444,7 +445,7 @@
        aria-labelledby="pos-unlinked-title">
     <div class="pos-overlay__panel pos-overlay__panel--control">
       <h2 id="pos-unlinked-title">Return without receipt</h2>
-      <p data-register-workspace-target="unlinkedFeedback" role="status"></p>
+      <p id="pos-unlinked-feedback" class="pos-overlay__error" data-register-workspace-target="unlinkedFeedback" data-overlay-error role="alert"></p>
 
       <label for="pos-unlinked-identifier">Scan or identifier</label>
       <input id="pos-unlinked-identifier" class="pos-command__field" data-register-workspace-target="unlinkedIdentifierField" autocomplete="off">
@@ -493,7 +494,7 @@
        aria-labelledby="pos-other-title">
     <div class="pos-overlay__panel">
       <h2 id="pos-other-title">Other tender</h2>
-      <ul class="pos-picker" data-register-workspace-target="otherList"></ul>
+      <ul class="pos-picker" role="listbox" aria-labelledby="pos-other-title" data-register-workspace-target="otherList"></ul>
       <p class="muted">Enter selects the highlighted tender. Esc cancels.</p>
       <button type="button" class="btn btn--secondary" data-action="register-workspace#closeOtherOverlay">Cancel (Esc)</button>
     </div>
@@ -517,7 +518,7 @@
         <input type="text" autocomplete="off" data-register-workspace-target="searchNameField">
       </label>
       <p class="muted" data-register-workspace-target="searchQueryLabel"></p>
-      <ul class="pos-picker" data-register-workspace-target="searchList"></ul>
+      <ul class="pos-picker" role="listbox" aria-labelledby="pos-search-title" data-register-workspace-target="searchList"></ul>
       <p class="muted">Enter searches, then Enter selects the highlighted item. Esc cancels.</p>
       <button type="button" class="btn btn--secondary" data-action="register-workspace#closeSearchOverlay">Cancel (Esc)</button>
     </div>
@@ -532,7 +533,7 @@
        aria-labelledby="pos-variant-title">
     <div class="pos-overlay__panel">
       <h2 id="pos-variant-title">Choose variant</h2>
-      <ul class="pos-picker" data-register-workspace-target="variantList"></ul>
+      <ul class="pos-picker" role="listbox" aria-labelledby="pos-variant-title" data-register-workspace-target="variantList"></ul>
       <p class="muted">Enter selects the highlighted variant. Esc cancels.</p>
       <button type="button" class="btn btn--secondary" data-action="register-workspace#closeVariantOverlay">Cancel (Esc)</button>
     </div>
@@ -547,7 +548,7 @@
        aria-labelledby="pos-unit-title">
     <div class="pos-overlay__panel">
       <h2 id="pos-unit-title">Choose unit</h2>
-      <ul class="pos-picker" data-register-workspace-target="unitList"></ul>
+      <ul class="pos-picker" role="listbox" aria-labelledby="pos-unit-title" data-register-workspace-target="unitList"></ul>
       <p class="muted">Enter selects the highlighted unit. Esc cancels.</p>
       <button type="button" class="btn btn--secondary" data-action="register-workspace#closeUnitOverlay">Cancel (Esc)</button>
     </div>
@@ -563,6 +564,7 @@
     <div class="pos-overlay__panel">
       <h2 id="pos-open-price-title">Open price</h2>
       <p data-register-workspace-target="openPricePrompt"></p>
+      <p id="pos-open-price-feedback" class="pos-overlay__error" data-overlay-error role="alert"></p>
       <label class="field">
         <span>Price</span>
         <input type="text" inputmode="decimal" autocomplete="off" data-register-workspace-target="openPriceField">
@@ -583,9 +585,9 @@
        aria-labelledby="pos-return-chooser-title">
     <div class="pos-overlay__panel">
       <h2 id="pos-return-chooser-title">RETURN</h2>
-      <ul class="pos-picker" data-register-workspace-target="returnChooserList">
-        <li data-choice="linked" class="is-selected" aria-selected="true">Linked return</li>
-        <li data-choice="unlinked">Unlinked return</li>
+      <ul class="pos-picker" role="listbox" aria-labelledby="pos-return-chooser-title" data-register-workspace-target="returnChooserList">
+        <li data-choice="linked" class="is-selected" role="option" tabindex="0" aria-selected="true">Linked return</li>
+        <li data-choice="unlinked" role="option" tabindex="-1" aria-selected="false">Unlinked return</li>
       </ul>
       <p class="muted">Enter chooses. Esc cancels.</p>
       <button type="button" class="btn btn--secondary" data-action="register-workspace#closeReturnChooser">Cancel (Esc)</button>
@@ -605,8 +607,8 @@
         <span>Receipt, merchandise, or unit</span>
         <input type="text" autocomplete="off" data-register-workspace-target="linkedLookupField">
       </label>
-      <p class="muted" data-register-workspace-target="linkedFeedback"></p>
-      <ul class="pos-picker" data-register-workspace-target="linkedList"></ul>
+      <p id="pos-linked-feedback" class="pos-overlay__error" data-register-workspace-target="linkedFeedback" data-overlay-error role="alert"></p>
+      <ul class="pos-picker" role="listbox" aria-labelledby="pos-linked-title" data-register-workspace-target="linkedList"></ul>
       <label class="field">
         <span>Qty</span>
         <input type="text" inputmode="numeric" autocomplete="off" value="1" data-register-workspace-target="linkedQuantityField">

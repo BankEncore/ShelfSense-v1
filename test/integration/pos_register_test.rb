@@ -558,6 +558,58 @@ class PosRegisterTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "turbo stream overlay error updates dialog feedback without replacing the workspace" do
+    pos_transacting_user(store: @store, assigned_by: @actor, username: "clerk_overlay")
+    pos_store_manager(store: @store, assigned_by: @actor, username: "mgr_overlay")
+    delete session_path
+    sign_in_as("clerk_overlay")
+
+    post pos_register_enter_path, params: enter_params
+    follow_redirect!
+    transaction = PosTransaction.working.find_by!(register: @register)
+    post pos_register_merchandise_path, params: { identifier: @variant.sku, lock_version: transaction.lock_version }
+    line = transaction.reload.pos_transaction_lines.first
+
+    post pos_register_controlled_action_path, params: {
+      lock_version: transaction.lock_version,
+      line_id: line.id,
+      action_type: "price_override",
+      operation: "apply",
+      reason_code: "damaged",
+      selling_price: "15.00",
+      approver_username: "mgr_overlay",
+      approver_password: "wrong-password-secret"
+    }, headers: { "Accept" => "text/vnd.turbo-stream.html" }
+
+    assert_response :unprocessable_entity
+    assert_equal 1999, line.reload.selling_unit_price_cents
+    assert_match(/approver credentials/, response.body)
+    assert_includes response.body, 'target="pos-control-feedback"'
+    refute_includes response.body, 'target="pos_workspace"'
+    refute_includes response.body, "wrong-password-secret"
+  end
+
+  test "stale overlay submission still replaces the workspace" do
+    post pos_register_enter_path, params: enter_params
+    follow_redirect!
+    transaction = PosTransaction.working.find_by!(register: @register)
+    post pos_register_merchandise_path, params: { identifier: @variant.sku, lock_version: transaction.lock_version }
+    line = transaction.reload.pos_transaction_lines.first
+
+    post pos_register_controlled_action_path, params: {
+      lock_version: transaction.lock_version - 1,
+      line_id: line.id,
+      action_type: "price_override",
+      operation: "apply",
+      reason_code: "damaged",
+      selling_price: "15.00"
+    }, headers: { "Accept" => "text/vnd.turbo-stream.html" }
+
+    assert_response :success
+    assert_includes response.body, 'target="pos_workspace"'
+    assert_match(/This sale was changed/, response.body)
+  end
+
   test "discount apply ignores a leftover malformed selling_price" do
     post pos_register_enter_path, params: enter_params
     follow_redirect!

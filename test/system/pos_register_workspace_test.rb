@@ -146,6 +146,43 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     assert_equal line.reference_unit_price_cents, line.selling_unit_price_cents
   end
 
+  test "rejected approver credentials stay in the price overlay" do
+    pos_transacting_user(store: @store, assigned_by: @actor, username: "clerk_retry")
+    pos_store_manager(store: @store, assigned_by: @actor, username: "mgr_retry")
+    visit new_session_path
+    fill_in "session_username", with: "clerk_retry"
+    fill_in "session_password", with: "correct-horse-battery"
+    find_field("session_password").send_keys :enter
+    assert_text "Signed in successfully"
+    visit pos_register_enter_path(register_id: @register.id)
+    fill_in "Opening float", with: "0.00"
+    click_on "Open register"
+    assert_text "SALE ENTRY"
+    add_current_sku
+
+    click_on "Price (F6)"
+    assert_selector "#pos_control_overlay", visible: true
+    fill_in "Selling price", with: "15.00"
+    select "Damaged", from: "Reason"
+    fill_in "Approver username", with: "mgr_retry"
+    find("#pos-approver-password").fill_in with: "typoooo"
+    find("#pos-approver-password").send_keys :enter
+
+    assert_selector "#pos_control_overlay", visible: true
+    assert_selector "#pos-control-feedback", text: /approver credentials/
+    assert_field "Selling price", with: "15.00"
+    assert_field "Approver username", with: "mgr_retry"
+    assert_equal "", find("#pos-approver-password").value
+    assert_equal "pos-approver-password", page.evaluate_script("document.activeElement && document.activeElement.id")
+    line = PosTransaction.working.find_by!(register: @register).pos_transaction_lines.first
+    assert_equal line.reference_unit_price_cents, line.selling_unit_price_cents
+
+    find("#pos-approver-password").fill_in with: "correct-horse-battery"
+    find("#pos-approver-password").send_keys :enter
+    assert_no_selector "#pos_control_overlay", visible: true
+    assert_equal 1500, line.reload.selling_unit_price_cents
+  end
+
   test "enter from a direct price field applies the override" do
     open_register
     add_current_sku
@@ -198,6 +235,32 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     assert_selector "#pos-control-title", text: "Tax Class override"
     send_keys :escape
     assert_no_selector "#pos_control_overlay", visible: true
+  end
+
+  test "other picker traps tab inside the overlay" do
+    TenderType.create!(
+      code: "voucher_tab",
+      name: "Store Voucher",
+      behavioral_category: "other",
+      external_reference_policy: "omitted",
+      active: true
+    )
+    TenderType.create!(
+      code: "campus_tab",
+      name: "Campus Charge",
+      behavioral_category: "other",
+      external_reference_policy: "required",
+      active: true
+    )
+    open_register
+    add_current_sku
+    send_keys :f4
+    assert_selector "#pos_other_overlay", visible: true
+    assert page.evaluate_script("document.activeElement === document.querySelector('#pos_other_overlay li.is-selected')")
+    find("#pos_other_overlay li.is-selected").send_keys :tab
+    assert page.evaluate_script("Boolean(document.activeElement && document.activeElement.closest('#pos_other_overlay'))")
+    page.send_keys :tab
+    assert page.evaluate_script("Boolean(document.activeElement && document.activeElement.closest('#pos_other_overlay'))")
   end
 
   test "empty basket disables cancel" do
@@ -512,6 +575,7 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     send_keys :f4
     assert_selector "#pos_other_overlay", visible: true
     assert_selector "#pos_other_overlay li.is-selected", text: "Campus Charge"
+    assert page.evaluate_script("document.activeElement === document.querySelector('#pos_other_overlay li.is-selected')")
     assert_text "SALE ENTRY"
     send_keys :enter
     assert_no_selector "#pos_other_overlay", visible: true
@@ -563,6 +627,7 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     click_on "Return (-)"
     assert_selector "#pos_return_chooser", visible: true
     assert_selector "#pos_return_chooser li.is-selected", text: "Linked return"
+    assert page.evaluate_script("document.activeElement === document.querySelector('#pos_return_chooser li.is-selected')")
     send_keys :arrow_down
     send_keys :enter
     assert_selector "#pos_unlinked_overlay", visible: true
