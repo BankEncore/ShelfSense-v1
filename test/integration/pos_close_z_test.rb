@@ -43,6 +43,15 @@ class PosCloseZTest < ActionDispatch::IntegrationTest
     assert_select ".pos-receipt__print", text: /Business date/, count: 0
     assert_select ".pos-receipt__barcode"
     assert_select "input[name='session_id'][value='#{transaction.pos_session_id}']"
+    assert_select "link[rel=preload][as=font][type='font/woff2']"
+    assert_select ".pos-receipt-font-loader", text: "0"
+    stylesheet_href = css_select("link[rel=stylesheet]").first["href"]
+    get stylesheet_href
+    assert_response :success
+    assert_match "@font-face", response.body
+    assert_match "Inconsolata", response.body
+    assert_match "inconsolata-latin-700", response.body
+    refute_match "fonts.googleapis.com", response.body
     assert transaction.reload.completed?
     assert_equal 1, PosTransaction.completed.where(id: transaction.id).count
   end

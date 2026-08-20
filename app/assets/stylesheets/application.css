@@ -1,3 +1,11 @@
+@font-face {
+  font-family: "Inconsolata";
+  font-style: normal;
+  font-weight: 700;
+  font-display: block;
+  src: url("/inconsolata-latin-700.woff2") format("woff2");
+}
+
 :root {
   --color-background: #f8fafc;
   --color-surface: #ffffff;
@@ -18,6 +26,7 @@
   --content-max: 72rem;
   --form-max: 40rem;
   --font-sans: "Source Sans 3", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-receipt: "Inconsolata", "Courier New", Courier, ui-monospace, monospace;
 }
 
 *,
@@ -671,6 +680,20 @@ input[type="submit"]:hover {
   display: none;
 }
 
+.pos-receipt-font-loader {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+  font-family: var(--font-receipt);
+  font-weight: 700;
+}
+
 .pos-close,
 .pos-z {
   width: min(100% - 2rem, 40rem);
@@ -815,7 +838,7 @@ input[type="submit"]:hover {
 
 .pos-receipt__print,
 .pos-report-print {
-  font-family: "Courier New", Courier, ui-monospace, monospace;
+  font-family: var(--font-receipt);
   font-weight: 700;
   color: #000;
 }
@@ -980,7 +1003,7 @@ input[type="submit"]:hover {
 
   .pos-receipt__print,
   .pos-report-print {
-    font-family: "Courier New", Courier, ui-monospace, monospace;
+    font-family: var(--font-receipt);
     font-weight: 700;
     color: #000;
     font-size: 10pt;

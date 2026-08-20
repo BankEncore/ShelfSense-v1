@@ -7,8 +7,16 @@ export default class extends Controller {
     event.preventDefault()
   }
 
-  print(event) {
+  async print(event) {
     event.preventDefault()
+    if (document.fonts && document.fonts.load) {
+      try {
+        await document.fonts.load('700 12px "Inconsolata"')
+        await document.fonts.ready
+      } catch (_error) {
+        // Print with the stack fallback if the local face is unavailable.
+      }
+    }
     window.print()
   }
 }
