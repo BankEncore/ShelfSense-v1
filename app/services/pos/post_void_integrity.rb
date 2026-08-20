@@ -39,8 +39,10 @@ module Pos
         %i[
           quantity product_variant_id inventory_unit_id
           reference_unit_price_cents selling_unit_price_cents
-          extended_selling_amount_cents manual_discount_cents
-          net_merchandise_amount_cents line_tax_cents line_total_cents tax_class_id
+          extended_selling_amount_cents manual_discount_cents manual_discount_basis_points
+          net_merchandise_amount_cents line_tax_cents line_total_cents
+          tax_class_id tax_class_code_snapshot tax_class_name_snapshot
+          default_tax_class_id default_tax_class_code_snapshot default_tax_class_name_snapshot
         ].each do |attribute|
           unless line.public_send(attribute) == source.public_send(attribute)
             raise Pos::Error, "post-void line does not match the source"
@@ -64,6 +66,8 @@ module Pos
     def component_tuple(component)
       [
         component.store_tax_id,
+        component.store_tax_code_snapshot,
+        component.store_tax_name_snapshot,
         component.rate_percent,
         component.applies,
         component.taxable_basis_cents,
@@ -85,7 +89,9 @@ module Pos
         raise Pos::Error, "post-void tender is missing the source tender" if source.nil?
         raise Pos::Error, "post-void tender direction must reverse the source" unless opposite_tender?(source, tender)
         unless tender.amount_cents == source.amount_cents &&
+               tender.tender_type_id == source.tender_type_id &&
                tender.tender_type == source.tender_type &&
+               tender.tender_name == source.tender_name &&
                tender.behavioral_category == source.behavioral_category
           raise Pos::Error, "post-void tender does not match the source"
         end

@@ -8,13 +8,14 @@ class PosPostVoidTransactionTest < ActiveSupport::TestCase
     @store = @bootstrap[:store]
     @actor = @bootstrap[:administrator]
     @tax = tax_class(code: "physical_book", name: "Physical book")
+    @food = tax_class(code: "prepared_food", name: "Prepared food")
     @store_tax = StoreTaxes::Create.call(
       store: @store,
       actor: @actor,
       name: "Illinois State",
       rate_percent: "5.000",
       calculation_order: 1,
-      applies_by_tax_class_id: { @tax.id => true }
+      applies_by_tax_class_id: { @tax.id => true, @food.id => true }
     )
     @variant = pos_sellable_variant(actor: @actor, tax_class: @tax)
     open_quantity_stock(store: @store, variant: @variant, actor: @actor, quantity: 20, unit_cost_cents: 100)
@@ -396,7 +397,193 @@ class PosPostVoidTransactionTest < ActiveSupport::TestCase
     Pos::CompletedTransactionFacts.new(envelope).verify!
   end
 
+  test "duplicate card reversal rows are refused before persist" do
+    source = complete_mixed_tender_sale!(card_cents: 1000, card_reference: "AUTH-DUP")
+    card = source.pos_tenders.find_by!(behavioral_category: "card")
+    error = assert_raises(Pos::Error) do
+      post_void!(
+        source,
+        card_reversals: [
+          { "source_tender_id" => card.id, "confirmed" => false, "external_reference" => "REV-A" },
+          { "source_tender_id" => card.id, "confirmed" => true, "external_reference" => "REV-B" }
+        ]
+      )
+    end
+    assert_equal "Card reversal confirmation is invalid", error.message
+    refute PosTransaction.completed.exists?(post_void_of_transaction_id: source.id)
+  end
+
+  test "post-void of mixed sale and return negates signed net and reverses both directions" do
+    original = complete_quantity_sale!(quantity: 1)
+    transaction = start_sale(quantity: 2)
+    Pos::AddLinkedReturnLine.call(
+      transaction: transaction.reload,
+      actor: @actor,
+      expected_lock_version: transaction.lock_version,
+      original_line: original.pos_transaction_lines.first,
+      quantity: 1,
+      reason_code: "changed_mind"
+    )
+    transaction.reload
+    if transaction.signed_net_cents.positive?
+      Pos::TenderCash.call(
+        transaction: transaction,
+        actor: @actor,
+        expected_lock_version: transaction.lock_version,
+        amount_presented_cents: transaction.total_cents
+      )
+    elsif transaction.signed_net_cents.negative?
+      Pos::AddRefundTender.call(
+        transaction: transaction.reload,
+        actor: @actor,
+        expected_lock_version: transaction.lock_version,
+        tender_type: @cash,
+        amount_cents: -transaction.signed_net_cents
+      )
+    end
+    source = complete_current!(transaction.reload, expected_signed_net_cents: transaction.signed_net_cents).transaction
+    assert source.pos_transaction_lines.any?(&:sale?)
+    assert source.pos_transaction_lines.any?(&:linked_return?)
+    refute_equal 0, source.signed_net_cents
+
+    reversal = post_void!(source).transaction
+    assert_equal(-source.signed_net_cents, reversal.signed_net_cents)
+    assert_equal source.pos_transaction_lines.count, reversal.pos_transaction_lines.count
+    source.pos_transaction_lines.each do |source_line|
+      generated = reversal.pos_transaction_lines.find_by!(post_void_source_line_id: source_line.id)
+      assert_equal source_line.sale? ? "return" : "sale", generated.direction
+    end
+  end
+
+  test "post-void of an even exchange stays zero-net with no tenders" do
+    original = complete_quantity_sale!(quantity: 1)
+    transaction = start_sale(quantity: 1)
+    Pos::AddLinkedReturnLine.call(
+      transaction: transaction.reload,
+      actor: @actor,
+      expected_lock_version: transaction.lock_version,
+      original_line: original.pos_transaction_lines.first,
+      quantity: 1,
+      reason_code: "changed_mind"
+    )
+    source = complete_current!(transaction.reload, expected_signed_net_cents: 0).transaction
+    assert_equal 0, source.signed_net_cents
+    assert_equal 0, source.pos_tenders.count
+
+    reversal = post_void!(source).transaction
+    assert_equal 0, reversal.signed_net_cents
+    assert_equal 0, reversal.pos_tenders.count
+  end
+
+  test "post-void copies override discount and tax class facts without copying sale actions" do
+    transaction = start_sale(quantity: 1)
+    line = transaction.pos_transaction_lines.first
+    apply_action(
+      transaction, line,
+      action_type: "price_override",
+      selling_unit_price_cents: 1800
+    )
+    apply_action(
+      transaction.reload, line.reload,
+      action_type: "line_discount",
+      discount_basis_points: 1000
+    )
+    apply_action(
+      transaction.reload, line.reload,
+      action_type: "tax_class_override",
+      tax_class_id: @food.id
+    )
+    Pos::TenderCash.call(
+      transaction: transaction.reload,
+      actor: @actor,
+      expected_lock_version: transaction.lock_version,
+      amount_presented_cents: transaction.total_cents
+    )
+    source = complete_current!(transaction.reload).transaction
+    source_line = source.pos_transaction_lines.first
+    source_actions = source_line.pos_controlled_actions.map(&:action_type).sort
+    assert_equal %w[line_discount price_override tax_class_override], source_actions
+
+    result = post_void!(source)
+    reversal_line = result.transaction.pos_transaction_lines.first
+    envelope_line = result.operation.envelope.fetch("lines").first
+
+    assert_equal source_line.selling_unit_price_cents, reversal_line.selling_unit_price_cents
+    assert_equal source_line.manual_discount_cents, reversal_line.manual_discount_cents
+    assert_equal source_line.manual_discount_basis_points, reversal_line.manual_discount_basis_points
+    assert_equal source_line.tax_class_id, reversal_line.tax_class_id
+    assert_equal source_line.default_tax_class_id, reversal_line.default_tax_class_id
+    assert_empty reversal_line.pos_controlled_actions
+    assert_equal [ "post_void" ], result.transaction.pos_controlled_actions.map(&:action_type)
+    assert envelope_line.key?("override")
+    assert_equal source_line.manual_discount_cents, envelope_line.dig("discount", "discount_cents")
+    assert_equal source_line.manual_discount_basis_points, envelope_line.dig("discount", "basis_points")
+    assert_equal source_line.default_tax_class_id.to_s, envelope_line["default_tax_class_id"]
+    refute envelope_line.key?("return_reason")
+  end
+
+  test "post-void integrity refuses a fingerprint mismatch" do
+    reversal = post_void!(complete_quantity_sale!(quantity: 1)).transaction
+    action = reversal.pos_controlled_actions.find_by!(action_type: "post_void")
+    PosControlledAction.where(id: action.id).update_all(action_fingerprint: "deadbeef")
+    error = assert_raises(Pos::Error) { Pos::CompletedTransactionIntegrity.verify!(reversal.reload) }
+    assert_match(/fingerprint/, error.message)
+  end
+
+  test "post-void integrity refuses stored material that does not match Core" do
+    reversal = post_void!(complete_quantity_sale!(quantity: 1)).transaction
+    action = reversal.pos_controlled_actions.find_by!(action_type: "post_void")
+    PosControlledAction.where(id: action.id).update_all(
+      material_values: action.material_values.merge("source_envelope_hash" => "tampered")
+    )
+    error = assert_raises(Pos::Error) { Pos::CompletedTransactionIntegrity.verify!(reversal.reload) }
+    assert_match(/material values/, error.message)
+  end
+
+  test "post-void integrity refuses a reason name that does not match the catalog" do
+    reversal = post_void!(complete_quantity_sale!(quantity: 1)).transaction
+    action = reversal.pos_controlled_actions.find_by!(action_type: "post_void")
+    PosControlledAction.where(id: action.id).update_all(reason_name_snapshot: "Not a catalog name")
+    error = assert_raises(Pos::Error) { Pos::CompletedTransactionIntegrity.verify!(reversal.reload) }
+    assert_match(/reason/, error.message)
+  end
+
+  test "post-void integrity reconstructs card reversals from generated tenders" do
+    source = complete_mixed_tender_sale!(card_cents: 1000, card_reference: "AUTH-CORE")
+    card = source.pos_tenders.find_by!(behavioral_category: "card")
+    reversal = post_void!(
+      source,
+      card_reversals: [ { "source_tender_id" => card.id, "confirmed" => true, "external_reference" => "REV-CORE" } ]
+    ).transaction
+    Pos::CompletedTransactionIntegrity.verify!(reversal)
+
+    PosTender.where(id: reversal.pos_tenders.find_by!(behavioral_category: "card").id)
+             .update_all(external_reference: "REV-TAMPERED")
+    error = assert_raises(Pos::Error) { Pos::CompletedTransactionIntegrity.verify!(reversal.reload) }
+    assert_match(/material values/, error.message)
+  end
+
   private
+
+  def apply_action(transaction, line, action_type:, selling_unit_price_cents: nil, discount_basis_points: nil, tax_class_id: nil)
+    reason = case action_type
+    when "price_override" then "shelf_price_mismatch"
+    when "line_discount" then "customer_service"
+    when "tax_class_override" then "classification_correction"
+    end
+    Pos::ExecuteControlledAction.call(
+      transaction: transaction,
+      line: line,
+      actor: @actor,
+      expected_lock_version: transaction.lock_version,
+      action_type: action_type,
+      operation: "apply",
+      reason_code: reason,
+      selling_unit_price_cents: selling_unit_price_cents,
+      discount_basis_points: discount_basis_points,
+      tax_class_id: tax_class_id
+    )
+  end
 
   def post_void!(source, operation_id: SecureRandom.uuid_v7, reversal_transaction_id: SecureRandom.uuid_v7, reason_code: "entered_in_error", card_reversals: [])
     Pos::PostVoidTransaction.call(

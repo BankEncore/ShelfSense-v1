@@ -150,7 +150,7 @@ finalized_post_void_tax_cents           # signed
 finalized_post_void_net_cents           # signed
 ```
 
-NULL on pre-6.6 finalized = not captured. New finalize writes `0` when no post-void activity.
+NULL on pre-6.6 finalized = not captured. New finalize writes `0` when no post-void activity. Lineage FKs keep only the partial unique indexes (`add_reference` `index: false`). The migration is irreversible once post-void rows exist.
 
 ---
 
@@ -225,7 +225,7 @@ Tenders: reverse **applied** amount and tender-type identity snapshots. Payments
 
 ## 8. `Pos::PostVoidIntegrity`
 
-Before persisting the completed operation, prove the mirror: bijection of lines and tenders, opposite directions, equal magnitudes/snapshots, signed-net negation, no sale/unlinked controlled actions on generated lines.
+Before persisting the completed operation, prove the exact locked mirror: bijection of lines and tenders, opposite directions, equal magnitudes and copied snapshots (`manual_discount_basis_points`, Tax Class ids/code/name including defaults, tax-component code/name snapshots, tender type id/name), signed-net negation, no sale/unlinked controlled actions on generated lines.
 
 ---
 
@@ -279,13 +279,13 @@ wrong_register
 other          # note required, max 200
 ```
 
-Fingerprint material includes source/reversal ids, source operation id, source envelope hash, reason, and per-Card reversal facts. `line_id` is omitted.
+Fingerprint material includes source/reversal ids, source operation id, source envelope hash, and per-Card reversal facts reconstructed from generated reversal tenders. `line_id` is omitted. Completion recomputes stored `material_values` and `action_fingerprint` from those Core facts and refuses a mismatch. Stored reason name must match `PostVoidReasons`.
 
 ---
 
 ## 12. External Card confirmation
 
-**Card** source tenders: per-tender confirmation that the reversal was performed outside ShelfSense, plus optional **new** `external_reference` on the reversal tender (not the original AUTH).
+**Card** source tenders: exactly one confirmation row per source Card tender. Duplicate `source_tender_id` rows are refused before validation, fingerprinting, or persist. Confirmation means the reversal was performed outside ShelfSense, plus optional **new** `external_reference` on the reversal tender (not the original AUTH).
 
 Check / Other: no extra confirmation policy. Cash: none.
 
@@ -322,7 +322,7 @@ corrections.original_transaction_id
 corrections.post_void_of_transaction_id
 ```
 
-Lines: `post_void_source_line_id` when generated. Do **not** emit `original_transaction_line_id` or `return_reason` on generated lines. Tenders: `post_void_source_tender_id` when generated. Keep rejecting `corrections.return_of_transaction_id`. Transaction-scoped `post_void` in `controlled_actions[]` omits `subject.line_id`.
+Lines: `post_void_source_line_id` when generated. Do **not** emit `original_transaction_line_id` or `return_reason` on generated lines. When the source line had a commercial discount or unit-price variance, emit the historical `discount` / `override` blocks from those copied cents. Do **not** copy `line_discount` / `price_override` / `tax_class_override` / `unlinked_return` into `controlled_actions[]`. Tenders: `post_void_source_tender_id` when generated. Keep rejecting `corrections.return_of_transaction_id`. Transaction-scoped `post_void` in `controlled_actions[]` omits `subject.line_id`.
 
 Historical v2 envelopes without correction keys remain valid.
 
@@ -347,7 +347,7 @@ inventory.post_void_posted
 pos.transaction_completed   # on the reversal, existing completion audit
 ```
 
-Never passwords or full tender dumps.
+Executed `pos.post_void.applied` includes performer and approver identity alongside reason code. Never passwords or full tender dumps.
 
 ---
 

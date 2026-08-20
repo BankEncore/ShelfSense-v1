@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_19_200000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_19_203000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -556,7 +556,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_19_200000) do
     t.index ["pos_transaction_id"], name: "index_pos_tenders_on_pos_transaction_id"
     t.index ["pos_transaction_id"], name: "index_pos_tenders_one_cash_payment", unique: true, where: "(((behavioral_category)::text = 'cash'::text) AND ((direction)::text = 'payment'::text))"
     t.index ["pos_transaction_id"], name: "index_pos_tenders_one_cash_refund", unique: true, where: "(((behavioral_category)::text = 'cash'::text) AND ((direction)::text = 'refund'::text))"
-    t.index ["post_void_source_tender_id"], name: "index_pos_tenders_on_post_void_source_tender_id"
     t.index ["post_void_source_tender_id"], name: "index_pos_tenders_one_post_void_source", unique: true, where: "(post_void_source_tender_id IS NOT NULL)"
     t.index ["tender_type_id"], name: "index_pos_tenders_on_tender_type_id"
     t.check_constraint "amount_cents >= 0", name: "pos_tenders_amount_nonnegative"
@@ -601,7 +600,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_19_200000) do
     t.index ["original_transaction_line_id"], name: "index_pos_transaction_lines_on_original_transaction_line_id"
     t.index ["pos_transaction_id", "line_number"], name: "idx_on_pos_transaction_id_line_number_00590a67d2", unique: true
     t.index ["pos_transaction_id", "original_transaction_line_id"], name: "index_pos_transaction_lines_one_linked_original", unique: true, where: "(original_transaction_line_id IS NOT NULL)"
-    t.index ["post_void_source_line_id"], name: "index_pos_transaction_lines_on_post_void_source_line_id"
     t.index ["post_void_source_line_id"], name: "index_pos_transaction_lines_one_post_void_source", unique: true, where: "(post_void_source_line_id IS NOT NULL)"
     t.index ["product_variant_id"], name: "index_pos_transaction_lines_on_product_variant_id"
     t.index ["tax_class_id"], name: "index_pos_transaction_lines_on_tax_class_id"
@@ -650,7 +648,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_19_200000) do
     t.index ["cashier_user_id"], name: "index_pos_transactions_on_cashier_user_id"
     t.index ["pos_session_id"], name: "index_pos_transactions_on_pos_session_id"
     t.index ["pos_session_id"], name: "index_pos_transactions_one_working_per_session", unique: true, where: "((status)::text = 'working'::text)"
-    t.index ["post_void_of_transaction_id"], name: "index_pos_transactions_on_post_void_of_transaction_id"
     t.index ["post_void_of_transaction_id"], name: "index_pos_transactions_one_post_void_per_source", unique: true, where: "(post_void_of_transaction_id IS NOT NULL)"
     t.index ["register_id"], name: "index_pos_transactions_on_register_id"
     t.index ["reporting_period_id"], name: "index_pos_transactions_on_reporting_period_id"

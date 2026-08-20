@@ -28,6 +28,19 @@ module Pos
       payload
     end
 
+    def self.card_reversal_material(reversal)
+      reversal.pos_tenders.select { |tender| tender.behavioral_category == "card" }
+              .sort_by { |tender| tender.post_void_source_tender_id.to_s }
+              .map do |tender|
+        row = {
+          "source_tender_id" => tender.post_void_source_tender_id.to_s,
+          "confirmed" => true
+        }
+        row["external_reference"] = tender.external_reference if tender.external_reference.present?
+        row
+      end
+    end
+
     def self.source_operation(source)
       PosOperation.find_by!(pos_transaction_id: source.id, status: "completed", fact_type: PosOperation::FACT_TYPE)
     end
@@ -60,6 +73,7 @@ module Pos
       lease = nil
       Pos::Support.authorize!(@actor, @source.store)
       prepare_reason!
+      @card_reversals_by_source = unique_card_reversals!(@card_reversals)
       validate_card_reversals!(@source)
       source_operation = self.class.source_operation(@source)
       payload = self.class.command_payload(
@@ -159,7 +173,7 @@ module Pos
         persist_completed_transaction!(reversal, facts, completion_time, business_date)
         post_inventory!(reversal, completion_time, business_date, operation.id)
         persist_completed_operation!(operation, reversal, facts, completion_time)
-        record_success_audit!(reversal, operation, facts, source)
+        record_success_audit!(reversal, operation, facts, source, approver)
         record_completion_outbox!(reversal, operation, facts, completion_time)
         result = Result.new(transaction: reversal.reload, operation: operation.reload, replayed: false)
       end
@@ -193,9 +207,16 @@ module Pos
       )
     end
 
+    def unique_card_reversals!(rows)
+      ids = rows.map { |row| row["source_tender_id"] }
+      raise Pos::Error, "Card reversal confirmation is invalid" if ids.size != ids.uniq.size
+
+      rows.index_by { |row| row["source_tender_id"] }
+    end
+
     def validate_card_reversals!(source)
       card_tenders = source.pos_tenders.select { |tender| tender.behavioral_category == "card" }
-      submitted = @card_reversals.index_by { |row| row["source_tender_id"] }
+      submitted = @card_reversals_by_source
       card_tenders.each do |tender|
         row = submitted[tender.id.to_s]
         raise Pos::Error, "Card reversal confirmation is required" if row.nil? || row["confirmed"] != true
@@ -258,7 +279,7 @@ module Pos
           attrs[:change_cents] = 0
         end
         if source_tender.behavioral_category == "card"
-          row = @card_reversals.find { |entry| entry["source_tender_id"] == source_tender.id.to_s }
+          row = @card_reversals_by_source[source_tender.id.to_s]
           attrs[:external_reference] = row["external_reference"] if row && row["external_reference"].present?
         end
         reversal.pos_tenders.create!(attrs)
@@ -272,7 +293,7 @@ module Pos
         "prospective_reversal_transaction_id" => reversal.id.to_s,
         "source_completion_operation_id" => source_operation.id.to_s,
         "source_envelope_hash" => source_operation.envelope_hash,
-        "card_reversals" => @card_reversals
+        "card_reversals" => self.class.card_reversal_material(reversal)
       }
       fingerprint = Pos::ControlledActionFingerprint.call(
         action_type: "post_void",
@@ -392,7 +413,7 @@ module Pos
       )
     end
 
-    def record_success_audit!(transaction, operation, facts, source)
+    def record_success_audit!(transaction, operation, facts, source, approver)
       Audit::Recorder.record!(
         action: "pos.post_void.applied",
         outcome: "succeeded",
@@ -406,8 +427,12 @@ module Pos
           source_transaction_id: source.id,
           receipt_sequence: facts.receipt_sequence,
           transaction_reference: facts.transaction_reference,
-          reason_code: @reason_code
-        },
+          reason_code: @reason_code,
+          performed_by_user_id: @actor.id,
+          performed_by_name: @actor.display_name,
+          approved_by_user_id: approver&.id,
+          approved_by_name: approver&.display_name
+        }.compact,
         metadata: { operation_id: operation.id, envelope_hash: facts.envelope_hash }
       )
       Audit::Recorder.record!(

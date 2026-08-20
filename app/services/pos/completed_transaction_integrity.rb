@@ -54,9 +54,51 @@ module Pos
         raise Pos::Error, "post-void is missing the post_void fact" unless actions.one?
         action = actions.first
         raise Pos::Error, "post_void cannot target a line" if action.pos_transaction_line_id.present?
+        verify_post_void_action!(action)
       elsif actions.exists?
         raise Pos::Error, "ordinary transactions cannot include post_void"
       end
+    end
+
+    def verify_post_void_action!(action)
+      expected_name = Pos::PostVoidReasons.name_for!(action.reason_code)
+      unless action.reason_name_snapshot == expected_name
+        raise Pos::Error, "post-void reason does not match the catalog"
+      end
+      if Pos::PostVoidReasons.require_note?(action.reason_code)
+        raise Pos::Error, "post-void reason does not match the catalog" if action.reason_note.blank?
+      elsif action.reason_note.present?
+        raise Pos::Error, "post-void reason does not match the catalog"
+      end
+
+      material = reconstructed_post_void_material
+      stored = Idempotency::CanonicalJson.normalize(action.material_values)
+      expected_material = Idempotency::CanonicalJson.normalize(material)
+      raise Pos::Error, "controlled action material values do not match" unless stored == expected_material
+
+      expected = Pos::ControlledActionFingerprint.call(
+        action_type: "post_void",
+        transaction_id: @transaction.id,
+        line_id: nil,
+        material_values: material,
+        reason_code: action.reason_code,
+        reason_note: action.reason_note
+      )
+      raise Pos::Error, "controlled action fingerprint does not match" unless expected == action.action_fingerprint
+    end
+
+    def reconstructed_post_void_material
+      source = @transaction.post_void_of
+      raise Pos::Error, "post-void is missing the source transaction" if source.nil?
+
+      source_operation = Pos::PostVoidTransaction.source_operation(source)
+      {
+        "source_transaction_id" => source.id.to_s,
+        "prospective_reversal_transaction_id" => @transaction.id.to_s,
+        "source_completion_operation_id" => source_operation.id.to_s,
+        "source_envelope_hash" => source_operation.envelope_hash,
+        "card_reversals" => Pos::PostVoidTransaction.card_reversal_material(@transaction)
+      }
     end
 
     def verify_unlinked!(line, actions)

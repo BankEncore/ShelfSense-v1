@@ -164,6 +164,19 @@ class PosPostVoidWorkspaceTest < ActionDispatch::IntegrationTest
       reversal_transaction_id: css_select("input[name='reversal_transaction_id']").first["value"],
       reason_code: "duplicate_transaction",
       card_reversals: {
+        "0" => { source_tender_id: card.id, confirmed: "0", external_reference: "REV-A" },
+        "1" => { source_tender_id: card.id, confirmed: "1", external_reference: "REV-B" }
+      }
+    }
+    assert_response :unprocessable_entity
+    assert_match "Card reversal confirmation is invalid", response.body
+    refute PosTransaction.completed.exists?(post_void_of_transaction_id: sale.id)
+
+    post pos_transaction_post_void_path(sale), params: {
+      operation_id: css_select("input[name='operation_id']").first["value"],
+      reversal_transaction_id: css_select("input[name='reversal_transaction_id']").first["value"],
+      reason_code: "duplicate_transaction",
+      card_reversals: {
         "0" => { source_tender_id: card.id, confirmed: "1", external_reference: "REV-9" }
       }
     }

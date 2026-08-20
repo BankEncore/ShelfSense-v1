@@ -145,7 +145,12 @@ module Pos
     end
 
     def emit_historical_override?(line)
-      return false if line.post_void_generated?
+      if line.post_void_generated?
+        source = line.post_void_source_line
+        return false if source.nil?
+
+        return source.selling_unit_price_cents != source.reference_unit_price_cents
+      end
       return line.price_overridden? if line.sale?
       return false if line.unlinked_return?
 
@@ -157,7 +162,12 @@ module Pos
     end
 
     def emit_historical_discount?(line)
-      return false if line.post_void_generated?
+      if line.post_void_generated?
+        source = line.post_void_source_line
+        return false if source.nil?
+
+        return source.manual_discount_cents.to_i.positive? || source.manual_discount_basis_points.present?
+      end
       return line.manually_discounted? if line.sale?
       return false if line.unlinked_return?
 
