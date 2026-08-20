@@ -161,6 +161,19 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     assert_equal 1500, line.selling_unit_price_cents
   end
 
+  test "blocking overlay panel is an opaque surface above the dimmed workspace" do
+    open_register
+    add_current_sku
+
+    click_on "Price (F6)"
+    assert_selector "#pos_control_overlay", visible: true
+    background = page.evaluate_script(<<~JS)
+      getComputedStyle(document.querySelector("#pos_control_overlay .pos-overlay__panel")).backgroundColor
+    JS
+    assert_match(/rgb\(\s*255,\s*255,\s*255\s*\)/, background)
+    refute_match(/rgba\(\s*0,\s*0,\s*0,\s*0\s*\)/, background)
+  end
+
   test "f6 and f7 open controlled-action overlays and f5 is unbound" do
     open_register
     add_current_sku

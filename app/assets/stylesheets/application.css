@@ -546,16 +546,36 @@ input[type="submit"]:hover {
   background: color-mix(in srgb, #000 45%, transparent);
   display: grid;
   place-items: center;
+  padding: var(--space-5);
+  z-index: 1000;
 }
 
 .pos-overlay[hidden] {
   display: none;
 }
 
-.pos-overlay__panel--control {
-  max-width: 32rem;
-  max-height: min(90vh, 44rem);
+.pos-overlay__panel {
+  width: min(100%, 36rem);
+  max-height: calc(100vh - (2 * var(--space-5)));
   overflow-y: auto;
+  background: var(--color-surface);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: var(--space-5);
+  box-shadow: 0 1rem 2.5rem rgb(0 0 0 / 0.25);
+}
+
+.pos-overlay__panel > :first-child {
+  margin-top: 0;
+}
+
+.pos-overlay__panel > :last-child {
+  margin-bottom: 0;
+}
+
+.pos-overlay__panel--control {
+  width: min(100%, 32rem);
   display: grid;
   gap: var(--space-3);
 }

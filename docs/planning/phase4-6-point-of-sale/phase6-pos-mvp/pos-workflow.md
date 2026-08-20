@@ -537,6 +537,8 @@ Mixed sale+return `signed_net = 0`: `+` confirms complete with no tender ([retur
 
 One dialog contract: dim workspace, focus first field, Tab trap, Enter per §7, Esc cancel, restore scanner focus. Visible `[Esc Cancel]` / `[Enter Apply]` where Enter applies.
 
+Every blocking POS overlay must render its contents on an opaque, visually distinct dialog surface above the dimmed workspace. Fields and actions must never appear directly over the backdrop.
+
 **Replace** 6.4 “Enter does not submit” except where a scan could confirm (lookup/identifier fields, cancel overlay).
 
 Errors: transient above scan (next input replaces); blocking inside the current dialog.
