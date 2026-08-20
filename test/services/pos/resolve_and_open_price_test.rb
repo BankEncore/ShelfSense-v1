@@ -57,6 +57,48 @@ class PosResolveAndOpenPriceTest < ActiveSupport::TestCase
     assert_equal 1, transaction.pos_transaction_lines.count
   end
 
+  test "initial open-price zero is allowed and negative is rejected before mutation" do
+    transaction = Pos::StartTransaction.call(session: @context[:session], actor: @actor)
+    positive = Pos::AddMerchandise.call(
+      transaction: transaction,
+      actor: @actor,
+      expected_lock_version: transaction.lock_version,
+      identifier: @open_price.sku,
+      selling_price_cents: 500
+    )
+    assert_equal 500, positive.selling_unit_price_cents
+
+    transaction.reload
+    zero = Pos::AddMerchandise.call(
+      transaction: transaction,
+      actor: @actor,
+      expected_lock_version: transaction.lock_version,
+      identifier: @open_price.sku,
+      selling_price_cents: 0
+    )
+    assert_equal 0, zero.selling_unit_price_cents
+    assert_equal 0, zero.reference_unit_price_cents
+    assert_equal "open_price", zero.pricing_method_snapshot
+
+    transaction.reload
+    lock = transaction.lock_version
+    line_count = transaction.pos_transaction_lines.count
+    error = assert_raises(Pos::Error) do
+      Pos::AddMerchandise.call(
+        transaction: transaction,
+        actor: @actor,
+        expected_lock_version: lock,
+        identifier: @open_price.sku,
+        selling_price_cents: -1000
+      )
+    end
+    assert_equal "open price cannot be negative", error.message
+    transaction.reload
+    assert_equal lock, transaction.lock_version
+    assert_equal line_count, transaction.pos_transaction_lines.count
+    assert_equal 0, transaction.pos_tenders.count
+  end
+
   test "open-price used is refused with the locked message" do
     used = pos_sellable_variant(
       actor: @actor,

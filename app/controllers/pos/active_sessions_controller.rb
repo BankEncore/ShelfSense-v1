@@ -2,6 +2,8 @@
 
 module Pos
   class ActiveSessionsController < BaseController
+    skip_before_action :require_pos_transact!
+
     def index
       raise ActiveRecord::RecordNotFound unless can_view_other_sessions?
 

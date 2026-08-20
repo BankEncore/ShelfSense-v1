@@ -184,6 +184,31 @@ class PosHomeTest < ActionDispatch::IntegrationTest
     assert foreign.reload.open?
   end
 
+  test "pos.sessions.view without pos.transact can open a foreign x" do
+    pos_open_context(store: @store, actor: @actor, register: @register)
+    foreign = PosSession.open.find_by!(register: @register)
+    viewer = sessions_view_only_user(username: "x_viewer")
+    delete session_path
+    sign_in_as("x_viewer")
+
+    get pos_path
+    assert_redirected_to root_path
+
+    get pos_x_report_path
+    assert_redirected_to root_path
+
+    get pos_active_sessions_path
+    assert_response :success
+    assert_select "a[href='#{pos_session_x_report_path(foreign)}']", text: "X Report"
+
+    get pos_session_x_report_path(foreign)
+    assert_response :success
+    assert_match "X REPORT", response.body
+    assert_match @actor.display_name, response.body
+    assert foreign.reload.open?
+    assert_equal viewer.id, User.find_by!(username: "x_viewer").id
+  end
+
   test "session and z reports are viewable without an open session" do
     context = pos_open_context(store: @store, actor: @actor, register: @register)
     Pos::CloseSession.call(
@@ -247,6 +272,32 @@ class PosHomeTest < ActionDispatch::IntegrationTest
       opening_float: opening_float,
       confirmed_business_date: BusinessDate.for_store(@store).iso8601
     }
+  end
+
+  def sessions_view_only_user(username:)
+    role = Role.create!(
+      key: "session_viewer_#{SecureRandom.hex(4)}",
+      name: "Session viewer #{SecureRandom.hex(4)}",
+      assignment_scope: "either"
+    )
+    role.role_permissions.create!(
+      permission: Permission.find_by!(key: "pos.sessions.view"),
+      granted_by: @actor
+    )
+    user = User.create!(
+      username: username,
+      display_name: username,
+      password: "correct-horse-battery",
+      password_confirmation: "correct-horse-battery"
+    )
+    RoleAssignment.create!(
+      user: user,
+      role: role,
+      store: @store,
+      assigned_by: @actor,
+      effective_at: Time.current
+    )
+    user
   end
 
   def complete_cash_sale!(session:, actor: @actor, variant: @variant)

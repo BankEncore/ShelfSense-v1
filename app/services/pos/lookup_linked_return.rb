@@ -3,6 +3,7 @@
 module Pos
   class LookupLinkedReturn
     LIMIT = 20
+    LINE_BATCH = 50
 
     Result = Struct.new(:outcome, :receipts, :lines, :truncated, :message, :transaction_id, keyword_init: true)
     Receipt = Struct.new(:id, :transaction_reference, :completed_at, keyword_init: true)
@@ -73,24 +74,58 @@ module Pos
     end
 
     def transactions_for_variants(variants)
-      lines = completed_sale_lines.where(product_variant_id: variants.map(&:id)).includes(:pos_transaction).to_a
-      eligible_transactions = unique_returnable_transactions(lines)
+      eligible_transactions = collect_eligible_transactions(variants.map(&:id))
       return empty("no returnable original found") if eligible_transactions.empty?
       return lines_for_transaction(eligible_transactions.first) if eligible_transactions.one?
 
       receipts_result(eligible_transactions)
     end
 
+    def collect_eligible_transactions(variant_ids)
+      eligible = []
+      seen = Set.new
+      offset = 0
+      needed = LIMIT + 1
+
+      loop do
+        batch = completed_sale_lines
+                .where(product_variant_id: variant_ids)
+                .preload(:pos_transaction)
+                .order(
+                  "pos_transactions.completed_at DESC",
+                  "pos_transactions.transaction_reference ASC",
+                  "pos_transaction_lines.line_number ASC"
+                )
+                .offset(offset)
+                .limit(LINE_BATCH)
+                .to_a
+        break if batch.empty?
+
+        unique_returnable_transactions(batch).each do |transaction|
+          next if seen.include?(transaction.id)
+
+          seen.add(transaction.id)
+          eligible << transaction
+          return eligible if eligible.size >= needed
+        end
+
+        break if batch.size < LINE_BATCH
+
+        offset += LINE_BATCH
+      end
+
+      eligible
+    end
+
     def unique_returnable_transactions(lines)
       summaries = Pos::Returnability.summary_for(lines)
       basket = basket_original_ids
-      lines.select { |line| summaries[line.id]&.remaining_quantity.to_i.positive? && basket.exclude?(line.id) }
-           .map(&:pos_transaction)
-           .uniq
-           .sort { |left, right|
-             by_time = right.completed_at <=> left.completed_at
-             by_time.zero? ? left.transaction_reference <=> right.transaction_reference : by_time
-           }
+      lines.filter_map do |line|
+        next unless summaries[line.id]&.remaining_quantity.to_i.positive?
+        next if basket.include?(line.id)
+
+        line.pos_transaction
+      end.uniq
     end
 
     def receipts_result(transactions)

@@ -56,11 +56,30 @@ class PosLookupLinkedReturnTest < ActiveSupport::TestCase
 
   test "truncated merchandise lookup requires a receipt when more than 20 originals exist" do
     21.times { complete_sale! }
-    result = Pos::LookupLinkedReturn.call(store: @store, query: @variant.sku)
+    sqls = []
+    callback = lambda { |_name, _started, _finished, _id, payload| sqls << payload[:sql].to_s }
+    result = nil
+    ActiveSupport::Notifications.subscribed(callback, "sql.active_record") do
+      result = Pos::LookupLinkedReturn.call(store: @store, query: @variant.sku)
+    end
     assert_equal :receipts, result.outcome
     assert_equal 20, result.receipts.size
     assert result.truncated
     assert_match(/receipt or use Transactions/i, result.message)
+    assert sqls.any? { |sql| sql.match?(/pos_transaction_lines/i) && sql.match?(/LIMIT/i) }
+  end
+
+  test "newest exhausted originals do not hide an older returnable receipt" do
+    oldest = complete_sale!
+    newer = complete_sale!
+    newest = complete_sale!
+    complete_full_return!(newer)
+    complete_full_return!(newest)
+
+    result = Pos::LookupLinkedReturn.call(store: @store, query: @variant.sku)
+    assert_equal :lines, result.outcome
+    assert_equal oldest.id, result.transaction_id
+    assert_equal oldest.pos_transaction_lines.first.id, result.lines.first.id
   end
 
   test "unit identifier lands on that receipt's returnable lines" do
@@ -105,6 +124,35 @@ class PosLookupLinkedReturnTest < ActiveSupport::TestCase
       expected_total_cents: transaction.total_cents,
       expected_signed_net_cents: transaction.signed_net_cents
     ).transaction
+  end
+
+  def complete_full_return!(sale)
+    original_line = sale.pos_transaction_lines.first
+    transaction = Pos::StartTransaction.call(session: open_session, actor: @actor)
+    Pos::AddLinkedReturnLine.call(
+      transaction: transaction,
+      actor: @actor,
+      expected_lock_version: transaction.lock_version,
+      original_line: original_line,
+      quantity: original_line.quantity,
+      reason_code: "changed_mind"
+    )
+    transaction.reload
+    Pos::AddRefundTender.call(
+      transaction: transaction,
+      actor: @actor,
+      expected_lock_version: transaction.lock_version,
+      tender_type: TenderType.find_by!(code: "cash"),
+      amount_cents: -transaction.signed_net_cents
+    )
+    Pos::CompleteTransaction.call(
+      transaction: transaction.reload,
+      actor: @actor,
+      operation_id: SecureRandom.uuid_v7,
+      expected_lock_version: transaction.lock_version,
+      expected_total_cents: transaction.total_cents,
+      expected_signed_net_cents: transaction.signed_net_cents
+    )
   end
 
   def complete_unit_sale!(unit)

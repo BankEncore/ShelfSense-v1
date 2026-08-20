@@ -55,8 +55,7 @@ module Pos
         when :addable_variant
           add_variant_line!(transaction, resolution.variant)
         when :open_price_required
-          raise Pos::Error, "open price is required" if @selling_price_cents.nil?
-
+          require_nonnegative_open_price!
           add_variant_line!(transaction, resolution.variant)
         when :variant_choice_required
           raise Pos::Error, "identifier matches multiple variants"
@@ -100,7 +99,7 @@ module Pos
       raise Pos::Error, "scan the unit identifier" if tracking == "individual"
       if variant.merchandise_class.pricing_method == "open_price"
         raise Pos::Error, Pos::ResolveMerchandiseForSale::OPEN_PRICE_USED_MESSAGE if tracking == "individual"
-        raise Pos::Error, "open price is required" if @selling_price_cents.nil?
+        require_nonnegative_open_price!
       end
 
       validate_variant!(variant, tracking: tracking)
@@ -141,11 +140,17 @@ module Pos
       end
       if variant.merchandise_class.pricing_method == "open_price"
         raise Pos::Error, Pos::ResolveMerchandiseForSale::OPEN_PRICE_USED_MESSAGE if tracking == "individual"
-        return if @selling_price_cents.present?
+        require_nonnegative_open_price!
+        return
       end
       return if tracking == "individual"
 
       raise Pos::Error, "regular price is required" if variant.regular_price_cents.nil? && @selling_price_cents.nil?
+    end
+
+    def require_nonnegative_open_price!
+      raise Pos::Error, "open price is required" if @selling_price_cents.nil?
+      raise Pos::Error, "open price cannot be negative" if @selling_price_cents.negative?
     end
 
     def working_unit_line?(unit)

@@ -129,14 +129,36 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     assert_selector "#pos_control_overlay", visible: true
     fill_in "Selling price", with: "15.00"
     select "Damaged", from: "Reason"
-    username = find("#pos-approver-username")
-    username.fill_in with: "mgr_scan"
-    username.send_keys :enter
+    find("#pos-control-price").send_keys :enter
 
     assert_selector "#pos_control_overlay", visible: true
     assert_equal "pos-approver-username", page.evaluate_script("document.activeElement && document.activeElement.id")
     line = PosTransaction.working.find_by!(register: @register).pos_transaction_lines.first
     assert_equal line.reference_unit_price_cents, line.selling_unit_price_cents
+
+    username = find("#pos-approver-username")
+    username.fill_in with: "mgr_scan"
+    username.send_keys :enter
+
+    assert_selector "#pos_control_overlay", visible: true
+    assert_equal "pos-approver-password", page.evaluate_script("document.activeElement && document.activeElement.id")
+    line.reload
+    assert_equal line.reference_unit_price_cents, line.selling_unit_price_cents
+  end
+
+  test "enter from a direct price field applies the override" do
+    open_register
+    add_current_sku
+
+    click_on "Price (F6)"
+    assert_selector "#pos_control_overlay", visible: true
+    fill_in "Selling price", with: "15.00"
+    select "Damaged", from: "Reason"
+    find("#pos-control-price").send_keys :enter
+
+    assert_no_selector "#pos_control_overlay", visible: true
+    line = PosTransaction.working.find_by!(register: @register).pos_transaction_lines.first
+    assert_equal 1500, line.selling_unit_price_cents
   end
 
   test "f6 and f7 open controlled-action overlays and f5 is unbound" do

@@ -368,6 +368,7 @@ export default class extends Controller {
     const target = event.target
     if (this.hasApproverUsernameTarget && target === this.approverUsernameTarget) {
       event.preventDefault()
+      if (this.hasApproverPasswordTarget) this.approverPasswordTarget.focus()
       return
     }
     if (this.hasApproverPasswordTarget && target === this.approverPasswordTarget) {
@@ -377,6 +378,38 @@ export default class extends Controller {
     }
     if (this.isActionableControl(target)) return
     event.preventDefault()
+    this.advanceOrApplyControlOverlay()
+  }
+
+  advanceOrApplyControlOverlay() {
+    if (this.policyFor(this.currentControlAction) !== "approval_required") {
+      this.submitControlApply()
+      return
+    }
+    if (this.controlReasonNeedsNote()) {
+      this.controlNoteFieldTarget.focus()
+      return
+    }
+    if (this.hasApproverUsernameTarget && !this.controlApproverWrapTarget?.hidden) {
+      if (this.approverUsernameTarget.value.trim() === "") {
+        this.approverUsernameTarget.focus()
+        return
+      }
+      if (this.hasApproverPasswordTarget) {
+        this.approverPasswordTarget.focus()
+        return
+      }
+    }
+    this.submitControlApply()
+  }
+
+  controlReasonNeedsNote() {
+    return this.hasControlReasonFieldTarget &&
+      this.controlReasonFieldTarget.value === "other" &&
+      this.hasControlNoteFieldTarget &&
+      this.controlNoteFieldTarget.value.trim() === "" &&
+      this.hasControlNoteWrapTarget &&
+      !this.controlNoteWrapTarget.hidden
   }
 
   onUnlinkedOverlayKeydown(event, key = this.functionKey(event) || event.key) {
@@ -403,6 +436,7 @@ export default class extends Controller {
     }
     if (this.hasUnlinkedApproverUsernameTarget && target === this.unlinkedApproverUsernameTarget) {
       event.preventDefault()
+      if (this.hasUnlinkedApproverPasswordTarget) this.unlinkedApproverPasswordTarget.focus()
       return
     }
     if (this.hasUnlinkedApproverPasswordTarget && target === this.unlinkedApproverPasswordTarget) {
@@ -412,6 +446,35 @@ export default class extends Controller {
     }
     if (this.isActionableControl(target)) return
     event.preventDefault()
+    this.advanceOrApplyUnlinkedOverlay()
+  }
+
+  advanceOrApplyUnlinkedOverlay() {
+    if (!this.unlinkedPreviewPayload) return
+    if (this.policyFor("unlinked_return") !== "approval_required") {
+      this.submitUnlinkedReturn()
+      return
+    }
+    if (this.hasUnlinkedReasonFieldTarget &&
+        this.unlinkedReasonFieldTarget.value === "other" &&
+        this.hasUnlinkedNoteFieldTarget &&
+        this.unlinkedNoteFieldTarget.value.trim() === "" &&
+        this.hasUnlinkedNoteWrapTarget &&
+        !this.unlinkedNoteWrapTarget.hidden) {
+      this.unlinkedNoteFieldTarget.focus()
+      return
+    }
+    if (this.hasUnlinkedApproverUsernameTarget && !this.unlinkedApproverWrapTarget?.hidden) {
+      if (this.unlinkedApproverUsernameTarget.value.trim() === "") {
+        this.unlinkedApproverUsernameTarget.focus()
+        return
+      }
+      if (this.hasUnlinkedApproverPasswordTarget) {
+        this.unlinkedApproverPasswordTarget.focus()
+        return
+      }
+    }
+    this.submitUnlinkedReturn()
   }
 
   onSubmitEnd(event) {

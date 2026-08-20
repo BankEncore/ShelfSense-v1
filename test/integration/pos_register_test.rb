@@ -696,18 +696,58 @@ class PosRegisterTest < ActionDispatch::IntegrationTest
     follow_redirect!
     assert_response :success
     assert_match "register/merchandise_resolve?register_id=#{@register.id}", response.body
+    bound = session[:pos_register_id].to_s
 
-    session[:pos_register_id] = west_register.id
-    get pos_register_workspace_path, params: { register_id: @register.id }
-    assert_response :success
-    assert_equal @register.id.to_s, session[:pos_register_id].to_s
-
-    session[:pos_register_id] = west_register.id
-    get pos_register_merchandise_resolve_path, params: { identifier: @variant.sku }, as: :json
+    get pos_register_merchandise_resolve_path, params: { identifier: @variant.sku, register_id: @register.id }, as: :json
     assert_response :success
     assert_equal "addable_variant", response.parsed_body.fetch("outcome")
     assert_equal @variant.id, response.parsed_body.dig("variant", "id")
-    assert_equal @register.id.to_s, session[:pos_register_id].to_s
+    assert_equal bound, session[:pos_register_id].to_s
+
+    other = Register.create!(store: @store, register_number: 2, name: "Back")
+    get pos_register_merchandise_resolve_path, params: { identifier: @variant.sku, register_id: other.id }, as: :json
+    assert_response :conflict
+    assert_equal bound, session[:pos_register_id].to_s
+    assert_equal "open a register to continue", response.parsed_body.fetch("message")
+  end
+
+  test "read-only workspace gets do not bind the register" do
+    post pos_register_enter_path, params: enter_params
+    follow_redirect!
+    bound = session[:pos_register_id].to_s
+    other = Register.create!(store: @store, register_number: 9, name: "Unused")
+
+    get pos_register_workspace_path, params: { register_id: @register.id }
+    assert_response :success
+    assert_equal bound, session[:pos_register_id].to_s
+
+    get pos_register_merchandise_resolve_path, params: { identifier: @variant.sku, register_id: @register.id }, as: :json
+    assert_response :success
+    assert_equal bound, session[:pos_register_id].to_s
+
+    get pos_register_merchandise_search_path, params: { name: "Example", register_id: @register.id }, as: :json
+    assert_response :success
+    assert_equal bound, session[:pos_register_id].to_s
+
+    get pos_register_linked_return_lookup_path, params: { q: "not-a-receipt", register_id: @register.id }, as: :json
+    assert_response :success
+    assert_equal bound, session[:pos_register_id].to_s
+
+    get pos_register_workspace_path, params: { register_id: other.id }
+    assert_redirected_to pos_register_enter_path(register_id: other.id)
+    assert_equal bound, session[:pos_register_id].to_s
+
+    get pos_register_merchandise_resolve_path, params: { identifier: @variant.sku, register_id: other.id }, as: :json
+    assert_response :conflict
+    assert_equal bound, session[:pos_register_id].to_s
+
+    get pos_register_merchandise_search_path, params: { name: "Example", register_id: other.id }, as: :json
+    assert_response :conflict
+    assert_equal bound, session[:pos_register_id].to_s
+
+    get pos_register_linked_return_lookup_path, params: { q: @variant.sku, register_id: other.id }, as: :json
+    assert_response :conflict
+    assert_equal bound, session[:pos_register_id].to_s
   end
 
   private

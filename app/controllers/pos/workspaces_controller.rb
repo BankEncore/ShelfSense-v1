@@ -317,6 +317,7 @@ module Pos
 
     def continue
       Pos::ResumeOrStartTransaction.call(session: @session_record, actor: current_user)
+      session[:pos_register_id] = @register.id
       redirect_to pos_register_workspace_path
     rescue Pos::Denied, Pos::Error => e
       redirect_to pos_register_enter_path(register_id: @register.id), alert: e.message
@@ -326,12 +327,9 @@ module Pos
 
     def require_register!
       @register = find_register
-      unless @register
-        reject_workspace_context!(register_id: nil)
-        return
-      end
+      return if @register
 
-      session[:pos_register_id] = @register.id
+      reject_workspace_context!(register_id: nil)
     end
 
     def actor_session
