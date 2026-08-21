@@ -218,7 +218,7 @@ Authoritative plan: [phase6-plan.md](docs/planning/phase4-6-point-of-sale/phase6
 
 Status: proposed (not implemented).
 
-Phase 6.1 cuts over classification and product identity before later domains consume the Phase 2 contracts. Data is disposable; the implementing migrations ship the final schema. Departments remain reporting + GL owners; merchandise classes belong to one department and own creation-time defaults; variants persist inventory mode, pricing method, margin, supplier returnability, and tax class; products always receive generated `222` identifiers; manufacturer GTINs stay on variants; lookup codes are optional and may be shared; POS and inventory identifier entry use registry hits first, then lookup codes, with product selection when a code matches more than one product.
+Phase 6.1 cuts over classification and product identity before later domains consume the Phase 2 contracts. Data is disposable; the implementing migrations ship the final schema. Departments remain reporting and GL posting owners (all classes in a department share those accounts); merchandise classes belong to one department and own policies plus variant defaults, including a live default tax class with optional variant override; variants persist inventory mode, pricing method, margin, and supplier returnability; products always receive generated `222` identifiers and may have a product-level industry GTIN; lookup codes are optional and may be shared; identifier matching uses any registry row (active or retired) before lookup codes; POS and inventory callers apply their own eligibility after a match.
 
 Authoritative packet: [Phase 6.1](docs/planning/phase6.1-merchandise-classification-and-identifiers/README.md).
 

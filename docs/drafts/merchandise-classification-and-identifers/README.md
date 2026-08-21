@@ -2,9 +2,9 @@
 
 These files are **not** implementation authority.
 
-The earlier drafts described a production-style expand/contract refactor: live tax inheritance, product-level industry identifiers, class-level GL mappings, and staged column drops with backfill reports.
+The earlier drafts described a production-style expand/contract refactor, including class-level GL mappings and staged column drops with backfill reports.
 
-ShelfSense will instead implement **Phase 6.1**, which assumes disposable data and no backward compatibility. Lookup codes, shared-code product selection, and POS/inventory identifier targeting **are** in Phase 6.1.
+ShelfSense will instead implement **Phase 6.1**, which assumes disposable data and no backward compatibility. Live tax inheritance, product-level industry GTIN, lookup codes, shared-code product selection, and POS/inventory identifier targeting **are** in Phase 6.1. Class-level GL posting is deferred with a documented trigger before journal posting.
 
 Canonical packet:
 

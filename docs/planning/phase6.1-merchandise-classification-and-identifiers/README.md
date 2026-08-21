@@ -8,4 +8,6 @@ Status: **proposed**. Data is disposable; this packet does not require backward 
 | [phase6.1-schema.md](phase6.1-schema.md) | Target tables, fields, and constraints |
 | [phase6.1-user-stories.md](phase6.1-user-stories.md) | Issue backlog and acceptance criteria |
 
-Earlier drafts under `docs/drafts/merchandise-classification-and-identifers/` described a larger expand/contract refactor (live tax inheritance, product-level GTIN, class-level GL, staged column drops). This packet keeps **lookup codes and POS/inventory targeting** (including shared codes and product selection). It still defers live tax inheritance, product-level GTIN, class-level GL, and production dual-write.
+This packet includes live tax inheritance with a variant override, product-level industry GTIN (`product_industry`), lookup codes (including shared codes and product selection), and POS/inventory targeting with matching separated from caller eligibility.
+
+It still defers class-level GL mappings (with an explicit posting trigger), production dual-write, and a bulk reclassification UI. Earlier drafts under `docs/drafts/merchandise-classification-and-identifers/` that assumed expand/contract migration are not implementation authority.

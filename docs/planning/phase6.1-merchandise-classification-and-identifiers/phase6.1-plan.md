@@ -26,17 +26,19 @@ Completed POS and inventory facts already in a developer database may be discard
 
 ## Deliverable
 
-An authorized administrator can maintain departments as reporting categories with department-level GL mappings; maintain merchandise classes as single-department subdepartments that own operational defaults; create variants whose inventory mode, pricing method, margin, supplier returnability, department reporting path, and tax class do not change when class or department defaults later change; and create products that always receive an immutable generated `222` identifier, optional lookup code, and manufacturer GTINs on variants.
+An authorized administrator can maintain departments as reporting categories and GL posting owners; maintain merchandise classes as department-scoped policy and variant-default groups; create variants whose inventory mode, pricing method, margin, and supplier returnability do not change when class defaults later change; inherit the class’s current default tax class unless a variant override is set; and create products that always receive an immutable generated `222` identifier, an optional manufacturer GTIN at product level, and an optional lookup code.
 
-Cashiers and inventory operators target merchandise by exact identifier in this order:
+Cashiers target merchandise by exact identifier in this order:
 
 1. a direct inventory-unit identifier targets the unit;
-2. a direct variant identifier (SKU or industry GTIN) targets the variant;
-3. a product identifier (`222` primary or unique lookup-code match) with one eligible variant resolves to that variant;
-4. a product identifier with multiple eligible variants requires variant selection;
+2. a direct variant identifier (SKU or variant industry GTIN) targets the variant;
+3. a product identifier (`222` primary, product industry GTIN, or unique lookup-code match) with one POS-eligible variant resolves to that variant;
+4. a product identifier with multiple POS-eligible variants requires variant selection;
 5. an individually tracked variant requires inventory-unit selection.
 
-This phase adds one step: a lookup code that matches **multiple products** requires product selection. After a product is selected, resolution continues through the same product/variant/unit flow. No handler may pick the first product.
+This phase adds one step: a lookup code that matches **multiple products** requires product selection. After a product is selected, POS resolution continues through the same product/variant/unit flow. No handler may pick the first product.
+
+Identifier **matching** is shared. **Eligibility** (sellable, returnable, adjustable) is caller-specific and must not be baked into the matcher as POS `sellable?` for every entry point.
 
 ## Established conventions
 
@@ -52,14 +54,14 @@ This phase adds one step: a lookup code that matches **multiple products** requi
 1. **Final schema in the implementing migrations.** No dual-write window.
 2. Each merchandise class belongs to **exactly one** department. Department is derived for reporting and sellability through `variant.merchandise_class.department`. Variants do not store `department_id`.
 3. Merchandise-class numbers are unique within a department. Class `code` remains globally unique.
-4. **Copied at variant create** (explicit input wins; omitted booleans are distinct from `false`): `inventory_mode`, `pricing_method`, `target_margin_bps`, `supplier_returnable`, `tax_class_id`. Later class or department default changes do not mutate existing variants.
-5. Tax is **not** dynamically inherited. `product_variants.tax_class_id` remains the effective tax class. Class `default_tax_class_id` is a creation-time default only. Bulk “apply class tax to variants” is deferred.
-6. **GL mappings stay on departments.** Class-level GL is deferred until journal posting exists and a class must post differently from its department.
-7. Departments keep identity, lifecycle, ordering, description, and GL mappings. They drop `default_tax_class_id` and `default_target_margin_bps` (those defaults move to the merchandise class).
-8. Categories suggest **separate** default classes for standard vs used variants. No `abbreviation` column.
-9. Every new product receives a generated immutable `222` primary identifier. Creation no longer offers enter vs generate. Manufacturer identifiers are **variant** `industry_identifier` values only (existing GTIN normalizer: ISBN-10, ISBN-13, UPC-A, EAN-13). No `products.industry_identifier` and no `product_industry` registry kind.
+4. **Copied at variant create** (explicit input wins; omitted booleans are distinct from `false`): `inventory_mode`, `pricing_method`, `target_margin_bps`, `supplier_returnable`. Later class default changes do not mutate those stored values on existing variants.
+5. **Tax class is dynamically inherited.** `merchandise_classes.default_tax_class_id` is the live default. `product_variants.tax_class_override_id` is nullable. Effective tax is the override when present, otherwise the class’s **current** default. Clearing the override resumes inheritance. Changing the class default tax class affects future tax calculation and sellability for every associated variant without an override. An inactive or unassignable new default can make those variants unsellable until remedied. Completed POS lines retain existing tax snapshots.
+6. **GL mappings stay on departments.** All merchandise classes within a department share that department’s posting accounts. The class may be used later as an analytic classification, but **separate GL posting by class is not supported**. Reconsider class-level mappings **before implementing journal posting** if any two classes in the same department require different inventory, sales, COGS, shrink, adjustment, or write-down accounts. Do not postpone that decision until after posting exists.
+7. Departments keep identity, lifecycle, ordering, description, and GL mappings. They drop `default_tax_class_id` and `default_target_margin_bps` (tax default and target margin move to the merchandise class).
+8. Categories suggest **separate** default classes for standard and used variants. No `abbreviation` column.
+9. Every new product receives a generated immutable `222` primary identifier. Creation no longer offers enter vs generate. A product may have one optional **industry identifier** (ISBN-10 / ISBN-13 / UPC-A / EAN-13 / GTIN-13), stored as canonical 13 digits and reserved as `product_industry` in `identifier_registry`. Both `222` and product industry GTIN enter the **same product-resolution path**. Variant `industry_identifier` / `variant_industry` remains only when the variant has a **genuinely distinct** manufacturer GTIN. Do not copy the product industry identifier onto a variant. Collision across registry kinds remains a hard error.
 10. At most one **lookup code** per product. Lookup codes are optional, stored uppercase, **not globally unique**, and **not** in `identifier_registry`. Saving a duplicate is allowed.
-11. Identifier lookup tries the global registry first (GTIN-normalized input). If there is no active registry row, it tries an exact lookup-code match. One match enters the existing product-resolution path. Multiple matches return `multiple_products` and require product selection. After selection, reuse the existing product/variant/unit path; do not flatten variants from all matching products into one list.
+11. Identifier **matching** tries the global registry first (GTIN-normalized input) via `find_any` (any row, including retired). Active row → resolve by kind. Retired row → `retired`. **Only when no registry row exists** may lookup-code fallback run. One lookup-code match yields that product; multiple matches return `multiple_products`. After product selection, POS reuses the existing product/variant/unit flow; do not flatten variants from all matching products into one list.
 12. Ordinary edits cannot move a merchandise class to another department after an associated variant has inventory history (balances, ledger entries, valuation entries, or inventory units) or POS transaction-line history. Controlled bulk reclassification UI is deferred; rejected moves must not partially save.
 13. Target margin range stays `NULL` or `0 <= value < 10000` basis points (gross margin, same as today’s department constraint).
 14. Lookup-code characters after trim and upcase: `A–Z`, `0–9`, `.`, `_`, `/`, `-`. Maximum 64 characters. No spaces. Blank becomes `NULL`.
@@ -72,19 +74,25 @@ This packet **supersedes** the following Phase 2 / 2.1 implementation contracts:
 - Merchandise class has separate default standard and used *departments*.
 - Variant stores `department_id`.
 - POS and sellability read inventory mode and pricing method from the merchandise class at use time.
+- Variant tax class is only a stored copy with no live class default.
 
-It **preserves** Phase 2’s rule that approved tax class (and, after this phase, inventory mode and pricing method) are stored on the variant and are not live-inherited.
+It **preserves** Phase 2’s rule that inventory mode and pricing method, once stored on the variant, are not live-inherited. Tax is the exception: it is live-inherited from the class unless overridden.
 
 Historical Phase 2 plan and schema documents remain a record of what shipped then. Implement against this packet.
 
 ## Terminology
 
-- **Department:** top-level reporting category and GL mapping owner.
-- **Merchandise class:** department-scoped subdepartment that owns variant *defaults* and merchandise policies (`used_merchandise_allowed`, `buyback_allowed`).
+- **Department:** top-level reporting category and **GL posting owner**. Classes in a department share those accounts.
+- **Merchandise class:** department-scoped merchandise **policy and variant-default group** (including the live default tax class). Not an independently mapped posting unit.
 - **Merchandise category:** hierarchical browsing / shelving taxonomy; not the accounting path.
-- **Resolved variant value:** copied from a class default or explicit input and then stored on the variant.
-- **Industry identifier:** manufacturer GTIN-compatible identifier on a **variant**, canonical 13 digits, globally unique via `identifier_registry` (`variant_industry`).
+- **Resolved variant value:** copied from a class default or explicit input and then stored on the variant (inventory mode, pricing method, margin, supplier returnability).
+- **Tax override:** nullable variant `tax_class_override_id` that replaces the class’s current default.
+- **Effective tax class:** the override when present; otherwise `merchandise_class.default_tax_class`.
+- **Product industry identifier:** manufacturer GTIN for the bibliographic/merchandise product (typically the ISBN for a book), canonical 13 digits, registry kind `product_industry`.
+- **Variant industry identifier:** manufacturer GTIN for a distinct sellable form, registry kind `variant_industry`. Unused when the product-level GTIN already identifies the edition.
 - **Lookup code:** optional, nonunique product search code; may contain letters; not a GTIN; not a registry value.
+
+Avoid calling classes “accounting subdepartments.” They are not independently mapped GL units in this phase.
 
 ## Behavior
 
@@ -106,7 +114,7 @@ Optional: `target_margin_bps` (same range as locked decision 13), `description`.
 
 Retain: buyback implies used merchandise allowed and inventory-capable default inventory mode.
 
-Admin form groups: identity (including parent department and class number), operational defaults, merchandise policies. Explain that defaults apply to **newly created** variants only.
+Admin form groups: identity (including parent department and class number), operational defaults, merchandise policies. Explain that inventory, pricing, margin, and supplier-return defaults apply to **newly created** variants only, and that **tax default changes affect existing variants that have no override** (future transactions and sellability).
 
 Class selectors that could be ambiguous include department context (name or number).
 
@@ -125,36 +133,53 @@ Retain parent, sibling-name uniqueness, cycle prevention, and code rules. Displa
 
 1. Class: explicit class, else category default for the requested `variant_type`, else unresolved.
 2. Copy class defaults for inventory mode, pricing method, target margin, and supplier returnability unless the caller submitted those fields.
-3. Tax class: explicit tax class, else class `default_tax_class_id`, else unresolved.
+3. Tax: store `tax_class_override` only when the caller **explicitly** selects a tax class. Omitted or blank means inherit (`tax_class_override_id` null).
 4. Price suggestion: unchanged list-price / condition adjustment behavior, driven by the **resolved** (soon persisted) pricing method.
 5. Do not assign `department_id`.
 
-After create, POS, sellability, inventory tracking derivation, and open-price checks read the **variant’s** persisted `inventory_mode` and `pricing_method`, not the class current defaults.
+```ruby
+def effective_tax_class
+  tax_class_override || merchandise_class&.default_tax_class
+end
+```
+
+After create, POS, sellability, inventory tracking derivation, and open-price checks read the **variant’s** persisted `inventory_mode` and `pricing_method`. All tax consumers (activation, sellability, POS add, display) call `effective_tax_class`; they must not treat `tax_class_override_id` as the resolved class.
+
+The variant form labels tax as an override and offers **Use merchandise-class default**. Display the currently effective tax class even when no override exists. Assignment and clearing of the override are audited and must distinguish override change from effective-value change.
 
 `derived_inventory_tracking` uses `variant.inventory_mode` and `variant.variant_type` with the same matrix as Phase 2 (inventory+standard → quantity; inventory+used → individual; non_inventory+standard → non_inventory; non_inventory+used invalid).
 
 Inventory-mode or variant-type changes that would change derived tracking are rejected when the variant has inventory history. History-free variants may change when the resulting type, condition, and class policy remain valid.
 
-Activation and sellability require an active assignable merchandise class, that class’s department active/assignable, and an active assignable `tax_class` on the variant. Price rules use the variant’s persisted pricing method.
+Activation and sellability require an active assignable merchandise class, that class’s department active/assignable, and an active assignable **effective** tax class. Price rules use the variant’s persisted pricing method.
 
 ### Products and identifiers
 
-`Products::Create` always allocates a `222` EAN in the same transaction as registry reservation. Remove `identifier_mode` and entered-primary handling from UI, controllers, CSV, and services.
+`Products::Create` always allocates a `222` EAN in the same transaction as registry reservation of `product_primary`. Remove `identifier_mode` and entered-primary handling from UI, controllers, CSV, and services.
 
-Product detail shows `primary_identifier` as read-only. Optional `lookup_code` field; display the stored uppercase value. Saving a lookup code already used by other products is permitted; the UI may warn that scan/add will require product selection.
+Optional product `industry_identifier` is normalized with the existing GTIN normalizer (ISBN-10 → Bookland `978` ISBN-13, UPC-A → GTIN-13, EAN-13/ISBN-13 validated) and reserved as `product_industry` atomically with the product write. Assignment, replacement, and retirement use a registry-aware service equivalent to the existing variant industry-identifier service. Entered values must not use the reserved `222` namespace.
 
-Variant SKU generation (`221`) and inventory-unit identifiers (`220`) are unchanged. Variant industry identifier assignment remains registry-aware, atomic, and audited.
+Product detail shows `primary_identifier` as read-only. Industry identifier is labeled as GTIN/ISBN/UPC with normalization explained. Optional `lookup_code` field; display the stored uppercase value. Saving a lookup code already used by other products is permitted; the UI may warn that scan/add will require product selection.
 
-### Identifier resolution
+Variant SKU generation (`221`) and inventory-unit identifiers (`220`) are unchanged. Variant industry identifier remains optional and registry-aware; it is not the place to store the book’s ISBN when that ISBN belongs to the product.
 
-Preserve current result statuses and add product ambiguity:
+### Identifier matching vs eligibility
 
-- `not_found`, `invalid`, `retired`
-- `product` — product resolved; no eligible sellable variant
-- `multiple_products` — **new;** caused only by a nonunique lookup-code match; `products` carries the choices
-- `variant`, `multi_variant`, `inventory_unit`
+Split two layers.
 
-Compatible result shape:
+**1. Matching (`Identifiers::Lookup` or a dedicated matcher it calls)**
+
+Return identity only. Do **not** filter variants with `sellable?`.
+
+Statuses from matching:
+
+- `not_found` — no registry row and no lookup-code match
+- `invalid` — input cannot be interpreted
+- `retired` — a registry row exists and `retired_at` is set
+- `inventory_unit` — active `inventory_unit` kind
+- `variant` — active `variant_sku` or `variant_industry`
+- `product` — active `product_primary` or `product_industry`, or a single lookup-code product match (product record only; include or allow loading of its variants without POS eligibility filtering)
+- `multiple_products` — two or more products share the lookup code
 
 ```ruby
 Result = Struct.new(
@@ -169,64 +194,65 @@ Result = Struct.new(
 )
 ```
 
-Algorithm:
+Matching algorithm:
 
-1. If the raw input can be GTIN-normalized (including ISBN-10 and UPC-A), search `identifier_registry` (allow `222`). On an active hit, follow the existing kind-specific path (unit, variant SKU/industry, product primary → existing single/multi-variant logic).
-2. Otherwise, or if normalization succeeds but no **active** registry row exists, normalize the raw input as a lookup code (`strip` + `upcase`) and search `products.lookup_code` by exact equality.
-3. No products: `not_found`.
-4. One product: feed it into the existing product-primary resolution path (eligible sellable variants → `variant`, `multi_variant`, or `product`).
-5. Multiple products: `multiple_products` with a deterministic product list (stable sort, e.g. name then `222` then id). Do not auto-select.
-6. Letter-containing lookup codes must not fail as invalid GTINs before the lookup-code path runs.
-7. A numeric value that is syntactically a valid GTIN may still be tried as a lookup code when no active registry record matches. A registered unique identifier always wins.
+1. If the raw input can be GTIN-normalized (including ISBN-10 and UPC-A), search `identifier_registry` with `find_any` (allow `222`).
+2. If a registry row exists and is retired → `retired`. Stop. Do not fall through to lookup codes.
+3. If a registry row exists and is active → resolve by `identifier_kind`:
+   - `inventory_unit` → that unit (and its variant/product);
+   - `variant_sku` / `variant_industry` → that variant;
+   - `product_primary` / `product_industry` → that product.
+4. If **no** registry row exists, normalize the raw input as a lookup code (`strip` + `upcase`) and search `products.lookup_code` by exact equality.
+5. Letter-containing codes must not fail as invalid GTINs before step 4.
+6. A numeric value that is a valid GTIN with **no** registry row may still match a lookup code. Any registry row (active or retired) wins over lookup codes.
 
-Scan/add remains exact-only. Prefix and name matching belong to interactive search (`Pos::SearchMerchandise` and admin search) and must not silently select merchandise.
+**2. Caller eligibility**
 
-### POS and inventory targeting
+| Caller | After a match |
+|---|---|
+| POS sale (`Pos::ResolveMerchandiseForSale`) | Apply sellability, store, open-price, availability, working-transaction unit-busy. Product match with one POS-eligible variant → add path; several → variant chooser; individually tracked → unit chooser; none eligible → unavailable. `multiple_products` → `product_choice_required`. |
+| Linked / unlinked returns | Apply return eligibility and disposition rules to matched identity. Same product-selection rule; never first-match. |
+| Inventory adjustments | May target a variant that is discontinued, unsellable, unpriced, or missing a current assignable tax class, when it still requires quantity/value correction. Do not use POS `sellable?` as the matcher. Shared lookup codes must not pick the first product. One product with several variants → require a specific SKU or present an explicit choice; do not invent POS eligibility. |
+| Admin merchandise lookup / search | May display records that are not sellable. Never auto-select the first of several products. |
 
-The existing targeting pattern is authoritative and must keep working. Lookup codes extend it; they do not replace it.
+Today’s `Identifiers::Lookup` embeds `sellable?` when resolving `product_primary`. That must move to the POS (and similar) callers. Direct SKU/unit hits stay identity matches; callers still apply their own rules.
 
-**Entry points that must use the same `Identifiers::Lookup` contract:**
+### POS targeting (cashier flow)
 
-| Entry point | After `multiple_products` | After a single product |
-|---|---|---|
-| Register scan/add (`Pos::ResolveMerchandiseForSale` and workspace) | Product-selection overlay; cancel adds nothing | Existing product path (variant chooser, unit chooser, open-price, sellability) |
-| Linked and unlinked returns | Same product-selection rule; then existing return eligibility | Existing return path |
-| Admin merchandise lookup | Product list or require a more specific identifier; never the first match | Existing path |
-| Inventory adjustment variant identifier | Do not pick a product or variant arbitrarily. Present product choices or reject with a message that names the ambiguity and asks for a `221` SKU, unit `220`, or `222` primary | If the product has one eligible variant, that variant; if several, require a specific SKU (same as today’s `multi_variant` adjustment behavior) |
+The existing targeting pattern remains authoritative for **sales**. Lookup codes and product industry GTINs extend it; they do not replace it.
+
+Register workspace: add a product picker in the same style as the existing variant and unit pickers (keyboard list, Enter selects, Escape cancels). Product rows must identify the choice (name, `222`, industry identifier, lookup code, distinguishing subtitle/brand as available). Selecting a product re-invokes **POS eligibility** on that product (equivalent to a unique `222` or product-industry hit).
+
+Cancel of product selection does not add or reserve merchandise.
+
+Do not skip POS sellability, store, availability, open-price, or working-transaction unit-busy rules after product selection.
+
+POS `ResolveMerchandiseForSale` must gain an outcome such as `product_choice_required` (carrying `products`) in addition to today’s `variant_choice_required` and `unit_choice_required`. Exhaustive `case` handlers must handle `multiple_products` / `product_choice_required` and `retired` explicitly.
 
 **Target-specific coverage** (accepted lookup *entry* points, not a promise of uniqueness):
 
-- Product lookup: product `222` primary, product lookup code.
+- Product lookup: product `222`, product industry identifier, product lookup code.
 - Variant lookup: those inputs plus variant SKU and variant industry identifier.
 - Inventory-unit lookup: those inputs plus inventory-unit `220` identifier.
-
-Register workspace: add a product picker in the same style as the existing variant and unit pickers (keyboard list, Enter selects, Escape cancels). Product rows must identify the choice (name, `222`, lookup code, distinguishing subtitle/brand as available). Selecting a product re-invokes resolution with that product (equivalent to a unique product-primary hit), including:
-
-- one eligible sellable variant → add or open-price / unit choice as today;
-- several eligible variants → existing variant chooser;
-- individually tracked variant → existing unit chooser;
-- no eligible variant → existing unsellable/not-found messaging.
-
-Do not skip sellability, store, availability, open-price, or working-transaction unit-busy rules after product selection.
-
-POS `ResolveMerchandiseForSale` must gain an outcome such as `product_choice_required` (carrying `products`) in addition to today’s `variant_choice_required` and `unit_choice_required`. Exhaustive `case` handlers that currently treat unknown lookup statuses as `not_found` must handle `multiple_products` / `product_choice_required` explicitly.
 
 ### CSV
 
 Template and importer:
 
 - New products always generate `222`. Ordinary import cannot assign a primary identifier. `generate_primary_identifier` and entered `primary_identifier` on **create** are removed.
-- Stable update keys: existing `222` `product_primary_identifier`, variant `sku`, variant `industry_identifier`. `product_lookup_code` may locate an existing product only when the match is **one** product; multiple matches fail the row/group and must not update an arbitrary product.
-- Headers include `product_lookup_code`, `merchandise_class_code`, and variant operational columns when supplied: `inventory_mode`, `pricing_method`, `target_margin_bps`, `supplier_returnable`, `tax_class_code` (stored on the variant; blank tax means apply class default at create).
-- Variant `industry_identifier` uses the same normalizer as the UI.
+- Stable update keys: existing `222` `product_primary_identifier`, unambiguous `product_industry_identifier`, variant `sku`, variant `industry_identifier`. `product_lookup_code` locates a product only when the match is **one** product; multiple matches fail the row/group.
+- Headers include `product_industry_identifier`, `product_lookup_code`, `merchandise_class_code`, `inventory_mode`, `pricing_method`, `target_margin_bps`, `supplier_returnable`, `tax_class_override_code` (blank means inherit).
+- Product and variant industry identifiers use the same GTIN normalizer as the UI. Ambiguous industry-identifier matches are rejected.
 - Lookup codes uppercase; duplicate lookup codes on different products are allowed on write.
 - Omitted booleans vs explicit `false` must be distinguished.
 
 ### Auditing
 
-Audit at least: department and class identity/lifecycle; class parent-department change attempts (including rejected moves); class default and policy changes; GL mapping changes on departments; variant persisted operational and tax-class changes; product lookup-code changes; variant industry-identifier assignment/replacement/retirement.
+Audit at least: department and class identity/lifecycle; class parent-department change attempts (including rejected moves); class default tax-class changes; other class default and policy changes; GL mapping changes on departments; variant persisted operational-value changes; variant tax-override assignment and clearing; product industry-identifier assignment, replacement, or retirement; product lookup-code changes; variant industry-identifier assignment/replacement/retirement.
 
-Do not put secrets or full row dumps in payloads. Use `before_values` / `after_values` for the fields that changed.
+Audit payloads must use `before_values` and `after_values` sufficient to distinguish a changed override from a changed effective tax class.
+
+Do not put secrets or full row dumps in payloads.
 
 ## Delivery
 
@@ -234,11 +260,11 @@ Prefer **two pull requests** on `main` (no long-lived phase branch). Each PR inc
 
 ### Slice A — Classification cutover
 
-Schema and behavior for departments, classes, categories, and persisted variant operational fields. POS and sellability read variant inventory mode and pricing method. Seeds and factories rebuilt. Department and class admin UX.
+Schema and behavior for departments, classes, categories, persisted variant operational fields, and `effective_tax_class` / tax override. POS and sellability read variant inventory mode and pricing method and effective tax. Seeds and factories rebuilt. Department and class admin UX.
 
 ### Slice B — Product identity, lookup codes, and targeting
 
-Always-generate `222`, remove enter/generate, add lookup codes (nonunique), extend `Identifiers::Lookup` with lookup-code fallback and `multiple_products`, Register product picker, POS sale/return handlers, inventory-adjustment and admin lookup handlers, CSV identity rules.
+Always-generate `222`, product industry GTIN and `product_industry` registry kind, lookup codes (nonunique), matcher vs eligibility split, lookup-code fallback that respects retired registry rows, `multiple_products`, Register product picker, POS sale/return handlers, inventory-adjustment and admin lookup handlers, CSV identity rules.
 
 If a single PR stays reviewable, combining A and B is acceptable because data is disposable. Do not split tests from the behavior they cover.
 
@@ -251,68 +277,73 @@ If a single PR stays reviewable, combining A and B is acceptable because data is
 - Class requires one parent department; cannot assign an inactive department.
 - Buyback implication unchanged.
 - Used category default rejects a class that does not allow used merchandise.
-- Variant create copies class defaults; explicit values win; explicit `false` supplier returnability is kept.
-- Later class default changes do not mutate existing variants.
-- Variant tax is the stored `tax_class_id`; changing class default tax does not change existing variants.
+- Variant create copies inventory, pricing, margin, and supplier-return defaults; explicit values win; explicit `false` supplier returnability is kept.
+- Later class default changes for those copied fields do not mutate existing variants.
+- Variant effective tax uses the class default when no override exists.
+- Variant effective tax uses the override when present.
+- Changing a class tax default changes effective tax only for non-overridden variants.
 - Inventory-mode / tracking changes blocked after inventory history.
 - Lookup code trimmed, uppercased, nullable when blank, and permitted to duplicate another product; database check rejects noncanonical storage.
 - Invalid lookup-code characters rejected.
+- Product and variant industry identifiers: ISBN-10, UPC-A, EAN-13 normalization and check-digit failures; reserved `222` rejected on entered industry IDs; registry collisions across kinds.
 
 ### Services
 
 - Product create always assigns `222`; enter-external path is gone.
-- Variant create assigns `221` and persists resolved defaults.
+- Product industry assignment is atomic with registry reservation/retirement.
+- Variant create assigns `221` and persists resolved copied defaults; tax override only when explicit.
 - Unit create still assigns `220`.
-- Unique registry match beats lookup code.
+- Matcher: registry row absent vs active vs retired are distinct; retired does not fall through to lookup codes.
+- Unique registry match (including product industry) beats lookup code.
 - Lowercase lookup input matches stored uppercase code.
-- One lookup-code match enters existing product resolution.
+- One lookup-code match yields that product without POS eligibility filtering in the matcher.
 - Multiple lookup-code matches return `multiple_products` deterministically; no handler selects the first product.
-- Product selection after `multiple_products` reuses existing variant and unit resolution.
-- GTIN normalizer behavior for variant industry identifiers unchanged (ISBN-10, UPC-A, EAN-13, check-digit failures, reserved `222` on *entered* industry IDs as today).
+- POS eligibility after a product match reuses existing variant and unit resolution.
+- Inventory adjustment can match a product/variant that is not POS-sellable.
 
 ### POS / inventory targeting integration
 
-- Direct unit, variant, single-variant product, multi-variant product, and individual-unit-selection flows unchanged.
-- A unique lookup code with one eligible variant adds or advances as a product primary would.
-- A unique lookup code with multiple eligible variants uses the existing variant chooser.
-- A unique lookup code whose variant is individually tracked uses the existing unit chooser.
+- Direct unit, variant, single-variant product, multi-variant product, and individual-unit-selection flows unchanged for **sellable** merchandise.
+- Product industry GTIN enters the same POS product path as `222`.
+- A unique lookup code with one POS-eligible variant adds or advances as a product primary would.
+- A unique lookup code with multiple POS-eligible variants uses the existing variant chooser.
+- A unique lookup code whose chosen variant is individually tracked uses the existing unit chooser.
 - A duplicated lookup code presents product choices; cancel does not add or reserve merchandise.
-- Selecting a product then follows the same variant/unit/open-price outcomes as a direct `222` hit.
-- Linked and unlinked return identifier entry handles `multiple_products` without arbitrary selection.
-- Inventory adjustment identifier entry does not apply a lookup-code match to an arbitrary product or variant.
-- Completed transaction tax and pricing snapshots still reconstruct after class default changes (because variants and lines store their own values).
+- Linked and unlinked return identifier entry handles `multiple_products` and `retired` without arbitrary selection.
+- Inventory adjustment identifier entry does not apply a lookup-code match to an arbitrary product or variant and does not hide discontinued on-hand variants behind POS `sellable?`.
+- Completed transactions retain tax and pricing snapshots after class tax or other defaults change.
 
 ### Cutover
 
 - Test database schema matches `phase6.1-schema.md`.
-- No remaining application reads of `product_variants.department_id`, class standard/used department FKs, category `default_merchandise_class_id`, or live `merchandise_class.inventory_mode` / `pricing_method` for POS/sellability/tracking.
+- No remaining application reads of `product_variants.department_id`, class standard/used department FKs, category `default_merchandise_class_id`, legacy variant `tax_class_id` as the effective class, or live `merchandise_class.inventory_mode` / `pricing_method` for POS/sellability/tracking.
 - Seeds boot; CSV template documents the new headers.
 
 ## Acceptance criteria
 
-1. Departments are reporting + GL configuration; no tax or margin defaults on the department.
+1. Departments are reporting + GL configuration; no tax or margin defaults on the department; classes in a department share the department’s posting accounts.
 2. Every merchandise class has exactly one parent department and a department-scoped unique number.
 3. Categories can specify separate standard and used default classes.
-4. Existing variants (after cutover, in tests/seeds) keep persisted inventory, pricing, margin, supplier-return, and tax values when class defaults change.
-5. Every product has an immutable generated `222` primary identifier.
-6. Manufacturer GTINs are variant industry identifiers in the registry.
-7. Lookup codes are optional, stored uppercase, may be shared by multiple products, and resolve only after a registry miss.
-8. Multiple lookup-code matches require product selection and then resume the established POS product/variant/unit flow.
-9. Existing identifier-based POS flows continue to pass without behavioral regression.
-10. Inventory adjustment and other identifier handlers never apply a shared lookup code to an arbitrary product.
-11. Documentation (this packet, README roadmap, CSV template) matches the implemented behavior.
+4. Existing variants keep persisted inventory, pricing, margin, and supplier-return values when those class defaults change.
+5. Non-overridden variants use the merchandise class’s current default tax class for future transactions and sellability; overridden variants keep their override.
+6. Every product has an immutable generated `222` primary identifier.
+7. A product may have one optional industry GTIN in the registry (`product_industry`); both product identifiers enter the product-resolution path. Variant industry identifiers are only for a distinct manufacturer GTIN.
+8. Lookup codes are optional, stored uppercase, may be shared, and resolve only when **no** registry row exists (active or retired).
+9. Multiple lookup-code matches require product selection and then resume the established POS product/variant/unit flow.
+10. Identifier matching does not embed POS `sellable?`; callers apply their own eligibility.
+11. Existing identifier-based POS flows continue to pass without behavioral regression for sellable merchandise.
+12. Documentation (this packet, README roadmap, CSV template) matches the implemented behavior.
 
 ## Out of scope
 
 - Backward-compatible migrations or preserving disposable developer data.
-- Live tax inheritance or variant `tax_class_override_id`.
-- Product-level industry identifier / `product_industry` registry kind.
-- Moving GL mappings onto merchandise classes.
+- Moving GL mappings onto merchandise classes (see locked decision 6 for when to reopen).
 - Multiple lookup codes per product.
 - Non-GTIN industry identifier types.
-- Redesigning the established POS product/variant/unit targeting workflow (this phase only *adds* product selection for shared lookup codes).
+- Redesigning the established POS product/variant/unit targeting workflow (this phase adds product selection for shared lookup codes and product-level industry GTIN).
 - Automatically rewriting historical POS department reporting (no variant `department_id`; future reports join through class, or use snapshots already on completed lines if present).
 - General-purpose bulk reclassification UI.
 - Changing the `220` / `221` / `222` namespaces.
 - Purchasing, journal posting, customers, buyback workflows.
 - Category `abbreviation`.
+- Forbidding lookup codes that equal a registry `value` (optional later; retirement already wins on scan).

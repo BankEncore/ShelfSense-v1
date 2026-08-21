@@ -10,7 +10,7 @@ Because data is disposable, migrations may drop obsolete columns in the same cha
 
 ## 1. `departments`
 
-Top-level reporting category and GL mapping owner. No tax or margin defaults.
+Top-level reporting category and GL posting owner. No tax or margin defaults. All merchandise classes in a department share these posting accounts; class-level GL columns are not in this schema.
 
 | Field | Type | Rules |
 |---|---|---|
@@ -54,7 +54,7 @@ Deactivation rule (application): blocked while any merchandise class with `activ
 
 ## 2. `merchandise_classes`
 
-Department-scoped subdepartment. Owns creation-time defaults and merchandise policies. Does not own GL mappings.
+Department-scoped merchandise policy and variant-default group, including the live default tax class. Does not own GL mappings.
 
 | Field | Type | Rules |
 |---|---|---|
@@ -64,7 +64,7 @@ Department-scoped subdepartment. Owns creation-time defaults and merchandise pol
 | `name` | string | Required |
 | `code` | string | Required; globally unique; normalized; effectively immutable |
 | `description` | text | Optional |
-| `default_tax_class_id` | uuid | Required FK to `tax_classes`; must be assignable when assigned or reactivated |
+| `default_tax_class_id` | uuid | Required FK to `tax_classes`; live default for variants without an override; must be assignable when assigned or reactivated |
 | `default_inventory_mode` | string | Required; `inventory` or `non_inventory` |
 | `default_pricing_method` | string | Required; `fixed`, `list_price`, `cost_based`, or `open_price` |
 | `target_margin_bps` | integer | Optional; `0 <= value < 10000` |
@@ -134,6 +134,7 @@ Application: used default must allow used merchandise; both defaults must be ass
 |---|---|---|
 | existing descriptive fields | | Unchanged (`name`, `subtitle`, `description`, `brand_name`, `product_model`, `merchandise_category_id`, `list_price_cents`, `release_date`, `status`, option names, `lock_version`, timestamps) |
 | `primary_identifier` | string(13) | Required; immutable; unique; always generated `222` EAN-13 |
+| `industry_identifier` | string(13) | Optional; canonical GTIN-13; globally unique via `identifier_registry` (`product_industry`) |
 | `lookup_code` | string(64) | Optional; **nonunique**; canonical uppercase |
 
 ### Constraints and indexes
@@ -141,6 +142,8 @@ Application: used default must allow used merchandise; both defaults must be ass
 ```text
 unique (primary_identifier)
 check primary_identifier ~ '^[0-9]{13}$'
+unique (industry_identifier) where industry_identifier is not null
+check industry_identifier is null or industry_identifier ~ '^[0-9]{13}$'
 index (lookup_code) where lookup_code is not null   -- nonunique
 check lookup_code is null
   or (
@@ -152,7 +155,7 @@ check lookup_code is null
 
 A unique index on lookup code is **incorrect**. Shared codes are required for POS product selection.
 
-`identifier_registry` continues to own uniqueness of active `product_primary` values. Lookup codes are **not** registry rows.
+`identifier_registry` owns uniqueness of all 13-digit identifier values, including active `product_primary` and `product_industry`. Lookup codes are **not** registry rows. Do not copy `products.industry_identifier` onto a variant.
 
 ---
 
@@ -160,19 +163,20 @@ A unique index on lookup code is **incorrect**. Shared codes are required for PO
 
 | Field | Type | Rules |
 |---|---|---|
-| existing identity | | `product_id`, `variant_type`, `sku`, `industry_identifier`, `name`, option values, `merchandise_condition_id`, `status`, `regular_price_cents`, `lock_version`, timestamps |
+| existing identity | | `product_id`, `variant_type`, `sku`, `industry_identifier` (only if this variant has a distinct manufacturer GTIN), `name`, option values, `merchandise_condition_id`, `status`, `regular_price_cents`, `lock_version`, timestamps |
 | `merchandise_class_id` | uuid | Required to activate |
 | `inventory_mode` | string | Required to activate; copied at create; `inventory` or `non_inventory` |
 | `pricing_method` | string | Required to activate; copied at create; same enum as class default |
 | `target_margin_bps` | integer | Optional; copied at create; `0 <= value < 10000` |
 | `supplier_returnable` | boolean | Required to activate; copied at create |
-| `tax_class_id` | uuid | Required to activate; copied from class default or explicit input |
+| `tax_class_override_id` | uuid | Optional FK to `tax_classes`; null means inherit class default |
 
 ### Remove
 
 - `department_id`
+- `tax_class_id` (replaced by `tax_class_override_id`; effective tax is not a stored column)
 
-Reporting and sellability use `merchandise_class.department`.
+Reporting and sellability use `merchandise_class.department` and `effective_tax_class`.
 
 ### Constraints
 
@@ -183,21 +187,27 @@ check target_margin_bps is null or (target_margin_bps >= 0 and target_margin_bps
 -- existing: condition matches variant_type; sku/industry shape; status enum
 ```
 
-Draft rows may still omit class/tax/mode until activation, matching today’s “required when active” pattern. If implementation prefers NOT NULL on the new operational columns for all rows, DefaultResolver must populate them at create even for drafts.
+Draft rows may still omit class/mode until activation, matching today’s “required when active” pattern. `tax_class_override_id` remains nullable for inherited tax. If implementation prefers NOT NULL on the copied operational columns for all rows, DefaultResolver must populate them at create even for drafts.
 
-Indexes: existing FKs; no `department_id` index.
+Indexes: existing FKs plus `tax_class_override_id`; no `department_id` index.
 
 ---
 
 ## 6. `identifier_registry`
 
-No new `identifier_kind`. Kinds remain:
+Kinds:
 
-`product_primary`, `variant_sku`, `variant_industry`, `inventory_unit`
+`product_primary`, `product_industry`, `variant_sku`, `variant_industry`, `inventory_unit`
 
-Ownership check and unique active `value` unchanged. `product_primary` values are only generated `222` identifiers after cutover.
+Extend `identifier_kind` check, owner-matches-kind check, and unique active owner indexes:
 
-`value` remains 13-digit GTIN shape. Lookup codes never appear here.
+- active `product_primary`: unique `product_id` where kind is `product_primary` and not retired (unchanged intent)
+- active `product_industry`: unique `product_id` where kind is `product_industry` and not retired (at most one active product industry identifier per product)
+- existing variant SKU, variant industry, and inventory-unit owner indexes unchanged
+
+`value` remains unique across the table (active and retired) and 13-digit GTIN shape. `product_primary` values are only generated `222` identifiers after cutover. Lookup codes never appear here.
+
+Matching uses `find_any` (any row for that value). Retired rows still occupy `value` uniqueness and must return `retired` on lookup; they must not fall through to `products.lookup_code`.
 
 ---
 
@@ -211,4 +221,4 @@ Future operational reports that need department should join `product_variants` �
 
 ## 8. Seed and fixture expectations
 
-Every seeded merchandise class has a department and class number. Every seeded product primary is a `222` identifier. ISBNs/UPCs live on variant `industry_identifier`. Lookup codes, if seeded, are canonical uppercase and may be shared. Include at least one shared lookup-code fixture for POS/inventory targeting tests. No factory should set `product_variants.department_id` or `identifier_mode`.
+Every seeded merchandise class has a department and class number. Every seeded product primary is a `222` identifier. Book ISBNs/UPCs live on `products.industry_identifier` (`product_industry`). Variant industry identifiers only when the fixture represents a distinct manufacturer GTIN. Lookup codes, if seeded, are canonical uppercase and may be shared. Include at least one shared lookup-code fixture and one retired-registry-vs-lookup-code fixture. No factory should set `product_variants.department_id`, `product_variants.tax_class_id`, or `identifier_mode`.
