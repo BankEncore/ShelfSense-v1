@@ -2,10 +2,11 @@
 
 # Bootstrap the application
 ./dev/rails-docker env \
-  ORGANIZATION_NAME="Example Books" \
+  ORGANIZATION_NAME="ShelfSense" \
   STORE_NUMBER=001 \
-  STORE_CODE=main \
-  STORE_NAME="Main Store" \
+  STORE_CODE="001_mi_bloomfield_bloomfield_commons" \
+  STORE_NAME="Bloomfield Books" \
+  STORE_LEGAL_NAME="MI/Bloomfield Books" \
   STORE_TIMEZONE=America/New_York \
   STORE_COUNTRY_CODE=US \
   ADMIN_USERNAME=admin \
