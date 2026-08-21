@@ -5,7 +5,7 @@
     <p>Code: <code><%= department.code %></code> (immutable)</p>
   <% else %>
     <p>
-      <%= form.label :code %>
+      <%= form.label :code, "Key / code" %>
       <%= form.text_field :code %>
       <span>Leave blank to generate from the name. Later changes are not allowed.</span>
     </p>
@@ -13,11 +13,7 @@
   <p><%= form.label :department_number %><%= form.text_field :department_number %></p>
   <p><%= form.label :name %><%= form.text_field :name %></p>
   <p><%= form.label :description %><%= form.text_area :description %></p>
-  <p>
-    <%= form.label :default_tax_class_id, "Default tax class" %>
-    <%= form.select :default_tax_class_id, TaxClass.options_for_select(@tax_classes), include_blank: true %>
-  </p>
-  <p><%= form.label :default_target_margin_bps %><%= form.number_field :default_target_margin_bps %></p>
+  <p class="muted">GL mappings are shared by all merchandise classes in this department.</p>
   <% [
     [:inventory_asset_gl_account_id, "Inventory asset GL"],
     [:cost_of_goods_sold_gl_account_id, "COGS GL"],

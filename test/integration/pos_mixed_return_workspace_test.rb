@@ -264,7 +264,7 @@ class PosMixedReturnWorkspaceTest < ActionDispatch::IntegrationTest
       return_price: return_price,
       expected_product_variant_id: variant.id,
       expected_reference_unit_price_cents: variant.regular_price_cents,
-      expected_tax_class_id: variant.tax_class_id
+      expected_tax_class_id: variant.effective_tax_class&.id
     }
     assert_response :success
   end

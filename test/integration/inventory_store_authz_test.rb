@@ -31,16 +31,15 @@ class InventoryStoreAuthzTest < ActionDispatch::IntegrationTest
     )
 
     @tax = tax_class(code: "authz_tax")
-    @department = department(code: "authz_dept", default_tax_class: @tax)
+    @department = department(code: "authz_dept")
     @klass = merchandise_class(
       code: "authz_std",
-      default_standard_department: @department,
+      department: @department,
       pricing_method: "fixed"
     )
     @product = Products::Create.call(
       attributes: { name: "Authz Widget", status: "active" },
-      actor: @admin,
-      identifier_mode: "generate"
+      actor: @admin
     )
     @variant = ProductVariants::Create.call(
       product: @product,
@@ -48,8 +47,6 @@ class InventoryStoreAuthzTest < ActionDispatch::IntegrationTest
         variant_type: "standard",
         status: "active",
         merchandise_class_id: @klass.id,
-        department_id: @department.id,
-        tax_class_id: @tax.id,
         regular_price_cents: 1999
       },
       actor: @admin

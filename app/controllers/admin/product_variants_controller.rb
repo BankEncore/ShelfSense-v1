@@ -149,8 +149,7 @@ module Admin
 
     def load_form_options
       @merchandise_conditions = MerchandiseCondition.assignable.admin_ordered
-      @merchandise_classes = MerchandiseClass.assignable.admin_ordered
-      @departments = Department.assignable.admin_ordered
+      @merchandise_classes = MerchandiseClass.assignable.admin_ordered.includes(:department)
       @tax_classes = TaxClass.assignable.admin_ordered
     end
 
@@ -163,7 +162,8 @@ module Admin
       @regular_price_raw = params.dig(:product_variant, :regular_price)
       permitted = params.require(:product_variant).permit(
         :variant_type, :name, :option_value_1, :option_value_2, :merchandise_condition_id,
-        :merchandise_class_id, :department_id, :tax_class_id, :regular_price, :regular_price_cents,
+        :merchandise_class_id, :tax_class_override_id, :inventory_mode, :pricing_method,
+        :target_margin_bps, :supplier_returnable, :regular_price, :regular_price_cents,
         :industry_identifier, :status, :lock_version
       )
 
@@ -178,8 +178,8 @@ module Admin
         end
       end
 
-      %i[name option_value_1 option_value_2 merchandise_condition_id merchandise_class_id department_id tax_class_id
-         regular_price_cents industry_identifier].each do |key|
+      %i[name option_value_1 option_value_2 merchandise_condition_id merchandise_class_id tax_class_override_id
+         inventory_mode pricing_method target_margin_bps regular_price_cents industry_identifier].each do |key|
         permitted[key] = nil if permitted[key].blank?
       end
       permitted

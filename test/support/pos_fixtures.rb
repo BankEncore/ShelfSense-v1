@@ -4,31 +4,33 @@ module PosFixtures
   def pos_sellable_variant(
     actor:,
     tax_class:,
+    product: nil,
     pricing_method: "fixed",
     variant_type: "standard",
     inventory_mode: "inventory",
-    name: "Example Book"
+    name: "Example Book",
+    industry_identifier: nil,
+    lookup_code: nil
   )
-    department = department(code: "pos_#{SecureRandom.hex(3)}", default_tax_class: tax_class)
+    department = department(code: "pos_#{SecureRandom.hex(3)}")
     klass = merchandise_class(
       code: "pos_#{SecureRandom.hex(3)}",
-      default_standard_department: department,
-      default_used_department: variant_type == "used" ? department : nil,
+      department: department,
+      default_tax_class: tax_class,
       pricing_method: pricing_method,
       used_merchandise_allowed: variant_type == "used",
       inventory_mode: inventory_mode
     )
-    product = Products::Create.call(
+    product ||= Products::Create.call(
       attributes: { name: name, status: "active" },
       actor: actor,
-      identifier_mode: "generate"
+      industry_identifier: industry_identifier,
+      lookup_code: lookup_code
     )
     attributes = {
       variant_type: variant_type,
       status: "active",
       merchandise_class_id: klass.id,
-      department_id: department.id,
-      tax_class_id: tax_class.id,
       regular_price_cents: pricing_method == "open_price" ? nil : 1999
     }
     if variant_type == "used"

@@ -12,7 +12,9 @@ module Admin
       @departments = Department.admin_ordered
     end
 
-    def show; end
+    def show
+      @merchandise_classes = @department.merchandise_classes.admin_ordered
+    end
 
     def new
       @department = Department.new(display_order: 0)
@@ -74,13 +76,12 @@ module Admin
     end
 
     def load_form_options
-      @tax_classes = TaxClass.assignable.admin_ordered
       @gl_accounts = GlAccount.assignable.order(:account_number)
     end
 
     def audit_attribute_keys
       %w[
-        code department_number name description default_tax_class_id default_target_margin_bps
+        code department_number name description
         inventory_asset_gl_account_id cost_of_goods_sold_gl_account_id sales_revenue_gl_account_id
         sales_returns_gl_account_id receiving_clearing_gl_account_id freight_in_gl_account_id
         inventory_shrinkage_gl_account_id inventory_adjustment_gain_gl_account_id
@@ -90,15 +91,15 @@ module Admin
 
     def department_params
       permitted = params.require(:department).permit(
-        :code, :department_number, :name, :description, :default_tax_class_id,
-        :default_target_margin_bps, :inventory_asset_gl_account_id, :cost_of_goods_sold_gl_account_id,
+        :code, :department_number, :name, :description,
+        :inventory_asset_gl_account_id, :cost_of_goods_sold_gl_account_id,
         :sales_revenue_gl_account_id, :sales_returns_gl_account_id, :receiving_clearing_gl_account_id,
         :freight_in_gl_account_id, :inventory_shrinkage_gl_account_id,
         :inventory_adjustment_gain_gl_account_id, :inventory_adjustment_loss_gl_account_id,
         :inventory_write_down_gl_account_id, :display_order, :lock_version
       )
       blankable = %i[
-        department_number default_target_margin_bps inventory_asset_gl_account_id
+        inventory_asset_gl_account_id
         cost_of_goods_sold_gl_account_id sales_revenue_gl_account_id sales_returns_gl_account_id
         receiving_clearing_gl_account_id freight_in_gl_account_id inventory_shrinkage_gl_account_id
         inventory_adjustment_gain_gl_account_id inventory_adjustment_loss_gl_account_id

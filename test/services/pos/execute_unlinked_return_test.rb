@@ -161,8 +161,6 @@ class PosExecuteUnlinkedReturnTest < ActiveSupport::TestCase
         variant_type: "standard",
         status: "active",
         merchandise_class_id: @variant.merchandise_class_id,
-        department_id: @variant.department_id,
-        tax_class_id: @variant.tax_class_id,
         regular_price_cents: 1500
       },
       actor: @admin
@@ -172,6 +170,35 @@ class PosExecuteUnlinkedReturnTest < ActiveSupport::TestCase
       add_unlinked!(transaction, @manager, identifier: @variant.product.primary_identifier)
     end
     assert_match(/scan\/enter variant or unit identifier/, error.message)
+  end
+
+  test "product industry identifier and unique lookup code reach the same variant" do
+    Identifiers::AssignProductIndustry.call(product: @variant.product, raw_value: external_isbn13)
+    @variant.product.update!(lookup_code: "UNL-1")
+
+    transaction = start_transaction(@manager)
+    by_industry = add_unlinked!(transaction, @manager, identifier: external_isbn13)
+    by_lookup_code = add_unlinked!(transaction.reload, @manager, identifier: "unl-1")
+
+    assert_equal @variant.id, by_industry.product_variant_id
+    assert_equal @variant.id, by_lookup_code.product_variant_id
+  end
+
+  test "a shared lookup code is rejected instead of picking a product" do
+    @variant.product.update!(lookup_code: "UNL-SHARED")
+    Products::Create.call(
+      attributes: { name: "Other Unlinked", status: "active" },
+      actor: @admin,
+      lookup_code: "UNL-SHARED"
+    )
+
+    transaction = start_transaction(@manager)
+    error = assert_raises(Pos::Error) do
+      add_unlinked!(transaction, @manager, identifier: "unl-shared")
+    end
+
+    assert_match(/multiple products share that lookup code/i, error.message)
+    assert_equal 0, transaction.reload.pos_transaction_lines.count
   end
 
   test "unlinked returns do not merge on rescan" do

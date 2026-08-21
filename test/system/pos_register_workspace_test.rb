@@ -622,6 +622,39 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     assert_equal 0, PosTransaction.working.find_by!(register: @register).pos_transaction_lines.count
   end
 
+  test "shared lookup code opens the product picker and enter adds the highlighted product" do
+    other = pos_sellable_variant(actor: @actor, tax_class: @tax, name: "Beta Shared")
+    open_quantity_stock(store: @store, variant: other, actor: @actor, quantity: 3)
+    @variant.product.update!(lookup_code: "SHARED")
+    other.product.update!(lookup_code: "SHARED")
+
+    open_register
+    field = find("#pos-command-field")
+    field.fill_in with: "shared"
+    field.send_keys :enter
+
+    assert_selector "#pos_product_overlay", visible: true
+    assert_selector "#pos_product_overlay li", count: 2
+    assert page.evaluate_script("document.activeElement === document.querySelector('#pos_product_overlay li.is-selected')")
+    assert_equal 0, PosTransaction.working.find_by!(register: @register).pos_transaction_lines.count
+
+    send_keys :escape
+    assert_no_selector "#pos_product_overlay", visible: true
+    assert_no_text "Beta Shared"
+    assert_equal 0, PosTransaction.working.find_by!(register: @register).pos_transaction_lines.count
+
+    field = find("#pos-command-field")
+    field.fill_in with: "shared"
+    field.send_keys :enter
+    assert_selector "#pos_product_overlay", visible: true
+    send_keys :arrow_down
+    send_keys :enter
+
+    assert_no_selector "#pos_product_overlay", visible: true
+    assert_text "Example Book"
+    assert_equal 1, PosTransaction.working.find_by!(register: @register).pos_transaction_lines.count
+  end
+
   test "minus opens linked and unlinked chooser from empty sale entry" do
     open_register
     click_on "Return (-)"

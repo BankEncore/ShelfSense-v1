@@ -12,16 +12,15 @@ class Inventory::RebuildProjectionTest < ActiveSupport::TestCase
     Authorization::PermissionCatalog.seed!(granted_by: @actor)
 
     @tax = tax_class(code: "reb_tax")
-    @department = department(code: "reb_dept", default_tax_class: @tax)
+    @department = department(code: "reb_dept")
     @klass = merchandise_class(
       code: "reb_std",
-      default_standard_department: @department,
+      department: @department,
       pricing_method: "fixed"
     )
     @product = Products::Create.call(
       attributes: { name: "Rebuild Widget", status: "active" },
-      actor: @actor,
-      identifier_mode: "generate"
+      actor: @actor
     )
     @variant = ProductVariants::Create.call(
       product: @product,
@@ -29,8 +28,6 @@ class Inventory::RebuildProjectionTest < ActiveSupport::TestCase
         variant_type: "standard",
         status: "active",
         merchandise_class_id: @klass.id,
-        department_id: @department.id,
-        tax_class_id: @tax.id,
         regular_price_cents: 1999
       },
       actor: @actor

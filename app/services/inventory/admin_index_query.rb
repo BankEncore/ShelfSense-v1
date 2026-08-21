@@ -7,11 +7,11 @@ module Inventory
 
     DERIVED_TRACKING_SQL = <<~SQL.squish
       CASE
-        WHEN merchandise_classes.inventory_mode = 'inventory'
+        WHEN product_variants.inventory_mode = 'inventory'
              AND product_variants.variant_type = 'standard' THEN 'quantity'
-        WHEN merchandise_classes.inventory_mode = 'inventory'
+        WHEN product_variants.inventory_mode = 'inventory'
              AND product_variants.variant_type = 'used' THEN 'individual'
-        WHEN merchandise_classes.inventory_mode = 'non_inventory'
+        WHEN product_variants.inventory_mode = 'non_inventory'
              AND product_variants.variant_type = 'standard' THEN 'non_inventory'
       END
     SQL

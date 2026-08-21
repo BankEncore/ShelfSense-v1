@@ -256,7 +256,9 @@ Do not put secrets or full row dumps in payloads.
 
 ## Delivery
 
-Prefer **two pull requests** on `main` (no long-lived phase branch). Each PR includes tests, audit, admin/CSV/POS updates, seeds/fixtures, `db/schema.rb`, and documentation.
+Implement on the long-lived feature branch `phase-6.1-classification-and-identifiers`. Land Slice A then Slice B on that branch. Run automated CI-equivalent checks and a written **manual test gate** against `docker compose up` before opening a PR to `main`. Do not merge until the manual checklist passes.
+
+Each slice includes tests, audit, admin/CSV/POS updates, seeds/fixtures, `db/schema.rb`, and documentation as applicable.
 
 ### Slice A — Classification cutover
 
@@ -266,7 +268,7 @@ Schema and behavior for departments, classes, categories, persisted variant oper
 
 Always-generate `222`, product industry GTIN and `product_industry` registry kind, lookup codes (nonunique), matcher vs eligibility split, lookup-code fallback that respects retired registry rows, `multiple_products`, Register product picker, POS sale/return handlers, inventory-adjustment and admin lookup handlers, CSV identity rules.
 
-If a single PR stays reviewable, combining A and B is acceptable because data is disposable. Do not split tests from the behavior they cover.
+Do not split tests from the behavior they cover.
 
 ## Test plan
 

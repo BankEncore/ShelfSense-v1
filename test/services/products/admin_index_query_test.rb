@@ -7,13 +7,11 @@ class Products::AdminIndexQueryTest < ActiveSupport::TestCase
     @actor = actor_user
     @alpha = Products::Create.call(
       attributes: { name: "Alpha Book", status: "active" },
-      actor: @actor,
-      identifier_mode: "generate"
+      actor: @actor
     )
     @beta = Products::Create.call(
       attributes: { name: "Beta Guide", status: "draft" },
-      actor: @actor,
-      identifier_mode: "generate"
+      actor: @actor
     )
     @category = merchandise_category(name: "Fiction")
     @beta.update!(merchandise_category: @category)
@@ -31,8 +29,7 @@ class Products::AdminIndexQueryTest < ActiveSupport::TestCase
   test "escapes like wildcards in q" do
     wild = Products::Create.call(
       attributes: { name: "100% Cotton", status: "draft" },
-      actor: @actor,
-      identifier_mode: "generate"
+      actor: @actor
     )
     result = Products::AdminIndexQuery.call(q: "%")
     assert_includes result.records.map(&:id), wild.id

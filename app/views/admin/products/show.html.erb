@@ -29,6 +29,17 @@
 <section class="section surface">
   <%= render "shared/definition_list", rows: [
         ["Primary identifier", @product.primary_identifier],
+        ["Industry identifier (GTIN / ISBN / UPC)", @product.industry_identifier],
+        ["Lookup code", (
+          if @product.lookup_code.present?
+            shared = Product.where(lookup_code: @product.lookup_code).where.not(id: @product.id).count
+            if shared.positive?
+              safe_join([@product.lookup_code, tag.span(" · shared with #{shared} other #{"product".pluralize(shared)}; scan and add will require product selection", class: "muted")])
+            else
+              @product.lookup_code
+            end
+          end
+        )],
         ["Status", status_badge(@product.status, scheme: :product_variant)],
         ["List price", format_money_cents(@product.list_price_cents)],
         ["Merchandise category", (
@@ -85,7 +96,7 @@
            status_badge(variant.status, scheme: :product_variant),
            variant.merchandise_class ? variant.merchandise_class.admin_label : missing_value,
            variant.department ? variant.department.admin_label : missing_value,
-           variant.tax_class ? variant.tax_class.admin_label : missing_value,
+           variant.effective_tax_class ? variant.effective_tax_class.admin_label : missing_value,
            variant.used? ? (variant.merchandise_condition&.name || missing_value) : "—",
            format_money_cents(variant.regular_price_cents)
          ]

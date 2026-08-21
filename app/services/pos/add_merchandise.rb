@@ -59,6 +59,8 @@ module Pos
           add_variant_line!(transaction, resolution.variant)
         when :variant_choice_required
           raise Pos::Error, "identifier matches multiple variants"
+        when :product_choice_required
+          raise Pos::Error, "identifier matches multiple products"
         when :unit_choice_required
           raise Pos::Error, "scan the unit identifier"
         else
@@ -76,7 +78,7 @@ module Pos
 
       variant = unit.product_variant
       raise Pos::Error, "merchandise tracking is not supported" unless variant.derived_inventory_tracking == "individual"
-      if variant.merchandise_class.pricing_method == "open_price"
+      if variant.pricing_method == "open_price"
         raise Pos::Error, Pos::ResolveMerchandiseForSale::OPEN_PRICE_USED_MESSAGE
       end
       validate_variant!(variant, tracking: "individual")
@@ -97,13 +99,13 @@ module Pos
     def add_variant_line!(transaction, variant)
       tracking = variant.derived_inventory_tracking
       raise Pos::Error, "scan the unit identifier" if tracking == "individual"
-      if variant.merchandise_class.pricing_method == "open_price"
+      if variant.pricing_method == "open_price"
         raise Pos::Error, Pos::ResolveMerchandiseForSale::OPEN_PRICE_USED_MESSAGE if tracking == "individual"
         require_nonnegative_open_price!
       end
 
       validate_variant!(variant, tracking: tracking)
-      open_price = variant.merchandise_class.pricing_method == "open_price"
+      open_price = variant.pricing_method == "open_price"
       price_cents = open_price ? @selling_price_cents : variant.regular_price_cents
       raise Pos::Error, "regular price is required" if price_cents.nil?
 
@@ -138,7 +140,7 @@ module Pos
       unless %w[quantity non_inventory individual].include?(tracking)
         raise Pos::Error, "merchandise tracking is not supported"
       end
-      if variant.merchandise_class.pricing_method == "open_price"
+      if variant.pricing_method == "open_price"
         raise Pos::Error, Pos::ResolveMerchandiseForSale::OPEN_PRICE_USED_MESSAGE if tracking == "individual"
         require_nonnegative_open_price!
         return
@@ -160,6 +162,9 @@ module Pos
     end
 
     def build_line!(transaction, variant:, quantity:, price_cents:, inventory_unit: nil, pricing_method_snapshot:)
+      tax = variant.effective_tax_class
+      raise Pos::Error, "effective tax class is required" if tax.blank?
+
       line = transaction.pos_transaction_lines.build(
         line_number: next_line_number(transaction),
         direction: "sale",
@@ -169,12 +174,12 @@ module Pos
         reference_unit_price_cents: price_cents,
         selling_unit_price_cents: price_cents,
         pricing_method_snapshot: pricing_method_snapshot,
-        tax_class: variant.tax_class,
-        tax_class_code_snapshot: variant.tax_class.code,
-        tax_class_name_snapshot: variant.tax_class.name,
-        default_tax_class: variant.tax_class,
-        default_tax_class_code_snapshot: variant.tax_class.code,
-        default_tax_class_name_snapshot: variant.tax_class.name,
+        tax_class: tax,
+        tax_class_code_snapshot: tax.code,
+        tax_class_name_snapshot: tax.name,
+        default_tax_class: tax,
+        default_tax_class_code_snapshot: tax.code,
+        default_tax_class_name_snapshot: tax.name,
         manual_discount_cents: 0
       )
       line.extended_selling_amount_cents = line.selling_unit_price_cents * line.quantity
@@ -185,6 +190,7 @@ module Pos
     end
 
     def compatible_line(transaction, variant)
+      effective_tax_id = variant.effective_tax_class&.id
       transaction.pos_transaction_lines.find do |line|
         line.inventory_unit_id.nil? &&
           line.product_variant_id == variant.id &&
@@ -194,7 +200,7 @@ module Pos
           line.selling_unit_price_cents == line.reference_unit_price_cents &&
           (line.default_tax_class_id.blank? || line.tax_class_id == line.default_tax_class_id) &&
           line.selling_unit_price_cents == variant.regular_price_cents &&
-          line.tax_class_id == variant.tax_class_id
+          line.tax_class_id == effective_tax_id
       end
     end
 

@@ -5,16 +5,19 @@ require "test_helper"
 class MerchandiseReferenceTest < ActiveSupport::TestCase
   setup do
     @tax = tax_class(code: "standard")
-    @department = department(code: "books", default_tax_class: @tax)
+    @department = department(code: "books")
   end
 
   test "merchandise class code is unique" do
-    merchandise_class(code: "book", default_standard_department: @department)
+    merchandise_class(code: "book", department: @department)
     duplicate = MerchandiseClass.new(
       code: " Book ",
       name: "Other",
-      inventory_mode: "inventory",
-      pricing_method: "fixed"
+      department: @department,
+      merchandise_class_number: "2",
+      default_tax_class: @tax,
+      default_inventory_mode: "inventory",
+      default_pricing_method: "fixed"
     )
     assert_not duplicate.valid?
     assert_equal "book", duplicate.code
@@ -68,11 +71,11 @@ class MerchandiseReferenceTest < ActiveSupport::TestCase
   end
 
   test "admin labels and hierarchical category options" do
-    dept = department(code: "trade", name: "General Trade Books", department_number: "110", default_tax_class: @tax)
+    dept = department(code: "trade", name: "General Trade Books", department_number: "110")
     assert_equal "110 - General Trade Books", dept.admin_label
 
-    klass = merchandise_class(code: "book", name: "Physical book", default_standard_department: @department)
-    assert_equal "Physical book", klass.admin_label
+    klass = merchandise_class(code: "book", name: "Physical book", department: @department, merchandise_class_number: "1")
+    assert_equal "BOOKS / 1 - Physical book", klass.admin_label
 
     condition = merchandise_condition(code: "good", name: "Good")
     assert_equal "Good", condition.admin_label
@@ -92,37 +95,40 @@ class MerchandiseReferenceTest < ActiveSupport::TestCase
     assert_operator options[3].first.count("\u00A0"), :>, options[1].first.count("\u00A0")
   end
 
-  test "inventory_mode accepts inventory and non_inventory" do
-    inventory = merchandise_class(code: "book", inventory_mode: "inventory", default_standard_department: @department)
-    service = merchandise_class(code: "service", inventory_mode: "non_inventory", default_standard_department: @department)
+  test "default_inventory_mode accepts inventory and non_inventory" do
+    inventory = merchandise_class(code: "book", inventory_mode: "inventory", department: @department)
+    service = merchandise_class(code: "service", inventory_mode: "non_inventory", department: @department)
 
     assert inventory.inventory?
     assert service.non_inventory?
     invalid = MerchandiseClass.new(
       code: "bad",
       name: "Bad",
-      inventory_mode: "quantity",
-      pricing_method: "fixed"
+      department: @department,
+      merchandise_class_number: "9",
+      default_tax_class: @tax,
+      default_inventory_mode: "quantity",
+      default_pricing_method: "fixed"
     )
     assert_not invalid.valid?
-    assert_includes invalid.errors[:inventory_mode], "is not included in the list"
+    assert_includes invalid.errors[:default_inventory_mode], "is not included in the list"
   end
 
   test "buyback requires used merchandise and inventory mode" do
-    klass = merchandise_class(code: "gift_card", inventory_mode: "non_inventory", default_standard_department: @department)
+    klass = merchandise_class(code: "gift_card", inventory_mode: "non_inventory", department: @department)
     klass.buyback_allowed = true
     assert_not klass.valid?
     assert_includes klass.errors[:buyback_allowed], "requires used merchandise allowed and inventory mode"
   end
 
   test "default_supplier_returnable is the returnability column" do
-    klass = merchandise_class(code: "book", default_standard_department: @department)
+    klass = merchandise_class(code: "book", department: @department)
     assert klass.respond_to?(:default_supplier_returnable)
     assert_not klass.respond_to?(:default_returnable)
   end
 
   test "codes are immutable after create" do
-    klass = merchandise_class(code: "immutable", default_standard_department: @department)
+    klass = merchandise_class(code: "immutable", department: @department)
     klass.code = "changed"
     assert_not klass.valid?
     assert_includes klass.errors[:code], "cannot be changed after creation"
@@ -131,9 +137,11 @@ class MerchandiseReferenceTest < ActiveSupport::TestCase
   test "blank code generates from name" do
     klass = MerchandiseClass.create!(
       name: "Used Books & Media",
-      inventory_mode: "inventory",
-      pricing_method: "fixed",
-      default_standard_department: @department
+      department: @department,
+      merchandise_class_number: "3",
+      default_tax_class: @tax,
+      default_inventory_mode: "inventory",
+      default_pricing_method: "fixed"
     )
     assert_equal "used_books_media", klass.code
   end

@@ -9,15 +9,15 @@ module Admin
     before_action :set_merchandise_class, only: %i[show edit update destroy reactivate]
 
     def index
-      @merchandise_classes = MerchandiseClass.admin_ordered
+      @merchandise_classes = MerchandiseClass.admin_ordered.includes(:department)
     end
 
     def show; end
 
     def new
       @merchandise_class = MerchandiseClass.new(
-        inventory_mode: "inventory",
-        pricing_method: "fixed",
+        default_inventory_mode: "inventory",
+        default_pricing_method: "fixed",
         display_order: 0
       )
       load_form_options
@@ -48,8 +48,8 @@ module Admin
           attrs: merchandise_class_params.except(:code),
           action: "merchandise_classes.update",
           before_keys: %w[
-            name description inventory_mode pricing_method
-            default_standard_department_id default_used_department_id
+            name description department_id merchandise_class_number
+            default_inventory_mode default_pricing_method default_tax_class_id target_margin_bps
             used_merchandise_allowed buyback_allowed default_supplier_returnable display_order
           ]
         )
@@ -85,16 +85,17 @@ module Admin
 
     def load_form_options
       @departments = Department.assignable.admin_ordered
+      @tax_classes = TaxClass.assignable.admin_ordered
     end
 
     def merchandise_class_params
       permitted = params.require(:merchandise_class).permit(
-        :code, :name, :description, :inventory_mode, :pricing_method,
-        :default_standard_department_id, :default_used_department_id,
+        :code, :name, :description, :department_id, :merchandise_class_number,
+        :default_inventory_mode, :default_pricing_method, :default_tax_class_id, :target_margin_bps,
         :used_merchandise_allowed, :buyback_allowed, :default_supplier_returnable,
         :display_order, :lock_version
       )
-      %i[default_standard_department_id default_used_department_id].each do |key|
+      %i[target_margin_bps].each do |key|
         permitted[key] = nil if permitted[key].blank?
       end
       permitted

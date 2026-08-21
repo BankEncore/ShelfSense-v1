@@ -24,21 +24,19 @@
 <section class="section surface">
   <%= render "shared/definition_list", rows: [
         ["Code", @merchandise_class.code],
-        ["Inventory mode", @merchandise_class.inventory_mode.humanize],
-        ["Pricing method", @merchandise_class.pricing_method.humanize],
+        ["Department", (
+          link_to(@merchandise_class.department.admin_label, admin_department_path(@merchandise_class.department))
+        )],
+        ["Class number", @merchandise_class.merchandise_class_number],
+        ["Default tax class", (
+          link_to(@merchandise_class.default_tax_class.admin_label, admin_tax_class_path(@merchandise_class.default_tax_class))
+        )],
+        ["Default inventory mode", @merchandise_class.default_inventory_mode.humanize],
+        ["Default pricing method", @merchandise_class.default_pricing_method.humanize],
+        ["Target margin (bps)", @merchandise_class.target_margin_bps.presence || "—"],
         ["Used merchandise allowed", @merchandise_class.used_merchandise_allowed? ? "Yes" : "No"],
         ["Buyback allowed", @merchandise_class.buyback_allowed? ? "Yes" : "No"],
         ["Default supplier returnable", @merchandise_class.default_supplier_returnable? ? "Yes" : "No"],
-        ["Default standard department", (
-          if @merchandise_class.default_standard_department
-            link_to(@merchandise_class.default_standard_department.admin_label, admin_department_path(@merchandise_class.default_standard_department))
-          end
-        )],
-        ["Default used department", (
-          if @merchandise_class.default_used_department
-            link_to(@merchandise_class.default_used_department.admin_label, admin_department_path(@merchandise_class.default_used_department))
-          end
-        )],
         ["Display order", @merchandise_class.display_order],
         ["Description", @merchandise_class.description]
       ] %>

@@ -17,16 +17,15 @@ class Inventory::ConcurrencyTest < ActiveSupport::TestCase
     @opening = AdjustmentReason.find_by!(code: "opening_inventory")
     @suffix = SecureRandom.hex(4)
     @tax = tax_class(code: "c_#{@suffix}")
-    @department = department(code: "c_#{@suffix}", default_tax_class: @tax)
+    @department = department(code: "c_#{@suffix}")
     @klass = merchandise_class(
       code: "c_#{@suffix}",
-      default_standard_department: @department,
+      department: @department,
       pricing_method: "fixed"
     )
     @product = Products::Create.call(
       attributes: { name: "Concurrency #{@suffix}", status: "active" },
-      actor: @actor,
-      identifier_mode: "generate"
+      actor: @actor
     )
     @variant = ProductVariants::Create.call(
       product: @product,
@@ -34,8 +33,6 @@ class Inventory::ConcurrencyTest < ActiveSupport::TestCase
         variant_type: "standard",
         status: "active",
         merchandise_class_id: @klass.id,
-        department_id: @department.id,
-        tax_class_id: @tax.id,
         regular_price_cents: 1999
       },
       actor: @actor

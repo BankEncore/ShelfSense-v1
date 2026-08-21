@@ -12,16 +12,15 @@ class InventoryPostAdjustmentTest < ActiveSupport::TestCase
     Authorization::PermissionCatalog.seed!(granted_by: @actor)
 
     @tax = tax_class(code: "inv_tax")
-    @department = department(code: "inv_dept", default_tax_class: @tax)
+    @department = department(code: "inv_dept")
     @klass = merchandise_class(
       code: "inv_std",
-      default_standard_department: @department,
+      department: @department,
       pricing_method: "fixed"
     )
     @product = Products::Create.call(
       attributes: { name: "Widget", status: "active" },
-      actor: @actor,
-      identifier_mode: "generate"
+      actor: @actor
     )
     @variant = ProductVariants::Create.call(
       product: @product,
@@ -29,8 +28,6 @@ class InventoryPostAdjustmentTest < ActiveSupport::TestCase
         variant_type: "standard",
         status: "active",
         merchandise_class_id: @klass.id,
-        department_id: @department.id,
-        tax_class_id: @tax.id,
         regular_price_cents: 1999
       },
       actor: @actor
@@ -130,9 +127,8 @@ class InventoryPostAdjustmentTest < ActiveSupport::TestCase
     used_klass = merchandise_class(
       code: "inv_used",
       used_merchandise_allowed: true,
-      default_standard_department: @department,
-      default_used_department: @department,
-      pricing_method: "fixed"
+      department: @department,
+            pricing_method: "fixed"
     )
     condition = merchandise_condition(code: "good")
     used = ProductVariants::Create.call(
@@ -142,8 +138,6 @@ class InventoryPostAdjustmentTest < ActiveSupport::TestCase
         status: "active",
         merchandise_class_id: used_klass.id,
         merchandise_condition_id: condition.id,
-        department_id: @department.id,
-        tax_class_id: @tax.id,
         regular_price_cents: 1200
       },
       actor: @actor
@@ -185,9 +179,8 @@ class InventoryPostAdjustmentTest < ActiveSupport::TestCase
     used_klass = merchandise_class(
       code: "inv_used_miss",
       used_merchandise_allowed: true,
-      default_standard_department: @department,
-      default_used_department: @department,
-      pricing_method: "fixed"
+      department: @department,
+            pricing_method: "fixed"
     )
     condition = merchandise_condition(code: "good")
     used = ProductVariants::Create.call(
@@ -197,8 +190,6 @@ class InventoryPostAdjustmentTest < ActiveSupport::TestCase
         status: "active",
         merchandise_class_id: used_klass.id,
         merchandise_condition_id: condition.id,
-        department_id: @department.id,
-        tax_class_id: @tax.id,
         regular_price_cents: 1200
       },
       actor: @actor
@@ -454,9 +445,8 @@ class InventoryPostAdjustmentTest < ActiveSupport::TestCase
     used_klass = merchandise_class(
       code: class_code,
       used_merchandise_allowed: true,
-      default_standard_department: @department,
-      default_used_department: @department,
-      pricing_method: "fixed"
+      department: @department,
+            pricing_method: "fixed"
     )
     condition = MerchandiseCondition.find_by(code: "good") || merchandise_condition(code: "good")
     ProductVariants::Create.call(
@@ -466,8 +456,6 @@ class InventoryPostAdjustmentTest < ActiveSupport::TestCase
         status: "active",
         merchandise_class_id: used_klass.id,
         merchandise_condition_id: condition.id,
-        department_id: @department.id,
-        tax_class_id: @tax.id,
         regular_price_cents: 1200
       },
       actor: @actor

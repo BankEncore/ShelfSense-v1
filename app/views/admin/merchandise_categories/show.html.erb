@@ -2,7 +2,8 @@
 <h1><%= @merchandise_category.admin_label %></h1>
 <p>
   Parent: <%= @merchandise_category.parent&.admin_label || "—" %> ·
-  Default class: <%= @merchandise_category.default_merchandise_class&.admin_label || "—" %> ·
+  Default standard class: <%= @merchandise_category.default_standard_merchandise_class&.admin_label || "—" %> ·
+  Default used class: <%= @merchandise_category.default_used_merchandise_class&.admin_label || "—" %> ·
   Order: <%= @merchandise_category.display_order %> ·
   <%= @merchandise_category.active? ? "active" : "inactive" %>
 </p>

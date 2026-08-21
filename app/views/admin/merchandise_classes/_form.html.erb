@@ -10,11 +10,20 @@
       </div>
     <% else %>
       <div class="form-field">
-        <%= form.label :code %>
+        <%= form.label :code, "Key / code" %>
         <%= form.text_field :code %>
         <span class="field-help">Leave blank to generate from the name. Later changes are not allowed.</span>
       </div>
     <% end %>
+    <div class="form-field">
+      <%= form.label :department_id, "Department" %>
+      <%= form.select :department_id, Department.options_for_select(@departments), include_blank: true %>
+    </div>
+    <div class="form-field">
+      <%= form.label :merchandise_class_number, "Class number" %>
+      <%= form.text_field :merchandise_class_number %>
+      <span class="field-help">Unique within the parent department.</span>
+    </div>
     <div class="form-field">
       <%= form.label :name %>
       <%= form.text_field :name %>
@@ -29,23 +38,33 @@
     </div>
   <% end %>
 
-  <%= render layout: "shared/form_section", locals: { title: "Behavior" } do %>
+  <%= render layout: "shared/form_section", locals: {
+        title: "Operational defaults",
+        help: "Inventory mode, pricing method, margin, and supplier returnability are copied to new variants only. Tax default changes affect existing variants that have no tax override."
+      } do %>
     <div class="form-field">
-      <%= form.label :inventory_mode %>
-      <%= form.select :inventory_mode, MerchandiseClass::INVENTORY_MODES.map { |m| [m.humanize, m] } %>
+      <%= form.label :default_tax_class_id, "Default tax class" %>
+      <%= form.select :default_tax_class_id, TaxClass.options_for_select(@tax_classes), include_blank: true %>
     </div>
     <div class="form-field">
-      <%= form.label :pricing_method %>
-      <%= form.select :pricing_method, MerchandiseClass::PRICING_METHODS.map { |m| [m.humanize, m] } %>
+      <%= form.label :default_inventory_mode, "Default inventory mode" %>
+      <%= form.select :default_inventory_mode, MerchandiseClass::INVENTORY_MODES.map { |m| [m.humanize, m] } %>
     </div>
     <div class="form-field">
-      <%= form.label :default_standard_department_id, "Default standard department" %>
-      <%= form.select :default_standard_department_id, Department.options_for_select(@departments), include_blank: "None" %>
+      <%= form.label :default_pricing_method, "Default pricing method" %>
+      <%= form.select :default_pricing_method, MerchandiseClass::PRICING_METHODS.map { |m| [m.humanize, m] } %>
     </div>
     <div class="form-field">
-      <%= form.label :default_used_department_id, "Default used department" %>
-      <%= form.select :default_used_department_id, Department.options_for_select(@departments), include_blank: "None" %>
+      <%= form.label :target_margin_bps, "Target margin (basis points)" %>
+      <%= form.number_field :target_margin_bps %>
     </div>
+    <div class="form-field">
+      <%= form.check_box :default_supplier_returnable %>
+      <%= form.label :default_supplier_returnable, "Default supplier returnable" %>
+    </div>
+  <% end %>
+
+  <%= render layout: "shared/form_section", locals: { title: "Merchandise policies" } do %>
     <div class="form-field">
       <%= form.check_box :used_merchandise_allowed %>
       <%= form.label :used_merchandise_allowed, "Used merchandise allowed" %>
@@ -53,10 +72,6 @@
     <div class="form-field">
       <%= form.check_box :buyback_allowed %>
       <%= form.label :buyback_allowed, "Buyback allowed (requires used + inventory)" %>
-    </div>
-    <div class="form-field">
-      <%= form.check_box :default_supplier_returnable %>
-      <%= form.label :default_supplier_returnable, "Default supplier returnable" %>
     </div>
   <% end %>
 

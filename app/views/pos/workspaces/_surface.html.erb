@@ -524,6 +524,21 @@
   </div>
 
   <div class="pos-overlay"
+       id="pos_product_overlay"
+       hidden
+       data-register-workspace-target="productOverlay"
+       role="dialog"
+       aria-modal="true"
+       aria-labelledby="pos-product-title">
+    <div class="pos-overlay__panel">
+      <h2 id="pos-product-title">Choose product</h2>
+      <ul class="pos-picker" role="listbox" aria-labelledby="pos-product-title" data-register-workspace-target="productList"></ul>
+      <p class="muted">Several products share that lookup code. Enter selects the highlighted product. Esc cancels without adding merchandise.</p>
+      <button type="button" class="btn btn--secondary" data-action="register-workspace#closeProductOverlay">Cancel (Esc)</button>
+    </div>
+  </div>
+
+  <div class="pos-overlay"
        id="pos_variant_overlay"
        hidden
        data-register-workspace-target="variantOverlay"

@@ -2,18 +2,11 @@
   <%= render "shared/form_errors", record: product, attribute_ids: { list_price: "product_list_price" } %>
   <%= form.hidden_field :lock_version %>
 
-  <%= render layout: "shared/form_section", locals: { title: "Identity", help: "Enter a manufacturer-assigned identifier or ask ShelfSense to generate a reserved 222 identifier." } do %>
+  <%= render layout: "shared/form_section", locals: { title: "Identity", help: "ShelfSense assigns every product an immutable generated 222 primary identifier. Record the manufacturer GTIN and an optional lookup code here." } do %>
     <% if creating %>
       <div class="form-field">
-        <%= label_tag "product_identifier_mode", "Identifier mode" %>
-        <%= select_tag "product[identifier_mode]",
-              options_for_select([["Enter external", "enter"], ["Generate ShelfSense (222)", "generate"]], params.dig(:product, :identifier_mode) || "enter"),
-              id: "product_identifier_mode" %>
-      </div>
-      <div class="form-field">
-        <%= label_tag "product_external_identifier", "External identifier" %>
-        <%= text_field_tag "product[external_identifier]", params.dig(:product, :external_identifier), id: "product_external_identifier" %>
-        <span class="field-help" id="product_external_identifier_help">Required when entering an external identifier. Spaces and hyphens are removed during normalization.</span>
+        <span class="muted">Primary identifier</span>
+        <div>Generated on save (reserved <code>222</code> namespace)</div>
       </div>
     <% else %>
       <div class="form-field">
@@ -21,6 +14,22 @@
         <div><code><%= product.primary_identifier %></code> (immutable)</div>
       </div>
     <% end %>
+
+    <div class="form-field">
+      <%= form.label :industry_identifier, "Industry identifier (GTIN / ISBN / UPC)" %>
+      <%= form.text_field :industry_identifier,
+            id: "product_industry_identifier",
+            "aria-describedby": "product_industry_identifier_help" %>
+      <span class="field-help" id="product_industry_identifier_help">Optional manufacturer identifier for this product. ISBN-10 becomes a Bookland 978 ISBN-13 and UPC-A becomes a GTIN-13; spaces and hyphens are removed. May not use the reserved 222 namespace. Clear the field to retire it.</span>
+      <% if product.errors[:industry_identifier].any? %><span class="field-error"><%= product.errors[:industry_identifier].to_sentence %></span><% end %>
+    </div>
+
+    <div class="form-field">
+      <%= form.label :lookup_code, "Lookup code" %>
+      <%= form.text_field :lookup_code, id: "product_lookup_code", "aria-describedby": "product_lookup_code_help" %>
+      <span class="field-help" id="product_lookup_code_help">Optional shelf or search code, stored uppercase. Allowed characters: A–Z, 0–9, period, underscore, slash, and hyphen; no spaces; up to 64 characters. Lookup codes are not unique — if another product uses the same code, scan and add will ask the cashier to choose a product.</span>
+      <% if product.errors[:lookup_code].any? %><span class="field-error"><%= product.errors[:lookup_code].to_sentence %></span><% end %>
+    </div>
 
     <div class="form-field">
       <%= form.label :name %>

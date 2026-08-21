@@ -7,8 +7,7 @@ class Identifiers::AssignIndustryTest < ActiveSupport::TestCase
     @actor = actor_user
     @product = Products::Create.call(
       attributes: { name: "Industry product", status: "draft" },
-      actor: @actor,
-      identifier_mode: "generate"
+      actor: @actor
     )
     @variant = ProductVariants::Create.call(
       product: @product,

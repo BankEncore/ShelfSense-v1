@@ -311,14 +311,13 @@ class PosWorkingCommandsTest < ActiveSupport::TestCase
     used_class = merchandise_class(
       code: "pos_used_#{SecureRandom.hex(3)}",
       used_merchandise_allowed: true,
-      default_standard_department: department(code: "pos_used_d_#{SecureRandom.hex(3)}", default_tax_class: @tax),
-      default_used_department: department(code: "pos_used_u_#{SecureRandom.hex(3)}", default_tax_class: @tax),
+      department: department(code: "pos_used_#{SecureRandom.hex(3)}"),
+      default_tax_class: @tax,
       pricing_method: "fixed"
     )
     product = Products::Create.call(
       attributes: { name: "Used Book", status: "active" },
-      actor: @actor,
-      identifier_mode: "generate"
+      actor: @actor
     )
     used = ProductVariants::Create.call(
       product: product,
@@ -327,8 +326,6 @@ class PosWorkingCommandsTest < ActiveSupport::TestCase
         status: "active",
         merchandise_class_id: used_class.id,
         merchandise_condition_id: merchandise_condition(code: "pos_good_#{SecureRandom.hex(2)}").id,
-        department_id: used_class.default_used_department_id,
-        tax_class_id: @tax.id,
         regular_price_cents: 1200
       },
       actor: @actor

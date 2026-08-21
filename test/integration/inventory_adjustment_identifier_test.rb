@@ -11,25 +11,23 @@ class InventoryAdjustmentIdentifierTest < ActionDispatch::IntegrationTest
     Inventory::AdjustmentReasons.seed!
 
     @tax = tax_class(code: "adj_id_tax")
-    @department = department(code: "adj_id_dept", default_tax_class: @tax)
+    @department = department(code: "adj_id_dept")
     @klass = merchandise_class(
       code: "adj_id_std",
-      default_standard_department: @department,
+      department: @department,
       pricing_method: "fixed"
     )
     @used_klass = merchandise_class(
       code: "adj_id_used",
       used_merchandise_allowed: true,
-      default_standard_department: @department,
-      default_used_department: @department,
-      pricing_method: "fixed"
+      department: @department,
+            pricing_method: "fixed"
     )
     @condition = merchandise_condition(code: "good")
 
     @product = Products::Create.call(
       attributes: { name: "Adjustment Identifier Book", status: "active" },
-      actor: @actor,
-      identifier_mode: "generate"
+      actor: @actor
     )
     @qty_variant = ProductVariants::Create.call(
       product: @product,
@@ -37,8 +35,6 @@ class InventoryAdjustmentIdentifierTest < ActionDispatch::IntegrationTest
         variant_type: "standard",
         status: "active",
         merchandise_class_id: @klass.id,
-        department_id: @department.id,
-        tax_class_id: @tax.id,
         regular_price_cents: 1999
       },
       actor: @actor
@@ -50,8 +46,6 @@ class InventoryAdjustmentIdentifierTest < ActionDispatch::IntegrationTest
         status: "active",
         merchandise_class_id: @used_klass.id,
         merchandise_condition_id: @condition.id,
-        department_id: @department.id,
-        tax_class_id: @tax.id,
         regular_price_cents: 1200
       },
       actor: @actor
@@ -135,6 +129,82 @@ class InventoryAdjustmentIdentifierTest < ActionDispatch::IntegrationTest
     }
     assert_response :redirect
     assert unit.reload.removed?
+  end
+
+  test "adjustment matching accepts a product whose only variant POS would refuse" do
+    product = Products::Create.call(
+      attributes: { name: "Not For Sale Yet", status: "draft" },
+      actor: @actor,
+      lookup_code: "adj-draft"
+    )
+    variant = ProductVariants::Create.call(
+      product: product,
+      attributes: { variant_type: "standard", status: "draft", merchandise_class_id: @klass.id },
+      actor: @actor
+    )
+    assert_not variant.sellable?
+
+    sign_in_as("admin")
+    post preview_admin_inventory_adjustments_path, params: {
+      store_id: @store.id,
+      product_variant_id: "adj-draft",
+      adjustment_reason_id: @opening.id,
+      quantity_delta: 2,
+      acquisition_unit_cost: "1.00",
+      command_token: SecureRandom.uuid_v7,
+      idempotency_key: SecureRandom.uuid_v7
+    }
+
+    assert_response :success
+    assert_match(/Confirm adjustment/, response.body)
+
+    post admin_inventory_adjustments_path, params: {
+      store_id: @store.id,
+      product_variant_id: "adj-draft",
+      adjustment_reason_id: @opening.id,
+      quantity_delta: 2,
+      acquisition_unit_cost: "1.00",
+      command_token: SecureRandom.uuid_v7,
+      idempotency_key: SecureRandom.uuid_v7
+    }
+    assert_response :redirect
+    assert_equal 2, InventoryBalance.find_by!(store: @store, product_variant: variant).on_hand_quantity
+  end
+
+  test "adjustment matching refuses a shared lookup code instead of picking one product" do
+    first = Products::Create.call(
+      attributes: { name: "Shared A", status: "active" },
+      actor: @actor,
+      lookup_code: "adj-shared"
+    )
+    second = Products::Create.call(
+      attributes: { name: "Shared B", status: "active" },
+      actor: @actor,
+      lookup_code: "adj-shared"
+    )
+    [ first, second ].each do |product|
+      ProductVariants::Create.call(
+        product: product,
+        attributes: { variant_type: "standard", status: "active", merchandise_class_id: @klass.id, regular_price_cents: 500 },
+        actor: @actor
+      )
+    end
+
+    sign_in_as("admin")
+    post preview_admin_inventory_adjustments_path, params: {
+      store_id: @store.id,
+      product_variant_id: "adj-shared",
+      adjustment_reason_id: @opening.id,
+      quantity_delta: 2,
+      acquisition_unit_cost: "1.00",
+      command_token: SecureRandom.uuid_v7,
+      idempotency_key: SecureRandom.uuid_v7
+    }
+
+    assert_response :redirect
+    follow_redirect!
+    assert_match(/Multiple products share that lookup code/, response.body)
+    assert_no_match(/Confirm adjustment/, response.body)
   end
 
   private

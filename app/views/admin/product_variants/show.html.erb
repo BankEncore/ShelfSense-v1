@@ -48,9 +48,14 @@
             link_to(@product_variant.department.admin_label, admin_department_path(@product_variant.department))
           end
         )],
-        ["Tax class", (
-          if @product_variant.tax_class
-            link_to(@product_variant.tax_class.admin_label, admin_tax_class_path(@product_variant.tax_class))
+        ["Effective tax class", (
+          if @product_variant.effective_tax_class
+            link_to(@product_variant.effective_tax_class.admin_label, admin_tax_class_path(@product_variant.effective_tax_class))
+          end
+        )],
+        ["Tax class override", (
+          if @product_variant.tax_class_override
+            link_to(@product_variant.tax_class_override.admin_label, admin_tax_class_path(@product_variant.tax_class_override))
           end
         )],
         ["Condition", @product_variant.merchandise_condition&.admin_label],

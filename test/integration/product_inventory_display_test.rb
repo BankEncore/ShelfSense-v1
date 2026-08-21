@@ -11,25 +11,23 @@ class ProductInventoryDisplayTest < ActionDispatch::IntegrationTest
     Inventory::AdjustmentReasons.seed!
 
     @tax = tax_class(code: "disp_tax")
-    @department = department(code: "disp_dept", default_tax_class: @tax)
+    @department = department(code: "disp_dept")
     @klass = merchandise_class(
       code: "disp_std",
-      default_standard_department: @department,
+      department: @department,
       pricing_method: "fixed"
     )
     @used_klass = merchandise_class(
       code: "disp_used",
       used_merchandise_allowed: true,
-      default_standard_department: @department,
-      default_used_department: @department,
-      pricing_method: "fixed"
+      department: @department,
+            pricing_method: "fixed"
     )
     @condition = merchandise_condition(code: "good")
 
     @product = Products::Create.call(
       attributes: { name: "Inventory Display Book", status: "active" },
-      actor: @actor,
-      identifier_mode: "generate"
+      actor: @actor
     )
     @qty_variant = ProductVariants::Create.call(
       product: @product,
@@ -37,8 +35,6 @@ class ProductInventoryDisplayTest < ActionDispatch::IntegrationTest
         variant_type: "standard",
         status: "active",
         merchandise_class_id: @klass.id,
-        department_id: @department.id,
-        tax_class_id: @tax.id,
         regular_price_cents: 1999
       },
       actor: @actor
@@ -50,8 +46,6 @@ class ProductInventoryDisplayTest < ActionDispatch::IntegrationTest
         status: "active",
         merchandise_class_id: @used_klass.id,
         merchandise_condition_id: @condition.id,
-        department_id: @department.id,
-        tax_class_id: @tax.id,
         regular_price_cents: 1200
       },
       actor: @actor

@@ -5,9 +5,10 @@ require "csv"
 module Admin
   class MerchandiseImportsController < BaseController
     TEMPLATE_HEADERS = %w[
-      primary_identifier name generate_primary_identifier status sku variant_type variant_name
-      industry_identifier variant_condition_code merchandise_class_code department_code
-      tax_class_code regular_price_cents
+      product_primary_identifier product_industry_identifier product_lookup_code name status
+      sku variant_type variant_name industry_identifier variant_condition_code
+      merchandise_class_code inventory_mode pricing_method target_margin_bps
+      supplier_returnable tax_class_override_code regular_price_cents
     ].freeze
 
     before_action -> { require_permission!("merchandise.import") }

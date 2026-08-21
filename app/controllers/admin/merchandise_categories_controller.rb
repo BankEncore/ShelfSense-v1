@@ -43,7 +43,7 @@ module Admin
           @merchandise_category,
           attrs: merchandise_category_params.except(:code),
           action: "merchandise_categories.update",
-          before_keys: %w[name description parent_id default_merchandise_class_id display_order]
+          before_keys: %w[name description parent_id default_standard_merchandise_class_id default_used_merchandise_class_id display_order]
         )
           redirect_to admin_merchandise_category_path(@merchandise_category), notice: "Merchandise category updated."
         else
@@ -84,10 +84,11 @@ module Admin
 
     def merchandise_category_params
       permitted = params.require(:merchandise_category).permit(
-        :code, :name, :description, :parent_id, :default_merchandise_class_id,
+        :code, :name, :description, :parent_id,
+        :default_standard_merchandise_class_id, :default_used_merchandise_class_id,
         :display_order, :lock_version
       )
-      %i[code parent_id default_merchandise_class_id].each do |key|
+      %i[code parent_id default_standard_merchandise_class_id default_used_merchandise_class_id].each do |key|
         permitted[key] = nil if permitted[key].blank?
       end
       permitted

@@ -6,47 +6,47 @@ class ProductVariants::CreateAndActivationTest < ActiveSupport::TestCase
   setup do
     @actor = actor_user
     @tax = tax_class(code: "books")
-    @standard_dept = department(code: "new_books", default_tax_class: @tax)
-    @used_dept = department(code: "used_books", default_tax_class: @tax)
+    @standard_dept = department(code: "new_books")
+    @used_dept = department(code: "used_books")
     @klass = merchandise_class(
       code: "book",
       pricing_method: "list_price",
       used_merchandise_allowed: false,
-      default_standard_department: @standard_dept,
-      default_used_department: @used_dept
+      department: @standard_dept,
+      default_tax_class: @tax
     )
     @used_klass = merchandise_class(
       code: "used_book",
       pricing_method: "list_price",
       used_merchandise_allowed: true,
-      default_standard_department: @standard_dept,
-      default_used_department: @used_dept
+      department: @used_dept,
+      default_tax_class: @tax
     )
     @open_klass = merchandise_class(
       code: "open_item",
       pricing_method: "open_price",
-      default_standard_department: @standard_dept
+      department: @standard_dept,
+      default_tax_class: @tax
     )
     @service_klass = merchandise_class(
       code: "service",
       inventory_mode: "non_inventory",
       pricing_method: "fixed",
-      default_standard_department: @standard_dept
+      department: @standard_dept,
+      default_tax_class: @tax
     )
-    @category = merchandise_category(name: "Fiction", default_merchandise_class: @klass)
+    @category = merchandise_category(name: "Fiction", default_standard_merchandise_class: @klass)
     @like_new = merchandise_condition(code: "like_new", price_adjustment_bps: 6_000)
     @product = Products::Create.call(
       attributes: { name: "Example", status: "draft", merchandise_category: @category, list_price_cents: 2_000 },
-      actor: @actor,
-      identifier_mode: "generate"
+      actor: @actor
     )
   end
 
   test "draft standard can omit class department and tax when no defaults apply" do
     bare = Products::Create.call(
       attributes: { name: "Bare", status: "draft" },
-      actor: @actor,
-      identifier_mode: "generate"
+      actor: @actor
     )
     variant = ProductVariants::Create.call(
       product: bare,
@@ -58,8 +58,8 @@ class ProductVariants::CreateAndActivationTest < ActiveSupport::TestCase
     assert variant.standard?
     assert_nil variant.merchandise_condition_id
     assert_nil variant.merchandise_class_id
-    assert_nil variant.department_id
-    assert_nil variant.tax_class_id
+    assert_nil variant.department
+    assert_nil variant.effective_tax_class
   end
 
   test "used variant requires condition and standard forbids it" do
@@ -92,8 +92,6 @@ class ProductVariants::CreateAndActivationTest < ActiveSupport::TestCase
       attributes: {
         variant_type: "standard",
         merchandise_class_id: @klass.id,
-        department_id: @standard_dept.id,
-        tax_class_id: @tax.id,
         regular_price_cents: 1_999,
         status: "draft"
       }
@@ -121,8 +119,6 @@ class ProductVariants::CreateAndActivationTest < ActiveSupport::TestCase
       attributes: {
         variant_type: "standard",
         merchandise_class_id: @open_klass.id,
-        department_id: @standard_dept.id,
-        tax_class_id: @tax.id,
         regular_price_cents: nil,
         status: "draft"
       }
@@ -142,8 +138,6 @@ class ProductVariants::CreateAndActivationTest < ActiveSupport::TestCase
           variant_type: "used",
           merchandise_condition_id: @like_new.id,
           merchandise_class_id: @klass.id,
-          department_id: @used_dept.id,
-          tax_class_id: @tax.id,
           regular_price_cents: 1_200
         }
       )
@@ -188,8 +182,8 @@ class ProductVariants::CreateAndActivationTest < ActiveSupport::TestCase
     )
 
     assert_equal @klass.id, standard.merchandise_class_id
-    assert_equal @standard_dept.id, standard.department_id
-    assert_equal @tax.id, standard.tax_class_id
+    assert_equal @standard_dept.id, standard.department.id
+    assert_equal @tax.id, standard.effective_tax_class.id
     assert_equal 2_000, standard.regular_price_cents
     assert_equal "quantity", standard.derived_inventory_tracking
     assert_equal "Standard", standard.name
@@ -203,7 +197,7 @@ class ProductVariants::CreateAndActivationTest < ActiveSupport::TestCase
         merchandise_class_id: @used_klass.id
       }
     )
-    assert_equal @used_dept.id, used.department_id
+    assert_equal @used_dept.id, used.department.id
     assert_equal 1_200, used.regular_price_cents
     assert_equal "individual", used.derived_inventory_tracking
     assert_equal @like_new.name, used.name
@@ -227,13 +221,13 @@ class ProductVariants::CreateAndActivationTest < ActiveSupport::TestCase
     fixed = merchandise_class(
       code: "fixed_book",
       pricing_method: "fixed",
-      default_standard_department: @standard_dept
+      department: @standard_dept,
+      default_tax_class: @tax
     )
-    category = merchandise_category(name: "Fixed Cat", default_merchandise_class: fixed)
+    category = merchandise_category(name: "Fixed Cat", default_standard_merchandise_class: fixed)
     product = Products::Create.call(
       attributes: { name: "Fixed Price Book", status: "draft", merchandise_category: category, list_price_cents: 2_000 },
-      actor: @actor,
-      identifier_mode: "generate"
+      actor: @actor
     )
 
     variant = ProductVariants::Create.call(
@@ -244,17 +238,16 @@ class ProductVariants::CreateAndActivationTest < ActiveSupport::TestCase
     assert_nil variant.regular_price_cents
   end
 
-  test "changing class defaults does not mutate existing variants" do
+  test "changing class defaults does not mutate existing variant stored fields" do
     variant = ProductVariants::Create.call(
       product: @product,
       actor: @actor,
       attributes: { variant_type: "standard" }
     )
-    original_dept = variant.department_id
-    other = department(code: "other_books", default_tax_class: @tax)
-    @klass.update!(default_standard_department: other)
+    original_inventory_mode = variant.inventory_mode
+    @klass.update!(default_inventory_mode: "non_inventory")
 
-    assert_equal original_dept, variant.reload.department_id
+    assert_equal original_inventory_mode, variant.reload.inventory_mode
   end
 
   test "database rejects standard with condition and used without" do
@@ -297,8 +290,6 @@ class ProductVariants::CreateAndActivationTest < ActiveSupport::TestCase
       attributes: {
         variant_type: "standard",
         merchandise_class_id: @klass.id,
-        department_id: @standard_dept.id,
-        tax_class_id: @tax.id,
         regular_price_cents: 1_999,
         status: "active"
       }
@@ -324,8 +315,6 @@ class ProductVariants::CreateAndActivationTest < ActiveSupport::TestCase
         variant_type: "used",
         merchandise_condition_id: @like_new.id,
         merchandise_class_id: @used_klass.id,
-        department_id: @used_dept.id,
-        tax_class_id: @tax.id,
         regular_price_cents: 1_200,
         status: "active"
       }
@@ -349,7 +338,8 @@ class ProductVariants::CreateAndActivationTest < ActiveSupport::TestCase
     result = ProductVariants::DefaultResolver.resolve(
       product: @product,
       variant_type: "used",
-      condition: @like_new
+      condition: @like_new,
+      merchandise_class: @used_klass
     )
     # (1005 * 3333 + 5000) / 10000 = 335
     assert_equal 335, result.suggested_price_cents

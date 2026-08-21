@@ -82,8 +82,7 @@ class PosMvpCloseoutTest < ActionDispatch::IntegrationTest
       line_id: standard_line.id,
       action_type: "tax_class_override",
       operation: "apply",
-      reason_code: "classification_correction",
-      tax_class_id: @food.id
+      reason_code: "classification_correction"
     }
     assert_response :success
 
@@ -146,7 +145,7 @@ class PosMvpCloseoutTest < ActionDispatch::IntegrationTest
       return_price: "18.00",
       expected_product_variant_id: @variant.id,
       expected_reference_unit_price_cents: @variant.regular_price_cents,
-      expected_tax_class_id: @variant.tax_class_id
+      expected_tax_class_id: @variant.effective_tax_class&.id
     }
     assert_response :success
     working.reload

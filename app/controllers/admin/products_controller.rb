@@ -25,7 +25,7 @@ module Admin
 
     def show
       @product_variants = @product.product_variants
-        .includes(:merchandise_class, :department, :tax_class, :merchandise_condition)
+        .includes(:merchandise_class, :merchandise_condition, :tax_class_override, merchandise_class: [ :department, :default_tax_class ])
         .order(:sku)
       @recent_audit_events = recent_product_audit_events
       @show_inventory = inventory_display_enabled?
@@ -48,10 +48,10 @@ module Admin
       end
 
       @product = Products::Create.call(
-        attributes: attrs,
+        attributes: attrs.except(:industry_identifier, :lookup_code),
         actor: current_user,
-        identifier_mode: identifier_mode,
-        external_identifier: external_identifier.presence
+        industry_identifier: attrs[:industry_identifier],
+        lookup_code: attrs[:lookup_code]
       )
       redirect_to admin_product_path(@product), notice: "Product created."
     rescue Products::Create::Error => e
@@ -190,14 +190,6 @@ module Admin
       scope.order(occurred_at: :desc).limit(5).to_a
     end
 
-    def identifier_mode
-      params.dig(:product, :identifier_mode).presence || params[:identifier_mode].presence || "enter"
-    end
-
-    def external_identifier
-      params.dig(:product, :external_identifier).presence || params[:external_identifier]
-    end
-
     def product_attributes
       attrs = product_params.except(:lock_version).to_h.symbolize_keys
       attrs[:status] = "draft" if attrs[:status].blank?
@@ -210,7 +202,7 @@ module Admin
       permitted = params.require(:product).permit(
         :name, :subtitle, :description, :brand_name, :product_model, :merchandise_category_id,
         :list_price, :list_price_cents, :release_date, :status, :variant_option_name_1, :variant_option_name_2,
-        :lock_version
+        :industry_identifier, :lookup_code, :lock_version
       )
 
       if permitted.key?(:list_price) || params[:product]&.key?(:list_price)
@@ -225,7 +217,8 @@ module Admin
       end
 
       %i[merchandise_category_id list_price_cents release_date subtitle description brand_name
-         product_model variant_option_name_1 variant_option_name_2].each do |key|
+         product_model variant_option_name_1 variant_option_name_2 industry_identifier
+         lookup_code].each do |key|
         permitted[key] = nil if permitted[key].blank?
       end
       permitted

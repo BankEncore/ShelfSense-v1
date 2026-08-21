@@ -8,16 +8,15 @@ class Phase2HardeningTest < ActionDispatch::IntegrationTest
     @actor = @bootstrap[:administrator]
     sign_in_as("admin")
     @tax = tax_class(code: "books")
-    @dept = department(code: "new_books", default_tax_class: @tax)
-    @klass = merchandise_class(code: "book", pricing_method: "fixed", default_standard_department: @dept)
+    @dept = department(code: "new_books")
+    @klass = merchandise_class(code: "book", pricing_method: "fixed", department: @dept)
     @condition = merchandise_condition(code: "new")
   end
 
-  test "cross-namespace uniqueness blocks product primary equal to variant sku" do
+  test "cross-namespace uniqueness blocks product industry identifier equal to variant sku" do
     product = Products::Create.call(
       attributes: { name: "Owner", status: "draft" },
-      actor: @actor,
-      identifier_mode: "generate"
+      actor: @actor
     )
     variant = ProductVariants::Create.call(
       product: product,
@@ -29,18 +28,17 @@ class Phase2HardeningTest < ActionDispatch::IntegrationTest
       Products::Create.call(
         attributes: { name: "Collision", status: "draft" },
         actor: @actor,
-        identifier_mode: "enter",
-        external_identifier: variant.sku
+        industry_identifier: variant.sku
       )
     end
     assert_match(/already reserved/i, error.message)
+    assert_nil Product.find_by(name: "Collision")
   end
 
   test "draft product delete leaves a retired registry tombstone" do
     product = Products::Create.call(
       attributes: { name: "Draft delete", status: "draft" },
-      actor: @actor,
-      identifier_mode: "generate"
+      actor: @actor
     )
     value = product.primary_identifier
 
@@ -57,8 +55,7 @@ class Phase2HardeningTest < ActionDispatch::IntegrationTest
   test "retired identifiers cannot be reallocated" do
     product = Products::Create.call(
       attributes: { name: "Retire", status: "draft" },
-      actor: @actor,
-      identifier_mode: "generate"
+      actor: @actor
     )
     value = product.primary_identifier
     delete admin_product_path(product)
@@ -69,9 +66,7 @@ class Phase2HardeningTest < ActionDispatch::IntegrationTest
         kind: "product_primary",
         product: Products::Create.call(
           attributes: { name: "Other", status: "draft" },
-          actor: @actor,
-          identifier_mode: "enter",
-          external_identifier: external_isbn13
+          actor: @actor
         )
       )
     end
@@ -81,8 +76,7 @@ class Phase2HardeningTest < ActionDispatch::IntegrationTest
       Products::Create.call(
         attributes: { name: "Reuse 222", status: "draft" },
         actor: @actor,
-        identifier_mode: "enter",
-        external_identifier: value
+        industry_identifier: value
       )
     end
     assert_match(/reserved 222|already reserved/i, error.message)
@@ -113,14 +107,12 @@ class Phase2HardeningTest < ActionDispatch::IntegrationTest
 
   test "inactive reference is rejected on new assignment" do
     inactive_tax = tax_class(code: "inactive_tax", active: false)
-    inactive_class = merchandise_class(code: "inactive_class", active: false, default_standard_department: @dept)
+    inactive_class = merchandise_class(code: "inactive_class", active: false, department: @dept)
     inactive_condition = merchandise_condition(code: "inactive_cond", active: false)
-    inactive_dept = department(code: "inactive_dept", default_tax_class: @tax, active: false)
 
     product = Products::Create.call(
       attributes: { name: "Refs", status: "draft" },
-      actor: @actor,
-      identifier_mode: "generate"
+      actor: @actor
     )
 
     assert_raises(ProductVariants::Create::Error) do
@@ -133,8 +125,8 @@ class Phase2HardeningTest < ActionDispatch::IntegrationTest
           merchandise_class_id: merchandise_class(
             code: "used_ok",
             used_merchandise_allowed: true,
-            default_standard_department: @dept,
-            default_used_department: @dept
+            department: @dept,
+            default_tax_class: @tax
           ).id
         }
       )
@@ -150,15 +142,24 @@ class Phase2HardeningTest < ActionDispatch::IntegrationTest
     assert_not variant.valid?
     assert_includes variant.errors[:merchandise_class_id], "must be an active merchandise class"
 
+    # A class cannot be created under an inactive department, so deactivate the
+    # department after the class exists to reach the variant activation rule.
+    deactivating_dept = department(code: "deactivating_dept")
+    dept_class = merchandise_class(
+      code: "deactivating_dept_class",
+      department: deactivating_dept,
+      default_tax_class: @tax
+    )
+    deactivating_dept.update_columns(active: false)
     variant.reload
-    variant.department = inactive_dept
+    variant.assign_attributes(merchandise_class: dept_class, status: "active")
     assert_not variant.valid?
-    assert_includes variant.errors[:department_id], "must be an active department"
+    assert_includes variant.errors[:base], "merchandise class department must be active"
 
     variant.reload
-    variant.tax_class = inactive_tax
+    variant.tax_class_override = inactive_tax
     assert_not variant.valid?
-    assert_includes variant.errors[:tax_class_id], "must be an active tax class"
+    assert_includes variant.errors[:tax_class_override_id], "must be an active tax class"
   end
 
   private

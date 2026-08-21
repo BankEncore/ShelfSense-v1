@@ -12,26 +12,24 @@ class Inventory::AdminIndexQueryTest < ActiveSupport::TestCase
     Authorization::PermissionCatalog.seed!(granted_by: @actor)
 
     @tax = tax_class(code: "idx_tax")
-    @department = department(code: "idx_dept", default_tax_class: @tax)
+    @department = department(code: "idx_dept")
     @qty_class = merchandise_class(
       code: "idx_qty",
-      default_standard_department: @department,
+      department: @department,
       pricing_method: "fixed"
     )
     @used_class = merchandise_class(
       code: "idx_used",
       used_merchandise_allowed: true,
-      default_standard_department: @department,
-      default_used_department: @department,
-      pricing_method: "fixed"
+      department: @department,
+            pricing_method: "fixed"
     )
     @condition = merchandise_condition(code: "idx_good")
     @opening = AdjustmentReason.find_by!(code: "opening_inventory")
 
     @product = Products::Create.call(
       attributes: { name: "Index Widget", status: "active" },
-      actor: @actor,
-      identifier_mode: "generate"
+      actor: @actor
     )
     @qty_variant = ProductVariants::Create.call(
       product: @product,
@@ -39,8 +37,6 @@ class Inventory::AdminIndexQueryTest < ActiveSupport::TestCase
         variant_type: "standard",
         status: "active",
         merchandise_class_id: @qty_class.id,
-        department_id: @department.id,
-        tax_class_id: @tax.id,
         regular_price_cents: 1999
       },
       actor: @actor
@@ -52,8 +48,6 @@ class Inventory::AdminIndexQueryTest < ActiveSupport::TestCase
         status: "active",
         merchandise_class_id: @used_class.id,
         merchandise_condition_id: @condition.id,
-        department_id: @department.id,
-        tax_class_id: @tax.id,
         regular_price_cents: 1200
       },
       actor: @actor

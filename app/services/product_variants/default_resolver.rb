@@ -2,54 +2,98 @@
 
 module ProductVariants
   class DefaultResolver
-    Result = Struct.new(:merchandise_class, :department, :tax_class, :suggested_price_cents, keyword_init: true)
+    Result = Struct.new(
+      :merchandise_class,
+      :inventory_mode,
+      :pricing_method,
+      :target_margin_bps,
+      :supplier_returnable,
+      :tax_class_override,
+      :suggested_price_cents,
+      keyword_init: true
+    )
 
     def self.resolve(**attrs)
       new(**attrs).resolve
     end
 
-    def initialize(product:, variant_type:, condition: nil, merchandise_class: nil, department: nil, tax_class: nil, regular_price_cents: nil)
+    def initialize(
+      product:,
+      variant_type:,
+      condition: nil,
+      merchandise_class: nil,
+      inventory_mode: nil,
+      pricing_method: nil,
+      target_margin_bps: :omitted,
+      supplier_returnable: :omitted,
+      tax_class_override: :omitted,
+      regular_price_cents: nil
+    )
       @product = product
       @variant_type = variant_type.to_s
       @condition = condition
       @merchandise_class = merchandise_class
-      @department = department
-      @tax_class = tax_class
+      @inventory_mode = inventory_mode
+      @pricing_method = pricing_method
+      @target_margin_bps = target_margin_bps
+      @supplier_returnable = supplier_returnable
+      @tax_class_override = tax_class_override
       @regular_price_cents = regular_price_cents
     end
 
     def resolve
-      klass = @merchandise_class || @product.merchandise_category&.default_merchandise_class
-      department = @department || department_from(klass)
-      tax = @tax_class || department&.default_tax_class
+      klass = @merchandise_class || category_default_class
+      inventory_mode = @inventory_mode.presence || klass&.default_inventory_mode
+      pricing_method = @pricing_method.presence || klass&.default_pricing_method
+      target_margin_bps =
+        if @target_margin_bps == :omitted
+          klass&.target_margin_bps
+        else
+          @target_margin_bps
+        end
+      supplier_returnable =
+        if @supplier_returnable == :omitted
+          klass.nil? ? nil : klass.default_supplier_returnable
+        else
+          @supplier_returnable
+        end
+      tax_override =
+        if @tax_class_override == :omitted
+          nil
+        else
+          @tax_class_override
+        end
+
       price = @regular_price_cents
-      if price.nil?
-        price = suggested_price_for(klass)
-      end
+      price = suggested_price_for(klass, pricing_method) if price.nil?
 
       Result.new(
         merchandise_class: klass,
-        department: department,
-        tax_class: tax,
+        inventory_mode: inventory_mode,
+        pricing_method: pricing_method,
+        target_margin_bps: target_margin_bps,
+        supplier_returnable: supplier_returnable,
+        tax_class_override: tax_override,
         suggested_price_cents: price
       )
     end
 
     private
 
-    def department_from(klass)
-      return if klass.blank?
+    def category_default_class
+      category = @product.merchandise_category
+      return if category.blank?
 
       if @variant_type == "used"
-        klass.default_used_department
+        category.default_used_merchandise_class
       else
-        klass.default_standard_department
+        category.default_standard_merchandise_class
       end
     end
 
-    def suggested_price_for(klass)
+    def suggested_price_for(klass, pricing_method)
       return if klass.blank?
-      return unless klass.pricing_method == "list_price"
+      return unless pricing_method == "list_price"
       return if @product.list_price_cents.blank?
 
       if @variant_type == "used" && @condition

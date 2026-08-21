@@ -105,6 +105,8 @@ export default class extends Controller {
     "searchSkuField",
     "searchNameField",
     "searchQueryLabel",
+    "productOverlay",
+    "productList",
     "variantOverlay",
     "variantList",
     "unitOverlay",
@@ -226,6 +228,11 @@ export default class extends Controller {
 
     if (this.searchOverlayOpen()) {
       this.onSearchOverlayKeydown(event, key)
+      return
+    }
+
+    if (this.productOverlayOpen()) {
+      this.onProductOverlayKeydown(event, key)
       return
     }
 
@@ -766,6 +773,7 @@ export default class extends Controller {
   async fetchResolve(params) {
     const url = new URL(this.resolveUrlValue, window.location.origin)
     if (params.identifier) url.searchParams.set("identifier", params.identifier)
+    if (params.product_id) url.searchParams.set("product_id", params.product_id)
     if (params.product_variant_id) url.searchParams.set("product_variant_id", params.product_variant_id)
     if (params.inventory_unit_id) url.searchParams.set("inventory_unit_id", params.inventory_unit_id)
     const response = await fetch(url, { headers: { Accept: "application/json" }, credentials: "same-origin" })
@@ -781,6 +789,9 @@ export default class extends Controller {
         return
       case "addable_unit":
         this.postAddMerchandise({ unitId: result.unit.id })
+        return
+      case "product_choice_required":
+        this.openProductPicker(result.products || [])
         return
       case "variant_choice_required":
         this.openVariantPicker(result.variants || [])
@@ -906,6 +917,50 @@ export default class extends Controller {
     const variantId = selected.dataset.variantId
     this.closeSearchOverlay()
     this.resolveAndHandle({ product_variant_id: variantId })
+  }
+
+  openProductPicker(products) {
+    if (!this.hasProductOverlayTarget || !this.hasProductListTarget) return
+    this.productListTarget.replaceChildren()
+    products.forEach((product, index) => {
+      const item = document.createElement("li")
+      item.dataset.productId = product.id
+      const identity = [product.primary_identifier, product.industry_identifier, product.lookup_code].filter(Boolean).join(" · ")
+      const descriptor = [product.name, product.subtitle, product.brand_name].filter(Boolean).join(" — ")
+      item.textContent = [descriptor, identity].filter(Boolean).join(" · ")
+      this.decoratePickerItem(item, { selected: index === 0 })
+      this.productListTarget.append(item)
+    })
+    this.showOverlay(this.productOverlayTarget, this.productListTarget.querySelector("li.is-selected"))
+  }
+
+  closeProductOverlay() {
+    this.hideOverlay(this.hasProductOverlayTarget && this.productOverlayTarget)
+  }
+
+  onProductOverlayKeydown(event, key) {
+    if (key === "Escape") {
+      event.preventDefault()
+      this.closeProductOverlay()
+      return
+    }
+    if (key === "ArrowUp" || key === "ArrowDown") {
+      event.preventDefault()
+      this.movePickerList(this.productListTarget, key === "ArrowUp" ? -1 : 1)
+      return
+    }
+    if (key === "Enter") {
+      event.preventDefault()
+      this.selectHighlightedProduct()
+    }
+  }
+
+  selectHighlightedProduct() {
+    const selected = this.hasProductListTarget && this.productListTarget.querySelector("li.is-selected")
+    if (!selected || !selected.dataset.productId) return
+    const productId = selected.dataset.productId
+    this.closeProductOverlay()
+    this.resolveAndHandle({ product_id: productId })
   }
 
   openVariantPicker(variants) {
@@ -1661,6 +1716,7 @@ export default class extends Controller {
       this.hasControlOverlayTarget && this.controlOverlayTarget,
       this.hasOtherOverlayTarget && this.otherOverlayTarget,
       this.hasSearchOverlayTarget && this.searchOverlayTarget,
+      this.hasProductOverlayTarget && this.productOverlayTarget,
       this.hasVariantOverlayTarget && this.variantOverlayTarget,
       this.hasUnitOverlayTarget && this.unitOverlayTarget,
       this.hasOpenPriceOverlayTarget && this.openPriceOverlayTarget,
@@ -1760,6 +1816,10 @@ export default class extends Controller {
 
   searchOverlayOpen() {
     return this.hasSearchOverlayTarget && !this.searchOverlayTarget.hidden
+  }
+
+  productOverlayOpen() {
+    return this.hasProductOverlayTarget && !this.productOverlayTarget.hidden
   }
 
   variantOverlayOpen() {

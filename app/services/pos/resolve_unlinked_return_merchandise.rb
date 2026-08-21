@@ -25,14 +25,16 @@ module Pos
     end
 
     def call
-      row = registry_row!
-      case row.identifier_kind
-      when "variant_sku", "variant_industry"
-        resolve_variant!(row.product_variant)
-      when "product_primary"
-        resolve_product_primary!(row.product)
-      when "inventory_unit"
-        resolve_unit!(row.inventory_unit)
+      result = Identifiers::Lookup.call(@identifier)
+      case result.status
+      when :variant
+        resolve_variant!(result.variant)
+      when :product
+        resolve_product!(result.product)
+      when :multiple_products
+        raise Pos::Error, "multiple products share that lookup code. Scan/enter a variant or unit identifier."
+      when :inventory_unit
+        resolve_unit!(result.inventory_unit)
       else
         raise Pos::Error, "merchandise not found"
       end
@@ -41,14 +43,6 @@ module Pos
     end
 
     private
-
-    def registry_row!
-      normalized = Identifiers::Normalizer.normalize(@identifier, allow_shelfsense_222: true)
-      row = Identifiers::Registry.find_any(normalized)
-      raise Pos::Error, "merchandise not found" if row.nil? || row.retired_at.present?
-
-      row
-    end
 
     def resolve_variant!(variant)
       raise Pos::Error, "merchandise not found" if variant.nil?
@@ -59,7 +53,7 @@ module Pos
       Result.new(**variant_result(variant, tracking: tracking))
     end
 
-    def resolve_product_primary!(product)
+    def resolve_product!(product)
       raise Pos::Error, "merchandise not found" if product.nil?
 
       candidates = product.product_variants.select { |variant| return_identity_eligible?(variant) }
@@ -136,7 +130,7 @@ module Pos
     def return_identity_eligible?(variant)
       tracking = tracking_for(variant)
       return false unless %w[quantity non_inventory individual].include?(tracking)
-      return false if variant.tax_class.nil?
+      return false if variant.effective_tax_class.nil?
       return true if tracking == "individual"
 
       variant.regular_price_cents.present?
@@ -156,7 +150,7 @@ module Pos
     end
 
     def require_tax_class!(variant)
-      tax_class = variant.tax_class
+      tax_class = variant.effective_tax_class
       raise Pos::Error, "Tax Class is required" if tax_class.nil?
 
       tax_class

@@ -3,7 +3,8 @@
 class IdentifierRegistry < ApplicationRecord
   self.table_name = "identifier_registry"
 
-  KINDS = %w[product_primary variant_sku variant_industry inventory_unit].freeze
+  KINDS = %w[product_primary product_industry variant_sku variant_industry inventory_unit].freeze
+  PRODUCT_KINDS = %w[product_primary product_industry].freeze
 
   belongs_to :product, optional: true
   belongs_to :product_variant, optional: true
@@ -29,10 +30,10 @@ class IdentifierRegistry < ApplicationRecord
 
     if active?
       case identifier_kind
-      when "product_primary"
-        errors.add(:product_id, "is required for active product_primary rows") if product_id.blank?
-        errors.add(:product_variant_id, "must be blank for product_primary rows") if product_variant_id.present?
-        errors.add(:inventory_unit_id, "must be blank for product_primary rows") if inventory_unit_id.present?
+      when *PRODUCT_KINDS
+        errors.add(:product_id, "is required for active #{identifier_kind} rows") if product_id.blank?
+        errors.add(:product_variant_id, "must be blank for #{identifier_kind} rows") if product_variant_id.present?
+        errors.add(:inventory_unit_id, "must be blank for #{identifier_kind} rows") if inventory_unit_id.present?
       when "variant_sku", "variant_industry"
         errors.add(:product_variant_id, "is required for active #{identifier_kind} rows") if product_variant_id.blank?
         errors.add(:product_id, "must be blank for #{identifier_kind} rows") if product_id.present?

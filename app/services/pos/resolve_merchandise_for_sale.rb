@@ -11,6 +11,7 @@ module Pos
       :variants,
       :units,
       :product,
+      :products,
       :message,
       keyword_init: true
     )
@@ -19,11 +20,12 @@ module Pos
       new(**attrs).call
     end
 
-    def initialize(store:, identifier: nil, variant: nil, inventory_unit: nil, current_transaction: nil)
+    def initialize(store:, identifier: nil, variant: nil, inventory_unit: nil, product: nil, current_transaction: nil)
       @store = store
       @identifier = identifier
       @variant = variant
       @inventory_unit = inventory_unit
+      @product = product
       @current_transaction = current_transaction
     end
 
@@ -32,6 +34,8 @@ module Pos
         resolve_unit(@inventory_unit)
       elsif @variant
         resolve_variant(@variant)
+      elsif @product
+        resolve_product(@product)
       else
         resolve_identifier
       end
@@ -50,10 +54,23 @@ module Pos
         resolve_unit(result.inventory_unit)
       when :variant
         resolve_variant(result.variant)
-      when :multi_variant
-        Result.new(outcome: :variant_choice_required, variants: sorted_variants(result.variants), product: result.product)
       when :product
+        resolve_product(result.product)
+      when :multiple_products
+        Result.new(outcome: :product_choice_required, products: result.products)
+      else
         unavailable("merchandise not found")
+      end
+    end
+
+    # POS eligibility for a matched product identity: the matcher intentionally does
+    # not filter variants, so sellability is applied here.
+    def resolve_product(product)
+      eligible = product.product_variants.select(&:sellable?)
+      if eligible.one?
+        resolve_variant(eligible.first)
+      elsif eligible.many?
+        Result.new(outcome: :variant_choice_required, variants: sorted_variants(eligible), product: product)
       else
         unavailable("merchandise not found")
       end
@@ -125,7 +142,7 @@ module Pos
     end
 
     def open_price?(variant)
-      variant.merchandise_class&.pricing_method == "open_price"
+      variant.pricing_method == "open_price"
     end
 
     def unsellable_reason(variant)

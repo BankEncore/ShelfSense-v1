@@ -15,6 +15,18 @@
   <% if @result.variant %>
     <p>Variant: <%= link_to "#{@result.variant.sku} — #{@result.variant.name.presence || "unnamed"}", admin_product_variant_path(@result.variant) %></p>
   <% end %>
+  <% if @result.products.present? %>
+    <p>Several products share that lookup code. Select one; ShelfSense never picks the first match.</p>
+    <ul>
+      <% @result.products.each do |product| %>
+        <li>
+          <%= link_to "#{product.primary_identifier} — #{product.name}", admin_product_path(product) %>
+          <% if product.industry_identifier.present? %> · GTIN <%= product.industry_identifier %><% end %>
+          <% if product.lookup_code.present? %> · Lookup code <%= product.lookup_code %><% end %>
+        </li>
+      <% end %>
+    </ul>
+  <% end %>
   <% if @result.variants.present? %>
     <ul>
       <% @result.variants.each do |variant| %>

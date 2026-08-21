@@ -8,32 +8,32 @@ module Products
       new(**attrs).call
     end
 
-    def initialize(attributes:, actor:, identifier_mode:, external_identifier: nil, source: "ui")
-      @attributes = attributes
+    def initialize(attributes:, actor:, industry_identifier: nil, lookup_code: nil, source: "ui")
+      attrs = attributes.to_h.symbolize_keys
+      @industry_identifier = industry_identifier.presence || attrs[:industry_identifier].presence
+      @lookup_code = lookup_code.presence || attrs[:lookup_code].presence
+      @attributes = attrs.except(:primary_identifier, :industry_identifier, :lookup_code)
       @actor = actor
-      @identifier_mode = identifier_mode.to_s
-      @external_identifier = external_identifier
       @source = source
     end
 
     def call
-      raise Error, "identifier mode must be enter or generate" unless %w[enter generate].include?(@identifier_mode)
-      raise Error, "external identifier is required" if @identifier_mode == "enter" && @external_identifier.blank?
-      raise Error, "external identifier must be blank when generating" if @identifier_mode == "generate" && @external_identifier.present?
-
       Product.transaction do
-        primary =
-          if @identifier_mode == "generate"
-            allocate_222!
-          else
-            Identifiers::Normalizer.normalize(@external_identifier, allow_shelfsense_222: false)
-          end
+        primary = allocate_222!
+        industry = normalized_industry(primary)
 
-        product = Product.new(@attributes.merge(primary_identifier: primary))
+        product = Product.new(
+          @attributes.merge(
+            primary_identifier: primary,
+            industry_identifier: industry,
+            lookup_code: @lookup_code
+          )
+        )
         product.identifier_writes_enabled = true
         product.save!
 
         Identifiers::Registry.reserve!(value: primary, kind: "product_primary", product: product)
+        Identifiers::Registry.reserve!(value: industry, kind: "product_industry", product: product) if industry
 
         Audit::Recorder.record!(
           action: "products.create",
@@ -44,7 +44,8 @@ module Products
           after_values: {
             name: product.name,
             primary_identifier: product.primary_identifier,
-            identifier_source: @identifier_mode,
+            industry_identifier: product.industry_identifier,
+            lookup_code: product.lookup_code,
             source: @source
           }
         )
@@ -56,6 +57,15 @@ module Products
     end
 
     private
+
+    def normalized_industry(primary)
+      return if @industry_identifier.blank?
+
+      value = Identifiers::Normalizer.normalize(@industry_identifier, allow_shelfsense_222: false)
+      raise Error, "industry identifier cannot equal the primary identifier" if value == primary
+
+      value
+    end
 
     def allocate_222!
       attempts = 0
