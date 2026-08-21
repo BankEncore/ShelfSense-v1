@@ -556,7 +556,7 @@ Approval for qty 1 / $24 reference / $18 return / defective does not authorize q
 
 ### Overlay
 
-Visible control: **Return without receipt**. No permanent F-key until 6.7.
+Visible control: **Return (-)**. Unlinked is a chooser option (and the `-` key), not a dedicated Sale Entry button ([pos-workflow.md](pos-workflow.md) §10).
 
 One overlay, one submit (identifier already resolved, or resolved in step 1):
 
@@ -751,7 +751,7 @@ Sale lines and linked/unlinked return lines remain one working transaction. No E
 
 ## 27. Receipt
 
-6.5 must be truthful (6.7 may polish presentation).
+6.5 must be truthful (6.8 presents the customer copy; [receipt-presentation.md](receipt-presentation.md)).
 
 ```text
 Example Book                 $20.00
@@ -858,7 +858,7 @@ Implementation notes:
 
 ### 6.5C — Unlinked return
 
-**Implemented.** Merge gate: cashier-usable return-only unlinked workflow — Return without receipt, identify known merchandise, quantity/reason/return price, manager approval when required, Cash refund complete.
+**Implemented.** Merge gate: cashier-usable return-only unlinked workflow — Return (-) Unlinked, identify known merchandise, quantity/reason/return price, manager approval when required, Cash refund complete.
 
 Implementation notes:
 
@@ -928,5 +928,5 @@ transaction-wide discount / promotion clawback
 percentage return-price adjustment
 separate return_price_adjustment perform/approve
 Cash refund as physical drawer-capacity control
-keyboard map lock (6.7)
+keyboard map lock (6.7 — [pos-workflow.md](pos-workflow.md))
 ```

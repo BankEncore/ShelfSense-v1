@@ -26,13 +26,13 @@ module Pos
       PosTransaction.transaction do
         transaction = Pos::Support.lock_working_transaction!(@transaction, @expected_lock_version)
         originals = PosTransactionLine.includes(:pos_transaction).where(id: original_ids).index_by { |line| line.id.to_s }
-        raise Pos::Error, "original sale line is missing" if originals.size != original_ids.size
+        raise Pos::InvalidatedDialogBasis, "original sale line is missing" if originals.size != original_ids.size
 
         prepared.each do |item|
           original = originals.fetch(item[:original_line_id])
           validate_original!(transaction, original)
           remaining = Pos::Returnability.remaining_quantity(original)
-          raise Pos::Error, "return quantity exceeds remaining quantity" if item[:quantity] > remaining
+          raise Pos::InvalidatedDialogBasis, "return quantity exceeds remaining quantity" if item[:quantity] > remaining
           if transaction.pos_transaction_lines.exists?(original_transaction_line_id: original.id)
             raise Pos::Error, "original line is already on this transaction"
           end
@@ -83,11 +83,11 @@ module Pos
     end
 
     def validate_original!(transaction, original)
-      raise Pos::Error, "original line is not a completed sale" unless original.sale?
-      raise Pos::Error, "original line is not a completed sale" if original.post_void_generated?
-      raise Pos::Error, "original line is not a completed sale" unless original.pos_transaction.completed?
-      raise Pos::Error, "original sale has been post-voided" if original.pos_transaction.post_void?
-      raise Pos::Error, "original sale has been post-voided" if Pos::Returnability.post_voided_source?(original.pos_transaction_id)
+      raise Pos::InvalidatedDialogBasis, "original line is not a completed sale" unless original.sale?
+      raise Pos::InvalidatedDialogBasis, "original line is not a completed sale" if original.post_void_generated?
+      raise Pos::InvalidatedDialogBasis, "original line is not a completed sale" unless original.pos_transaction.completed?
+      raise Pos::InvalidatedDialogBasis, "original sale has been post-voided" if original.pos_transaction.post_void?
+      raise Pos::InvalidatedDialogBasis, "original sale has been post-voided" if Pos::Returnability.post_voided_source?(original.pos_transaction_id)
       raise Pos::Error, "original sale is not at this store" unless original.pos_transaction.store_id == transaction.store_id
     end
 
@@ -114,6 +114,7 @@ module Pos
         default_tax_class_code_snapshot: original.default_tax_class_code_snapshot,
         default_tax_class_name_snapshot: original.default_tax_class_name_snapshot,
         merchandise_snapshot: original.merchandise_snapshot.deep_dup,
+        pricing_method_snapshot: original.pricing_method_snapshot,
         return_reason_code: item[:reason_code],
         return_reason_name_snapshot: item[:reason_name],
         return_reason_note: item[:reason_note]

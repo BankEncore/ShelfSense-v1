@@ -207,7 +207,7 @@ class PosExecuteUnlinkedReturnTest < ActiveSupport::TestCase
 
   test "stale preview expectations reject without creating a line" do
     transaction = start_transaction(@manager)
-    error = assert_raises(Pos::Error) do
+    error = assert_raises(Pos::InvalidatedDialogBasis) do
       add_unlinked!(transaction, @manager, expected_reference_unit_price_cents: 1)
     end
     assert_equal Pos::ExecuteUnlinkedReturn::STALE_PREVIEW_MESSAGE, error.message

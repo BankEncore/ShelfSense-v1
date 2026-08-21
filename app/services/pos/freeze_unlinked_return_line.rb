@@ -94,7 +94,8 @@ module Pos
 
       snapshot.merge(
         "unit_identifier" => unit.unit_identifier,
-        "condition_code" => condition_code
+        "condition_code" => condition_code,
+        "condition_name" => variant.merchandise_condition.name
       )
     end
   end

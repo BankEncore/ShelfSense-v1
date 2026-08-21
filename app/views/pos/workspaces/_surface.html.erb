@@ -16,6 +16,7 @@
   remaining_cents = refund_mode ? remaining_refund_cents : remaining_payment_cents
   change_cents = tender&.change_cents
   completion_recovery = @ui_mode == "completion_failed"
+  register_scope = { register_id: @register.id }
   cash_selected = selected_tender_type&.cash?
   show_reference = @ui_mode == "tender" && selected_tender_type&.reference_captured?
   command_value = @command_value
@@ -61,14 +62,20 @@
      data-controller="register-workspace"
      data-register-workspace-mode-value="<%= @ui_mode %>"
      data-register-workspace-auto-complete-value="<%= @auto_complete ? "true" : "false" %>"
-     data-register-workspace-workspace-url-value="<%= pos_register_workspace_path %>"
+     data-register-workspace-workspace-url-value="<%= pos_register_workspace_path(register_scope) %>"
      data-register-workspace-tender-types-value="<%= h((@cashier_tender_types || []).map(&:cashier_payload).to_json) %>"
      data-register-workspace-settlement-value="<%= settlement_direction %>"
      data-register-workspace-refund-remaining-value="<%= remaining_refund_cents %>"
+     data-register-workspace-payment-remaining-value="<%= remaining_payment_cents %>"
+     data-register-workspace-transactions-url-value="<%= pos_transactions_path %>"
      data-register-workspace-policies-value="<%= h((@control_policies || {}).to_json) %>"
      data-register-workspace-reasons-value="<%= h(Pos::ControlledActionReasons::CATALOGS.to_json) %>"
      data-register-workspace-return-reasons-value="<%= h(Pos::ReturnReasons::ENTRIES.to_json) %>"
-     data-register-workspace-unlinked-lookup-url-value="<%= pos_register_unlinked_return_lookup_path %>"
+     data-register-workspace-unlinked-lookup-url-value="<%= pos_register_unlinked_return_lookup_path(register_scope) %>"
+     data-register-workspace-linked-lookup-url-value="<%= pos_register_linked_return_lookup_path(register_scope) %>"
+     data-register-workspace-resolve-url-value="<%= pos_register_merchandise_resolve_path(register_scope) %>"
+     data-register-workspace-search-url-value="<%= pos_register_merchandise_search_path(register_scope) %>"
+     data-register-workspace-open-price-url-value="<%= pos_register_open_price_path(register_scope) %>"
      data-action="turbo:submit-end->register-workspace#onSubmitEnd">
   <div data-register-workspace-target="chrome">
     <header class="pos-header">
@@ -76,7 +83,15 @@
         <span>Store  <%= current_store.admin_label %></span>
         <span>Register  <%= @register.register_number %></span>
         <span><%= current_user.display_name %></span>
-        <%= link_to "Transactions", pos_transactions_path, class: "pos-header__link" %>
+        <nav class="pos-header__nav" aria-label="Register">
+          <%= link_to "POS Home", pos_path, class: "pos-header__link" %>
+          <%= link_to "Transactions", pos_transactions_path, class: "pos-header__link" %>
+          <%= link_to "X Report", pos_x_report_path, class: "pos-header__link" %>
+          <% if @ui_mode == "sale_entry" && lines.empty? && tenders.empty? %>
+            <%= button_to "Close register", pos_register_close_path, method: :post,
+                  params: { session_id: @session_record.id, register_id: @register.id }, class: "btn btn--secondary" %>
+          <% end %>
+        </nav>
       </div>
       <div class="pos-header__date <%= "pos-date-emphasis" if leftover %>">
         Business date  <%= @session_record.reporting_period.business_date.iso8601 %>
@@ -113,6 +128,7 @@
                   data-selling-cents="<%= line.selling_unit_price_cents %>"
                   data-discount-bp="<%= line.manual_discount_basis_points %>"
                   data-tax-class-id="<%= line.tax_class_id %>"
+                  data-pricing-method-snapshot="<%= line.pricing_method_snapshot %>"
                   aria-selected="<%= line.id == selected_id %>">
                 <td><%= line.id == selected_id ? ">" : "" %> <%= line.quantity %></td>
                 <td>
@@ -217,21 +233,25 @@
       <% if completion_recovery %>
         <button type="button" class="btn" data-action="register-workspace#submitComplete" data-register-workspace-target="retry" autofocus>Retry complete</button>
         <%= button_to "Return to sale", pos_register_abandon_tender_path, method: :post,
-              params: { lock_version: @transaction.lock_version },
+              params: { lock_version: @transaction.lock_version, register_id: @register.id },
               class: "btn btn--secondary",
               form: { data: { turbo: true } },
               data: { register_workspace_target: "abandonButton" } %>
       <% else %>
-        <button type="button" class="btn btn--secondary" data-action="register-workspace#openUnlinkedOverlay" data-register-workspace-target="unlinkedButton" disabled>Return without receipt</button>
+        <button type="button" class="btn btn--secondary" data-action="register-workspace#openReturnChooser" data-register-workspace-target="returnButton">Return (-)</button>
         <button type="button" class="btn btn--secondary" data-action="register-workspace#enterQuantity" data-register-workspace-target="quantityButton" disabled>Quantity (*)</button>
-        <button type="button" class="btn btn--secondary" data-action="register-workspace#openPriceOverride" data-register-workspace-target="overrideButton" disabled>Price override (F5)</button>
-        <button type="button" class="btn btn--secondary" data-action="register-workspace#openLineDiscount" data-register-workspace-target="discountButton" disabled>Discount (F6)</button>
-        <button type="button" class="btn btn--secondary" data-action="register-workspace#openTaxClassOverride" data-register-workspace-target="taxClassButton" disabled>Tax Class (F7)</button>
+        <button type="button" class="btn btn--secondary" data-action="register-workspace#openPriceOverride" data-register-workspace-target="overrideButton" disabled>Price (F6)</button>
+        <button type="button" class="btn btn--secondary" data-action="register-workspace#openLineDiscount" data-register-workspace-target="discountButton" disabled>Discount (F7)</button>
+        <button type="button" class="btn btn--secondary" data-action="register-workspace#openTaxClassOverride" data-register-workspace-target="taxClassButton" disabled>Tax Class</button>
+        <button type="button" class="btn btn--secondary" data-action="register-workspace#chooseCash" data-register-workspace-target="cashButton" disabled>Cash (F1)</button>
+        <button type="button" class="btn btn--secondary" data-action="register-workspace#chooseCard" data-register-workspace-target="cardButton" disabled>Card (F2)</button>
+        <button type="button" class="btn btn--secondary" data-action="register-workspace#chooseCheck" data-register-workspace-target="checkButton" disabled>Check (F3)</button>
+        <button type="button" class="btn btn--secondary" data-action="register-workspace#chooseOther" data-register-workspace-target="otherButton" disabled>Other (F4)</button>
         <button type="button" class="btn btn--secondary" data-action="register-workspace#enterTender" data-register-workspace-target="tenderButton" disabled><%= even_exchange ? "Complete (+)" : (refund_mode ? "Refund (+)" : "Tender (+)") %></button>
         <button type="button" class="btn btn--secondary" data-action="register-workspace#removeSelected" data-register-workspace-target="removeButton" disabled>Remove (F8)</button>
         <% if @ui_mode == "tender" && tenders.any? %>
           <%= button_to "Return to sale", pos_register_abandon_tender_path, method: :post,
-                params: { lock_version: @transaction.lock_version },
+                params: { lock_version: @transaction.lock_version, register_id: @register.id },
                 class: "btn btn--secondary",
                 form: { data: { turbo: true } },
                 data: { register_workspace_target: "abandonButton" } %>
@@ -247,37 +267,41 @@
               disabled>
         Cancel (F9)
       </button>
-      <% if @ui_mode == "sale_entry" && lines.empty? && tenders.empty? %>
-        <%= button_to "Close register", pos_register_close_path, method: :post,
-              params: { session_id: @session_record.id }, class: "btn btn--secondary" %>
-      <% end %>
     </div>
 
-    <%= form_with url: pos_register_merchandise_path, method: :post, html: { class: "pos-hidden", data: { register_workspace_target: "merchandiseForm", turbo: true } } do %>
+    <%= form_with url: pos_register_merchandise_path(register_scope), method: :post, html: { class: "pos-hidden", data: { register_workspace_target: "merchandiseForm", turbo: true } } do %>
+      <%= hidden_field_tag :register_id, @register.id %>
       <%= hidden_field_tag :lock_version, @transaction.lock_version %>
       <%= hidden_field_tag :selected_line_id, selected_id %>
       <%= hidden_field_tag :identifier, "", data: { register_workspace_target: "identifierInput" } %>
+      <%= hidden_field_tag :product_variant_id, "", data: { register_workspace_target: "variantInput" } %>
+      <%= hidden_field_tag :inventory_unit_id, "", data: { register_workspace_target: "unitInput" } %>
+      <%= hidden_field_tag :selling_price, "", data: { register_workspace_target: "openPriceInput" } %>
     <% end %>
 
-    <%= form_with url: pos_register_quantity_path, method: :post, html: { class: "pos-hidden", data: { register_workspace_target: "quantityForm", turbo: true } } do %>
+    <%= form_with url: pos_register_quantity_path(register_scope), method: :post, html: { class: "pos-hidden", data: { register_workspace_target: "quantityForm", turbo: true } } do %>
+      <%= hidden_field_tag :register_id, @register.id %>
       <%= hidden_field_tag :lock_version, @transaction.lock_version %>
       <%= hidden_field_tag :line_id, selected_id, data: { register_workspace_target: "quantityLineInput" } %>
       <%= hidden_field_tag :quantity, "", data: { register_workspace_target: "quantityInput" } %>
     <% end %>
 
-    <%= form_with url: pos_register_remove_path, method: :post, html: { class: "pos-hidden", data: { register_workspace_target: "removeForm", turbo: true } } do %>
+    <%= form_with url: pos_register_remove_path(register_scope), method: :post, html: { class: "pos-hidden", data: { register_workspace_target: "removeForm", turbo: true } } do %>
+      <%= hidden_field_tag :register_id, @register.id %>
       <%= hidden_field_tag :lock_version, @transaction.lock_version %>
       <%= hidden_field_tag :line_id, selected_id, data: { register_workspace_target: "removeLineInput" } %>
     <% end %>
 
-    <%= form_with url: pos_register_tender_path, method: :post, html: { class: "pos-hidden", data: { register_workspace_target: "tenderForm", turbo: true } } do %>
+    <%= form_with url: pos_register_tender_path(register_scope), method: :post, html: { class: "pos-hidden", data: { register_workspace_target: "tenderForm", turbo: true } } do %>
+      <%= hidden_field_tag :register_id, @register.id %>
       <%= hidden_field_tag :lock_version, @transaction.lock_version %>
       <%= hidden_field_tag :tender_amount, "", data: { register_workspace_target: "presentedInput" } %>
       <%= hidden_field_tag :tender_type_id, selected_tender_type&.id, data: { register_workspace_target: "tenderTypeInput" } %>
       <%= hidden_field_tag :external_reference, "", data: { register_workspace_target: "referenceInput" } %>
     <% end %>
 
-    <%= form_with url: pos_register_remove_tender_path, method: :post, html: { class: "pos-hidden", data: { register_workspace_target: "removeTenderForm", turbo: true } } do %>
+    <%= form_with url: pos_register_remove_tender_path(register_scope), method: :post, html: { class: "pos-hidden", data: { register_workspace_target: "removeTenderForm", turbo: true } } do %>
+      <%= hidden_field_tag :register_id, @register.id %>
       <%= hidden_field_tag :lock_version, @transaction.lock_version %>
       <%= hidden_field_tag :tender_id, tenders.last&.id, data: { register_workspace_target: "removeTenderInput" } %>
     <% end %>
@@ -289,7 +313,8 @@
       <%= hidden_field_tag :expected_signed_net_cents, @transaction.signed_net_cents %>
     <% end %>
 
-    <%= form_with url: pos_register_controlled_action_path, method: :post, html: { class: "pos-hidden", data: { register_workspace_target: "controlForm", turbo: true } } do %>
+    <%= form_with url: pos_register_controlled_action_path(register_scope), method: :post, html: { class: "pos-hidden", data: { register_workspace_target: "controlForm", turbo: true } } do %>
+      <%= hidden_field_tag :register_id, @register.id %>
       <%= hidden_field_tag :lock_version, @transaction.lock_version %>
       <%= hidden_field_tag :line_id, selected_id, data: { register_workspace_target: "controlLineInput" } %>
       <%= hidden_field_tag :action_type, "", data: { register_workspace_target: "controlActionInput" } %>
@@ -303,7 +328,8 @@
       <%= hidden_field_tag :approver_password, "", data: { register_workspace_target: "controlApproverPasswordInput" } %>
     <% end %>
 
-    <%= form_with url: pos_register_unlinked_return_path, method: :post, html: { class: "pos-hidden", data: { register_workspace_target: "unlinkedForm", turbo: true } } do %>
+    <%= form_with url: pos_register_unlinked_return_path(register_scope), method: :post, html: { class: "pos-hidden", data: { register_workspace_target: "unlinkedForm", turbo: true } } do %>
+      <%= hidden_field_tag :register_id, @register.id %>
       <%= hidden_field_tag :lock_version, @transaction.lock_version %>
       <%= hidden_field_tag :identifier, "", data: { register_workspace_target: "unlinkedIdentifierInput" } %>
       <%= hidden_field_tag :quantity, "", data: { register_workspace_target: "unlinkedQuantityInput" } %>
@@ -318,7 +344,24 @@
       <%= hidden_field_tag :approver_password, "", data: { register_workspace_target: "unlinkedApproverPasswordInput" } %>
     <% end %>
 
-    <%= form_with url: pos_register_cancel_path, method: :post, html: { class: "pos-hidden", data: { register_workspace_target: "cancelForm", turbo: true } } do %>
+    <%= form_with url: pos_register_open_price_path(register_scope), method: :post, html: { class: "pos-hidden", data: { register_workspace_target: "openPriceForm", turbo: true } } do %>
+      <%= hidden_field_tag :register_id, @register.id %>
+      <%= hidden_field_tag :lock_version, @transaction.lock_version %>
+      <%= hidden_field_tag :line_id, selected_id, data: { register_workspace_target: "openPriceLineInput" } %>
+      <%= hidden_field_tag :selling_price, "", data: { register_workspace_target: "openPriceEditInput" } %>
+    <% end %>
+
+    <%= form_with url: pos_register_linked_return_path(register_scope), method: :post, html: { class: "pos-hidden", data: { register_workspace_target: "linkedReturnForm", turbo: true } } do %>
+      <%= hidden_field_tag :register_id, @register.id %>
+      <%= hidden_field_tag :lock_version, @transaction.lock_version %>
+      <%= hidden_field_tag :original_line_id, "", data: { register_workspace_target: "linkedOriginalInput" } %>
+      <%= hidden_field_tag :quantity, "1", data: { register_workspace_target: "linkedQuantityInput" } %>
+      <%= hidden_field_tag :reason_code, "", data: { register_workspace_target: "linkedReasonInput" } %>
+      <%= hidden_field_tag :reason_note, "", data: { register_workspace_target: "linkedNoteInput" } %>
+    <% end %>
+
+    <%= form_with url: pos_register_cancel_path(register_scope), method: :post, html: { class: "pos-hidden", data: { register_workspace_target: "cancelForm", turbo: true } } do %>
+      <%= hidden_field_tag :register_id, @register.id %>
       <%= hidden_field_tag :lock_version, @transaction.lock_version %>
     <% end %>
   </div>
@@ -348,6 +391,7 @@
     <div class="pos-overlay__panel pos-overlay__panel--control">
       <h2 id="pos-control-title" data-register-workspace-target="controlTitle">Controlled action</h2>
       <p data-register-workspace-target="controlLineLabel"></p>
+      <p id="pos-control-feedback" class="pos-overlay__error" data-overlay-error role="alert"></p>
 
       <div data-register-workspace-target="controlPriceWrap">
         <label for="pos-control-price">Selling price</label>
@@ -400,7 +444,7 @@
        aria-labelledby="pos-unlinked-title">
     <div class="pos-overlay__panel pos-overlay__panel--control">
       <h2 id="pos-unlinked-title">Return without receipt</h2>
-      <p data-register-workspace-target="unlinkedFeedback" role="status"></p>
+      <p id="pos-unlinked-feedback" class="pos-overlay__error" data-register-workspace-target="unlinkedFeedback" data-overlay-error role="alert"></p>
 
       <label for="pos-unlinked-identifier">Scan or identifier</label>
       <input id="pos-unlinked-identifier" class="pos-command__field" data-register-workspace-target="unlinkedIdentifierField" autocomplete="off">
@@ -437,6 +481,147 @@
         <button type="button" class="btn btn--secondary" data-action="register-workspace#closeUnlinkedOverlay" data-register-workspace-target="unlinkedCancel">Don't return (Esc)</button>
         <button type="button" class="btn" data-action="register-workspace#submitUnlinkedReturn" data-register-workspace-target="unlinkedApply" hidden>Add return</button>
       </div>
+    </div>
+  </div>
+
+  <div class="pos-overlay"
+       id="pos_other_overlay"
+       hidden
+       data-register-workspace-target="otherOverlay"
+       role="dialog"
+       aria-modal="true"
+       aria-labelledby="pos-other-title">
+    <div class="pos-overlay__panel">
+      <h2 id="pos-other-title">Other tender</h2>
+      <ul class="pos-picker" role="listbox" aria-labelledby="pos-other-title" data-register-workspace-target="otherList"></ul>
+      <p class="muted">Enter selects the highlighted tender. Esc cancels.</p>
+      <button type="button" class="btn btn--secondary" data-action="register-workspace#closeOtherOverlay">Cancel (Esc)</button>
+    </div>
+  </div>
+
+  <div class="pos-overlay"
+       id="pos_search_overlay"
+       hidden
+       data-register-workspace-target="searchOverlay"
+       role="dialog"
+       aria-modal="true"
+       aria-labelledby="pos-search-title">
+    <div class="pos-overlay__panel">
+      <h2 id="pos-search-title">Search merchandise</h2>
+      <label class="field">
+        <span>SKU</span>
+        <input type="text" autocomplete="off" data-register-workspace-target="searchSkuField">
+      </label>
+      <label class="field">
+        <span>Product name</span>
+        <input type="text" autocomplete="off" data-register-workspace-target="searchNameField">
+      </label>
+      <p class="muted" data-register-workspace-target="searchQueryLabel"></p>
+      <ul class="pos-picker" role="listbox" aria-labelledby="pos-search-title" data-register-workspace-target="searchList"></ul>
+      <p class="muted">Enter searches, then Enter selects the highlighted item. Esc cancels.</p>
+      <button type="button" class="btn btn--secondary" data-action="register-workspace#closeSearchOverlay">Cancel (Esc)</button>
+    </div>
+  </div>
+
+  <div class="pos-overlay"
+       id="pos_variant_overlay"
+       hidden
+       data-register-workspace-target="variantOverlay"
+       role="dialog"
+       aria-modal="true"
+       aria-labelledby="pos-variant-title">
+    <div class="pos-overlay__panel">
+      <h2 id="pos-variant-title">Choose variant</h2>
+      <ul class="pos-picker" role="listbox" aria-labelledby="pos-variant-title" data-register-workspace-target="variantList"></ul>
+      <p class="muted">Enter selects the highlighted variant. Esc cancels.</p>
+      <button type="button" class="btn btn--secondary" data-action="register-workspace#closeVariantOverlay">Cancel (Esc)</button>
+    </div>
+  </div>
+
+  <div class="pos-overlay"
+       id="pos_unit_overlay"
+       hidden
+       data-register-workspace-target="unitOverlay"
+       role="dialog"
+       aria-modal="true"
+       aria-labelledby="pos-unit-title">
+    <div class="pos-overlay__panel">
+      <h2 id="pos-unit-title">Choose unit</h2>
+      <ul class="pos-picker" role="listbox" aria-labelledby="pos-unit-title" data-register-workspace-target="unitList"></ul>
+      <p class="muted">Enter selects the highlighted unit. Esc cancels.</p>
+      <button type="button" class="btn btn--secondary" data-action="register-workspace#closeUnitOverlay">Cancel (Esc)</button>
+    </div>
+  </div>
+
+  <div class="pos-overlay"
+       id="pos_open_price_overlay"
+       hidden
+       data-register-workspace-target="openPriceOverlay"
+       role="dialog"
+       aria-modal="true"
+       aria-labelledby="pos-open-price-title">
+    <div class="pos-overlay__panel">
+      <h2 id="pos-open-price-title">Open price</h2>
+      <p data-register-workspace-target="openPricePrompt"></p>
+      <p id="pos-open-price-feedback" class="pos-overlay__error" data-overlay-error role="alert"></p>
+      <label class="field">
+        <span>Price</span>
+        <input type="text" inputmode="decimal" autocomplete="off" data-register-workspace-target="openPriceField">
+      </label>
+      <div class="pos-overlay__actions">
+        <button type="button" class="btn btn--secondary" data-action="register-workspace#closeOpenPriceOverlay">Cancel (Esc)</button>
+        <button type="button" class="btn" data-action="register-workspace#submitOpenPricePrompt">Apply</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="pos-overlay"
+       id="pos_return_chooser"
+       hidden
+       data-register-workspace-target="returnChooserOverlay"
+       role="dialog"
+       aria-modal="true"
+       aria-labelledby="pos-return-chooser-title">
+    <div class="pos-overlay__panel">
+      <h2 id="pos-return-chooser-title">RETURN</h2>
+      <ul class="pos-picker" role="listbox" aria-labelledby="pos-return-chooser-title" data-register-workspace-target="returnChooserList">
+        <li data-choice="linked" class="is-selected" role="option" tabindex="0" aria-selected="true">Linked return</li>
+        <li data-choice="unlinked" role="option" tabindex="-1" aria-selected="false">Unlinked return</li>
+      </ul>
+      <p class="muted">Enter chooses. Esc cancels.</p>
+      <button type="button" class="btn btn--secondary" data-action="register-workspace#closeReturnChooser">Cancel (Esc)</button>
+    </div>
+  </div>
+
+  <div class="pos-overlay"
+       id="pos_linked_overlay"
+       hidden
+       data-register-workspace-target="linkedOverlay"
+       role="dialog"
+       aria-modal="true"
+       aria-labelledby="pos-linked-title">
+    <div class="pos-overlay__panel">
+      <h2 id="pos-linked-title">Linked return</h2>
+      <label class="field">
+        <span>Receipt, merchandise, or unit</span>
+        <input type="text" autocomplete="off" data-register-workspace-target="linkedLookupField">
+      </label>
+      <p id="pos-linked-feedback" class="pos-overlay__error" data-register-workspace-target="linkedFeedback" data-overlay-error role="alert"></p>
+      <ul class="pos-picker" role="listbox" aria-labelledby="pos-linked-title" data-register-workspace-target="linkedList"></ul>
+      <label class="field">
+        <span>Qty</span>
+        <input type="text" inputmode="numeric" autocomplete="off" value="1" data-register-workspace-target="linkedQuantityField">
+      </label>
+      <label class="field">
+        <span>Reason</span>
+        <select data-register-workspace-target="linkedReasonField"></select>
+      </label>
+      <label class="field" hidden data-register-workspace-target="linkedNoteWrap">
+        <span>Note</span>
+        <input type="text" maxlength="200" autocomplete="off" data-register-workspace-target="linkedNoteField">
+      </label>
+      <p class="muted">Enter in the lookup field searches. Enter on a highlighted line adds it. Esc cancels.</p>
+      <button type="button" class="btn btn--secondary" data-action="register-workspace#closeLinkedOverlay">Cancel (Esc)</button>
     </div>
   </div>
 </div>

@@ -8,6 +8,7 @@ namespace :shelfsense do
       STORE_NUMBER
       STORE_CODE
       STORE_NAME
+      STORE_LEGAL_NAME
       STORE_TIMEZONE
       STORE_COUNTRY_CODE
       ADMIN_USERNAME
@@ -23,6 +24,7 @@ namespace :shelfsense do
       store_number: ENV.fetch("STORE_NUMBER"),
       store_code: ENV.fetch("STORE_CODE"),
       store_name: ENV.fetch("STORE_NAME"),
+      store_legal_name: ENV.fetch("STORE_LEGAL_NAME"),
       store_timezone: ENV.fetch("STORE_TIMEZONE"),
       store_country_code: ENV.fetch("STORE_COUNTRY_CODE"),
       admin_username: ENV.fetch("ADMIN_USERNAME"),

@@ -55,7 +55,7 @@ class PosMixedReturnTest < ApplicationSystemTestCase
     field.fill_in with: "4.00"
     field.send_keys :enter
     field = find("#pos-command-field")
-    field.send_keys :f2
+    field.send_keys :f1
     assert_selector "[data-register-workspace-target='fieldLabel']", text: /Refund amount/
     field = find("#pos-command-field")
     field.send_keys :enter
@@ -85,7 +85,9 @@ class PosMixedReturnTest < ApplicationSystemTestCase
 
   test "overlay lookup enter escape and return-line keys stay on sale entry" do
     open_register
-    click_on "Return without receipt"
+    click_on "Return (-)"
+    send_keys :arrow_down
+    send_keys :enter
     assert_text "Return without receipt"
     identifier = find("#pos-unlinked-identifier")
     identifier.fill_in with: @twenty.sku
@@ -154,7 +156,9 @@ class PosMixedReturnTest < ApplicationSystemTestCase
   end
 
   def add_unlinked_return(sku, price:)
-    click_on "Return without receipt"
+    click_on "Return (-)"
+    send_keys :arrow_down
+    send_keys :enter
     identifier = find("#pos-unlinked-identifier")
     identifier.fill_in with: sku
     identifier.send_keys :enter

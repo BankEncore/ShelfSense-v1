@@ -437,7 +437,7 @@ Second-actor success: approval event with the **approver** as audit actor, plus 
 
 Architectural lock: each 6.4 action has a **visible, keyboard-accessible control** and applies to the **selected line**. Disabled with no selection, empty basket, or completion in flight.
 
-Current bindings (wireframe-validatable, not domain invariants) live in [register-workspace.md](../phase5-cash-register/register-workspace.md): F5 override, F6 discount, F7 Tax Class.
+Current bindings in [register-workspace.md](../phase5-cash-register/register-workspace.md) (F5 override, F6 discount, F7 Tax Class) are **superseded by 6.7** ([pos-workflow.md](pos-workflow.md)): F6 **Price** (override on ordinary sale lines; open-price edit on open-price lines), F7 discount, Tax Class visible-only, F5 unbound. Policy, fingerprints, and overlay rules in this document remain authoritative. Enter-in-overlay behavior is 6.7 §7.
 
 Approval overlay is a **second** overlay besides cancel:
 

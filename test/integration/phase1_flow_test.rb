@@ -9,6 +9,7 @@ class Phase1FlowTest < ActionDispatch::IntegrationTest
       store_number: "1",
       store_code: "main",
       store_name: "Main Store",
+      store_legal_name: "Example Books LLC",
       store_timezone: "America/New_York",
       store_country_code: "US",
       admin_username: "admin",

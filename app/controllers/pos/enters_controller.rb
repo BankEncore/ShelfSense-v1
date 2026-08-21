@@ -3,8 +3,11 @@
 module Pos
   class EntersController < BaseController
     def show
+      if current_store.legal_name.blank?
+        flash.now[:alert] = "This Store cannot use POS until its legal name is configured."
+      end
       @registers = active_registers
-      @register = find_register || (@registers.one? ? @registers.first : nil)
+      @register = find_enter_register || (@registers.one? ? @registers.first : nil)
       @gate = Pos::OpenGate.for(store: current_store, register: @register, actor: current_user) if @register
       @opening_float = params[:opening_float]
     end
@@ -26,6 +29,7 @@ module Pos
         business_date: params[:confirmed_business_date]
       )
       session[:pos_register_id] = @register.id
+      write_preferred_register!(@register)
       redirect_to pos_register_workspace_path
     rescue ActiveRecord::RecordNotFound
       redirect_to pos_register_enter_path, alert: "Select an active register."
@@ -38,6 +42,11 @@ module Pos
     end
 
     private
+
+    def find_enter_register
+      from_params = params[:register_id].presence && active_registers.find_by(id: params[:register_id])
+      from_params || preferred_register || find_register
+    end
 
     def parse_opening_float
       gate = Pos::OpenGate.for(store: current_store, register: @register, actor: current_user)

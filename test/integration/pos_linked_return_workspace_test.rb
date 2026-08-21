@@ -25,6 +25,27 @@ class PosLinkedReturnWorkspaceTest < ActionDispatch::IntegrationTest
     sign_in_as("admin")
   end
 
+  test "invalidated linked returnability replaces the workspace instead of the overlay" do
+    sale = complete_cash_sale!(quantity: 1)
+    original_line = sale.pos_transaction_lines.first
+    post pos_register_enter_path, params: enter_params
+    follow_redirect!
+    working = PosTransaction.working.find_by!(register: @register)
+
+    post pos_register_linked_return_path, params: {
+      original_line_id: original_line.id,
+      quantity: 2,
+      reason_code: "changed_mind",
+      lock_version: working.lock_version
+    }, headers: { "Accept" => "text/vnd.turbo-stream.html" }
+
+    assert_response :success
+    assert_equal 0, working.reload.pos_transaction_lines.count
+    assert_includes response.body, 'target="pos_workspace"'
+    assert_match "return quantity exceeds remaining quantity", response.body
+    refute_includes response.body, 'target="pos-linked-feedback"'
+  end
+
   test "workspace marks linked returns and allows quantity with a copied historical discount" do
     sale = complete_discounted_sale!
     original_line = sale.pos_transaction_lines.first

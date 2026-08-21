@@ -8,6 +8,7 @@ module Pos
       raise ActiveRecord::RecordNotFound unless @period.finalized?
 
       @register = @period.register
+      @report_groups = Pos::OperatorReport.period(period: @period)
     rescue Pos::Denied
       raise ActiveRecord::RecordNotFound
     end

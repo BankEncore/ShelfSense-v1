@@ -1,35 +1,32 @@
 <% content_for :title, "Z report" %>
 
-<main class="pos-z">
-  <h1>Z report</h1>
-  <p>Store  <%= pos_padded_store_number(@period.store) %></p>
-  <p>Register  <%= pos_padded_register_number(@register) %></p>
-  <p>Business date  <%= @period.business_date.iso8601 %></p>
+<main class="pos-z" data-controller="pos-receipt">
+  <div class="pos-no-print">
+    <%= render "pos/shared/report_nav" %>
 
-  <dl class="pos-z__facts">
-    <div><dt>Transactions</dt><dd><%= @period.finalized_transaction_count %></dd></div>
-    <div><dt>Sales subtotal</dt><dd><%= format_money_cents(@period.finalized_subtotal_cents) %></dd></div>
-    <div><dt>Sales discount</dt><dd><%= pos_optional_money_cents(@period.finalized_discount_cents) %></dd></div>
-    <div><dt>Sales tax</dt><dd><%= format_money_cents(@period.finalized_tax_cents) %></dd></div>
-    <div><dt>Sales total</dt><dd><%= format_money_cents(@period.finalized_total_cents) %></dd></div>
-    <div><dt>Returns total</dt><dd><%= pos_optional_money_cents(@period.finalized_return_total_cents) %></dd></div>
-    <div><dt>Post-void adjustments</dt><dd><%= pos_optional_signed_money_cents(@period.finalized_post_void_net_cents) %></dd></div>
-    <div><dt>Net</dt><dd><%= @period.finalized_net_cents.nil? ? pos_optional_money_cents(nil) : format_signed_money_cents(@period.finalized_net_cents) %></dd></div>
-    <div><dt>Cash payments</dt><dd><%= format_money_cents(@period.finalized_cash_payment_cents) %></dd></div>
-    <div><dt>Cash refunds</dt><dd><%= pos_optional_money_cents(@period.finalized_cash_refund_cents) %></dd></div>
-    <div><dt>Card payments</dt><dd><%= pos_optional_money_cents(@period.finalized_card_payment_cents) %></dd></div>
-    <div><dt>Card refunds</dt><dd><%= pos_optional_money_cents(@period.finalized_card_refund_cents) %></dd></div>
-    <div><dt>Check payments</dt><dd><%= pos_optional_money_cents(@period.finalized_check_payment_cents) %></dd></div>
-    <div><dt>Check refunds</dt><dd><%= pos_optional_money_cents(@period.finalized_check_refund_cents) %></dd></div>
-    <div><dt>Other payments</dt><dd><%= pos_optional_money_cents(@period.finalized_other_payment_cents) %></dd></div>
-    <div><dt>Other refunds</dt><dd><%= pos_optional_money_cents(@period.finalized_other_refund_cents) %></dd></div>
-    <div><dt>Sessions</dt><dd><%= @period.finalized_session_count %></dd></div>
-    <div><dt>Opening floats total</dt><dd><%= format_money_cents(@period.finalized_opening_float_cents_sum) %></dd></div>
-    <div><dt>Expected closing Cash</dt><dd><%= format_signed_money_cents(@period.finalized_closing_expected_cash_cents_sum) %></dd></div>
-    <div><dt>Counted closing Cash</dt><dd><%= format_money_cents(@period.finalized_closing_count_cents_sum) %></dd></div>
-    <div><dt>Closing variance</dt><dd><%= format_signed_money_cents(@period.finalized_closing_variance_cents_sum) %></dd></div>
-  </dl>
+    <h1>Z report</h1>
+    <p>Store  <%= pos_padded_store_number(@period.store) %></p>
+    <p>Register  <%= pos_padded_register_number(@register) %></p>
+    <p>Business date  <%= @period.business_date.iso8601 %></p>
+    <p>Finalized  <%= format_store_timestamp(@period.closed_at, @period.store) %></p>
+    <p>Finalized by  <%= @period.finalized_by.display_name %></p>
 
-  <p>Finalized  <%= format_store_timestamp(@period.closed_at, @period.store) %></p>
-  <p>Finalized by  <%= @period.finalized_by.display_name %></p>
+    <%= render "pos/shared/totals_groups", groups: @report_groups %>
+
+    <div class="pos-z__actions">
+      <button type="button" class="btn" data-action="pos-receipt#print">Print</button>
+    </div>
+  </div>
+
+  <%= render "pos/shared/report_print",
+        title: "Z report",
+        banners: [],
+        meta: [
+          "Store  #{pos_padded_store_number(@period.store)}",
+          "Register  #{pos_padded_register_number(@register)}",
+          "Business date  #{@period.business_date.iso8601}",
+          "Finalized  #{format_store_timestamp(@period.closed_at, @period.store)}",
+          "Finalized by  #{@period.finalized_by.display_name}"
+        ],
+        groups: @report_groups %>
 </main>

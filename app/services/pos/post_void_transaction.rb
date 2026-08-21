@@ -259,6 +259,7 @@ module Pos
           line_tax_cents: source_line.line_tax_cents,
           line_total_cents: source_line.line_total_cents,
           merchandise_snapshot: source_line.merchandise_snapshot.deep_dup,
+          pricing_method_snapshot: source_line.pricing_method_snapshot,
           post_void_source_line_id: source_line.id
         )
       end

@@ -129,6 +129,7 @@ class PosMerchandiseBreadthTest < ActiveSupport::TestCase
     refute envelope.fetch("lines").find { |line| line["product_variant_id"] == @standard.id }.key?("inventory_unit_id")
     assert_equal @unit.unit_identifier, unit_line.merchandise_snapshot.fetch("unit_identifier")
     assert_equal @used_variant.merchandise_condition.code, unit_line.merchandise_snapshot.fetch("condition_code")
+    assert_equal @used_variant.merchandise_condition.name, unit_line.merchandise_snapshot.fetch("condition_name")
 
     standard_balance = InventoryBalance.find_by!(store: @store, product_variant: @standard)
     assert_equal 3, standard_balance.on_hand_quantity
@@ -231,6 +232,7 @@ class PosMerchandiseBreadthTest < ActiveSupport::TestCase
       store_number: (@store.store_number || 1) + 50,
       code: "east_#{SecureRandom.hex(3)}",
       name: "East Store",
+      legal_name: "Example Books LLC",
       timezone: "America/New_York",
       country_code: "US"
     )

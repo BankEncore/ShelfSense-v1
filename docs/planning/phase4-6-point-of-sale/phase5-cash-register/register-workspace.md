@@ -354,9 +354,9 @@ UI mode is **browser state**. Authoritative transaction status remains `working`
 
 One primary POS input. Autofocus on load. After every successful action and recoverable error, focus returns there unless a confirmation overlay is open. Overlays must restore focus to the primary input.
 
-The only overlays are **cancel confirmation** and **controlled-action approval** ([controlled-actions.md](../phase6-pos-mvp/controlled-actions.md)). Occupied-register deny lives on `GET enter`, not on the selling surface.
+The only overlays in Phase 5 / 6.4 are **cancel confirmation** and **controlled-action approval** ([controlled-actions.md](../phase6-pos-mvp/controlled-actions.md)). Occupied-register deny lives on `GET enter`, not on the selling surface. 6.7 adds search, picker, open-price, return-chooser, and Other-tender dialogs ([pos-workflow.md](../phase6-pos-mvp/pos-workflow.md)).
 
-Intercept `*` and `+` on keydown so they never become identifier text. Do not intercept letter keys such as `T` or hyphen. Delete is native text editing. F8 removes the selected line in `SALE_ENTRY`. Bind F2/F5–F9 on `window` in the capture phase and cancel the default: Chrome on macOS otherwise uses F5 reload, F6 address bar, and F7 caret browsing before the workspace sees the key. `event.code` is accepted when `event.key` is unidentified. When the Keyboard Lock API is available (Chrome), the workspace also requests exclusive F2/F5–F9 so those keys are delivered to the page. Visible Price override / Discount / Tax Class buttons remain the fallback if a browser still swallows a key.
+Intercept `*` and `+` on keydown so they never become identifier text. Do not intercept letter keys such as `T`. **Until 6.7:** do not intercept hyphen. **6.7** intercepts `-` and `/` only when the primary field is empty ([pos-workflow.md](../phase6-pos-mvp/pos-workflow.md)). Delete is native text editing. F8 removes the selected line in `SALE_ENTRY`. Bind F2/F5–F9 on `window` in the capture phase and cancel the default: Chrome on macOS otherwise uses F5 reload, F6 address bar, and F7 caret browsing before the workspace sees the key. `event.code` is accepted when `event.key` is unidentified. When the Keyboard Lock API is available (Chrome), the workspace also requests exclusive F2/F5–F9 so those keys are delivered to the page. Visible Price override / Discount / Tax Class buttons remain the fallback if a browser still swallows a key. 6.7 extends Keyboard Lock to F1–F4 and F6–F10 and never locks F5.
 
 `*` with no selected line is a no-op (stay `SALE_ENTRY`). `+` with no merchandise is a no-op. F8 with no selected line is a no-op. QUANTITY with no selected line is not entered.
 
@@ -367,7 +367,7 @@ Intercept `*` and `+` on keydown so they never become identifier text. Do not in
 | `TENDER` (before `TenderCash` succeeds) | `POST tender` only | → `SALE_ENTRY` | insufficient Cash: remain `TENDER` |
 | completion pending (`TenderCash` succeeded, including GET workspace restore) | not a fourth named mode; input locked until complete response | do not silently return to `SALE_ENTRY` | retry is `POST complete` only; **Return to sale** is `POST abandon_tender` |
 
-Keyboard map (shortcuts; each has a visible control). Bindings are **wireframe-validatable**; F9 is the current proposal, not an architectural lock.
+Keyboard map (shortcuts; each has a visible control). Bindings below are **historical Phase 5 / 6.4**. Slice 6.7 supersedes them ([pos-workflow.md](../phase6-pos-mvp/pos-workflow.md)): F5 unbound; F6 Price; F7 discount; F1–F4 tenders; F10 Transactions; `-` / `/` on empty scan field.
 
 | Key | Action |
 |---|---|

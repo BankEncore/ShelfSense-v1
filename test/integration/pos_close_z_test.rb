@@ -33,7 +33,25 @@ class PosCloseZTest < ActionDispatch::IntegrationTest
     assert_match "Example Book", response.body
     assert_select ".pos-print-only"
     assert_select ".pos-no-print"
+    assert_select ".pos-receipt__legal-name", text: "Example Books LLC"
+    assert_select ".pos-receipt__print .pos-receipt__store"
+    assert_select ".pos-receipt__print .pos-receipt__identity"
+    assert_select ".pos-receipt__print .pos-receipt__counts", text: /Items Sold:/
+    assert_select ".pos-receipt__print .pos-receipt__total"
+    assert_select ".pos-receipt__print .pos-receipt__line-rest"
+    assert_select ".pos-receipt__print .pos-receipt__tax"
+    assert_select ".pos-receipt__print", text: /Business date/, count: 0
+    assert_select ".pos-receipt__barcode"
     assert_select "input[name='session_id'][value='#{transaction.pos_session_id}']"
+    assert_select "link[rel=preload][as=font][type='font/woff2']"
+    assert_select ".pos-receipt-font-loader", text: "0"
+    stylesheet_href = css_select("link[rel=stylesheet]").first["href"]
+    get stylesheet_href
+    assert_response :success
+    assert_match "@font-face", response.body
+    assert_match "Inconsolata", response.body
+    assert_match "inconsolata-latin-700", response.body
+    refute_match "fonts.googleapis.com", response.body
     assert transaction.reload.completed?
     assert_equal 1, PosTransaction.completed.where(id: transaction.id).count
   end
@@ -116,6 +134,10 @@ class PosCloseZTest < ActionDispatch::IntegrationTest
     assert_match format_money(session_record.closing_expected_cash_cents), response.body
     assert_match format_money(session_record.closing_count_cents), response.body
     assert_match format_money(session_record.closing_variance_cents), response.body
+    assert_match "Store  #{@store.admin_label}", response.body
+    assert_match "Register  #{@register.admin_label}", response.body
+    assert_match "Cashier  #{@actor.display_name}", response.body
+    assert_match "Business date  #{session_record.reporting_period.business_date.iso8601}", response.body
     assert_match "Finalize Z", response.body
     assert_match "Leave period open", response.body
     assert PosReportingPeriod.open.exists?(register: @register)
@@ -328,7 +350,8 @@ class PosCloseZTest < ActionDispatch::IntegrationTest
     get pos_session_close_path(session_record)
     assert_response :not_found
     get pos_session_closed_path(session_record)
-    assert_response :not_found
+    assert_response :success
+    assert_match "Session closed", response.body
     post pos_session_close_path(session_record), params: {
       closing_count: "0.00",
       expected_lock_version: session_record.lock_version
@@ -365,7 +388,7 @@ class PosCloseZTest < ActionDispatch::IntegrationTest
     east = Store.create!(
       store_number: 2,
       code: "east",
-      name: "East Store",
+      name: "East Store", legal_name: "Example Books LLC",
       timezone: "America/New_York",
       country_code: "US"
     )

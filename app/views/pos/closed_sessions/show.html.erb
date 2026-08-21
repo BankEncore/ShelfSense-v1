@@ -1,50 +1,45 @@
 <% content_for :title, "Session closed" %>
 
-<main class="pos-close">
-  <h1>Session closed</h1>
+<main class="pos-close" data-controller="pos-receipt">
+  <div class="pos-no-print">
+    <%= render "pos/shared/report_nav" %>
 
-  <% if flash.now[:alert].present? || alert.present? %>
-    <p class="pos-enter__alert" role="alert"><%= flash.now[:alert] || alert %></p>
-  <% end %>
+    <h1>Session closed</h1>
+    <p>Store  <%= current_store.admin_label %></p>
+    <p>Register  <%= @register.admin_label %></p>
+    <p>Cashier  <%= @session_record.cashier_user.display_name %></p>
+    <p>Business date  <%= @period.business_date.iso8601 %></p>
 
-  <dl class="pos-close__facts">
-    <div><dt>Transactions</dt><dd><%= @totals.completed_transaction_count %></dd></div>
-    <div><dt>Sales subtotal</dt><dd><%= format_money_cents(@totals.subtotal_cents) %></dd></div>
-    <div><dt>Sales discount</dt><dd><%= format_money_cents(@totals.discount_cents) %></dd></div>
-    <div><dt>Sales tax</dt><dd><%= format_money_cents(@totals.tax_cents) %></dd></div>
-    <div><dt>Sales total</dt><dd><%= format_money_cents(@totals.total_cents) %></dd></div>
-    <div><dt>Return subtotal</dt><dd><%= format_money_cents(@totals.return_subtotal_cents) %></dd></div>
-    <div><dt>Return discount reversal</dt><dd><%= format_money_cents(@totals.return_discount_cents) %></dd></div>
-    <div><dt>Return tax reversal</dt><dd><%= format_money_cents(@totals.return_tax_cents) %></dd></div>
-    <div><dt>Returns total</dt><dd><%= format_money_cents(@totals.return_total_cents) %></dd></div>
-    <div><dt>Post-void adjustments</dt><dd><%= format_signed_money_cents(@totals.post_void_net_cents) %></dd></div>
-    <div><dt>Net</dt><dd><%= format_signed_money_cents(@totals.net_cents) %></dd></div>
-    <div><dt>Cash payments</dt><dd><%= format_money_cents(@totals.cash_payment_cents) %></dd></div>
-    <div><dt>Cash refunds</dt><dd><%= format_money_cents(@totals.cash_refund_cents) %></dd></div>
-    <div><dt>Card payments</dt><dd><%= format_money_cents(@totals.card_payment_cents) %></dd></div>
-    <div><dt>Card refunds</dt><dd><%= format_money_cents(@totals.card_refund_cents) %></dd></div>
-    <div><dt>Check payments</dt><dd><%= format_money_cents(@totals.check_payment_cents) %></dd></div>
-    <div><dt>Check refunds</dt><dd><%= format_money_cents(@totals.check_refund_cents) %></dd></div>
-    <div><dt>Other payments</dt><dd><%= format_money_cents(@totals.other_payment_cents) %></dd></div>
-    <div><dt>Other refunds</dt><dd><%= format_money_cents(@totals.other_refund_cents) %></dd></div>
-    <div><dt>Opening float</dt><dd><%= format_money_cents(@session_record.opening_float_cents) %></dd></div>
-    <div><dt>Expected closing Cash</dt><dd><%= format_signed_money_cents(@session_record.closing_expected_cash_cents) %></dd></div>
-    <div><dt>Counted Cash</dt><dd><%= format_money_cents(@session_record.closing_count_cents) %></dd></div>
-    <div><dt>Variance</dt><dd><%= format_signed_money_cents(@session_record.closing_variance_cents) %></dd></div>
-  </dl>
-
-  <div class="pos-close__actions">
-    <% if @period.finalized? %>
-      <%= link_to "View Z", pos_reporting_period_z_path(@period), class: "btn" %>
-    <% else %>
-      <%= form_with url: pos_reporting_period_finalize_path(@period), method: :post do %>
-        <%= hidden_field_tag :expected_lock_version, @period.lock_version %>
-        <%= hidden_field_tag :return_to, "closed" %>
-        <%= hidden_field_tag :session_id, @session_record.id %>
-        <%= hidden_field_tag :register_id, @register.id %>
-        <%= submit_tag "Finalize Z", class: "btn" %>
-      <% end %>
-      <%= link_to "Leave period open", pos_register_enter_path(register_id: @register.id), class: "btn btn--secondary" %>
+    <% if flash.now[:alert].present? || alert.present? %>
+      <p class="pos-enter__alert" role="alert"><%= flash.now[:alert] || alert %></p>
     <% end %>
+
+    <%= render "pos/shared/totals_groups", groups: @report_groups %>
+
+    <div class="pos-close__actions">
+      <button type="button" class="btn" data-action="pos-receipt#print">Print</button>
+      <% if @period.finalized? %>
+        <%= link_to "View Z", pos_reporting_period_z_path(@period), class: "btn" %>
+      <% else %>
+        <%= form_with url: pos_reporting_period_finalize_path(@period), method: :post do %>
+          <%= hidden_field_tag :expected_lock_version, @period.lock_version %>
+          <%= hidden_field_tag :return_to, "closed" %>
+          <%= hidden_field_tag :session_id, @session_record.id %>
+          <%= hidden_field_tag :register_id, @register.id %>
+          <%= submit_tag "Finalize Z", class: "btn" %>
+        <% end %>
+        <%= link_to "Leave period open", pos_register_enter_path(register_id: @register.id), class: "btn btn--secondary" %>
+      <% end %>
+    </div>
   </div>
+
+  <%= render "pos/shared/report_print",
+        title: "Session closed",
+        banners: [],
+        meta: [
+          "Store  #{current_store.admin_label}",
+          "Register  #{@register.admin_label}",
+          "Business date  #{@period.business_date.iso8601}"
+        ],
+        groups: @report_groups %>
 </main>

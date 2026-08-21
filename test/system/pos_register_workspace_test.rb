@@ -76,8 +76,7 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     assert_selector ".pos-totals", text: "External Card"
     assert_text "Amount due"
     field = find("#pos-command-field")
-    field.send_keys :f2
-    field.send_keys :f2
+    field.send_keys :f1
     assert_selector "[data-register-workspace-target='fieldLabel']", text: /Cash presented/
     field = find("#pos-command-field")
     field.fill_in with: "50.00"
@@ -126,41 +125,142 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     assert_text "SALE ENTRY"
     add_current_sku
 
-    click_on "Price override (F5)"
+    click_on "Price (F6)"
     assert_selector "#pos_control_overlay", visible: true
     fill_in "Selling price", with: "15.00"
     select "Damaged", from: "Reason"
-    username = find("#pos-approver-username")
-    username.fill_in with: "mgr_scan"
-    username.send_keys :enter
+    find("#pos-control-price").send_keys :enter
 
     assert_selector "#pos_control_overlay", visible: true
     assert_equal "pos-approver-username", page.evaluate_script("document.activeElement && document.activeElement.id")
     line = PosTransaction.working.find_by!(register: @register).pos_transaction_lines.first
     assert_equal line.reference_unit_price_cents, line.selling_unit_price_cents
+
+    username = find("#pos-approver-username")
+    username.fill_in with: "mgr_scan"
+    username.send_keys :enter
+
+    assert_selector "#pos_control_overlay", visible: true
+    assert_equal "pos-approver-password", page.evaluate_script("document.activeElement && document.activeElement.id")
+    line.reload
+    assert_equal line.reference_unit_price_cents, line.selling_unit_price_cents
   end
 
-  test "f5 f6 and f7 open controlled-action overlays" do
+  test "rejected approver credentials stay in the price overlay" do
+    pos_transacting_user(store: @store, assigned_by: @actor, username: "clerk_retry")
+    pos_store_manager(store: @store, assigned_by: @actor, username: "mgr_retry")
+    visit new_session_path
+    fill_in "session_username", with: "clerk_retry"
+    fill_in "session_password", with: "correct-horse-battery"
+    find_field("session_password").send_keys :enter
+    assert_text "Signed in successfully"
+    visit pos_register_enter_path(register_id: @register.id)
+    fill_in "Opening float", with: "0.00"
+    click_on "Open register"
+    assert_text "SALE ENTRY"
+    add_current_sku
+
+    click_on "Price (F6)"
+    assert_selector "#pos_control_overlay", visible: true
+    fill_in "Selling price", with: "15.00"
+    select "Damaged", from: "Reason"
+    fill_in "Approver username", with: "mgr_retry"
+    find("#pos-approver-password").fill_in with: "typoooo"
+    find("#pos-approver-password").send_keys :enter
+
+    assert_selector "#pos_control_overlay", visible: true
+    assert_selector "#pos-control-feedback", text: /approver credentials/
+    assert_field "Selling price", with: "15.00"
+    assert_field "Approver username", with: "mgr_retry"
+    assert_equal "", find("#pos-approver-password").value
+    assert_equal "pos-approver-password", page.evaluate_script("document.activeElement && document.activeElement.id")
+    line = PosTransaction.working.find_by!(register: @register).pos_transaction_lines.first
+    assert_equal line.reference_unit_price_cents, line.selling_unit_price_cents
+
+    find("#pos-approver-password").fill_in with: "correct-horse-battery"
+    find("#pos-approver-password").send_keys :enter
+    assert_no_selector "#pos_control_overlay", visible: true
+    assert_equal 1500, line.reload.selling_unit_price_cents
+  end
+
+  test "enter from a direct price field applies the override" do
+    open_register
+    add_current_sku
+
+    click_on "Price (F6)"
+    assert_selector "#pos_control_overlay", visible: true
+    fill_in "Selling price", with: "15.00"
+    select "Damaged", from: "Reason"
+    find("#pos-control-price").send_keys :enter
+
+    assert_no_selector "#pos_control_overlay", visible: true
+    line = PosTransaction.working.find_by!(register: @register).pos_transaction_lines.first
+    assert_equal 1500, line.selling_unit_price_cents
+  end
+
+  test "blocking overlay panel is an opaque surface above the dimmed workspace" do
+    open_register
+    add_current_sku
+
+    click_on "Price (F6)"
+    assert_selector "#pos_control_overlay", visible: true
+    background = page.evaluate_script(<<~JS)
+      getComputedStyle(document.querySelector("#pos_control_overlay .pos-overlay__panel")).backgroundColor
+    JS
+    assert_match(/rgb\(\s*255,\s*255,\s*255\s*\)/, background)
+    refute_match(/rgba\(\s*0,\s*0,\s*0,\s*0\s*\)/, background)
+  end
+
+  test "f6 and f7 open controlled-action overlays and f5 is unbound" do
     open_register
     add_current_sku
 
     send_keys :f5
+    assert_no_selector "#pos_control_overlay", visible: true
+
+    send_keys :f6
     assert_selector "#pos_control_overlay", visible: true
     assert_selector "#pos-control-title", text: "Price override"
     send_keys :escape
     assert_no_selector "#pos_control_overlay", visible: true
 
-    send_keys :f6
+    send_keys :f7
     assert_selector "#pos_control_overlay", visible: true
     assert_selector "#pos-control-title", text: "Line discount"
     send_keys :escape
     assert_no_selector "#pos_control_overlay", visible: true
 
-    send_keys :f7
+    click_on "Tax Class"
     assert_selector "#pos_control_overlay", visible: true
     assert_selector "#pos-control-title", text: "Tax Class override"
     send_keys :escape
     assert_no_selector "#pos_control_overlay", visible: true
+  end
+
+  test "other picker traps tab inside the overlay" do
+    TenderType.create!(
+      code: "voucher_tab",
+      name: "Store Voucher",
+      behavioral_category: "other",
+      external_reference_policy: "omitted",
+      active: true
+    )
+    TenderType.create!(
+      code: "campus_tab",
+      name: "Campus Charge",
+      behavioral_category: "other",
+      external_reference_policy: "required",
+      active: true
+    )
+    open_register
+    add_current_sku
+    send_keys :f4
+    assert_selector "#pos_other_overlay", visible: true
+    assert page.evaluate_script("document.activeElement === document.querySelector('#pos_other_overlay li.is-selected')")
+    find("#pos_other_overlay li.is-selected").send_keys :tab
+    assert page.evaluate_script("Boolean(document.activeElement && document.activeElement.closest('#pos_other_overlay'))")
+    page.send_keys :tab
+    assert page.evaluate_script("Boolean(document.activeElement && document.activeElement.closest('#pos_other_overlay'))")
   end
 
   test "empty basket disables cancel" do
@@ -415,6 +515,132 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     assert_equal counts[:ledger], InventoryLedgerEntry.count
     assert_equal counts[:outbox], OutboxMessage.count
     assert_equal counts[:receipt], completed.reload.receipt_sequence
+  end
+
+  test "f1 through f4 select tenders and f10 preserves the working basket" do
+    open_register
+    add_current_sku
+    send_keys :f4
+    assert_text "No Other tender types are configured."
+    assert_text "SALE ENTRY"
+
+    send_keys :f1
+    assert_text "CASH TENDER"
+    field = find("#pos-command-field")
+    refute_equal "", field.value
+
+    send_keys :f10
+    assert_text "Transactions"
+    click_on "Register"
+    assert_text "Example Book"
+    assert_text "SALE ENTRY"
+
+    click_on "Tender (+)"
+    send_keys :f2
+    field = find("#pos-command-field")
+    field.fill_in with: "10.00"
+    field.send_keys :enter
+    assert_selector ".pos-totals", text: "External Card"
+    send_keys :f10
+    assert_text "Transactions"
+    click_on "Register"
+    assert_selector ".pos-totals", text: "External Card"
+    assert_text "Example Book"
+  end
+
+  test "f4 other none one and many and f10 is blocked by an overlay" do
+    TenderType.create!(
+      code: "voucher",
+      name: "Store Voucher",
+      behavioral_category: "other",
+      external_reference_policy: "omitted",
+      active: true
+    )
+    open_register
+    add_current_sku
+    send_keys :f4
+    assert_text "TENDER"
+    assert_selector "[data-register-workspace-target='fieldLabel']", text: /Store Voucher/
+
+    TenderType.create!(
+      code: "campus_charge",
+      name: "Campus Charge",
+      behavioral_category: "other",
+      external_reference_policy: "required",
+      active: true
+    )
+    visit pos_register_workspace_path
+    assert_text "SALE ENTRY"
+    send_keys :escape
+    send_keys :f4
+    assert_selector "#pos_other_overlay", visible: true
+    assert_selector "#pos_other_overlay li.is-selected", text: "Campus Charge"
+    assert page.evaluate_script("document.activeElement === document.querySelector('#pos_other_overlay li.is-selected')")
+    assert_text "SALE ENTRY"
+    send_keys :enter
+    assert_no_selector "#pos_other_overlay", visible: true
+    assert_text "TENDER"
+    assert_selector "[data-register-workspace-target='fieldLabel']", text: /Campus Charge/
+    assert_field "Reference (required)"
+    field = find("#pos-command-field")
+    field.send_keys :enter
+    assert_equal "pos-reference-field", page.evaluate_script("document.activeElement && document.activeElement.id")
+
+    send_keys :escape
+    send_keys :f6
+    assert_selector "#pos_control_overlay", visible: true
+    send_keys :f10
+    assert_text "Finish or cancel the current dialog before opening Transactions."
+    assert_selector "#pos_control_overlay", visible: true
+    assert_no_selector "h1", text: "Transactions"
+  end
+
+  test "slash search always lists results and enter adds the highlighted item" do
+    open_register
+    field = find("#pos-command-field")
+    field.send_keys "/"
+    assert_selector "#pos_search_overlay", visible: true
+    fill_in "SKU", with: @variant.sku
+    find("[data-register-workspace-target='searchSkuField']").send_keys :enter
+    assert_selector "#pos_search_overlay li", minimum: 1
+    find("[data-register-workspace-target='searchList'] li.is-selected").send_keys :enter
+    assert_text "Example Book"
+    assert_no_selector "#pos_search_overlay", visible: true
+  end
+
+  test "open-price prompt escape does not add a line" do
+    open_price = pos_sellable_variant(actor: @actor, tax_class: @tax, pricing_method: "open_price", name: "Open Book")
+    open_quantity_stock(store: @store, variant: open_price, actor: @actor, quantity: 3)
+    open_register
+    field = find("#pos-command-field")
+    field.fill_in with: open_price.sku
+    field.send_keys :enter
+    assert_selector "#pos_open_price_overlay", visible: true
+    send_keys :escape
+    assert_no_selector "#pos_open_price_overlay", visible: true
+    assert_no_text "Open Book"
+    assert_equal 0, PosTransaction.working.find_by!(register: @register).pos_transaction_lines.count
+  end
+
+  test "minus opens linked and unlinked chooser from empty sale entry" do
+    open_register
+    click_on "Return (-)"
+    assert_selector "#pos_return_chooser", visible: true
+    assert_selector "#pos_return_chooser li.is-selected", text: "Linked return"
+    assert page.evaluate_script("document.activeElement === document.querySelector('#pos_return_chooser li.is-selected')")
+    send_keys :arrow_down
+    send_keys :enter
+    assert_selector "#pos_unlinked_overlay", visible: true
+    send_keys :escape
+    assert_no_selector "#pos_unlinked_overlay", visible: true
+    click_on "Return (-)"
+    send_keys :enter
+    assert_selector "#pos_linked_overlay", visible: true
+    assert_field "Receipt, merchandise, or unit"
+    send_keys :escape
+    assert_no_selector "#pos_linked_overlay", visible: true
+    send_keys "-"
+    assert_selector "#pos_return_chooser", visible: true
   end
 
   private

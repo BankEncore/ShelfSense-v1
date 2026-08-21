@@ -1,6 +1,6 @@
 # Phase 6 — Operational POS MVP
 
-**Status:** Slice 6.0 contract locked. Slice 6.1 merchandise breadth is implemented. Slice 6.2 tender breadth is implemented ([tender-breadth.md](tender-breadth.md)). Slice 6.3 transaction history is implemented ([transaction-history.md](transaction-history.md)). Slice 6.4 controlled actions are implemented ([controlled-actions.md](controlled-actions.md)). Slice 6.5 returns are implemented (6.5A–D; [returns.md](returns.md)). Slice 6.6 post-void is implemented ([post-void.md](post-void.md)).
+**Status:** Slice 6.0 contract locked. Slices 6.1–6.8 are implemented.
 
 | Document | Purpose |
 |---|---|
@@ -11,8 +11,11 @@
 | [transaction-history.md](transaction-history.md) | Slice 6.3: completed lookup, detail, reprint (implemented) |
 | [controlled-actions.md](controlled-actions.md) | Slice 6.4: price override, line discount, Tax Class override (implemented) |
 | [returns.md](returns.md) | Slice 6.5: linked/unlinked returns, refunds, mixed sale+return (6.5A–D implemented) |
-| [post-void.md](post-void.md) | Slice 6.6: whole-transaction compensating fact |
+| [post-void.md](post-void.md) | Slice 6.6: whole-transaction compensating fact (implemented) |
+| [pos-workflow.md](pos-workflow.md) | Slice 6.7: cashier Home, keys, pickers, open-price Standard, return entry, X Report (implemented) |
+| [mvp-closeout.md](mvp-closeout.md) | Slice 6.8: presentation, regression; no new commercial behavior (implemented) |
+| [receipt-presentation.md](receipt-presentation.md) | Customer print/reprint layout (implemented in 6.8) |
 
 Parent multi-phase sequencing: [../spec.md](../spec.md). Phase 4 completion kernel: [../phase4-point-of-sale/](../phase4-point-of-sale/). Phase 5 cash register: [../phase5-cash-register/](../phase5-cash-register/).
 
-Where this packet and `../spec.md` disagree on Phase 6 slice order, open ring, suspend/recall, cash operations, Store Close, or MVP deferrals, **prefer this packet**. Write the detailed implementation contract for slice 6.7 immediately before building it. 6.2–6.6 contracts are already written.
+Where this packet and `../spec.md` disagree on Phase 6 slice order, open ring, suspend/recall, cash operations, Store Close, or MVP deferrals, **prefer this packet**. 6.2–6.8 contracts are written. Slices 6.7 and 6.8 are implemented.

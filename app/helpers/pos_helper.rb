@@ -1,6 +1,14 @@
 # frozen_string_literal: true
 
 module PosHelper
+  CONTROLLED_ACTION_LABELS = {
+    "price_override" => "Price override",
+    "line_discount" => "Line discount",
+    "tax_class_override" => "Tax Class override",
+    "unlinked_return" => "Unlinked return",
+    "post_void" => "Post-void"
+  }.freeze
+
   def pos_line_description(line)
     snapshot = line.merchandise_snapshot
     if snapshot.is_a?(Hash) && snapshot["description"].present?
@@ -15,6 +23,18 @@ module PosHelper
 
     zone = ActiveSupport::TimeZone[store.timezone] || ActiveSupport::TimeZone["UTC"]
     time.in_time_zone(zone).strftime("%Y-%m-%d %H:%M")
+  end
+
+  def pos_print_amount(cents)
+    return if cents.nil?
+
+    sign = cents.negative? ? "-" : ""
+    absolute = cents.abs
+    "#{sign}#{absolute / 100}.#{format("%02d", absolute % 100)}"
+  end
+
+  def pos_code128_svg(payload)
+    Pos::Code128.svg(payload).html_safe
   end
 
   def pos_receipt_print_header(transaction)
@@ -120,6 +140,21 @@ module PosHelper
     format_signed_money_cents(cents)
   end
 
+  def pos_report_row_value(row)
+    case row.format
+    when :count
+      row.cents.nil? ? "not captured" : row.cents
+    when :optional_money
+      pos_optional_money_cents(row.cents)
+    when :optional_signed
+      pos_optional_signed_money_cents(row.cents)
+    when :signed
+      format_signed_money_cents(row.cents)
+    else
+      format_money_cents(row.cents)
+    end
+  end
+
   def pos_line_kind_prefix(line)
     if line.post_void_generated?
       "POST-VOID"
@@ -154,6 +189,18 @@ module PosHelper
     flags << "Discount" if line.manually_discounted?
     flags << "Tax Class" if line.tax_class_overridden?
     flags.join(" · ")
+  end
+
+  def pos_controlled_action_label(action)
+    CONTROLLED_ACTION_LABELS.fetch(action.action_type, action.action_type.tr("_", " "))
+  end
+
+  def pos_controlled_action_provenance(action)
+    parts = [ pos_controlled_action_label(action), "Performed by #{action.performed_by_name_snapshot}" ]
+    parts << "Approved by #{action.approved_by_name_snapshot}" if action.approved_by_name_snapshot.present?
+    parts << action.reason_name_snapshot if action.reason_name_snapshot.present?
+    parts << "Note #{action.reason_note}" if action.reason_note.present?
+    parts.join(" · ")
   end
 
   def pos_mode_label(mode)

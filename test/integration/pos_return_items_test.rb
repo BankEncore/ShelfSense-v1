@@ -38,7 +38,7 @@ class PosReturnItemsTest < ActionDispatch::IntegrationTest
     assert_equal working_before, PosTransaction.working.count
     assert_equal sessions_before, PosSession.count
 
-    east = Store.create!(store_number: "2", code: "east", name: "East Store", timezone: "America/New_York", country_code: "US")
+    east = Store.create!(store_number: "2", code: "east", name: "East Store", legal_name: "Example Books LLC", timezone: "America/New_York", country_code: "US")
     pos_transacting_user(store: east, assigned_by: @actor, username: "east_clerk")
     delete session_path
     sign_in_as("east_clerk")

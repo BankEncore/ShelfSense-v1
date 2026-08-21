@@ -1,0 +1,13 @@
+<%#
+  locals: title:, banners: [], meta: [], groups:
+%>
+<section class="pos-print-only pos-report-print" aria-hidden="true">
+  <% banners.each do |banner| %>
+    <p class="pos-receipt__reprint"><%= banner %></p>
+  <% end %>
+  <p class="pos-receipt__print-header"><%= title %></p>
+  <% meta.each do |line| %>
+    <p><%= line %></p>
+  <% end %>
+  <%= render "pos/shared/totals_groups", groups: groups %>
+</section>

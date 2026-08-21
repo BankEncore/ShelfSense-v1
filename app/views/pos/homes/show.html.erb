@@ -1,0 +1,58 @@
+<% content_for :title, "POS Home" %>
+
+<main class="pos-home">
+  <h1>POS Home</h1>
+
+  <% if notice.present? %>
+    <p role="status"><%= notice %></p>
+  <% end %>
+  <% if alert.present? %>
+    <p class="pos-enter__alert" role="alert"><%= alert %></p>
+  <% end %>
+
+  <dl class="pos-home__facts">
+    <div><dt>Store</dt><dd><%= current_store.admin_label %></dd></div>
+    <div><dt>Cashier</dt><dd><%= current_user.display_name %></dd></div>
+    <div>
+      <dt>Preferred register</dt>
+      <dd>
+        <% if @preferred_register %>
+          <%= @preferred_register.admin_label %>
+          <% if @preferred_gate&.occupied? %>
+            <span> — open for <%= @preferred_gate.occupier.display_name %></span>
+          <% elsif @preferred_gate&.own_session? %>
+            <span> — your open Session</span>
+          <% end %>
+        <% else %>
+          None
+        <% end %>
+      </dd>
+    </div>
+    <div>
+      <dt>Current session</dt>
+      <dd>
+        <% if @open_session %>
+          Register <%= @open_session.register.admin_label %>
+        <% else %>
+          None
+        <% end %>
+      </dd>
+    </div>
+  </dl>
+
+  <nav class="pos-home__actions" aria-label="POS Home">
+    <% if @open_session %>
+      <%= link_to "Resume Register", pos_register_workspace_path(register_id: @open_session.register_id), class: "btn" %>
+    <% else %>
+      <%= link_to "Open Register", pos_register_enter_path, class: "btn" %>
+    <% end %>
+    <%= link_to "Transactions", pos_transactions_path, class: "btn btn--secondary" %>
+    <%= link_to "X Report", pos_x_report_path, class: "btn btn--secondary" %>
+    <% if can_view_other_sessions? %>
+      <%= link_to "Active Sessions", pos_active_sessions_path, class: "btn btn--secondary" %>
+    <% end %>
+    <%= link_to "Session / Z Reports", pos_reports_path, class: "btn btn--secondary" %>
+    <%= link_to "Switch Register", pos_switch_register_path, class: "btn btn--secondary" %>
+    <%= link_to "Return to ShelfSense", root_path, class: "btn btn--secondary" %>
+  </nav>
+</main>

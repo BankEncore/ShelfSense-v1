@@ -51,6 +51,12 @@
         <% if line.manual_discount_cents.to_i.positive? %>
           <li><%= line.return? ? "Discount reversal" : "Discount" %>  <%= format_signed_money_cents(pos_line_discount_cents(line)) %></li>
         <% end %>
+        <% if line.tax_class_overridden? && line.tax_class_name_snapshot.present? %>
+          <li class="muted">Applied Tax Class  <%= line.tax_class_name_snapshot %></li>
+        <% end %>
+        <% line.pos_controlled_actions.each do |action| %>
+          <li class="muted"><%= pos_controlled_action_provenance(action) %></li>
+        <% end %>
       <% end %>
     </ul>
   </div>
@@ -58,7 +64,12 @@
   <%= render "pos/receipts/print", transaction: @transaction, tenders: @tenders, reprint: false %>
 
   <div class="pos-receipt__actions pos-no-print">
-    <button type="button" class="btn" data-action="pos-receipt#print">Print receipt</button>
+    <% receipt = Pos::CustomerReceipt.build(@transaction) %>
+    <% if receipt.printable? %>
+      <button type="button" class="btn" data-action="pos-receipt#print">Print receipt</button>
+    <% else %>
+      <p class="pos-enter__alert" role="alert"><%= receipt.error %></p>
+    <% end %>
     <%= link_to "Transactions", pos_transactions_path, class: "btn btn--secondary" %>
     <%= button_to "New transaction", pos_register_continue_path, method: :post, class: "btn pos-receipt__new" %>
     <%= button_to "Close register", pos_register_close_path, method: :post,

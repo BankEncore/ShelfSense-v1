@@ -68,7 +68,7 @@ Stored Value
 time windows
 cross-Store
 cancelling foreign working baskets
-keyboard map lock (6.7)
+keyboard map lock (6.7 — [pos-workflow.md](pos-workflow.md); post-void stays history-only)
 return_price_adjustment permission
 Check/Other external-reversal policy
 ```
@@ -336,6 +336,8 @@ Source detail and reprint share `pos/receipts/_post_void_banner`: **POST-VOIDED*
 
 Reversal screen and receipt: **POST-VOID** of original reference (not RETURN); screen links the original. Generated return-direction lines are labeled as post-void reversal, not customer RETURN. Customer copy still omits unnecessary Card/Check references.
 
+Closeout customer-print banners (top of paper, `Post-voided by:` on the printed original, no customer `RETURN` on generated lines) are [receipt-presentation.md](receipt-presentation.md) §§25–26 (implement in 6.8).
+
 ---
 
 ## 16. Audit
@@ -394,5 +396,5 @@ integrated Card / Stored Value
 time windows / cross-Store
 Check/Other reversal policy
 cancelling foreign working baskets
-keyboard map (6.7)
+keyboard map (6.7 — [pos-workflow.md](pos-workflow.md); no selling-surface post-void hotkey)
 ```

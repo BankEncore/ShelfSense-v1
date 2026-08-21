@@ -45,7 +45,7 @@ inventory + used     → individual
 non_inventory + standard → non_inventory
 ```
 
-Non-inventory Used variants remain invalid. Open-price merchandise remains rejected.
+Non-inventory Used variants remain invalid. Open-price merchandise remains rejected **in 6.1**. 6.7 sells open-price Standard only ([pos-workflow.md](pos-workflow.md)).
 
 ---
 
@@ -200,7 +200,7 @@ Rules:
 
 - SKU / identifier resolution is the existing variant path
 - Rescan of a compatible SKU increments quantity (same merge as Standard)
-- Pricing from `product_variants.regular_price_cents`; still reject `open_price` and missing regular price
+- Pricing from `product_variants.regular_price_cents`; still reject `open_price` and missing regular price in **this slice**. 6.7 accepts open-price **quantity-tracked and non-inventory Standard** only ([pos-workflow.md](pos-workflow.md) §9); Used/individual open-price stays refused.
 - Tax, tender, receipt participate normally
 - **Inventory effect = none.** No ledger, valuation, or balance row. No zero-quantity fake entry.
 

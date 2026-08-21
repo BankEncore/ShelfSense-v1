@@ -13,7 +13,7 @@ class PosCompletedTransactionSearchTest < ActiveSupport::TestCase
   end
 
   test "no filters returns only current-store completed transactions newest first" do
-    other_store = Store.create!(store_number: "2", code: "east", name: "East", timezone: "America/New_York", country_code: "US")
+    other_store = Store.create!(store_number: "2", code: "east", name: "East", legal_name: "Example Books LLC", timezone: "America/New_York", country_code: "US")
     other_context = pos_open_context(store: other_store, actor: @actor)
     older = insert_completed_transaction!(session: @session, receipt_sequence: 1, completed_at: @base_time, cashier_name: "Ada")
     newer = insert_completed_transaction!(session: @session, receipt_sequence: 2, completed_at: @base_time + 60, cashier_name: "Ada")
@@ -139,7 +139,7 @@ class PosCompletedTransactionSearchTest < ActiveSupport::TestCase
     found = Pos::CompletedTransactionSearch.call(store: @store, register_id: second[:register].id)
     assert_equal [ sale.id ], found.records.map(&:id)
 
-    east = Store.create!(store_number: "9", code: "west", name: "West", timezone: "America/New_York", country_code: "US")
+    east = Store.create!(store_number: "9", code: "west", name: "West", legal_name: "Example Books LLC", timezone: "America/New_York", country_code: "US")
     foreign = Register.create!(store: east, register_number: 1, name: "Foreign")
     empty = Pos::CompletedTransactionSearch.call(store: @store, register_id: foreign.id)
     assert_equal 0, empty.total_count

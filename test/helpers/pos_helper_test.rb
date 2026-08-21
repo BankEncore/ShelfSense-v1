@@ -79,6 +79,36 @@ class PosHelperTest < ActionView::TestCase
     assert_equal "Override · Discount · Tax Class", pos_line_control_flags(line)
   end
 
+  test "controlled-action provenance names the action type and note" do
+    action = PosControlledAction.new(
+      action_type: "price_override",
+      performed_by_name_snapshot: "John",
+      approved_by_name_snapshot: "Pat",
+      reason_name_snapshot: "Other",
+      reason_note: "customer requested"
+    )
+
+    assert_equal "Price override", pos_controlled_action_label(action)
+    assert_equal(
+      "Price override · Performed by John · Approved by Pat · Other · Note customer requested",
+      pos_controlled_action_provenance(action)
+    )
+  end
+
+  test "direct controlled-action provenance omits approver and blank note" do
+    action = PosControlledAction.new(
+      action_type: "tax_class_override",
+      performed_by_name_snapshot: "John",
+      reason_name_snapshot: "Classification correction"
+    )
+
+    assert_equal "Tax Class override", pos_controlled_action_label(action)
+    assert_equal(
+      "Tax Class override · Performed by John · Classification correction",
+      pos_controlled_action_provenance(action)
+    )
+  end
+
   test "unlinked return price distinction is not a sale override" do
     line = PosTransactionLine.new(
       direction: "return",

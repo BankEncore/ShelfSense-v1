@@ -2,6 +2,7 @@
 
 class PosTransactionLine < ApplicationRecord
   DIRECTIONS = %w[sale return].freeze
+  PRICING_METHOD_SNAPSHOTS = %w[open_price configured].freeze
   SNAPSHOT_KEYS = %w[sku description tax_class_code].freeze
   UNIT_SNAPSHOT_KEYS = %w[unit_identifier condition_code].freeze
 
@@ -18,6 +19,7 @@ class PosTransactionLine < ApplicationRecord
   validates :line_number, :direction, :quantity, :reference_unit_price_cents, :selling_unit_price_cents,
             :extended_selling_amount_cents, :tax_class_code_snapshot, presence: true
   validates :direction, inclusion: { in: DIRECTIONS }
+  validates :pricing_method_snapshot, inclusion: { in: PRICING_METHOD_SNAPSHOTS }
   validates :quantity, numericality: { only_integer: true, greater_than: 0 }
   validates :line_number, uniqueness: { scope: :pos_transaction_id }
   validate :inventory_unit_matches_tracking
@@ -58,6 +60,10 @@ class PosTransactionLine < ApplicationRecord
 
   def tax_class_overridden?
     sale? && default_tax_class_id.present? && tax_class_id != default_tax_class_id
+  end
+
+  def open_price_line?
+    pricing_method_snapshot == "open_price"
   end
 
   def recalc_extended!

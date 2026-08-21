@@ -83,8 +83,8 @@
   <% end %>
   <% if line.sale? || line.unlinked_return? %>
     <% line.pos_controlled_actions.each do |action| %>
-      <section class="pos-history__control" aria-label="<%= action.action_type.tr('_', ' ') %>">
-        <h3><%= action.action_type.tr("_", " ") %></h3>
+      <section class="pos-history__control" aria-label="<%= pos_controlled_action_label(action) %>">
+        <h3><%= pos_controlled_action_label(action) %></h3>
         <dl class="pos-history__line-facts">
           <div><dt>Performed by</dt><dd><%= action.performed_by_name_snapshot %></dd></div>
           <% if action.approved_by_name_snapshot.present? %>

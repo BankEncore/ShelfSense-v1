@@ -9,9 +9,17 @@ class Store < ApplicationRecord
   has_many :pos_transactions, dependent: :restrict_with_exception
   has_many :role_assignments, dependent: :restrict_with_exception
 
+  RECEIPT_MODES = %w[inherit custom none].freeze
+  RECEIPT_MESSAGE_LIMIT = 500
+
   before_validation :normalize_codes
+  before_validation :normalize_receipt_messages
 
   validates :store_number, :code, :name, :country_code, :timezone, presence: true
+  validates :legal_name, presence: true, if: :active?
+  validates :receipt_header_mode, :receipt_footer_mode, inclusion: { in: RECEIPT_MODES }
+  validates :receipt_header, :receipt_footer, length: { maximum: RECEIPT_MESSAGE_LIMIT }
+  validate :custom_receipt_text_present
   validates :country_code, length: { is: 2 }
   validates :store_number, numericality: { only_integer: true, greater_than: 0 }
   validates :store_number, uniqueness: true
@@ -34,11 +42,34 @@ class Store < ApplicationRecord
     pos_transactions.completed.exists? || registers.where("receipt_sequence > 0").exists?
   end
 
+  def effective_receipt_header
+    Pos::ReceiptMessages.header(self)
+  end
+
+  def effective_receipt_footer
+    Pos::ReceiptMessages.footer(self)
+  end
+
   private
 
   def normalize_codes
     self.code = code.to_s.strip.downcase
     self.country_code = country_code.to_s.strip.upcase
+  end
+
+  def normalize_receipt_messages
+    self.receipt_header = receipt_header&.strip
+    self.receipt_footer = receipt_footer&.strip
+    self.legal_name = legal_name&.strip
+  end
+
+  def custom_receipt_text_present
+    if receipt_header_mode == "custom" && receipt_header.blank?
+      errors.add(:receipt_header, "is required when the header mode is custom")
+    end
+    if receipt_footer_mode == "custom" && receipt_footer.blank?
+      errors.add(:receipt_footer, "is required when the footer mode is custom")
+    end
   end
 
   def store_number_immutable_after_receipts

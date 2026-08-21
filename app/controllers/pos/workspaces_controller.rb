@@ -2,6 +2,13 @@
 
 module Pos
   class WorkspacesController < BaseController
+    OVERLAY_ERROR_TARGETS = {
+      "controlled_action" => "pos-control-feedback",
+      "unlinked_return" => "pos-unlinked-feedback",
+      "open_price" => "pos-open-price-feedback",
+      "linked_return" => "pos-linked-feedback"
+    }.freeze
+
     before_action :require_register!, except: :complete
     before_action :prepare_workspace!, except: %i[show continue complete]
     before_action :prepare_session!, only: :continue
@@ -26,12 +33,82 @@ module Pos
 
     def merchandise
       rescue_workspace(error_mode: "sale_entry") do
+        selling_price_cents = parse_optional_open_price
         @selected_line = Pos::AddMerchandise.call(
           transaction: @transaction,
           actor: current_user,
           expected_lock_version: expected_lock_version,
-          identifier: params.require(:identifier),
+          identifier: params[:identifier],
+          product_variant: find_optional_variant,
+          inventory_unit: find_optional_unit,
+          selling_price_cents: selling_price_cents,
           quantity: 1
+        )
+        @transaction.reload
+        @ui_mode = "sale_entry"
+        respond_workspace
+      end
+    end
+
+    def resolve
+      result = Pos::ResolveMerchandiseForSale.call(
+        store: current_store,
+        identifier: params[:identifier],
+        variant: find_optional_variant,
+        inventory_unit: find_optional_unit,
+        current_transaction: @transaction
+      )
+      render json: serialize_resolution(result)
+    end
+
+    def search
+      query = params[:q].presence
+      sku = params[:sku].presence || query
+      name = params[:name].presence || query
+      rows = Pos::SearchMerchandise.call(store: current_store, sku: sku, name: name)
+      render json: { results: rows.map { |row| serialize_search_row(row) } }
+    end
+
+    def linked_return_lookup
+      result = Pos::LookupLinkedReturn.call(
+        store: current_store,
+        query: params[:q],
+        transaction_id: params[:transaction_id],
+        current_transaction: @transaction
+      )
+      render json: serialize_linked_return(result)
+    end
+
+    def linked_return
+      rescue_workspace(error_mode: "sale_entry") do
+        original = PosTransactionLine.find(params.require(:original_line_id))
+        @selected_line = Pos::AddLinkedReturnLine.call(
+          transaction: @transaction,
+          actor: current_user,
+          expected_lock_version: expected_lock_version,
+          original_line: original,
+          quantity: params[:quantity].presence || 1,
+          reason_code: params.require(:reason_code),
+          reason_note: params[:reason_note]
+        )
+        @transaction.reload
+        @ui_mode = "sale_entry"
+        respond_workspace
+      end
+    end
+
+    def open_price
+      rescue_workspace(error_mode: "sale_entry") do
+        line = find_line!
+        cents = Money::ParseCents.call(params[:selling_price])
+        raise Pos::Error, "selling price is required" if cents.nil?
+
+        @selected_line = Pos::UpdateOpenPrice.call(
+          transaction: @transaction,
+          line: line,
+          actor: current_user,
+          expected_lock_version: expected_lock_version,
+          selling_price_cents: cents
         )
         @transaction.reload
         @ui_mode = "sale_entry"
@@ -247,6 +324,7 @@ module Pos
 
     def continue
       Pos::ResumeOrStartTransaction.call(session: @session_record, actor: current_user)
+      session[:pos_register_id] = @register.id
       redirect_to pos_register_workspace_path
     rescue Pos::Denied, Pos::Error => e
       redirect_to pos_register_enter_path(register_id: @register.id), alert: e.message
@@ -258,7 +336,7 @@ module Pos
       @register = find_register
       return if @register
 
-      redirect_to pos_register_enter_path
+      reject_workspace_context!(register_id: nil)
     end
 
     def actor_session
@@ -269,20 +347,30 @@ module Pos
       @session_record = actor_session
       return if @session_record
 
-      redirect_to pos_register_enter_path(register_id: @register&.id)
+      reject_workspace_context!(register_id: @register&.id)
     end
 
     def prepare_workspace!
       @session_record = actor_session
       unless @session_record
-        redirect_to pos_register_enter_path(register_id: @register.id)
+        reject_workspace_context!(register_id: @register.id)
         return
       end
 
       @transaction = @session_record.pos_transactions.working.first
       return if @transaction
 
-      redirect_to pos_register_enter_path(register_id: @register.id)
+      reject_workspace_context!(register_id: @register.id)
+    end
+
+    def reject_workspace_context!(register_id:)
+      if request.format.json?
+        render json: { outcome: "unavailable", message: "open a register to continue" }, status: :conflict
+      elsif register_id.present?
+        redirect_to pos_register_enter_path(register_id: register_id)
+      else
+        redirect_to pos_register_enter_path
+      end
     end
 
     def load_completion_transaction!
@@ -402,12 +490,14 @@ module Pos
     rescue Pos::Denied
       redirect_to root_path, alert: "You are not authorized to perform that action."
     rescue Pos::StaleObject
-      recover_from_workspace_error("This sale was changed. Reload and try again.", error_mode)
+      recover_from_workspace_error("This sale was changed. Reload and try again.", error_mode, persist_overlay: false)
+    rescue Pos::InvalidatedDialogBasis => e
+      recover_from_workspace_error(e.message, error_mode, persist_overlay: false)
     rescue Money::ParseCents::Error, Pos::Error => e
       recover_from_workspace_error(e.message, error_mode)
     end
 
-    def recover_from_workspace_error(message, error_mode)
+    def recover_from_workspace_error(message, error_mode, persist_overlay: persist_overlay_error?)
       @feedback = message
       @transaction.reload
       @command_value = params[:identifier] || params[:quantity] || params[:tender_amount]
@@ -416,8 +506,36 @@ module Pos
         return
       end
 
+      if persist_overlay
+        respond_overlay_error(error_mode)
+        return
+      end
+
       apply_error_mode(error_mode)
       respond_workspace
+    end
+
+    def persist_overlay_error?
+      overlay_error_dom_id.present?
+    end
+
+    def overlay_error_dom_id
+      return OVERLAY_ERROR_TARGETS[action_name] if OVERLAY_ERROR_TARGETS.key?(action_name)
+      return "pos-open-price-feedback" if action_name == "merchandise" && params[:selling_price].present?
+
+      nil
+    end
+
+    def respond_overlay_error(error_mode)
+      @overlay_error_dom_id = overlay_error_dom_id
+      respond_to do |format|
+        format.turbo_stream { render "pos/workspaces/dialog_error", status: :unprocessable_entity }
+        format.html do
+          apply_error_mode(error_mode)
+          prepare_view_state
+          render :show
+        end
+      end
     end
 
     def apply_error_mode(error_mode)
@@ -515,6 +633,101 @@ module Pos
 
     def pos_workspace_cash_payment?(tender)
       tender.cash? && tender.direction == "payment"
+    end
+
+    def find_optional_variant
+      id = params[:product_variant_id].presence
+      return if id.blank?
+
+      ProductVariant.find_by(id: id)
+    end
+
+    def find_optional_unit
+      id = params[:inventory_unit_id].presence
+      return if id.blank?
+
+      InventoryUnit.find_by(id: id)
+    end
+
+    def parse_optional_open_price
+      return if params[:selling_price].blank? && params[:open_price].blank?
+
+      Money::ParseCents.call(params[:selling_price].presence || params[:open_price])
+    end
+
+    def serialize_resolution(result)
+      payload = { outcome: result.outcome.to_s, message: result.message }
+      payload[:variant] = serialize_variant(result.variant) if result.variant
+      payload[:unit] = serialize_unit(result.unit) if result.unit
+      payload[:variants] = Array(result.variants).map { |variant| serialize_variant(variant) }
+      payload[:units] = Array(result.units).map { |unit| serialize_unit(unit) }
+      payload
+    end
+
+    def serialize_variant(variant)
+      tracking = variant.derived_inventory_tracking
+      open_price = variant.merchandise_class&.pricing_method == "open_price"
+      {
+        id: variant.id,
+        sku: variant.sku,
+        name: variant.product.name,
+        condition: variant.merchandise_condition&.name,
+        price_cents: variant.regular_price_cents,
+        price_label: open_price ? "Open price" : nil,
+        tracking: tracking,
+        open_price: open_price,
+        available: tracking == "non_inventory" ? nil : (InventoryBalance.find_by(store: current_store, product_variant: variant)&.on_hand_quantity || 0)
+      }
+    end
+
+    def serialize_unit(unit)
+      {
+        id: unit.id,
+        unit_identifier: unit.unit_identifier,
+        condition: unit.product_variant.merchandise_condition&.name,
+        price_cents: unit.effective_regular_price_cents
+      }
+    end
+
+    def serialize_linked_return(result)
+      {
+        outcome: result.outcome.to_s,
+        message: result.message,
+        truncated: result.truncated,
+        transaction_id: result.transaction_id,
+        receipts: Array(result.receipts).map do |receipt|
+          {
+            id: receipt.id,
+            transaction_reference: receipt.transaction_reference,
+            completed_at: receipt.completed_at
+          }
+        end,
+        lines: Array(result.lines).map do |line|
+          {
+            id: line.id,
+            description: line.description,
+            remaining: line.remaining,
+            sold: line.sold,
+            quantity_fixed: line.quantity_fixed,
+            unit_identifier: line.unit_identifier
+          }
+        end
+      }
+    end
+
+    def serialize_search_row(row)
+      {
+        id: row.variant.id,
+        sku: row.sku,
+        name: row.product_name,
+        condition: row.condition_name,
+        price_label: row.price_label,
+        available: row.available,
+        disabled: row.disabled,
+        reason: row.reason,
+        tracking: row.tracking,
+        open_price: row.open_price
+      }
     end
   end
 end

@@ -112,6 +112,7 @@ After `db:prepare` / `db:migrate`, initialize once:
   STORE_NUMBER=1 \
   STORE_CODE=main \
   STORE_NAME="Main Store" \
+  STORE_LEGAL_NAME="Example Books LLC" \
   STORE_TIMEZONE=America/New_York \
   STORE_COUNTRY_CODE=US \
   ADMIN_USERNAME=admin \

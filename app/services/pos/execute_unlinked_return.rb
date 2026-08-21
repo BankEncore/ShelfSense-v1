@@ -137,9 +137,9 @@ module Pos
       stale ||= expected_unit.present? && expected_unit != actual_unit.to_s
       stale ||= !expected_reference.nil? && expected_reference != resolved.reference_unit_price_cents
       stale ||= @expected_tax_class_id.present? && @expected_tax_class_id != resolved.tax_class.id.to_s
-      raise Pos::Error, STALE_PREVIEW_MESSAGE if stale
+      raise Pos::InvalidatedDialogBasis, STALE_PREVIEW_MESSAGE if stale
     rescue ArgumentError, TypeError
-      raise Pos::Error, STALE_PREVIEW_MESSAGE
+      raise Pos::InvalidatedDialogBasis, STALE_PREVIEW_MESSAGE
     end
 
     def preflight_valuation!(transaction, resolved)
@@ -197,6 +197,7 @@ module Pos
         default_tax_class: resolved.tax_class,
         default_tax_class_code_snapshot: resolved.tax_class.code,
         default_tax_class_name_snapshot: resolved.tax_class.name,
+        pricing_method_snapshot: "configured",
         manual_discount_cents: 0,
         return_reason_code: @reason_code,
         return_reason_name_snapshot: @reason_name,

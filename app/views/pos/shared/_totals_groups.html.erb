@@ -1,0 +1,16 @@
+<%#
+  locals: groups:
+%>
+<% groups.each do |group| %>
+  <section class="pos-report-group">
+    <h2><%= group.title %></h2>
+    <dl class="pos-close__facts">
+      <% group.rows.each do |row| %>
+        <div>
+          <dt><%= row.label %></dt>
+          <dd><%= pos_report_row_value(row) %></dd>
+        </div>
+      <% end %>
+    </dl>
+  </section>
+<% end %>

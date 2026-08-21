@@ -189,7 +189,7 @@ class PosRegisterTest < ActionDispatch::IntegrationTest
     Store.create!(
       store_number: "2",
       code: "east",
-      name: "East Store",
+      name: "East Store", legal_name: "Example Books LLC",
       timezone: "America/New_York",
       country_code: "US"
     )
@@ -436,7 +436,7 @@ class PosRegisterTest < ActionDispatch::IntegrationTest
     east = Store.create!(
       store_number: "2",
       code: "east",
-      name: "East Store",
+      name: "East Store", legal_name: "Example Books LLC",
       timezone: "America/New_York",
       country_code: "US"
     )
@@ -492,9 +492,9 @@ class PosRegisterTest < ActionDispatch::IntegrationTest
     transaction = PosTransaction.working.find_by!(register: @register)
     post pos_register_merchandise_path, params: { identifier: @variant.sku, lock_version: transaction.lock_version }
     assert_response :success
-    assert_select "button", text: "Price override (F5)"
-    assert_select "button", text: "Discount (F6)"
-    assert_select "button", text: "Tax Class (F7)"
+    assert_select "button", text: "Price (F6)"
+    assert_select "button", text: "Discount (F7)"
+    assert_select "button", text: "Tax Class"
     assert_select "#pos_control_overlay"
     assert_select "#pos-approver-username"
     assert_select "#pos-approver-password"
@@ -558,6 +558,58 @@ class PosRegisterTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "turbo stream overlay error updates dialog feedback without replacing the workspace" do
+    pos_transacting_user(store: @store, assigned_by: @actor, username: "clerk_overlay")
+    pos_store_manager(store: @store, assigned_by: @actor, username: "mgr_overlay")
+    delete session_path
+    sign_in_as("clerk_overlay")
+
+    post pos_register_enter_path, params: enter_params
+    follow_redirect!
+    transaction = PosTransaction.working.find_by!(register: @register)
+    post pos_register_merchandise_path, params: { identifier: @variant.sku, lock_version: transaction.lock_version }
+    line = transaction.reload.pos_transaction_lines.first
+
+    post pos_register_controlled_action_path, params: {
+      lock_version: transaction.lock_version,
+      line_id: line.id,
+      action_type: "price_override",
+      operation: "apply",
+      reason_code: "damaged",
+      selling_price: "15.00",
+      approver_username: "mgr_overlay",
+      approver_password: "wrong-password-secret"
+    }, headers: { "Accept" => "text/vnd.turbo-stream.html" }
+
+    assert_response :unprocessable_entity
+    assert_equal 1999, line.reload.selling_unit_price_cents
+    assert_match(/approver credentials/, response.body)
+    assert_includes response.body, 'target="pos-control-feedback"'
+    refute_includes response.body, 'target="pos_workspace"'
+    refute_includes response.body, "wrong-password-secret"
+  end
+
+  test "stale overlay submission still replaces the workspace" do
+    post pos_register_enter_path, params: enter_params
+    follow_redirect!
+    transaction = PosTransaction.working.find_by!(register: @register)
+    post pos_register_merchandise_path, params: { identifier: @variant.sku, lock_version: transaction.lock_version }
+    line = transaction.reload.pos_transaction_lines.first
+
+    post pos_register_controlled_action_path, params: {
+      lock_version: transaction.lock_version - 1,
+      line_id: line.id,
+      action_type: "price_override",
+      operation: "apply",
+      reason_code: "damaged",
+      selling_price: "15.00"
+    }, headers: { "Accept" => "text/vnd.turbo-stream.html" }
+
+    assert_response :success
+    assert_includes response.body, 'target="pos_workspace"'
+    assert_match(/This sale was changed/, response.body)
+  end
+
   test "discount apply ignores a leftover malformed selling_price" do
     post pos_register_enter_path, params: enter_params
     follow_redirect!
@@ -610,6 +662,201 @@ class PosRegisterTest < ActionDispatch::IntegrationTest
     line.reload
     assert_equal line.reference_unit_price_cents, line.selling_unit_price_cents
     assert_equal 0, line.pos_controlled_actions.count
+  end
+
+  test "resolve and search are read-only and open-price apply does not write a price_override" do
+    open_price = pos_sellable_variant(actor: @actor, tax_class: @tax, pricing_method: "open_price", name: "Open Book")
+    open_quantity_stock(store: @store, variant: open_price, actor: @actor, quantity: 3)
+    post pos_register_enter_path, params: enter_params
+    follow_redirect!
+    transaction = PosTransaction.working.find_by!(register: @register)
+    post pos_register_merchandise_path, params: { identifier: @variant.sku, lock_version: transaction.lock_version }
+    transaction.reload
+    post pos_register_tender_path, params: {
+      tender_amount: "10.00",
+      tender_type_id: TenderType.find_by!(code: "card").id,
+      external_reference: "AUTH-9",
+      lock_version: transaction.lock_version
+    }
+    transaction.reload
+    assert_equal 1, transaction.pos_tenders.count
+
+    get pos_register_merchandise_resolve_path, params: { identifier: open_price.sku }, as: :json
+    assert_response :success
+    body = response.parsed_body
+    assert_equal "open_price_required", body.fetch("outcome")
+    transaction.reload
+    assert_equal 1, transaction.pos_tenders.count
+    assert_equal 1, transaction.pos_transaction_lines.count
+
+    get pos_register_merchandise_search_path, params: { name: "Open Book" }, as: :json
+    assert_response :success
+    results = response.parsed_body.fetch("results")
+    assert results.is_a?(Array)
+    assert results.any? { |row| row.fetch("id") == open_price.id }
+
+    post pos_register_merchandise_path, params: {
+      product_variant_id: open_price.id,
+      selling_price: "5.00",
+      lock_version: transaction.lock_version
+    }
+    assert_response :success
+    transaction.reload
+    open_line = transaction.pos_transaction_lines.find_by!(product_variant_id: open_price.id)
+    assert_equal "open_price", open_line.pricing_method_snapshot
+    assert_equal 500, open_line.reference_unit_price_cents
+    assert_equal 500, open_line.selling_unit_price_cents
+    assert_equal 0, open_line.pos_controlled_actions.where(action_type: "price_override").count
+    assert_equal 0, transaction.pos_tenders.count
+  end
+
+  test "linked return lookup is read-only get" do
+    post pos_register_enter_path, params: enter_params
+    follow_redirect!
+    transaction = PosTransaction.working.find_by!(register: @register)
+    lock = transaction.lock_version
+    get pos_register_linked_return_lookup_path, params: { q: "not-a-receipt" }, as: :json
+    assert_response :success
+    assert_equal "empty", response.parsed_body.fetch("outcome")
+    transaction.reload
+    assert_equal lock, transaction.lock_version
+    assert_equal 0, transaction.pos_transaction_lines.count
+  end
+
+  test "resolve after store switch does not treat a sellable sku as missing" do
+    west = Store.create!(
+      store_number: "2",
+      code: "west",
+      name: "West Store",
+      legal_name: "Example Books LLC",
+      timezone: "America/New_York",
+      country_code: "US"
+    )
+    west_register = Register.create!(store: west, register_number: 1, name: "West Front")
+    post store_selection_path, params: { store_id: west.id }
+    post pos_register_enter_path, params: {
+      register_id: west_register.id,
+      opening_float: "0.00",
+      confirmed_business_date: BusinessDate.for_store(west).iso8601
+    }
+    assert_equal west_register.id.to_s, session[:pos_register_id].to_s
+
+    post store_selection_path, params: { store_id: @store.id }
+    assert_nil session[:pos_register_id]
+
+    post pos_register_enter_path, params: enter_params
+    follow_redirect!
+    assert_response :success
+    assert_match "register/merchandise_resolve?register_id=#{@register.id}", response.body
+    bound = session[:pos_register_id].to_s
+
+    get pos_register_merchandise_resolve_path, params: { identifier: @variant.sku, register_id: @register.id }, as: :json
+    assert_response :success
+    assert_equal "addable_variant", response.parsed_body.fetch("outcome")
+    assert_equal @variant.id, response.parsed_body.dig("variant", "id")
+    assert_equal bound, session[:pos_register_id].to_s
+
+    other = Register.create!(store: @store, register_number: 2, name: "Back")
+    get pos_register_merchandise_resolve_path, params: { identifier: @variant.sku, register_id: other.id }, as: :json
+    assert_response :conflict
+    assert_equal bound, session[:pos_register_id].to_s
+    assert_equal "open a register to continue", response.parsed_body.fetch("message")
+  end
+
+  test "read-only workspace gets do not bind the register" do
+    post pos_register_enter_path, params: enter_params
+    follow_redirect!
+    bound = session[:pos_register_id].to_s
+    other = Register.create!(store: @store, register_number: 9, name: "Unused")
+
+    get pos_register_workspace_path, params: { register_id: @register.id }
+    assert_response :success
+    assert_equal bound, session[:pos_register_id].to_s
+
+    get pos_register_merchandise_resolve_path, params: { identifier: @variant.sku, register_id: @register.id }, as: :json
+    assert_response :success
+    assert_equal bound, session[:pos_register_id].to_s
+
+    get pos_register_merchandise_search_path, params: { name: "Example", register_id: @register.id }, as: :json
+    assert_response :success
+    assert_equal bound, session[:pos_register_id].to_s
+
+    get pos_register_linked_return_lookup_path, params: { q: "not-a-receipt", register_id: @register.id }, as: :json
+    assert_response :success
+    assert_equal bound, session[:pos_register_id].to_s
+
+    get pos_register_workspace_path, params: { register_id: other.id }
+    assert_redirected_to pos_register_enter_path(register_id: other.id)
+    assert_equal bound, session[:pos_register_id].to_s
+
+    get pos_register_merchandise_resolve_path, params: { identifier: @variant.sku, register_id: other.id }, as: :json
+    assert_response :conflict
+    assert_equal bound, session[:pos_register_id].to_s
+
+    get pos_register_merchandise_search_path, params: { name: "Example", register_id: other.id }, as: :json
+    assert_response :conflict
+    assert_equal bound, session[:pos_register_id].to_s
+
+    get pos_register_linked_return_lookup_path, params: { q: @variant.sku, register_id: other.id }, as: :json
+    assert_response :conflict
+    assert_equal bound, session[:pos_register_id].to_s
+  end
+
+  test "completion and history keep performer and approver provenance" do
+    clerk = pos_transacting_user(store: @store, assigned_by: @actor, username: "clerk_prov")
+    manager = pos_store_manager(store: @store, assigned_by: @actor, username: "mgr_prov")
+    delete session_path
+    sign_in_as("clerk_prov")
+
+    post pos_register_enter_path, params: enter_params
+    follow_redirect!
+    transaction = PosTransaction.working.find_by!(register: @register)
+    post pos_register_merchandise_path, params: { identifier: @variant.sku, lock_version: transaction.lock_version }
+    line = transaction.reload.pos_transaction_lines.first
+
+    post pos_register_controlled_action_path, params: {
+      lock_version: transaction.lock_version,
+      line_id: line.id,
+      action_type: "price_override",
+      operation: "apply",
+      reason_code: "damaged",
+      selling_price: "15.00",
+      approver_username: "mgr_prov",
+      approver_password: "correct-horse-battery"
+    }
+    assert_response :success
+    transaction.reload
+    post pos_register_tender_path, params: { tender_amount: "25.00", lock_version: transaction.lock_version }
+    transaction.reload
+    operation_id = css_select("input[name='completion_operation_id']").first["value"]
+    post pos_transaction_complete_path(transaction), params: {
+      completion_operation_id: operation_id,
+      lock_version: transaction.lock_version,
+      expected_total_cents: transaction.total_cents,
+      expected_signed_net_cents: transaction.signed_net_cents,
+      amount_presented_cents: 2500
+    }
+    assert_redirected_to pos_completed_transaction_path(transaction)
+    follow_redirect!
+    assert_response :success
+    assert_match "Price override", response.body
+    assert_match "Performed by", response.body
+    assert_match clerk.display_name, response.body
+    assert_match "Approved by", response.body
+    assert_match manager.display_name, response.body
+    assert_match "Damaged", response.body
+    assert_select ".pos-receipt__print", text: /Price override/, count: 0
+    assert_select ".pos-receipt__print", text: /Performed by/, count: 0
+    assert_select ".pos-receipt__print", text: /Approved by/, count: 0
+
+    get pos_transaction_path(transaction)
+    assert_response :success
+    assert_match "Price override", response.body
+    assert_match "Performed by", response.body
+    assert_match clerk.display_name, response.body
+    assert_match "Approved by", response.body
+    assert_match manager.display_name, response.body
+    assert_match "Damaged", response.body
   end
 
   private

@@ -2,7 +2,7 @@
 
 **Status:** Implemented.
 
-**Authority:** Store-scoped completed-transaction lookup, immutable detail, and customer-receipt reprint for the Phase 5/6 register. Dual authority with Core remains [mvp-contract.md](mvp-contract.md) / [ADR-020](../../../adr/ADR-020-pos-operation-envelope-and-core-facts.md). Receipt identity remains [receipt-identity.md](../phase4-point-of-sale/receipt-identity.md).
+**Authority:** Store-scoped completed-transaction lookup, immutable detail, and customer-receipt reprint *mechanics* for the Phase 5/6 register. Dual authority with Core remains [mvp-contract.md](mvp-contract.md) / [ADR-020](../../../adr/ADR-020-pos-operation-envelope-and-core-facts.md). Receipt identity remains [receipt-identity.md](../phase4-point-of-sale/receipt-identity.md). Customer print *layout* is [receipt-presentation.md](receipt-presentation.md) (locked; implement in 6.8).
 
 Companions: [phase6-plan.md](phase6-plan.md), [register-workspace.md](../phase5-cash-register/register-workspace.md), [phase4-schema.md](../phase4-point-of-sale/phase4-schema.md), [returns.md](returns.md).
 
@@ -193,7 +193,7 @@ Fact-driven sections only. Do not render empty override / discount / return / po
 
 6.5B attaches **Return items** on this detail ([returns.md](returns.md) §25): remaining returnable quantity on original sale lines; sold / returned / remaining; completed-return links; **Return items** only when remaining quantity > 0. GET `/pos/transactions/:transaction_id/return_items` is read-only. POST resolves selected items first, scopes submitted `original_line_id`s to this receipt, and wraps target-transaction creation with the batch add so a failed POST does not leave an empty working transaction. No Session ⇒ `Open a register before processing a return.` History itself stays Session-free until the POST that adds selected items. 6.6 attaches **Post-void** on this detail ([post-void.md](post-void.md)).
 
-Immediate completion, historical detail, and customer print share directional totals with tax (Sales subtotal/discount/tax/total; Return subtotal/discount reversal/tax reversal/total; Net). Omit a direction that has no lines.
+Immediate completion and historical detail share directional totals with tax (Sales subtotal/discount/tax/total; Return subtotal/discount reversal/tax reversal/total; Net). Omit a direction that has no lines. Customer print does **not** use those operator labels; 6.8 layout is [receipt-presentation.md](receipt-presentation.md).
 
 ---
 
@@ -201,7 +201,7 @@ Immediate completion, historical detail, and customer print share directional to
 
 Immediate completion Print is the original copy (`reprint: false`). History Print is `REPRINT` (`reprint: true`). Same print partial; same receipt identity; no new commercial records, inventory, outbox, or receipt sequence.
 
-No reprint table. No reprint audit in 6.3 (`window.print` stays client-side).
+No reprint table. No reprint audit in 6.3 (`window.print` stays client-side). [receipt-presentation.md](receipt-presentation.md) does not add reprint audit.
 
 ---
 
@@ -212,7 +212,7 @@ No reprint table. No reprint audit in 6.3 (`window.print` stays client-side).
 - Immediate completion actions may include Transactions (POS layout has no application nav).
 - History pages: Store, signed-in user, Transactions, Register. Register resumes the bound Register when `session[:pos_register_id]` has an open Session owned by this cashier; otherwise the cashier’s sole open Session at this Store; otherwise enter. No New sale / Close register / scan field. Multiple open Sessions never pick an arbitrary Register.
 
-History stays under `/pos` with the POS importmap. No 6.3 keyboard shortcut (6.7). Do not add Hotwire to admin chrome.
+History stays under `/pos` with the POS importmap. 6.7 binds **F10** to this history ([pos-workflow.md](pos-workflow.md) §14) without cancelling the working basket. Do not add Hotwire to admin chrome.
 
 ---
 

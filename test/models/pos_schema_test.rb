@@ -169,6 +169,13 @@ class PosSchemaTest < ActiveSupport::TestCase
     assert Role.find_by!(key: "store_manager").permissions.exists?(key: "pos.transact")
   end
 
+  test "pos.sessions.view is seeded for store manager and system administrator only" do
+    assert Permission.exists?(key: "pos.sessions.view", scope_type: "either")
+    assert Role.find_by!(key: "system_administrator").permissions.exists?(key: "pos.sessions.view")
+    assert Role.find_by!(key: "store_manager").permissions.exists?(key: "pos.sessions.view")
+    assert_not Role.find_by!(key: "associate").permissions.exists?(key: "pos.sessions.view")
+  end
+
   test "controlled-action permissions are seeded by role" do
     associate = Role.find_by!(key: "associate")
     manager = Role.find_by!(key: "store_manager")

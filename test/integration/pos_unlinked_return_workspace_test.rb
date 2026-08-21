@@ -128,6 +128,28 @@ class PosUnlinkedReturnWorkspaceTest < ActionDispatch::IntegrationTest
     assert_equal 1, event.before_values["quantity"]
   end
 
+  test "stale unlinked preview replaces the workspace instead of the overlay" do
+    post pos_register_enter_path, params: enter_params
+    transaction = PosTransaction.working.find_by!(register: @register)
+
+    post pos_register_unlinked_return_path, params: {
+      lock_version: transaction.lock_version,
+      identifier: @variant.sku,
+      quantity: 1,
+      reason_code: "changed_mind",
+      return_price: "18.00",
+      expected_product_variant_id: @variant.id,
+      expected_reference_unit_price_cents: 1,
+      expected_tax_class_id: @tax.id
+    }, headers: { "Accept" => "text/vnd.turbo-stream.html" }
+
+    assert_response :success
+    assert_equal 0, transaction.reload.pos_transaction_lines.count
+    assert_includes response.body, 'target="pos_workspace"'
+    assert_match Pos::ExecuteUnlinkedReturn::STALE_PREVIEW_MESSAGE, response.body
+    refute_includes response.body, 'target="pos-unlinked-feedback"'
+  end
+
   private
 
   def sign_in_as(username)
