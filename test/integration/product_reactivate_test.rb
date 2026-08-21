@@ -8,8 +8,7 @@ class ProductReactivateTest < ActionDispatch::IntegrationTest
     @admin = @bootstrap[:administrator]
     @product = Products::Create.call(
       attributes: { name: "Discontinued Book", status: "active" },
-      actor: @admin,
-      identifier_mode: "generate"
+      actor: @admin
     )
     @product.update!(status: "discontinued")
   end

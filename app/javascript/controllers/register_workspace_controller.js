@@ -58,6 +58,9 @@ export default class extends Controller {
     "controlRemove",
     "unlinkedIdentifierField",
     "unlinkedIdentifierInput",
+    "unlinkedProductIdInput",
+    "unlinkedVariantIdInput",
+    "unlinkedUnitIdInput",
     "unlinkedQuantityInput",
     "unlinkedReasonInput",
     "unlinkedNoteInput",
@@ -105,6 +108,8 @@ export default class extends Controller {
     "searchSkuField",
     "searchNameField",
     "searchQueryLabel",
+    "productOverlay",
+    "productList",
     "variantOverlay",
     "variantList",
     "unitOverlay",
@@ -226,6 +231,11 @@ export default class extends Controller {
 
     if (this.searchOverlayOpen()) {
       this.onSearchOverlayKeydown(event, key)
+      return
+    }
+
+    if (this.productOverlayOpen()) {
+      this.onProductOverlayKeydown(event, key)
       return
     }
 
@@ -766,6 +776,7 @@ export default class extends Controller {
   async fetchResolve(params) {
     const url = new URL(this.resolveUrlValue, window.location.origin)
     if (params.identifier) url.searchParams.set("identifier", params.identifier)
+    if (params.product_id) url.searchParams.set("product_id", params.product_id)
     if (params.product_variant_id) url.searchParams.set("product_variant_id", params.product_variant_id)
     if (params.inventory_unit_id) url.searchParams.set("inventory_unit_id", params.inventory_unit_id)
     const response = await fetch(url, { headers: { Accept: "application/json" }, credentials: "same-origin" })
@@ -781,6 +792,9 @@ export default class extends Controller {
         return
       case "addable_unit":
         this.postAddMerchandise({ unitId: result.unit.id })
+        return
+      case "product_choice_required":
+        this.openProductPicker(result.products || [])
         return
       case "variant_choice_required":
         this.openVariantPicker(result.variants || [])
@@ -908,6 +922,59 @@ export default class extends Controller {
     this.resolveAndHandle({ product_variant_id: variantId })
   }
 
+  openProductPicker(products) {
+    if (!this.hasProductOverlayTarget || !this.hasProductListTarget) return
+    this.productListTarget.replaceChildren()
+    products.forEach((product, index) => {
+      const item = document.createElement("li")
+      item.dataset.productId = product.id
+      const identity = [product.primary_identifier, product.industry_identifier, product.lookup_code].filter(Boolean).join(" · ")
+      const descriptor = [product.name, product.subtitle, product.brand_name].filter(Boolean).join(" — ")
+      item.textContent = [descriptor, identity].filter(Boolean).join(" · ")
+      this.decoratePickerItem(item, { selected: index === 0 })
+      this.productListTarget.append(item)
+    })
+    this.showOverlay(this.productOverlayTarget, this.productListTarget.querySelector("li.is-selected"))
+  }
+
+  closeProductOverlay() {
+    this.hideOverlay(this.hasProductOverlayTarget && this.productOverlayTarget)
+  }
+
+  onProductOverlayKeydown(event, key) {
+    if (key === "Escape") {
+      event.preventDefault()
+      this.closeProductOverlay()
+      if (this.unlinkedPickerActive) {
+        this.unlinkedPickerActive = false
+        this.unlinkedSelection = null
+      }
+      return
+    }
+    if (key === "ArrowUp" || key === "ArrowDown") {
+      event.preventDefault()
+      this.movePickerList(this.productListTarget, key === "ArrowUp" ? -1 : 1)
+      return
+    }
+    if (key === "Enter") {
+      event.preventDefault()
+      this.selectHighlightedProduct()
+    }
+  }
+
+  selectHighlightedProduct() {
+    const selected = this.hasProductListTarget && this.productListTarget.querySelector("li.is-selected")
+    if (!selected || !selected.dataset.productId) return
+    const productId = selected.dataset.productId
+    this.closeProductOverlay()
+    if (this.unlinkedPickerActive) {
+      this.unlinkedPickerActive = false
+      this.fetchUnlinkedResolution({ product_id: productId })
+      return
+    }
+    this.resolveAndHandle({ product_id: productId })
+  }
+
   openVariantPicker(variants) {
     if (!this.hasVariantOverlayTarget || !this.hasVariantListTarget) return
     this.variantListTarget.replaceChildren()
@@ -931,6 +998,10 @@ export default class extends Controller {
     if (key === "Escape") {
       event.preventDefault()
       this.closeVariantOverlay()
+      if (this.unlinkedPickerActive) {
+        this.unlinkedPickerActive = false
+        this.unlinkedSelection = null
+      }
       return
     }
     if (key === "ArrowUp" || key === "ArrowDown") {
@@ -949,6 +1020,11 @@ export default class extends Controller {
     if (!selected) return
     const variantId = selected.dataset.variantId
     this.closeVariantOverlay()
+    if (this.unlinkedPickerActive) {
+      this.unlinkedPickerActive = false
+      this.fetchUnlinkedResolution({ product_variant_id: variantId })
+      return
+    }
     this.resolveAndHandle({ product_variant_id: variantId })
   }
 
@@ -979,6 +1055,10 @@ export default class extends Controller {
     if (key === "Escape") {
       event.preventDefault()
       this.closeUnitOverlay()
+      if (this.unlinkedPickerActive) {
+        this.unlinkedPickerActive = false
+        this.unlinkedSelection = null
+      }
       return
     }
     if (key === "ArrowUp" || key === "ArrowDown") {
@@ -997,6 +1077,11 @@ export default class extends Controller {
     if (!selected || !selected.dataset.unitId) return
     const unitId = selected.dataset.unitId
     this.closeUnitOverlay()
+    if (this.unlinkedPickerActive) {
+      this.unlinkedPickerActive = false
+      this.fetchUnlinkedResolution({ inventory_unit_id: unitId })
+      return
+    }
     this.resolveAndHandle({ inventory_unit_id: unitId })
   }
 
@@ -1473,7 +1558,19 @@ export default class extends Controller {
     if (this.inFlight || !this.hasUnlinkedIdentifierFieldTarget) return
     const identifier = this.unlinkedIdentifierFieldTarget.value.trim()
     if (identifier === "") return
+    this.unlinkedSelection = { identifier }
+    await this.fetchUnlinkedResolution({ identifier })
+  }
+
+  async fetchUnlinkedResolution(params = {}) {
     const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute("content")
+    const body = new URLSearchParams()
+    const identifier = params.identifier || this.unlinkedSelection?.identifier ||
+      (this.hasUnlinkedIdentifierFieldTarget ? this.unlinkedIdentifierFieldTarget.value.trim() : "")
+    if (identifier) body.set("identifier", identifier)
+    if (params.product_id) body.set("product_id", params.product_id)
+    if (params.product_variant_id) body.set("product_variant_id", params.product_variant_id)
+    if (params.inventory_unit_id) body.set("inventory_unit_id", params.inventory_unit_id)
     try {
       const response = await fetch(this.unlinkedLookupUrlValue, {
         method: "POST",
@@ -1482,18 +1579,40 @@ export default class extends Controller {
           "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
           "X-CSRF-Token": token || ""
         },
-        body: new URLSearchParams({ identifier }).toString()
+        body: body.toString()
       })
       const payload = await response.json()
-      if (!response.ok) {
-        this.showUnlinkedFeedback(payload.error || "merchandise not found")
-        this.clearUnlinkedPreviewState()
-        return
-      }
-      this.applyUnlinkedPreview(payload)
+      this.handleUnlinkedResolution(payload, response.ok)
     } catch (_error) {
       this.showUnlinkedFeedback("merchandise not found")
       this.clearUnlinkedPreviewState()
+      this.unlinkedSelection = null
+    }
+  }
+
+  handleUnlinkedResolution(payload, ok) {
+    const outcome = payload.outcome || (ok ? "resolved" : "unavailable")
+    switch (outcome) {
+      case "resolved":
+        this.applyUnlinkedPreview(payload)
+        return
+      case "product_choice_required":
+        this.unlinkedPickerActive = true
+        this.openProductPicker(payload.products || [])
+        return
+      case "variant_choice_required":
+        this.unlinkedPickerActive = true
+        this.openVariantPicker(payload.variants || [])
+        return
+      case "unit_choice_required":
+        this.unlinkedPickerActive = true
+        this.openUnitPicker(payload.units || [])
+        return
+      default:
+        this.showUnlinkedFeedback(payload.error || payload.message || "merchandise not found")
+        this.clearUnlinkedPreviewState()
+        this.unlinkedSelection = null
+        this.unlinkedPickerActive = false
     }
   }
 
@@ -1539,6 +1658,15 @@ export default class extends Controller {
       this.unlinkedIdentifierInputTarget.value = this.hasUnlinkedIdentifierFieldTarget
         ? this.unlinkedIdentifierFieldTarget.value.trim()
         : ""
+    }
+    if (this.hasUnlinkedProductIdInputTarget) {
+      this.unlinkedProductIdInputTarget.value = this.unlinkedPreviewPayload.product_id || ""
+    }
+    if (this.hasUnlinkedVariantIdInputTarget) {
+      this.unlinkedVariantIdInputTarget.value = this.unlinkedPreviewPayload.product_variant_id || ""
+    }
+    if (this.hasUnlinkedUnitIdInputTarget) {
+      this.unlinkedUnitIdInputTarget.value = this.unlinkedPreviewPayload.inventory_unit_id || ""
     }
     if (this.hasUnlinkedQuantityInputTarget) {
       this.unlinkedQuantityInputTarget.value = this.unlinkedPreviewPayload.quantity_fixed
@@ -1661,6 +1789,7 @@ export default class extends Controller {
       this.hasControlOverlayTarget && this.controlOverlayTarget,
       this.hasOtherOverlayTarget && this.otherOverlayTarget,
       this.hasSearchOverlayTarget && this.searchOverlayTarget,
+      this.hasProductOverlayTarget && this.productOverlayTarget,
       this.hasVariantOverlayTarget && this.variantOverlayTarget,
       this.hasUnitOverlayTarget && this.unitOverlayTarget,
       this.hasOpenPriceOverlayTarget && this.openPriceOverlayTarget,
@@ -1760,6 +1889,10 @@ export default class extends Controller {
 
   searchOverlayOpen() {
     return this.hasSearchOverlayTarget && !this.searchOverlayTarget.hidden
+  }
+
+  productOverlayOpen() {
+    return this.hasProductOverlayTarget && !this.productOverlayTarget.hidden
   }
 
   variantOverlayOpen() {

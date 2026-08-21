@@ -178,7 +178,7 @@ class PosResolveAndOpenPriceTest < ActiveSupport::TestCase
       amount_cents: 100,
       external_reference: "AUTH-2"
     )
-    @open_price.merchandise_class.update_column(:pricing_method, "fixed")
+    @open_price.merchandise_class.update_column(:default_pricing_method, "fixed")
 
     updated = Pos::UpdateOpenPrice.call(
       transaction: transaction.reload,

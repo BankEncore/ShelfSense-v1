@@ -8,19 +8,23 @@
 <section>
   <h2>Column dictionary</h2>
   <ul>
-    <li><code>primary_identifier</code> — required unless <code>generate_primary_identifier</code> is true</li>
+    <li><code>product_primary_identifier</code> — existing generated <code>222</code> identifier; update key only. Import cannot assign a primary identifier: every new product receives a generated <code>222</code>.</li>
+    <li><code>product_industry_identifier</code> — optional product-level manufacturer GTIN (ISBN-10, ISBN-13, UPC-A, EAN-13); normalized to 13 digits. Doubles as an update key when it matches exactly one product.</li>
+    <li><code>product_lookup_code</code> — optional nonunique product search code; stored uppercase (<code>A–Z</code>, <code>0–9</code>, <code>.</code>, <code>_</code>, <code>/</code>, <code>-</code>). Locates a product only when exactly one product matches; several matches fail the group.</li>
     <li><code>name</code> — required for a new product</li>
-    <li><code>generate_primary_identifier</code> — <code>true</code>/<code>false</code>; blank+true is create-only and not idempotent on reimport</li>
     <li><code>status</code> — optional product status</li>
     <li><code>sku</code> — identifies an existing variant for update; cannot assign a SKU to a new variant</li>
     <li><code>variant_type</code> — <code>standard</code> or <code>used</code> for new variants</li>
     <li><code>variant_name</code> — maps to <code>product_variants.name</code>; blank uses shared create defaults</li>
-    <li><code>industry_identifier</code> — optional GTIN/ISBN-style identifier</li>
+    <li><code>industry_identifier</code> — variant-level GTIN, only when this variant has a manufacturer GTIN distinct from the product's</li>
     <li><code>variant_condition_code</code> — required for used; prohibited for standard; exact canonical code match</li>
-    <li><code>merchandise_class_code</code>, <code>department_code</code>, <code>tax_class_code</code> — exact canonical codes; blank uses defaults; unknown codes error</li>
+    <li><code>merchandise_class_code</code> — exact canonical code; blank uses the merchandise category default; unknown codes error</li>
+    <li><code>inventory_mode</code>, <code>pricing_method</code>, <code>target_margin_bps</code>, <code>supplier_returnable</code> — copied onto the new variant; blank keeps the merchandise-class default, and an explicit <code>false</code> supplier returnability is kept</li>
+    <li><code>tax_class_override_code</code> — blank means inherit the merchandise class's current default tax class</li>
     <li><code>regular_price_cents</code> — integer minor units (cents)</li>
   </ul>
-  <p>Rows sharing a normalized entered product identifier are one transaction group; a failure rolls back that group.</p>
+  <p>Rows sharing a resolvable product key are one transaction group; a failure rolls back that group. Rows with no product key are create-only and are not idempotent on reimport.</p>
+  <p>A blank cell never clears an existing value. Retire a product industry identifier or remove a lookup code on the product screen.</p>
 </section>
 
 <%= form_with url: admin_merchandise_imports_path, scope: :import, html: { multipart: true } do |form| %>

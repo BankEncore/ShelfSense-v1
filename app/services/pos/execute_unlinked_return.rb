@@ -22,7 +22,10 @@ module Pos
       expected_product_variant_id: nil,
       expected_inventory_unit_id: nil,
       expected_reference_unit_price_cents: nil,
-      expected_tax_class_id: nil
+      expected_tax_class_id: nil,
+      product_id: nil,
+      product_variant_id: nil,
+      inventory_unit_id: nil
     )
       @transaction = transaction
       @actor = actor
@@ -38,6 +41,9 @@ module Pos
       @expected_inventory_unit_id = expected_inventory_unit_id.to_s.presence
       @expected_reference_unit_price_cents = expected_reference_unit_price_cents
       @expected_tax_class_id = expected_tax_class_id.to_s.presence
+      @product_id = product_id.to_s.presence
+      @product_variant_id = product_variant_id.to_s.presence
+      @inventory_unit_id = inventory_unit_id.to_s.presence
     end
 
     def call
@@ -60,10 +66,15 @@ module Pos
 
       PosTransaction.transaction do
         transaction = Pos::Support.lock_working_transaction!(@transaction, @expected_lock_version)
-        resolved = Pos::ResolveUnlinkedReturnMerchandise.call(
-          identifier: @identifier,
-          store: transaction.store,
-          lock_unit: true
+        resolved = require_resolved_unlinked!(
+          Pos::ResolveUnlinkedReturnMerchandise.call(
+            identifier: @identifier,
+            store: transaction.store,
+            product: find_optional(Product, @product_id),
+            variant: find_optional(ProductVariant, @product_variant_id),
+            inventory_unit: find_optional(InventoryUnit, @inventory_unit_id),
+            lock_unit: true
+          )
         )
         capture_resolved!(resolved)
         validate_resolved!(resolved)
@@ -110,6 +121,23 @@ module Pos
     end
 
     private
+
+    def require_resolved_unlinked!(result)
+      case result.outcome
+      when :resolved
+        result
+      when :product_choice_required, :variant_choice_required, :unit_choice_required
+        raise Pos::Error, "select a product, variant, or unit before applying the return"
+      else
+        raise Pos::Error, result.message.presence || "merchandise not found"
+      end
+    end
+
+    def find_optional(model, id)
+      return if id.blank?
+
+      model.find_by(id: id)
+    end
 
     def capture_resolved!(resolved)
       @resolved_product_variant_id = resolved.variant.id.to_s

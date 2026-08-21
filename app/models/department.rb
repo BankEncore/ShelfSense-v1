@@ -19,7 +19,6 @@ class Department < ApplicationRecord
     inventory_adjustment_gain_gl_account_id
   ].freeze
 
-  belongs_to :default_tax_class, class_name: "TaxClass"
   belongs_to :inventory_asset_gl_account, class_name: "GlAccount", optional: true
   belongs_to :cost_of_goods_sold_gl_account, class_name: "GlAccount", optional: true
   belongs_to :sales_revenue_gl_account, class_name: "GlAccount", optional: true
@@ -30,16 +29,15 @@ class Department < ApplicationRecord
   belongs_to :inventory_adjustment_gain_gl_account, class_name: "GlAccount", optional: true
   belongs_to :inventory_adjustment_loss_gl_account, class_name: "GlAccount", optional: true
   belongs_to :inventory_write_down_gl_account, class_name: "GlAccount", optional: true
+  has_many :merchandise_classes, dependent: :restrict_with_exception
 
   before_validation :normalize_department_number
 
-  validates :code, :name, :default_tax_class_id, presence: true
+  validates :code, :name, :department_number, presence: true
   validates :code, uniqueness: true, format: { with: Codes::Normalizer::FORMAT }
-  validates :default_target_margin_bps,
-            numericality: { only_integer: true, greater_than_or_equal_to: 0, less_than: 10_000 },
-            allow_nil: true
+  validates :department_number, uniqueness: true
   validate :validate_changed_gl_mappings
-  validate :validate_changed_tax_class
+  validate :cannot_deactivate_with_active_classes, if: -> { active_changed? && !active? }
 
   scope :active, -> { where(active: true) }
   scope :assignable, -> { active }
@@ -50,11 +48,7 @@ class Department < ApplicationRecord
   end
 
   def admin_label
-    if department_number.present?
-      "#{department_number} - #{name}"
-    else
-      name
-    end
+    "#{department_number} - #{name}"
   end
 
   def self.options_for_select(records = admin_ordered)
@@ -63,9 +57,6 @@ class Department < ApplicationRecord
 
   def reactivation_blockers
     blockers = []
-    if default_tax_class.blank? || !default_tax_class.active?
-      blockers << "default tax class must be active"
-    end
 
     GL_MAPPING_EXPECTATIONS.each do |field, expectation|
       account = public_send(field.to_s.delete_suffix("_id"))
@@ -96,11 +87,10 @@ class Department < ApplicationRecord
     self.department_number = department_number.to_s.strip.presence
   end
 
-  def validate_changed_tax_class
-    return unless default_tax_class_id_changed?
-    return if default_tax_class.blank?
+  def cannot_deactivate_with_active_classes
+    return unless merchandise_classes.active.exists?
 
-    errors.add(:default_tax_class_id, "must be an active tax class") unless default_tax_class.assignable?
+    errors.add(:active, "cannot deactivate while active merchandise classes exist")
   end
 
   def validate_changed_gl_mappings

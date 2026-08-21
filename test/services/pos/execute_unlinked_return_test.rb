@@ -154,15 +154,13 @@ class PosExecuteUnlinkedReturnTest < ActiveSupport::TestCase
     assert_equal @variant.id, line.product_variant_id
   end
 
-  test "product-primary identifier with multiple variants is rejected" do
+  test "product-primary identifier with multiple variants requires selecting a variant" do
     ProductVariants::Create.call(
       product: @variant.product,
       attributes: {
         variant_type: "standard",
         status: "active",
         merchandise_class_id: @variant.merchandise_class_id,
-        department_id: @variant.department_id,
-        tax_class_id: @variant.tax_class_id,
         regular_price_cents: 1500
       },
       actor: @admin
@@ -171,7 +169,116 @@ class PosExecuteUnlinkedReturnTest < ActiveSupport::TestCase
     error = assert_raises(Pos::Error) do
       add_unlinked!(transaction, @manager, identifier: @variant.product.primary_identifier)
     end
-    assert_match(/scan\/enter variant or unit identifier/, error.message)
+    assert_match(/select a product, variant, or unit/i, error.message)
+
+    line = add_unlinked!(
+      transaction.reload,
+      @manager,
+      identifier: @variant.product.primary_identifier,
+      product_variant_id: @variant.id
+    )
+    assert_equal @variant.id, line.product_variant_id
+  end
+
+  test "product industry identifier and unique lookup code reach the same variant" do
+    Identifiers::AssignProductIndustry.call(product: @variant.product, raw_value: external_isbn13)
+    @variant.product.update!(lookup_code: "UNL-1")
+
+    transaction = start_transaction(@manager)
+    by_industry = add_unlinked!(transaction, @manager, identifier: external_isbn13)
+    by_lookup_code = add_unlinked!(transaction.reload, @manager, identifier: "unl-1")
+
+    assert_equal @variant.id, by_industry.product_variant_id
+    assert_equal @variant.id, by_lookup_code.product_variant_id
+  end
+
+  test "a shared lookup code requires selecting a product then resolves" do
+    @variant.product.update!(lookup_code: "UNL-SHARED")
+    other_product = Products::Create.call(
+      attributes: { name: "Other Unlinked", status: "active" },
+      actor: @admin,
+      lookup_code: "UNL-SHARED"
+    )
+    ProductVariants::Create.call(
+      product: other_product,
+      attributes: {
+        variant_type: "standard",
+        status: "active",
+        merchandise_class_id: @variant.merchandise_class_id,
+        regular_price_cents: 1500
+      },
+      actor: @admin
+    )
+
+    transaction = start_transaction(@manager)
+    error = assert_raises(Pos::Error) do
+      add_unlinked!(transaction, @manager, identifier: "unl-shared")
+    end
+    assert_match(/select a product, variant, or unit/i, error.message)
+
+    line = add_unlinked!(
+      transaction.reload,
+      @manager,
+      identifier: "unl-shared",
+      product_id: @variant.product_id
+    )
+    assert_equal @variant.id, line.product_variant_id
+    assert_equal 1, transaction.reload.pos_transaction_lines.count
+  end
+
+  test "reject product selection that is not among shared lookup matches" do
+    @variant.product.update!(lookup_code: "UNL-BOUND")
+    Products::Create.call(
+      attributes: { name: "Shared Peer", status: "active" },
+      actor: @admin,
+      lookup_code: "UNL-BOUND"
+    )
+    outsider = pos_sellable_variant(actor: @admin, tax_class: @tax, name: "Outsider")
+
+    transaction = start_transaction(@manager)
+    error = assert_raises(Pos::InvalidatedDialogBasis) do
+      add_unlinked!(
+        transaction,
+        @manager,
+        identifier: "unl-bound",
+        product_id: outsider.product_id
+      )
+    end
+    assert_equal Pos::ResolveUnlinkedReturnMerchandise::SELECTION_MISMATCH_MESSAGE, error.message
+    assert_equal 0, transaction.reload.pos_transaction_lines.count
+  end
+
+  test "reject variant selection that does not belong to the identifier product" do
+    other = pos_sellable_variant(actor: @admin, tax_class: @tax, name: "Unrelated Variant")
+
+    transaction = start_transaction(@manager)
+    error = assert_raises(Pos::InvalidatedDialogBasis) do
+      add_unlinked!(
+        transaction,
+        @manager,
+        identifier: @variant.product.primary_identifier,
+        product_variant_id: other.id
+      )
+    end
+    assert_equal Pos::ResolveUnlinkedReturnMerchandise::SELECTION_MISMATCH_MESSAGE, error.message
+    assert_equal 0, transaction.reload.pos_transaction_lines.count
+  end
+
+  test "reject unit selection unrelated to the scanned variant identifier" do
+    _foreign_variant, foreign_unit = pos_on_hand_unit(store: @store, actor: @admin, tax_class: @tax, name: "Foreign Unit")
+    foreign_unit.update_columns(lifecycle_state: "removed", removed_at: Time.current)
+
+    transaction = start_transaction(@manager)
+    error = assert_raises(Pos::InvalidatedDialogBasis) do
+      add_unlinked!(
+        transaction,
+        @manager,
+        identifier: @variant.sku,
+        inventory_unit_id: foreign_unit.id
+      )
+    end
+    assert_equal Pos::ResolveUnlinkedReturnMerchandise::SELECTION_MISMATCH_MESSAGE, error.message
+    assert_equal 0, transaction.reload.pos_transaction_lines.count
   end
 
   test "unlinked returns do not merge on rescan" do
@@ -237,7 +344,10 @@ class PosExecuteUnlinkedReturnTest < ActiveSupport::TestCase
       expected_product_variant_id: attrs[:expected_product_variant_id],
       expected_inventory_unit_id: attrs[:expected_inventory_unit_id],
       expected_reference_unit_price_cents: attrs[:expected_reference_unit_price_cents],
-      expected_tax_class_id: attrs[:expected_tax_class_id]
+      expected_tax_class_id: attrs[:expected_tax_class_id],
+      product_id: attrs[:product_id],
+      product_variant_id: attrs[:product_variant_id],
+      inventory_unit_id: attrs[:inventory_unit_id]
     )
   end
 

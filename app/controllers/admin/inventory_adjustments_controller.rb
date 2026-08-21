@@ -146,10 +146,18 @@ module Admin
       case result.status
       when :variant
         result.variant
-      when :multi_variant
-        raise ArgumentError, "Multiple variants match; enter a specific variant SKU"
+      when :inventory_unit
+        result.variant || raise(ArgumentError, "Variant not found")
       when :product
-        raise ArgumentError, "Product has no sellable variant; enter a variant SKU"
+        # Adjustments may target discontinued or unsellable merchandise, so POS
+        # sellability must not filter these candidates.
+        variants = result.product.product_variants.to_a
+        raise ArgumentError, "Product has no variants; enter a variant SKU" if variants.empty?
+        raise ArgumentError, "Multiple variants match; enter a specific variant SKU" if variants.many?
+
+        variants.first
+      when :multiple_products
+        raise ArgumentError, "Multiple products share that lookup code; enter a specific variant SKU"
       else
         raise ArgumentError, result.message.presence || "Variant not found"
       end

@@ -82,6 +82,47 @@ class PosLookupLinkedReturnTest < ActiveSupport::TestCase
     assert_equal oldest.pos_transaction_lines.first.id, result.lines.first.id
   end
 
+  test "product lookup code finds the original even when the variant is no longer sellable" do
+    sale = complete_sale!
+    @variant.product.update!(lookup_code: "RET-1")
+    @variant.update_columns(status: "discontinued")
+
+    result = Pos::LookupLinkedReturn.call(store: @store, query: "ret-1")
+
+    assert_equal :lines, result.outcome
+    assert_equal sale.id, result.transaction_id
+  end
+
+  test "a shared lookup code asks for a variant or unit identifier instead of guessing" do
+    complete_sale!
+    @variant.product.update!(lookup_code: "RET-SHARED")
+    Products::Create.call(
+      attributes: { name: "Other Returnable", status: "active" },
+      actor: @actor,
+      lookup_code: "RET-SHARED"
+    )
+
+    result = Pos::LookupLinkedReturn.call(store: @store, query: "ret-shared")
+
+    assert_equal :empty, result.outcome
+    assert_match(/multiple products share that lookup code/i, result.message)
+  end
+
+  test "a retired identifier reports retirement rather than falling through to a lookup code" do
+    complete_sale!
+    decoy = Products::Create.call(
+      attributes: { name: "Decoy Returnable", status: "active" },
+      actor: @actor
+    )
+    decoy.update!(lookup_code: @variant.product.primary_identifier)
+    Identifiers::Registry.retire!(value: @variant.product.primary_identifier)
+
+    result = Pos::LookupLinkedReturn.call(store: @store, query: @variant.product.primary_identifier)
+
+    assert_equal :empty, result.outcome
+    assert_match(/retired/i, result.message)
+  end
+
   test "unit identifier lands on that receipt's returnable lines" do
     used, unit = pos_on_hand_unit(store: @store, actor: @actor, tax_class: @tax)
     sale = complete_unit_sale!(unit)

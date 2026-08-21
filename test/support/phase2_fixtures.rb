@@ -62,13 +62,12 @@ module Phase2Fixtures
     )
   end
 
-  def department(code:, default_tax_class: nil, name: nil, active: true, **gl_mappings)
-    default_tax_class ||= tax_class(code: "#{code}_tax")
+  def department(code:, name: nil, active: true, department_number: nil, **gl_mappings)
     Department.create!(
       {
         code: code,
         name: name || code.to_s.tr("_", " ").capitalize,
-        default_tax_class: default_tax_class,
+        department_number: department_number || code.to_s.upcase,
         active: active,
         display_order: 0
       }.merge(gl_mappings)
@@ -77,36 +76,51 @@ module Phase2Fixtures
 
   def merchandise_class(
     code:,
+    department: nil,
+    default_tax_class: nil,
     pricing_method: "fixed",
     used_merchandise_allowed: false,
     inventory_mode: "inventory",
-    default_standard_department: nil,
-    default_used_department: nil,
+    merchandise_class_number: nil,
     name: nil,
     active: true,
     **attrs
   )
+    department ||= self.department(code: "#{code}_dept")
+    default_tax_class ||= tax_class(code: "#{code}_tax")
     MerchandiseClass.create!(
       {
         code: code,
         name: name || code.to_s.tr("_", " ").capitalize,
-        pricing_method: pricing_method,
-        inventory_mode: inventory_mode,
+        department: department,
+        merchandise_class_number: merchandise_class_number || code.to_s.upcase[0, 20],
+        default_tax_class: default_tax_class,
+        default_pricing_method: pricing_method,
+        default_inventory_mode: inventory_mode,
         used_merchandise_allowed: used_merchandise_allowed,
-        default_standard_department: default_standard_department,
-        default_used_department: default_used_department,
         active: active,
         display_order: 0
       }.merge(attrs)
     )
   end
 
-  def merchandise_category(name:, default_merchandise_class: nil, code: nil, parent: nil, active: true, **attrs)
+  def merchandise_category(
+    name:,
+    default_standard_merchandise_class: nil,
+    default_used_merchandise_class: nil,
+    default_merchandise_class: nil,
+    code: nil,
+    parent: nil,
+    active: true,
+    **attrs
+  )
+    standard = default_standard_merchandise_class || default_merchandise_class
     MerchandiseCategory.create!(
       {
         name: name,
         code: code,
-        default_merchandise_class: default_merchandise_class,
+        default_standard_merchandise_class: standard,
+        default_used_merchandise_class: default_used_merchandise_class,
         parent: parent,
         active: active,
         display_order: 0

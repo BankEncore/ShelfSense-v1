@@ -664,6 +664,35 @@ class PosRegisterTest < ActionDispatch::IntegrationTest
     assert_equal 0, line.pos_controlled_actions.count
   end
 
+  test "shared lookup code returns product choices and selecting one resolves without adding" do
+    other = pos_sellable_variant(actor: @actor, tax_class: @tax, name: "Beta Shared")
+    open_quantity_stock(store: @store, variant: other, actor: @actor, quantity: 4)
+    @variant.product.update!(lookup_code: "SHARED", brand_name: "Acme")
+    other.product.update!(lookup_code: "SHARED")
+
+    post pos_register_enter_path, params: enter_params
+    follow_redirect!
+    assert_select "#pos_product_overlay[hidden]"
+    transaction = PosTransaction.working.find_by!(register: @register)
+
+    get pos_register_merchandise_resolve_path, params: { identifier: "shared" }, as: :json
+    assert_response :success
+    body = response.parsed_body
+    assert_equal "product_choice_required", body.fetch("outcome")
+    products = body.fetch("products")
+    assert_equal [ @variant.product.id, other.product.id ].sort, products.map { |row| row.fetch("id") }.sort
+    chosen = products.find { |row| row.fetch("id") == @variant.product.id }
+    assert_equal @variant.product.primary_identifier, chosen.fetch("primary_identifier")
+    assert_equal "SHARED", chosen.fetch("lookup_code")
+    assert_equal "Acme", chosen.fetch("brand_name")
+    assert_equal 0, transaction.reload.pos_transaction_lines.count
+
+    get pos_register_merchandise_resolve_path, params: { product_id: @variant.product.id }, as: :json
+    assert_response :success
+    assert_equal "addable_variant", response.parsed_body.fetch("outcome")
+    assert_equal 0, transaction.reload.pos_transaction_lines.count
+  end
+
   test "resolve and search are read-only and open-price apply does not write a price_override" do
     open_price = pos_sellable_variant(actor: @actor, tax_class: @tax, pricing_method: "open_price", name: "Open Book")
     open_quantity_stock(store: @store, variant: open_price, actor: @actor, quantity: 3)

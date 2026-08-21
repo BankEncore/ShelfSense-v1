@@ -4,7 +4,6 @@ require "test_helper"
 
 class DepartmentTest < ActiveSupport::TestCase
   setup do
-    @tax = tax_class(code: "books")
     @inventory = inventory_gl
     @cogs = cogs_gl
     @sales = sales_gl
@@ -14,7 +13,7 @@ class DepartmentTest < ActiveSupport::TestCase
     record = Department.new(
       code: "new_books",
       name: "New Books",
-      default_tax_class: @tax,
+      department_number: "NEW_BOOKS",
       inventory_asset_gl_account: @sales
     )
     assert_not record.valid?
@@ -28,7 +27,7 @@ class DepartmentTest < ActiveSupport::TestCase
     record = Department.new(
       code: "cafe",
       name: "Café",
-      default_tax_class: @tax,
+      department_number: "CAFE",
       inventory_asset_gl_account: inactive
     )
     assert_not record.valid?
@@ -38,7 +37,6 @@ class DepartmentTest < ActiveSupport::TestCase
   test "historical inactive GL mapping is retained when editing unrelated fields" do
     record = department(
       code: "media",
-      default_tax_class: @tax,
       inventory_asset_gl_account: @inventory,
       cost_of_goods_sold_gl_account: @cogs,
       sales_revenue_gl_account: @sales
@@ -54,7 +52,6 @@ class DepartmentTest < ActiveSupport::TestCase
   test "changing a mapping revalidates assignability" do
     record = department(
       code: "gifts",
-      default_tax_class: @tax,
       inventory_asset_gl_account: @inventory
     )
     inactive = inventory_gl(account_number: "1210")

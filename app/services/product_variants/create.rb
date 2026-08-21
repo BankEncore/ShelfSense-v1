@@ -31,13 +31,35 @@ module ProductVariants
         klass = find_optional(MerchandiseClass, @attributes[:merchandise_class_id])
         validate_class_for_type!(variant_type, klass) if klass
 
+        tax_override =
+          if @attributes.key?(:tax_class_override_id)
+            find_optional(TaxClass, @attributes[:tax_class_override_id])
+          else
+            :omitted
+          end
+        supplier_returnable =
+          if @attributes.key?(:supplier_returnable)
+            ActiveModel::Type::Boolean.new.cast(@attributes[:supplier_returnable])
+          else
+            :omitted
+          end
+        target_margin_bps =
+          if @attributes.key?(:target_margin_bps)
+            @attributes[:target_margin_bps]
+          else
+            :omitted
+          end
+
         resolved = DefaultResolver.resolve(
           product: @product,
           variant_type: variant_type,
           condition: condition,
           merchandise_class: klass,
-          department: find_optional(Department, @attributes[:department_id]),
-          tax_class: find_optional(TaxClass, @attributes[:tax_class_id]),
+          inventory_mode: @attributes[:inventory_mode],
+          pricing_method: @attributes[:pricing_method],
+          target_margin_bps: target_margin_bps,
+          supplier_returnable: supplier_returnable,
+          tax_class_override: tax_override,
           regular_price_cents: @attributes[:regular_price_cents]
         )
         validate_class_for_type!(variant_type, resolved.merchandise_class) if resolved.merchandise_class
@@ -53,17 +75,21 @@ module ProductVariants
         resolved_name = @attributes[:name].presence || default_variant_name(variant_type, condition)
 
         variant = @product.product_variants.new(
-          @attributes.except(:industry_identifier, :sku).merge(
+          @attributes.except(
+            :industry_identifier, :sku, :department_id, :tax_class_id, :tax_class_override_id,
+            :inventory_mode, :pricing_method, :target_margin_bps, :supplier_returnable
+          ).merge(
             variant_type: variant_type,
             name: resolved_name,
             sku: sku,
             industry_identifier: normalized_industry,
             merchandise_condition: condition,
             merchandise_class: resolved.merchandise_class,
-            department: resolved.department,
-            tax_class: resolved.tax_class,
-            # DefaultResolver already applies list_price suggestions when the
-            # submitted regular_price_cents is nil (blank UI fields still send the key).
+            inventory_mode: resolved.inventory_mode,
+            pricing_method: resolved.pricing_method,
+            target_margin_bps: resolved.target_margin_bps,
+            supplier_returnable: resolved.supplier_returnable,
+            tax_class_override: resolved.tax_class_override,
             regular_price_cents: resolved.suggested_price_cents,
             status: @attributes[:status].presence || "draft"
           )
@@ -87,6 +113,9 @@ module ProductVariants
             sku: variant.sku,
             product_id: variant.product_id,
             variant_type: variant.variant_type,
+            inventory_mode: variant.inventory_mode,
+            pricing_method: variant.pricing_method,
+            tax_class_override_id: variant.tax_class_override_id,
             source: @source
           }
         )

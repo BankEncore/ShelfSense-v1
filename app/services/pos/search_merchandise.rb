@@ -38,7 +38,13 @@ module Pos
     private
 
     def ranked_variants
-      scope = ProductVariant.joins(:product).includes(:product, :merchandise_class, :merchandise_condition, :department, :tax_class)
+      scope = ProductVariant.joins(:product).includes(
+        :product,
+        :merchandise_class,
+        :merchandise_condition,
+        :tax_class_override,
+        merchandise_class: [ :department, :default_tax_class ]
+      )
       conditions = []
       binds = []
       if @sku.present?
@@ -63,7 +69,7 @@ module Pos
 
     def build_row(variant)
       tracking = variant.derived_inventory_tracking
-      open_price = variant.merchandise_class&.pricing_method == "open_price"
+      open_price = variant.pricing_method == "open_price"
       disabled, reason = disable_reason(variant, tracking, open_price)
       price_cents = variant.regular_price_cents
       Row.new(

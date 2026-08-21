@@ -53,10 +53,13 @@ module Pos
         transactions_for_unit(result.inventory_unit)
       when :variant
         transactions_for_variant(result.variant)
-      when :multi_variant
-        transactions_for_variants(result.variants)
-      when :not_found, :retired, :invalid, :product
-        empty("no returnable original found")
+      when :product
+        # Return eligibility is decided by completed sale lines, not POS sellability.
+        transactions_for_variants(result.product.product_variants.to_a)
+      when :multiple_products
+        empty("multiple products share that lookup code. Scan a variant or unit identifier.")
+      when :retired
+        empty("identifier is retired")
       else
         empty("no returnable original found")
       end

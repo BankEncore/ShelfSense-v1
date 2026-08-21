@@ -4,14 +4,15 @@ class MerchandiseCategory < ApplicationRecord
   include HasMachineCode
 
   belongs_to :parent, class_name: "MerchandiseCategory", optional: true
-  belongs_to :default_merchandise_class, class_name: "MerchandiseClass", optional: true
+  belongs_to :default_standard_merchandise_class, class_name: "MerchandiseClass", optional: true
+  belongs_to :default_used_merchandise_class, class_name: "MerchandiseClass", optional: true
   has_many :children, class_name: "MerchandiseCategory", foreign_key: :parent_id, inverse_of: :parent, dependent: :restrict_with_exception
 
   validates :name, presence: true
   validates :code, uniqueness: true, allow_nil: true, format: { with: Codes::Normalizer::FORMAT, allow_nil: true }
   validate :parent_not_self
   validate :no_parent_cycle
-  validate :validate_changed_default_class
+  validate :validate_changed_default_classes
 
   scope :active, -> { where(active: true) }
   scope :assignable, -> { active }
@@ -78,8 +79,11 @@ class MerchandiseCategory < ApplicationRecord
   def reactivation_blockers
     blockers = []
     blockers << "parent category must be active" if parent.present? && !parent.active?
-    if default_merchandise_class.present? && !default_merchandise_class.active?
-      blockers << "default merchandise class must be active"
+    if default_standard_merchandise_class.present? && !default_standard_merchandise_class.active?
+      blockers << "default standard merchandise class must be active"
+    end
+    if default_used_merchandise_class.present? && !default_used_merchandise_class.active?
+      blockers << "default used merchandise class must be active"
     end
     blockers
   end
@@ -89,8 +93,6 @@ class MerchandiseCategory < ApplicationRecord
   def prepare_machine_code
     if new_record?
       if code.blank?
-        # Optional: leave blank unless supplied or name is used for generation when code was omitted intentionally.
-        # Spec: blank generates from name. Categories generate when name present.
         if name.present?
           self.code = Codes::Normalizer.normalize(name).presence
         end
@@ -121,10 +123,20 @@ class MerchandiseCategory < ApplicationRecord
     end
   end
 
-  def validate_changed_default_class
-    return unless default_merchandise_class_id_changed?
-    return if default_merchandise_class.blank?
+  def validate_changed_default_classes
+    if default_standard_merchandise_class_id_changed? && default_standard_merchandise_class.present?
+      unless default_standard_merchandise_class.assignable?
+        errors.add(:default_standard_merchandise_class_id, "must be an active merchandise class")
+      end
+    end
 
-    errors.add(:default_merchandise_class_id, "must be an active merchandise class") unless default_merchandise_class.assignable?
+    if default_used_merchandise_class_id_changed? && default_used_merchandise_class.present?
+      unless default_used_merchandise_class.assignable?
+        errors.add(:default_used_merchandise_class_id, "must be an active merchandise class")
+      end
+      if default_used_merchandise_class.assignable? && !default_used_merchandise_class.used_merchandise_allowed?
+        errors.add(:default_used_merchandise_class_id, "must allow used merchandise")
+      end
+    end
   end
 end

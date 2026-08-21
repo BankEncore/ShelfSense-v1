@@ -12,7 +12,7 @@ module ProductVariants
       @variant = variant
       attrs = attributes.to_h.symbolize_keys
       @lock_version = attrs[:lock_version]
-      @attributes = attrs.except(:sku, :lock_version)
+      @attributes = attrs.except(:sku, :lock_version, :department_id, :tax_class_id)
       @actor = actor
       @source = source
       @store = store
@@ -20,7 +20,7 @@ module ProductVariants
 
     def call
       ProductVariant.transaction do
-        before = @variant.attributes.slice(*audit_keys)
+        before = snapshot_for_audit
         @variant.lock_version = @lock_version unless @lock_version.nil?
 
         if @attributes.key?(:industry_identifier)
@@ -45,7 +45,7 @@ module ProductVariants
           store: @store,
           subject: @variant,
           before_values: before,
-          after_values: @variant.attributes.slice(*before.keys).merge(source: @source)
+          after_values: snapshot_for_audit.merge("source" => @source)
         )
 
         @variant
@@ -56,11 +56,24 @@ module ProductVariants
 
     private
 
-    def audit_keys
-      %w[
-        variant_type name option_value_1 option_value_2 merchandise_condition_id merchandise_class_id
-        department_id tax_class_id regular_price_cents status industry_identifier
-      ]
+    def snapshot_for_audit
+      {
+        "variant_type" => @variant.variant_type,
+        "name" => @variant.name,
+        "option_value_1" => @variant.option_value_1,
+        "option_value_2" => @variant.option_value_2,
+        "merchandise_condition_id" => @variant.merchandise_condition_id,
+        "merchandise_class_id" => @variant.merchandise_class_id,
+        "inventory_mode" => @variant.inventory_mode,
+        "pricing_method" => @variant.pricing_method,
+        "target_margin_bps" => @variant.target_margin_bps,
+        "supplier_returnable" => @variant.supplier_returnable,
+        "tax_class_override_id" => @variant.tax_class_override_id,
+        "effective_tax_class_id" => @variant.effective_tax_class&.id,
+        "regular_price_cents" => @variant.regular_price_cents,
+        "status" => @variant.status,
+        "industry_identifier" => @variant.industry_identifier
+      }
     end
   end
 end

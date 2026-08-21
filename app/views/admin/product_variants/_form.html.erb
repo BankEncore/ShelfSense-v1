@@ -37,7 +37,10 @@
     </div>
   <% end %>
 
-  <%= render layout: "shared/form_section", locals: { title: "Sellability", help: "Blank class, department, or tax class resolve at create time. Clearing them later does not re-inherit defaults." } do %>
+  <%= render layout: "shared/form_section", locals: {
+        title: "Classification",
+        help: "Department comes from the merchandise class. Tax blank = use class default (live). Inventory mode and pricing are stored on the variant."
+      } do %>
     <div class="form-field">
       <%= form.label :merchandise_condition_id, "Condition (used variants only)" %>
       <%= form.select :merchandise_condition_id, MerchandiseCondition.options_for_select(@merchandise_conditions), include_blank: true %>
@@ -46,13 +49,41 @@
       <%= form.label :merchandise_class_id, "Merchandise class" %>
       <%= form.select :merchandise_class_id, MerchandiseClass.options_for_select(@merchandise_classes), include_blank: "Resolve default" %>
     </div>
+    <% if product_variant.persisted? && product_variant.department %>
+      <div class="form-field">
+        <span class="muted">Department</span>
+        <div><%= product_variant.department.admin_label %></div>
+      </div>
+    <% end %>
     <div class="form-field">
-      <%= form.label :department_id, "Department" %>
-      <%= form.select :department_id, Department.options_for_select(@departments), include_blank: "Resolve default" %>
+      <%= form.label :tax_class_override_id, "Tax class override" %>
+      <%= form.select :tax_class_override_id, TaxClass.options_for_select(@tax_classes), include_blank: "Use merchandise-class default" %>
+      <% if product_variant.persisted? && product_variant.effective_tax_class %>
+        <span class="field-help">Effective now: <%= product_variant.effective_tax_class.admin_label %><%= product_variant.tax_class_override_id.present? ? " (override)" : " (inherited)" %>.</span>
+      <% end %>
     </div>
     <div class="form-field">
-      <%= form.label :tax_class_id, "Tax class" %>
-      <%= form.select :tax_class_id, TaxClass.options_for_select(@tax_classes), include_blank: "Resolve default" %>
+      <%= form.label :inventory_mode %>
+      <%= form.select :inventory_mode, ProductVariant::INVENTORY_MODES.map { |m| [m.humanize, m] }, include_blank: product_variant.persisted? ? false : "Use class default" %>
+    </div>
+    <div class="form-field">
+      <%= form.label :pricing_method %>
+      <%= form.select :pricing_method, ProductVariant::PRICING_METHODS.map { |m| [m.humanize, m] }, include_blank: product_variant.persisted? ? false : "Use class default" %>
+    </div>
+    <div class="form-field">
+      <%= form.label :target_margin_bps, "Target margin (basis points)" %>
+      <%= form.number_field :target_margin_bps %>
+      <% unless product_variant.persisted? %>
+        <span class="field-help">Leave blank to copy the merchandise-class default.</span>
+      <% end %>
+    </div>
+    <div class="form-field">
+      <%= form.label :supplier_returnable, "Supplier returnable" %>
+      <% if product_variant.persisted? %>
+        <%= form.select :supplier_returnable, [ [ "Yes", true ], [ "No", false ] ] %>
+      <% else %>
+        <%= form.select :supplier_returnable, [ [ "Yes", true ], [ "No", false ] ], include_blank: "Use class default" %>
+      <% end %>
     </div>
   <% end %>
 

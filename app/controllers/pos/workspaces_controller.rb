@@ -56,6 +56,7 @@ module Pos
         identifier: params[:identifier],
         variant: find_optional_variant,
         inventory_unit: find_optional_unit,
+        product: find_optional_product,
         current_transaction: @transaction
       )
       render json: serialize_resolution(result)
@@ -174,22 +175,19 @@ module Pos
     def unlinked_return_lookup
       Pos::Support.authorize!(current_user, current_store)
       result = Pos::ResolveUnlinkedReturnMerchandise.call(
-        identifier: params.require(:identifier),
-        store: current_store
+        identifier: params[:identifier],
+        store: current_store,
+        product: find_optional_product,
+        variant: find_optional_variant,
+        inventory_unit: find_optional_unit
       )
-      render json: {
-        description: result.description,
-        tracking: result.tracking,
-        quantity_fixed: result.quantity_fixed,
-        reference_unit_price_cents: result.reference_unit_price_cents,
-        product_variant_id: result.variant.id,
-        inventory_unit_id: result.inventory_unit&.id,
-        tax_class_id: result.tax_class.id
-      }
+      render json: serialize_unlinked_resolution(result)
     rescue Pos::Denied
       render json: { error: "You are not authorized to perform that action." }, status: :forbidden
+    rescue Pos::InvalidatedDialogBasis => e
+      render json: { outcome: "unavailable", error: e.message, message: e.message }, status: :unprocessable_entity
     rescue Identifiers::NormalizationError, Pos::Error => e
-      render json: { error: e.message }, status: :unprocessable_entity
+      render json: { outcome: "unavailable", error: e.message, message: e.message }, status: :unprocessable_entity
     end
 
     def unlinked_return
@@ -208,7 +206,10 @@ module Pos
           expected_product_variant_id: params[:expected_product_variant_id],
           expected_inventory_unit_id: params[:expected_inventory_unit_id],
           expected_reference_unit_price_cents: params[:expected_reference_unit_price_cents],
-          expected_tax_class_id: params[:expected_tax_class_id]
+          expected_tax_class_id: params[:expected_tax_class_id],
+          product_id: params[:product_id],
+          product_variant_id: params[:product_variant_id],
+          inventory_unit_id: params[:inventory_unit_id]
         )
         @transaction.reload
         @ui_mode = "sale_entry"
@@ -649,6 +650,13 @@ module Pos
       InventoryUnit.find_by(id: id)
     end
 
+    def find_optional_product
+      id = params[:product_id].presence
+      return if id.blank?
+
+      Product.find_by(id: id)
+    end
+
     def parse_optional_open_price
       return if params[:selling_price].blank? && params[:open_price].blank?
 
@@ -661,12 +669,50 @@ module Pos
       payload[:unit] = serialize_unit(result.unit) if result.unit
       payload[:variants] = Array(result.variants).map { |variant| serialize_variant(variant) }
       payload[:units] = Array(result.units).map { |unit| serialize_unit(unit) }
+      payload[:products] = Array(result.products).map { |product| serialize_product(product) }
       payload
+    end
+
+    def serialize_unlinked_resolution(result)
+      payload = {
+        outcome: result.outcome.to_s,
+        message: result.message
+      }
+      payload[:variant] = serialize_variant(result.variant) if result.variant
+      payload[:unit] = serialize_unit(result.inventory_unit) if result.inventory_unit
+      payload[:variants] = Array(result.variants).map { |variant| serialize_variant(variant) }
+      payload[:units] = Array(result.units).map { |unit| serialize_unit(unit) }
+      payload[:products] = Array(result.products).map { |product| serialize_product(product) }
+      if result.outcome == :resolved
+        payload.merge!(
+          description: result.description,
+          tracking: result.tracking,
+          quantity_fixed: result.quantity_fixed,
+          reference_unit_price_cents: result.reference_unit_price_cents,
+          product_variant_id: result.variant.id,
+          inventory_unit_id: result.inventory_unit&.id,
+          tax_class_id: result.tax_class.id
+        )
+      end
+      payload[:error] = result.message if result.outcome == :unavailable
+      payload
+    end
+
+    def serialize_product(product)
+      {
+        id: product.id,
+        name: product.name,
+        subtitle: product.subtitle,
+        brand_name: product.brand_name,
+        primary_identifier: product.primary_identifier,
+        industry_identifier: product.industry_identifier,
+        lookup_code: product.lookup_code
+      }
     end
 
     def serialize_variant(variant)
       tracking = variant.derived_inventory_tracking
-      open_price = variant.merchandise_class&.pricing_method == "open_price"
+      open_price = variant.pricing_method == "open_price"
       {
         id: variant.id,
         sku: variant.sku,

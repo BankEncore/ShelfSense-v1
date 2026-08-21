@@ -16,12 +16,13 @@
   <% rows = @merchandise_classes.map { |klass|
        [
          link_to(klass.admin_label, admin_merchandise_class_path(klass)),
-         klass.inventory_mode.humanize,
-         klass.pricing_method.humanize,
+         klass.department&.admin_label,
+         klass.default_inventory_mode.humanize,
+         klass.default_pricing_method.humanize,
          configuration_status_badge(klass.active?)
        ]
      } %>
   <%= render "shared/data_table",
-        headers: ["Class", "Inventory mode", "Pricing method", "Status"],
+        headers: ["Class", "Department", "Inventory mode", "Pricing method", "Status"],
         rows: rows %>
 <% end %>

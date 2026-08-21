@@ -20,8 +20,7 @@ class Identifiers::GeneratorAndRegistryTest < ActiveSupport::TestCase
   test "reserve raises on conflict" do
     product = Products::Create.call(
       attributes: { name: "Reserved", status: "draft" },
-      actor: @actor,
-      identifier_mode: "generate"
+      actor: @actor
     )
 
     error = assert_raises(Identifiers::Registry::ConflictError) do
@@ -37,8 +36,7 @@ class Identifiers::GeneratorAndRegistryTest < ActiveSupport::TestCase
   test "retire marks registry row inactive while retaining the value" do
     product = Products::Create.call(
       attributes: { name: "Retire me", status: "draft" },
-      actor: @actor,
-      identifier_mode: "generate"
+      actor: @actor
     )
     value = product.primary_identifier
 
@@ -62,8 +60,7 @@ class Identifiers::GeneratorAndRegistryTest < ActiveSupport::TestCase
   test "active variant_sku rejects product ownership" do
     product = Products::Create.call(
       attributes: { name: "Owner mismatch", status: "draft" },
-      actor: @actor,
-      identifier_mode: "generate"
+      actor: @actor
     )
     row = IdentifierRegistry.new(
       value: Identifiers::Ean13.complete("221", "333333333"),
@@ -79,8 +76,7 @@ class Identifiers::GeneratorAndRegistryTest < ActiveSupport::TestCase
   test "database enforces kind-specific registry ownership" do
     product = Products::Create.call(
       attributes: { name: "DB owner", status: "draft" },
-      actor: @actor,
-      identifier_mode: "generate"
+      actor: @actor
     )
 
     assert_raises(ActiveRecord::StatementInvalid) do
@@ -100,8 +96,7 @@ class Identifiers::GeneratorAndRegistryTest < ActiveSupport::TestCase
   test "retired registry rows may not have two owners" do
     product = Products::Create.call(
       attributes: { name: "Dual owner", status: "draft" },
-      actor: @actor,
-      identifier_mode: "generate"
+      actor: @actor
     )
     variant = ProductVariants::Create.call(
       product: product,
@@ -144,8 +139,7 @@ class Identifiers::GeneratorAndRegistryTest < ActiveSupport::TestCase
 
     product = Products::Create.call(
       attributes: { name: "Guarded", status: "draft" },
-      actor: @actor,
-      identifier_mode: "generate"
+      actor: @actor
     )
     assert_raises(ActiveRecord::RecordInvalid) do
       product.update!(primary_identifier: Identifiers::Ean13.complete("978", "888888888"))
@@ -177,8 +171,7 @@ class Identifiers::GeneratorAndRegistryTest < ActiveSupport::TestCase
         Products::Create.call(
           attributes: { name: "Rollback", status: "draft" },
           actor: @actor,
-          identifier_mode: "enter",
-          external_identifier: external
+          industry_identifier: external
         )
       end
     ensure

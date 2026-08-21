@@ -332,6 +332,9 @@
       <%= hidden_field_tag :register_id, @register.id %>
       <%= hidden_field_tag :lock_version, @transaction.lock_version %>
       <%= hidden_field_tag :identifier, "", data: { register_workspace_target: "unlinkedIdentifierInput" } %>
+      <%= hidden_field_tag :product_id, "", data: { register_workspace_target: "unlinkedProductIdInput" } %>
+      <%= hidden_field_tag :product_variant_id, "", data: { register_workspace_target: "unlinkedVariantIdInput" } %>
+      <%= hidden_field_tag :inventory_unit_id, "", data: { register_workspace_target: "unlinkedUnitIdInput" } %>
       <%= hidden_field_tag :quantity, "", data: { register_workspace_target: "unlinkedQuantityInput" } %>
       <%= hidden_field_tag :reason_code, "", data: { register_workspace_target: "unlinkedReasonInput" } %>
       <%= hidden_field_tag :reason_note, "", data: { register_workspace_target: "unlinkedNoteInput" } %>
@@ -520,6 +523,21 @@
       <ul class="pos-picker" role="listbox" aria-labelledby="pos-search-title" data-register-workspace-target="searchList"></ul>
       <p class="muted">Enter searches, then Enter selects the highlighted item. Esc cancels.</p>
       <button type="button" class="btn btn--secondary" data-action="register-workspace#closeSearchOverlay">Cancel (Esc)</button>
+    </div>
+  </div>
+
+  <div class="pos-overlay"
+       id="pos_product_overlay"
+       hidden
+       data-register-workspace-target="productOverlay"
+       role="dialog"
+       aria-modal="true"
+       aria-labelledby="pos-product-title">
+    <div class="pos-overlay__panel">
+      <h2 id="pos-product-title">Choose product</h2>
+      <ul class="pos-picker" role="listbox" aria-labelledby="pos-product-title" data-register-workspace-target="productList"></ul>
+      <p class="muted">Several products share that lookup code. Enter selects the highlighted product. Esc cancels without adding merchandise.</p>
+      <button type="button" class="btn btn--secondary" data-action="register-workspace#closeProductOverlay">Cancel (Esc)</button>
     </div>
   </div>
 

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_20_020000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_21_020000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -76,9 +76,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_20_020000) do
     t.string "code", null: false
     t.uuid "cost_of_goods_sold_gl_account_id"
     t.timestamptz "created_at", null: false
-    t.integer "default_target_margin_bps"
-    t.uuid "default_tax_class_id", null: false
-    t.string "department_number"
+    t.string "department_number", null: false
     t.text "description"
     t.integer "display_order", default: 0, null: false
     t.uuid "freight_in_gl_account_id"
@@ -95,7 +93,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_20_020000) do
     t.timestamptz "updated_at", null: false
     t.index ["code"], name: "index_departments_on_code", unique: true
     t.index ["cost_of_goods_sold_gl_account_id"], name: "index_departments_on_cost_of_goods_sold_gl_account_id"
-    t.index ["department_number"], name: "index_departments_on_department_number", unique: true, where: "(department_number IS NOT NULL)"
+    t.index ["department_number"], name: "index_departments_on_department_number", unique: true
     t.index ["freight_in_gl_account_id"], name: "index_departments_on_freight_in_gl_account_id"
     t.index ["inventory_adjustment_gain_gl_account_id"], name: "index_departments_on_inventory_adjustment_gain_gl_account_id"
     t.index ["inventory_adjustment_loss_gl_account_id"], name: "index_departments_on_inventory_adjustment_loss_gl_account_id"
@@ -106,7 +104,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_20_020000) do
     t.index ["sales_returns_gl_account_id"], name: "index_departments_on_sales_returns_gl_account_id"
     t.index ["sales_revenue_gl_account_id"], name: "index_departments_on_sales_revenue_gl_account_id"
     t.check_constraint "code::text ~ '^[a-z0-9]+(_[a-z0-9]+)*$'::text", name: "departments_code_format"
-    t.check_constraint "default_target_margin_bps IS NULL OR default_target_margin_bps >= 0 AND default_target_margin_bps < 10000", name: "departments_margin_bps_range"
   end
 
   create_table "gl_accounts", id: :uuid, default: nil, force: :cascade do |t|
@@ -160,12 +157,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_20_020000) do
     t.timestamptz "updated_at", null: false
     t.string "value", limit: 13, null: false
     t.index ["inventory_unit_id"], name: "index_identifier_registry_inventory_unit", unique: true, where: "((identifier_kind)::text = 'inventory_unit'::text)"
+    t.index ["product_id"], name: "index_identifier_registry_active_product_industry", unique: true, where: "(((identifier_kind)::text = 'product_industry'::text) AND (retired_at IS NULL))"
     t.index ["product_id"], name: "index_identifier_registry_active_product_primary", unique: true, where: "(((identifier_kind)::text = 'product_primary'::text) AND (retired_at IS NULL))"
     t.index ["product_variant_id"], name: "index_identifier_registry_active_variant_industry", unique: true, where: "(((identifier_kind)::text = 'variant_industry'::text) AND (retired_at IS NULL))"
     t.index ["product_variant_id"], name: "index_identifier_registry_variant_sku", unique: true, where: "((identifier_kind)::text = 'variant_sku'::text)"
     t.index ["value"], name: "index_identifier_registry_on_value", unique: true
-    t.check_constraint "((product_id IS NOT NULL)::integer + (product_variant_id IS NOT NULL)::integer + (inventory_unit_id IS NOT NULL)::integer) <= 1 AND (retired_at IS NOT NULL OR identifier_kind::text = 'product_primary'::text AND product_id IS NOT NULL AND product_variant_id IS NULL AND inventory_unit_id IS NULL OR (identifier_kind::text = ANY (ARRAY['variant_sku'::character varying::text, 'variant_industry'::character varying::text])) AND product_variant_id IS NOT NULL AND product_id IS NULL AND inventory_unit_id IS NULL OR identifier_kind::text = 'inventory_unit'::text AND inventory_unit_id IS NOT NULL AND product_id IS NULL AND product_variant_id IS NULL)", name: "identifier_registry_owner_matches_kind"
-    t.check_constraint "identifier_kind::text = ANY (ARRAY['product_primary'::character varying::text, 'variant_sku'::character varying::text, 'variant_industry'::character varying::text, 'inventory_unit'::character varying::text])", name: "identifier_registry_kind_valid"
+    t.check_constraint "((product_id IS NOT NULL)::integer + (product_variant_id IS NOT NULL)::integer + (inventory_unit_id IS NOT NULL)::integer) <= 1 AND (retired_at IS NOT NULL OR (identifier_kind::text = ANY (ARRAY['product_primary'::character varying::text, 'product_industry'::character varying::text])) AND product_id IS NOT NULL AND product_variant_id IS NULL AND inventory_unit_id IS NULL OR (identifier_kind::text = ANY (ARRAY['variant_sku'::character varying::text, 'variant_industry'::character varying::text])) AND product_variant_id IS NOT NULL AND product_id IS NULL AND inventory_unit_id IS NULL OR identifier_kind::text = 'inventory_unit'::text AND inventory_unit_id IS NOT NULL AND product_id IS NULL AND product_variant_id IS NULL)", name: "identifier_registry_owner_matches_kind"
+    t.check_constraint "identifier_kind::text = ANY (ARRAY['product_primary'::character varying::text, 'product_industry'::character varying::text, 'variant_sku'::character varying::text, 'variant_industry'::character varying::text, 'inventory_unit'::character varying::text])", name: "identifier_registry_kind_valid"
     t.check_constraint "value::text ~ '^[0-9]{13}$'::text", name: "identifier_registry_value_shape"
   end
 
@@ -276,7 +274,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_20_020000) do
     t.boolean "active", default: true, null: false
     t.string "code"
     t.timestamptz "created_at", null: false
-    t.uuid "default_merchandise_class_id"
+    t.uuid "default_standard_merchandise_class_id"
+    t.uuid "default_used_merchandise_class_id"
     t.text "description"
     t.integer "display_order", default: 0, null: false
     t.integer "lock_version", default: 0, null: false
@@ -286,6 +285,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_20_020000) do
     t.index "lower((name)::text)", name: "index_merchandise_categories_root_name", unique: true, where: "(parent_id IS NULL)"
     t.index "parent_id, lower((name)::text)", name: "index_merchandise_categories_sibling_name", unique: true, where: "(parent_id IS NOT NULL)"
     t.index ["code"], name: "index_merchandise_categories_on_code", unique: true, where: "(code IS NOT NULL)"
+    t.index ["default_standard_merchandise_class_id"], name: "idx_on_default_standard_merchandise_class_id_1437b859ed"
+    t.index ["default_used_merchandise_class_id"], name: "idx_on_default_used_merchandise_class_id_0ca783adcd"
     t.check_constraint "code IS NULL OR code::text ~ '^[a-z0-9]+(_[a-z0-9]+)*$'::text", name: "merchandise_categories_code_format"
     t.check_constraint "parent_id IS NULL OR parent_id <> id", name: "merchandise_categories_parent_not_self"
   end
@@ -295,22 +296,28 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_20_020000) do
     t.boolean "buyback_allowed", default: false, null: false
     t.string "code", null: false
     t.timestamptz "created_at", null: false
-    t.uuid "default_standard_department_id"
+    t.string "default_inventory_mode", null: false
+    t.string "default_pricing_method", null: false
     t.boolean "default_supplier_returnable", default: true, null: false
-    t.uuid "default_used_department_id"
+    t.uuid "default_tax_class_id", null: false
+    t.uuid "department_id", null: false
     t.text "description"
     t.integer "display_order", default: 0, null: false
-    t.string "inventory_mode", null: false
     t.integer "lock_version", default: 0, null: false
+    t.string "merchandise_class_number", null: false
     t.string "name", null: false
-    t.string "pricing_method", null: false
+    t.integer "target_margin_bps"
     t.timestamptz "updated_at", null: false
     t.boolean "used_merchandise_allowed", default: false, null: false
     t.index ["code"], name: "index_merchandise_classes_on_code", unique: true
-    t.check_constraint "NOT buyback_allowed OR used_merchandise_allowed AND inventory_mode::text = 'inventory'::text", name: "merchandise_classes_buyback_implies_used_inventory"
+    t.index ["default_tax_class_id"], name: "index_merchandise_classes_on_default_tax_class_id"
+    t.index ["department_id", "merchandise_class_number"], name: "index_merchandise_classes_on_department_and_number", unique: true
+    t.index ["department_id"], name: "index_merchandise_classes_on_department_id"
+    t.check_constraint "NOT buyback_allowed OR used_merchandise_allowed AND default_inventory_mode::text = 'inventory'::text", name: "merchandise_classes_buyback_implies_used_inventory"
     t.check_constraint "code::text ~ '^[a-z0-9]+(_[a-z0-9]+)*$'::text", name: "merchandise_classes_code_format"
-    t.check_constraint "inventory_mode::text = ANY (ARRAY['inventory'::character varying::text, 'non_inventory'::character varying::text])", name: "merchandise_classes_inventory_mode_valid"
-    t.check_constraint "pricing_method::text = ANY (ARRAY['fixed'::character varying::text, 'list_price'::character varying::text, 'cost_based'::character varying::text, 'open_price'::character varying::text])", name: "merchandise_classes_pricing_method_valid"
+    t.check_constraint "default_inventory_mode::text = ANY (ARRAY['inventory'::character varying::text, 'non_inventory'::character varying::text])", name: "merchandise_classes_default_inventory_mode_valid"
+    t.check_constraint "default_pricing_method::text = ANY (ARRAY['fixed'::character varying::text, 'list_price'::character varying::text, 'cost_based'::character varying::text, 'open_price'::character varying::text])", name: "merchandise_classes_default_pricing_method_valid"
+    t.check_constraint "target_margin_bps IS NULL OR target_margin_bps >= 0 AND target_margin_bps < 10000", name: "merchandise_classes_margin_bps_range"
   end
 
   create_table "merchandise_conditions", id: :uuid, default: nil, force: :cascade do |t|
@@ -669,33 +676,38 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_20_020000) do
 
   create_table "product_variants", id: :uuid, default: nil, force: :cascade do |t|
     t.timestamptz "created_at", null: false
-    t.uuid "department_id"
     t.string "industry_identifier", limit: 13
+    t.string "inventory_mode"
     t.integer "lock_version", default: 0, null: false
     t.uuid "merchandise_class_id"
     t.uuid "merchandise_condition_id"
     t.string "name"
     t.string "option_value_1"
     t.string "option_value_2"
+    t.string "pricing_method"
     t.uuid "product_id", null: false
     t.bigint "regular_price_cents"
     t.string "sku", limit: 13, null: false
     t.string "status", default: "draft", null: false
-    t.uuid "tax_class_id"
+    t.boolean "supplier_returnable"
+    t.integer "target_margin_bps"
+    t.uuid "tax_class_override_id"
     t.timestamptz "updated_at", null: false
     t.string "variant_type", null: false
-    t.index ["department_id"], name: "index_product_variants_on_department_id"
     t.index ["industry_identifier"], name: "index_product_variants_on_industry_identifier", unique: true, where: "(industry_identifier IS NOT NULL)"
     t.index ["merchandise_class_id"], name: "index_product_variants_on_merchandise_class_id"
     t.index ["merchandise_condition_id"], name: "index_product_variants_on_merchandise_condition_id"
     t.index ["product_id", "status"], name: "index_product_variants_on_product_id_and_status"
     t.index ["product_id", "variant_type"], name: "index_product_variants_on_product_id_and_variant_type"
     t.index ["sku"], name: "index_product_variants_on_sku", unique: true
-    t.index ["tax_class_id"], name: "index_product_variants_on_tax_class_id"
+    t.index ["tax_class_override_id"], name: "index_product_variants_on_tax_class_override_id"
     t.check_constraint "industry_identifier IS NULL OR industry_identifier::text ~ '^[0-9]{13}$'::text", name: "product_variants_industry_identifier_shape"
+    t.check_constraint "inventory_mode IS NULL OR (inventory_mode::text = ANY (ARRAY['inventory'::character varying::text, 'non_inventory'::character varying::text]))", name: "product_variants_inventory_mode_valid"
+    t.check_constraint "pricing_method IS NULL OR (pricing_method::text = ANY (ARRAY['fixed'::character varying::text, 'list_price'::character varying::text, 'cost_based'::character varying::text, 'open_price'::character varying::text]))", name: "product_variants_pricing_method_valid"
     t.check_constraint "regular_price_cents IS NULL OR regular_price_cents >= 0", name: "product_variants_regular_price_nonnegative"
     t.check_constraint "sku::text ~ '^[0-9]{13}$'::text", name: "product_variants_sku_shape"
     t.check_constraint "status::text = ANY (ARRAY['draft'::character varying::text, 'active'::character varying::text, 'discontinued'::character varying::text])", name: "product_variants_status_valid"
+    t.check_constraint "target_margin_bps IS NULL OR target_margin_bps >= 0 AND target_margin_bps < 10000", name: "product_variants_margin_bps_range"
     t.check_constraint "variant_type::text = 'standard'::text AND merchandise_condition_id IS NULL OR variant_type::text = 'used'::text AND merchandise_condition_id IS NOT NULL", name: "product_variants_condition_matches_type"
     t.check_constraint "variant_type::text = ANY (ARRAY['standard'::character varying::text, 'used'::character varying::text])", name: "product_variants_variant_type_valid"
   end
@@ -704,8 +716,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_20_020000) do
     t.string "brand_name"
     t.timestamptz "created_at", null: false
     t.text "description"
+    t.string "industry_identifier", limit: 13
     t.bigint "list_price_cents"
     t.integer "lock_version", default: 0, null: false
+    t.string "lookup_code", limit: 64
     t.uuid "merchandise_category_id"
     t.string "name", null: false
     t.string "primary_identifier", limit: 13, null: false
@@ -716,10 +730,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_20_020000) do
     t.timestamptz "updated_at", null: false
     t.string "variant_option_name_1"
     t.string "variant_option_name_2"
+    t.index ["industry_identifier"], name: "index_products_on_industry_identifier", unique: true, where: "(industry_identifier IS NOT NULL)"
+    t.index ["lookup_code"], name: "index_products_on_lookup_code", where: "(lookup_code IS NOT NULL)"
     t.index ["merchandise_category_id"], name: "index_products_on_merchandise_category_id"
     t.index ["primary_identifier"], name: "index_products_on_primary_identifier", unique: true
     t.index ["status", "name"], name: "index_products_on_status_and_name"
+    t.check_constraint "industry_identifier IS NULL OR industry_identifier::text ~ '^[0-9]{13}$'::text", name: "products_industry_identifier_shape"
     t.check_constraint "list_price_cents IS NULL OR list_price_cents >= 0", name: "products_list_price_nonnegative"
+    t.check_constraint "lookup_code IS NULL OR lookup_code::text = upper(btrim(lookup_code::text)) AND char_length(lookup_code::text) >= 1 AND char_length(lookup_code::text) <= 64 AND lookup_code::text ~ '^[A-Z0-9._/-]+$'::text", name: "products_lookup_code_canonical"
     t.check_constraint "primary_identifier::text ~ '^[0-9]{13}$'::text", name: "products_primary_identifier_shape"
     t.check_constraint "status::text = ANY (ARRAY['draft'::character varying::text, 'active'::character varying::text, 'discontinued'::character varying::text])", name: "products_status_valid"
   end
@@ -946,7 +964,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_20_020000) do
   add_foreign_key "departments", "gl_accounts", column: "receiving_clearing_gl_account_id"
   add_foreign_key "departments", "gl_accounts", column: "sales_returns_gl_account_id"
   add_foreign_key "departments", "gl_accounts", column: "sales_revenue_gl_account_id"
-  add_foreign_key "departments", "tax_classes", column: "default_tax_class_id"
   add_foreign_key "gl_accounts", "gl_accounts", column: "parent_id"
   add_foreign_key "identifier_registry", "inventory_units", on_delete: :nullify
   add_foreign_key "identifier_registry", "product_variants", on_delete: :nullify
@@ -970,9 +987,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_20_020000) do
   add_foreign_key "inventory_valuation_entries", "product_variants"
   add_foreign_key "inventory_valuation_entries", "stores"
   add_foreign_key "merchandise_categories", "merchandise_categories", column: "parent_id"
-  add_foreign_key "merchandise_categories", "merchandise_classes", column: "default_merchandise_class_id"
-  add_foreign_key "merchandise_classes", "departments", column: "default_standard_department_id"
-  add_foreign_key "merchandise_classes", "departments", column: "default_used_department_id"
+  add_foreign_key "merchandise_categories", "merchandise_classes", column: "default_standard_merchandise_class_id"
+  add_foreign_key "merchandise_categories", "merchandise_classes", column: "default_used_merchandise_class_id"
+  add_foreign_key "merchandise_classes", "departments"
+  add_foreign_key "merchandise_classes", "tax_classes", column: "default_tax_class_id"
   add_foreign_key "pos_controlled_actions", "pos_transaction_lines"
   add_foreign_key "pos_controlled_actions", "pos_transactions"
   add_foreign_key "pos_controlled_actions", "users", column: "approved_by_user_id"
@@ -1005,11 +1023,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_20_020000) do
   add_foreign_key "pos_transactions", "registers"
   add_foreign_key "pos_transactions", "stores"
   add_foreign_key "pos_transactions", "users", column: "cashier_user_id"
-  add_foreign_key "product_variants", "departments"
   add_foreign_key "product_variants", "merchandise_classes"
   add_foreign_key "product_variants", "merchandise_conditions"
   add_foreign_key "product_variants", "products"
-  add_foreign_key "product_variants", "tax_classes"
+  add_foreign_key "product_variants", "tax_classes", column: "tax_class_override_id"
   add_foreign_key "products", "merchandise_categories"
   add_foreign_key "registers", "stores"
   add_foreign_key "registers", "users", column: "deactivated_by_id"
