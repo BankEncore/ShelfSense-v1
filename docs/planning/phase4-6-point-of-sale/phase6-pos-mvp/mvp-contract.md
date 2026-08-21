@@ -116,7 +116,7 @@ CompletedPosOperation
 │   ├── discount                      # omit when none; 6.4
 │   ├── return_price_adjustment       # omit when none; unlinked return; 6.5
 │   ├── original_transaction_line_id  # omit when not a linked return; 6.5
-│   ├── return_reason                 # 6.5; required on return lines
+│   ├── return_reason                 # 6.5; required on ordinary return lines; omit on post-void-generated lines
 │   └── tax_components[]              # v1 Store Tax determinations
 │
 ├── tenders[]
@@ -142,10 +142,9 @@ CompletedPosOperation
 │   ├── fingerprint
 │   └── executed_at
 │
-└── corrections                       # omit when none
-    ├── original_transaction_id       # linked return source txn and/or post-void source
-    ├── post_void_of_transaction_id
-    └── return_of_transaction_id      # 6.6 post-void era; omit in 6.5 (line original_transaction_line_id is authority)
+└── corrections                       # omit when none; 6.6 post-void only
+    ├── original_transaction_id       # post-void source txn
+    └── post_void_of_transaction_id   # never return_of_transaction_id; linked returns use original_transaction_line_id
 ```
 
 Do **not** use `operation_type` on the envelope. Command type lives only on `pos_operations`.

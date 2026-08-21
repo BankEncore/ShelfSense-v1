@@ -1,6 +1,14 @@
 # frozen_string_literal: true
 
 module PosHelper
+  CONTROLLED_ACTION_LABELS = {
+    "price_override" => "Price override",
+    "line_discount" => "Line discount",
+    "tax_class_override" => "Tax Class override",
+    "unlinked_return" => "Unlinked return",
+    "post_void" => "Post-void"
+  }.freeze
+
   def pos_line_description(line)
     snapshot = line.merchandise_snapshot
     if snapshot.is_a?(Hash) && snapshot["description"].present?
@@ -181,6 +189,18 @@ module PosHelper
     flags << "Discount" if line.manually_discounted?
     flags << "Tax Class" if line.tax_class_overridden?
     flags.join(" · ")
+  end
+
+  def pos_controlled_action_label(action)
+    CONTROLLED_ACTION_LABELS.fetch(action.action_type, action.action_type.tr("_", " "))
+  end
+
+  def pos_controlled_action_provenance(action)
+    parts = [ pos_controlled_action_label(action), "Performed by #{action.performed_by_name_snapshot}" ]
+    parts << "Approved by #{action.approved_by_name_snapshot}" if action.approved_by_name_snapshot.present?
+    parts << action.reason_name_snapshot if action.reason_name_snapshot.present?
+    parts << "Note #{action.reason_note}" if action.reason_note.present?
+    parts.join(" · ")
   end
 
   def pos_mode_label(mode)

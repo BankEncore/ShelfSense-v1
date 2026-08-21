@@ -55,15 +55,7 @@
           <li class="muted">Applied Tax Class  <%= line.tax_class_name_snapshot %></li>
         <% end %>
         <% line.pos_controlled_actions.each do |action| %>
-          <li class="muted">
-            Performed by <%= action.performed_by_name_snapshot %>
-            <% if action.approved_by_name_snapshot.present? %>
-              · Approved by <%= action.approved_by_name_snapshot %>
-            <% end %>
-            <% if action.reason_name_snapshot.present? %>
-              · <%= action.reason_name_snapshot %>
-            <% end %>
-          </li>
+          <li class="muted"><%= pos_controlled_action_provenance(action) %></li>
         <% end %>
       <% end %>
     </ul>

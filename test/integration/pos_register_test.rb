@@ -839,19 +839,24 @@ class PosRegisterTest < ActionDispatch::IntegrationTest
     assert_redirected_to pos_completed_transaction_path(transaction)
     follow_redirect!
     assert_response :success
+    assert_match "Price override", response.body
     assert_match "Performed by", response.body
     assert_match clerk.display_name, response.body
     assert_match "Approved by", response.body
     assert_match manager.display_name, response.body
+    assert_match "Damaged", response.body
+    assert_select ".pos-receipt__print", text: /Price override/, count: 0
     assert_select ".pos-receipt__print", text: /Performed by/, count: 0
     assert_select ".pos-receipt__print", text: /Approved by/, count: 0
 
     get pos_transaction_path(transaction)
     assert_response :success
+    assert_match "Price override", response.body
     assert_match "Performed by", response.body
     assert_match clerk.display_name, response.body
     assert_match "Approved by", response.body
     assert_match manager.display_name, response.body
+    assert_match "Damaged", response.body
   end
 
   private

@@ -154,7 +154,8 @@ Keep operational detail on screen. Customer receipt simplification does **not** 
 
 ```text
 who performed an action
-why
+action type
+why (reason name, and note when present)
 who approved
 price / discount / Tax Class provenance
 linked-return original
