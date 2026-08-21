@@ -73,10 +73,17 @@
     <div class="form-field">
       <%= form.label :target_margin_bps, "Target margin (basis points)" %>
       <%= form.number_field :target_margin_bps %>
+      <% unless product_variant.persisted? %>
+        <span class="field-help">Leave blank to copy the merchandise-class default.</span>
+      <% end %>
     </div>
     <div class="form-field">
-      <%= form.check_box :supplier_returnable %>
       <%= form.label :supplier_returnable, "Supplier returnable" %>
+      <% if product_variant.persisted? %>
+        <%= form.select :supplier_returnable, [ [ "Yes", true ], [ "No", false ] ] %>
+      <% else %>
+        <%= form.select :supplier_returnable, [ [ "Yes", true ], [ "No", false ] ], include_blank: "Use class default" %>
+      <% end %>
     </div>
   <% end %>
 

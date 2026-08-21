@@ -239,15 +239,52 @@ class ProductVariants::CreateAndActivationTest < ActiveSupport::TestCase
   end
 
   test "changing class defaults does not mutate existing variant stored fields" do
+    @klass.update!(target_margin_bps: 2_500, default_supplier_returnable: true)
     variant = ProductVariants::Create.call(
       product: @product,
       actor: @actor,
       attributes: { variant_type: "standard" }
     )
-    original_inventory_mode = variant.inventory_mode
-    @klass.update!(default_inventory_mode: "non_inventory")
+    original = variant.slice("inventory_mode", "pricing_method", "target_margin_bps", "supplier_returnable")
 
-    assert_equal original_inventory_mode, variant.reload.inventory_mode
+    @klass.update!(
+      default_inventory_mode: "non_inventory",
+      default_pricing_method: "open_price",
+      target_margin_bps: 1_000,
+      default_supplier_returnable: false
+    )
+
+    variant.reload
+    assert_equal original["inventory_mode"], variant.inventory_mode
+    assert_equal original["pricing_method"], variant.pricing_method
+    assert_equal original["target_margin_bps"], variant.target_margin_bps
+    assert_equal original["supplier_returnable"], variant.supplier_returnable
+  end
+
+  test "class default tax change updates effective tax unless overridden" do
+    @product.update!(status: "active")
+    other_tax = tax_class(code: "other_books_tax")
+    variant = ProductVariants::Create.call(
+      product: @product,
+      actor: @actor,
+      attributes: { variant_type: "standard", status: "active", regular_price_cents: 2_000 }
+    )
+    overridden = ProductVariants::Create.call(
+      product: @product,
+      actor: @actor,
+      attributes: {
+        variant_type: "standard",
+        status: "active",
+        regular_price_cents: 2_000,
+        tax_class_override_id: @tax.id
+      }
+    )
+
+    assert_equal @tax.id, variant.effective_tax_class.id
+    @klass.update!(default_tax_class: other_tax)
+
+    assert_equal other_tax.id, variant.reload.effective_tax_class.id
+    assert_equal @tax.id, overridden.reload.effective_tax_class.id
   end
 
   test "database rejects standard with condition and used without" do

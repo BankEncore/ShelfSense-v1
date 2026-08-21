@@ -67,6 +67,27 @@ class MerchandiseClassTrackingTest < ActiveSupport::TestCase
     assert_equal "inventory", variant.reload.inventory_mode
   end
 
+  test "merchandise class change is blocked after inventory history" do
+    other = merchandise_class(
+      code: "cls_other_dept",
+      department: department(code: "cls_other_dept_parent"),
+      pricing_method: "fixed",
+      default_tax_class: @tax
+    )
+    klass = merchandise_class(
+      code: "cls_hist_class",
+      department: @department,
+      pricing_method: "fixed"
+    )
+    variant = create_standard_variant(klass)
+    post_opening(variant)
+
+    variant.merchandise_class = other
+    assert_not variant.valid?
+    assert_includes variant.errors[:merchandise_class_id],
+                    "cannot be changed after inventory or POS history exists; a controlled reclassification is required"
+  end
+
   private
 
   def create_standard_variant(klass)

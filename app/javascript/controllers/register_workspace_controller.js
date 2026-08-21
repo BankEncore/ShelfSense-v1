@@ -58,6 +58,9 @@ export default class extends Controller {
     "controlRemove",
     "unlinkedIdentifierField",
     "unlinkedIdentifierInput",
+    "unlinkedProductIdInput",
+    "unlinkedVariantIdInput",
+    "unlinkedUnitIdInput",
     "unlinkedQuantityInput",
     "unlinkedReasonInput",
     "unlinkedNoteInput",
@@ -942,6 +945,10 @@ export default class extends Controller {
     if (key === "Escape") {
       event.preventDefault()
       this.closeProductOverlay()
+      if (this.unlinkedPickerActive) {
+        this.unlinkedPickerActive = false
+        this.unlinkedSelection = null
+      }
       return
     }
     if (key === "ArrowUp" || key === "ArrowDown") {
@@ -960,6 +967,11 @@ export default class extends Controller {
     if (!selected || !selected.dataset.productId) return
     const productId = selected.dataset.productId
     this.closeProductOverlay()
+    if (this.unlinkedPickerActive) {
+      this.unlinkedPickerActive = false
+      this.fetchUnlinkedResolution({ product_id: productId })
+      return
+    }
     this.resolveAndHandle({ product_id: productId })
   }
 
@@ -986,6 +998,10 @@ export default class extends Controller {
     if (key === "Escape") {
       event.preventDefault()
       this.closeVariantOverlay()
+      if (this.unlinkedPickerActive) {
+        this.unlinkedPickerActive = false
+        this.unlinkedSelection = null
+      }
       return
     }
     if (key === "ArrowUp" || key === "ArrowDown") {
@@ -1004,6 +1020,11 @@ export default class extends Controller {
     if (!selected) return
     const variantId = selected.dataset.variantId
     this.closeVariantOverlay()
+    if (this.unlinkedPickerActive) {
+      this.unlinkedPickerActive = false
+      this.fetchUnlinkedResolution({ product_variant_id: variantId })
+      return
+    }
     this.resolveAndHandle({ product_variant_id: variantId })
   }
 
@@ -1034,6 +1055,10 @@ export default class extends Controller {
     if (key === "Escape") {
       event.preventDefault()
       this.closeUnitOverlay()
+      if (this.unlinkedPickerActive) {
+        this.unlinkedPickerActive = false
+        this.unlinkedSelection = null
+      }
       return
     }
     if (key === "ArrowUp" || key === "ArrowDown") {
@@ -1052,6 +1077,11 @@ export default class extends Controller {
     if (!selected || !selected.dataset.unitId) return
     const unitId = selected.dataset.unitId
     this.closeUnitOverlay()
+    if (this.unlinkedPickerActive) {
+      this.unlinkedPickerActive = false
+      this.fetchUnlinkedResolution({ inventory_unit_id: unitId })
+      return
+    }
     this.resolveAndHandle({ inventory_unit_id: unitId })
   }
 
@@ -1528,7 +1558,19 @@ export default class extends Controller {
     if (this.inFlight || !this.hasUnlinkedIdentifierFieldTarget) return
     const identifier = this.unlinkedIdentifierFieldTarget.value.trim()
     if (identifier === "") return
+    this.unlinkedSelection = { identifier }
+    await this.fetchUnlinkedResolution({ identifier })
+  }
+
+  async fetchUnlinkedResolution(params = {}) {
     const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute("content")
+    const body = new URLSearchParams()
+    const identifier = params.identifier || this.unlinkedSelection?.identifier ||
+      (this.hasUnlinkedIdentifierFieldTarget ? this.unlinkedIdentifierFieldTarget.value.trim() : "")
+    if (identifier) body.set("identifier", identifier)
+    if (params.product_id) body.set("product_id", params.product_id)
+    if (params.product_variant_id) body.set("product_variant_id", params.product_variant_id)
+    if (params.inventory_unit_id) body.set("inventory_unit_id", params.inventory_unit_id)
     try {
       const response = await fetch(this.unlinkedLookupUrlValue, {
         method: "POST",
@@ -1537,18 +1579,40 @@ export default class extends Controller {
           "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
           "X-CSRF-Token": token || ""
         },
-        body: new URLSearchParams({ identifier }).toString()
+        body: body.toString()
       })
       const payload = await response.json()
-      if (!response.ok) {
-        this.showUnlinkedFeedback(payload.error || "merchandise not found")
-        this.clearUnlinkedPreviewState()
-        return
-      }
-      this.applyUnlinkedPreview(payload)
+      this.handleUnlinkedResolution(payload, response.ok)
     } catch (_error) {
       this.showUnlinkedFeedback("merchandise not found")
       this.clearUnlinkedPreviewState()
+      this.unlinkedSelection = null
+    }
+  }
+
+  handleUnlinkedResolution(payload, ok) {
+    const outcome = payload.outcome || (ok ? "resolved" : "unavailable")
+    switch (outcome) {
+      case "resolved":
+        this.applyUnlinkedPreview(payload)
+        return
+      case "product_choice_required":
+        this.unlinkedPickerActive = true
+        this.openProductPicker(payload.products || [])
+        return
+      case "variant_choice_required":
+        this.unlinkedPickerActive = true
+        this.openVariantPicker(payload.variants || [])
+        return
+      case "unit_choice_required":
+        this.unlinkedPickerActive = true
+        this.openUnitPicker(payload.units || [])
+        return
+      default:
+        this.showUnlinkedFeedback(payload.error || payload.message || "merchandise not found")
+        this.clearUnlinkedPreviewState()
+        this.unlinkedSelection = null
+        this.unlinkedPickerActive = false
     }
   }
 
@@ -1594,6 +1658,15 @@ export default class extends Controller {
       this.unlinkedIdentifierInputTarget.value = this.hasUnlinkedIdentifierFieldTarget
         ? this.unlinkedIdentifierFieldTarget.value.trim()
         : ""
+    }
+    if (this.hasUnlinkedProductIdInputTarget) {
+      this.unlinkedProductIdInputTarget.value = this.unlinkedPreviewPayload.product_id || ""
+    }
+    if (this.hasUnlinkedVariantIdInputTarget) {
+      this.unlinkedVariantIdInputTarget.value = this.unlinkedPreviewPayload.product_variant_id || ""
+    }
+    if (this.hasUnlinkedUnitIdInputTarget) {
+      this.unlinkedUnitIdInputTarget.value = this.unlinkedPreviewPayload.inventory_unit_id || ""
     }
     if (this.hasUnlinkedQuantityInputTarget) {
       this.unlinkedQuantityInputTarget.value = this.unlinkedPreviewPayload.quantity_fixed

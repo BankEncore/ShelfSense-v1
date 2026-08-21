@@ -139,6 +139,39 @@ class Phase22ProductUxTest < ActionDispatch::IntegrationTest
     assert_equal 1400, variant.regular_price_cents
   end
 
+  test "variant create copies class sticky defaults when margin and returnable are blank" do
+    sign_in_as("admin")
+    tax = tax_class(code: "books")
+    dept = department(code: "new_books")
+    klass = merchandise_class(
+      code: "book",
+      pricing_method: "fixed",
+      department: dept,
+      default_tax_class: tax,
+      target_margin_bps: 3_000,
+      default_supplier_returnable: true
+    )
+
+    post admin_product_product_variants_path(@product), params: {
+      product_variant: {
+        variant_type: "standard",
+        merchandise_class_id: klass.id,
+        inventory_mode: "",
+        pricing_method: "",
+        target_margin_bps: "",
+        supplier_returnable: "",
+        regular_price: "10.00",
+        status: "draft"
+      }
+    }
+    assert_response :redirect
+    variant = @product.product_variants.order(:created_at).last
+    assert_equal "inventory", variant.inventory_mode
+    assert_equal "fixed", variant.pricing_method
+    assert_equal 3_000, variant.target_margin_bps
+    assert_equal true, variant.supplier_returnable
+  end
+
   private
 
   def sign_in_as(username)

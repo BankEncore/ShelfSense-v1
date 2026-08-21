@@ -52,6 +52,28 @@ class Phase2HardeningTest < ActionDispatch::IntegrationTest
     assert_nil row.product_id
   end
 
+  test "draft product delete retires product industry identifier" do
+    isbn = Identifiers::Ean13.complete("978", "030640615")
+    product = Products::Create.call(
+      attributes: { name: "Draft with industry", status: "draft" },
+      actor: @actor,
+      industry_identifier: isbn
+    )
+    primary = product.primary_identifier
+    industry = product.industry_identifier
+
+    delete admin_product_path(product)
+    assert_redirected_to admin_products_path
+    assert_nil Product.find_by(id: product.id)
+
+    [ primary, industry ].each do |value|
+      row = Identifiers::Registry.find_any(value)
+      assert row.present?, "expected retired registry row for #{value}"
+      assert row.retired_at.present?
+      assert_nil row.product_id
+    end
+  end
+
   test "retired identifiers cannot be reallocated" do
     product = Products::Create.call(
       attributes: { name: "Retire", status: "draft" },

@@ -147,9 +147,11 @@ module Admin
       end
 
       primary_identifier = @product.primary_identifier
+      industry_identifier = @product.industry_identifier
       name = @product.name
       Product.transaction do
         Identifiers::Registry.retire!(value: primary_identifier)
+        Identifiers::Registry.retire!(value: industry_identifier) if industry_identifier.present?
         @product.destroy!
         Audit::Recorder.record!(
           action: "products.destroy",
@@ -157,11 +159,16 @@ module Admin
           actor_user: current_user,
           actor_label: current_user.display_name,
           store: current_store,
-          after_values: { primary_identifier: primary_identifier, name: name }
+          after_values: {
+            primary_identifier: primary_identifier,
+            industry_identifier: industry_identifier,
+            name: name
+          }
         )
       end
       redirect_to admin_products_path, notice: "Draft product deleted."
-    rescue ActiveRecord::DeleteRestrictionError, ActiveRecord::InvalidForeignKey, ActiveRecord::RecordNotFound => e
+    rescue ActiveRecord::DeleteRestrictionError, ActiveRecord::InvalidForeignKey, ActiveRecord::RecordNotFound,
+           ActiveRecord::StatementInvalid => e
       redirect_to admin_product_path(@product), alert: e.message
     end
 

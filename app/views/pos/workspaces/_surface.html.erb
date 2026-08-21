@@ -332,6 +332,9 @@
       <%= hidden_field_tag :register_id, @register.id %>
       <%= hidden_field_tag :lock_version, @transaction.lock_version %>
       <%= hidden_field_tag :identifier, "", data: { register_workspace_target: "unlinkedIdentifierInput" } %>
+      <%= hidden_field_tag :product_id, "", data: { register_workspace_target: "unlinkedProductIdInput" } %>
+      <%= hidden_field_tag :product_variant_id, "", data: { register_workspace_target: "unlinkedVariantIdInput" } %>
+      <%= hidden_field_tag :inventory_unit_id, "", data: { register_workspace_target: "unlinkedUnitIdInput" } %>
       <%= hidden_field_tag :quantity, "", data: { register_workspace_target: "unlinkedQuantityInput" } %>
       <%= hidden_field_tag :reason_code, "", data: { register_workspace_target: "unlinkedReasonInput" } %>
       <%= hidden_field_tag :reason_note, "", data: { register_workspace_target: "unlinkedNoteInput" } %>

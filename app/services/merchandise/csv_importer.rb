@@ -23,6 +23,7 @@ module Merchandise
       created_variants = 0
       updated_variants = 0
       errors = []
+      @preexisting_product_ids = Product.pluck(:id).to_set
 
       groups = group_rows(CSV.parse(@io.read, headers: true))
       groups.each do |group|
@@ -66,8 +67,9 @@ module Merchandise
 
     private
 
-    # Rows that share a resolvable product key form one transaction group. Rows with no
-    # key at all are create-only and each get their own group.
+    # Group only by unique product identity (primary or industry GTIN). Lookup codes are
+    # intentionally nonunique, so they must never merge rows into one product group.
+    # Rows with only a lookup code (or no identity) each get their own create/update group.
     def group_rows(rows)
       indexed = rows.each_with_index.map { |row, index| { row: row, line: index + 2 } }
       groups = []
@@ -75,24 +77,20 @@ module Merchandise
 
       indexed.each do |entry|
         begin
-          key = product_group_key(entry[:row])
+          key = product_group_key(entry[:row], entry[:line])
         rescue Identifiers::NormalizationError => e
           groups << { rows: [ entry ], error: e.message }
           next
         end
 
-        if key.nil?
-          groups << { rows: [ entry ] }
-        else
-          (by_key[key] ||= []) << entry
-        end
+        (by_key[key] ||= []) << entry
       end
 
       by_key.each_value { |entries| groups << { rows: entries } }
       groups
     end
 
-    def product_group_key(row)
+    def product_group_key(row, line)
       if (raw = row["product_primary_identifier"].presence)
         return "primary:#{Identifiers::Normalizer.normalize(raw, allow_shelfsense_222: true)}"
       end
@@ -101,8 +99,7 @@ module Merchandise
         return "industry:#{Identifiers::Normalizer.normalize(raw, allow_shelfsense_222: false)}"
       end
 
-      code = Product.canonical_lookup_code(row["product_lookup_code"])
-      code.present? ? "lookup:#{code}" : nil
+      "row:#{line}"
     end
 
     def variant_requested?(row)
@@ -151,7 +148,7 @@ module Merchandise
       code = Product.canonical_lookup_code(row["product_lookup_code"])
       return nil if code.blank?
 
-      matches = Product.where(lookup_code: code).to_a
+      matches = Product.where(lookup_code: code).select { |product| @preexisting_product_ids.include?(product.id) }
       if matches.many?
         raise Error, "product_lookup_code #{code} matches #{matches.size} products; use product_primary_identifier"
       end

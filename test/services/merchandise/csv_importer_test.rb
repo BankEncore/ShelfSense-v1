@@ -115,6 +115,20 @@ class Merchandise::CsvImporterTest < ActiveSupport::TestCase
     assert_nil Product.find_by(name: "Ambiguous")
   end
 
+  test "two new rows sharing a lookup code create two products" do
+    result = import_csv(<<~CSV)
+      product_lookup_code,name
+      SHARED-NEW,Product One
+      SHARED-NEW,Product Two
+    CSV
+
+    assert_empty result.errors
+    assert_equal 2, result.created_products
+    products = Product.where(lookup_code: "SHARED-NEW").order(:name)
+    assert_equal [ "Product One", "Product Two" ], products.map(&:name)
+    assert_equal 2, products.map(&:primary_identifier).uniq.size
+  end
+
   test "blank identity cells leave the industry identifier and lookup code untouched" do
     industry = Identifiers::Ean13.complete("978", "030640615")
     product = Products::Create.call(

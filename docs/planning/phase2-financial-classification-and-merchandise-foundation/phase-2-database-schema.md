@@ -8,7 +8,7 @@ Phase 2 establishes the financial classifications and merchandise records requir
 - Product variants are the sellable records used by later inventory, purchasing, customer-request, and POS workflows.
 - Every variant receives an immutable, system-generated `221` EAN-13-compatible SKU.
 - Every product has exactly one mandatory `primary_identifier` (entered external GTIN/ISBN or system-generated `222` EAN-13) established at creation.
-- Defaults assist record creation; approved classifications and prices are stored on each variant and are not dynamically inherited afterward.
+- Defaults assist record creation; approved classifications and prices are stored on each variant and are not dynamically inherited afterward. **Superseded in part by [Phase 6.1](../phase6.1-merchandise-classification-and-identifiers/phase6.1-plan.md):** tax class is dynamically inherited from the merchandise class unless a variant override is set; operational fields remain sticky copies.
 - Department GL mappings are explicit nullable foreign-key columns on `departments`.
 - ShelfSense uses perpetual inventory accounting: inventory assets and cost of goods sold are separate mappings.
 - All primary and foreign keys use `uuid`; application-created identifiers are UUIDv7.

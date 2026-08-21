@@ -28,6 +28,7 @@ class ProductVariant < ApplicationRecord
   validate :validate_changed_references
   validate :identifier_write_rules
   validate :tracking_immutability_after_history
+  validate :block_class_reclassification_after_history
   validate :activation_requirements, if: -> { status == "active" }
   after_save { self.identifier_writes_enabled = false }
 
@@ -164,6 +165,17 @@ class ProductVariant < ApplicationRecord
     return if prior == current
 
     errors.add(:base, "cannot change inventory tracking method after inventory history exists")
+  end
+
+  def block_class_reclassification_after_history
+    return if new_record?
+    return unless merchandise_class_id_changed?
+    return unless inventory_history? || pos_line_history?
+
+    errors.add(
+      :merchandise_class_id,
+      "cannot be changed after inventory or POS history exists; a controlled reclassification is required"
+    )
   end
 
   def condition_matches_variant_type

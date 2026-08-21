@@ -2,7 +2,9 @@
 
 ## Status
 
-Proposed. Not implemented.
+Accepted / implemented. Authority for classification and product-identity behavior after cutover.
+
+**Relative to Phase 2 / 2.1:** Phase 2 said defaults assist creation and approved classifications are not dynamically inherited afterward. Phase 6.1 keeps that for operational fields copied onto the variant (`inventory_mode`, `pricing_method`, `target_margin_bps`, `supplier_returnable`). It **supersedes** that blanket for tax only: effective tax is the variant override when present, otherwise the merchandise class’s **current** default. Clearing the tax override re-inherits the class default (this is intentional and differs from Phase 2.1 “blank means cleared stored tax class”).
 
 ## Purpose
 
@@ -240,7 +242,7 @@ POS `ResolveMerchandiseForSale` must gain an outcome such as `product_choice_req
 Template and importer:
 
 - New products always generate `222`. Ordinary import cannot assign a primary identifier. `generate_primary_identifier` and entered `primary_identifier` on **create** are removed.
-- Stable update keys: existing `222` `product_primary_identifier`, unambiguous `product_industry_identifier`, variant `sku`, variant `industry_identifier`. `product_lookup_code` locates a product only when the match is **one** product; multiple matches fail the row/group.
+- Stable update keys: existing `222` `product_primary_identifier`, unambiguous `product_industry_identifier`, variant `sku`, variant `industry_identifier`. `product_lookup_code` locates a product only when the match is **one pre-existing** product; multiple matches fail the row/group. Lookup code is **not** a multi-row group key—rows that share only a lookup code each form their own group so a single file can create multiple products with the same code.
 - Headers include `product_industry_identifier`, `product_lookup_code`, `merchandise_class_code`, `inventory_mode`, `pricing_method`, `target_margin_bps`, `supplier_returnable`, `tax_class_override_code` (blank means inherit).
 - Product and variant industry identifiers use the same GTIN normalizer as the UI. Ambiguous industry-identifier matches are rejected.
 - Lookup codes uppercase; duplicate lookup codes on different products are allowed on write.
