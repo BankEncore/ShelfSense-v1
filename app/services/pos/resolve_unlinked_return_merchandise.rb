@@ -2,6 +2,8 @@
 
 module Pos
   class ResolveUnlinkedReturnMerchandise
+    SELECTION_MISMATCH_MESSAGE = "Merchandise changed. Resolve the return again."
+
     Result = Struct.new(
       :outcome,
       :variant,
@@ -33,7 +35,7 @@ module Pos
       advisory_working_unit_check: true
     )
       @store = store
-      @identifier = identifier
+      @identifier = identifier.to_s.strip.presence
       @product = product
       @variant = variant
       @inventory_unit = inventory_unit
@@ -42,14 +44,13 @@ module Pos
     end
 
     def call
-      if @inventory_unit
-        resolve_unit(@inventory_unit)
-      elsif @variant
-        resolve_variant(@variant)
-      elsif @product
-        resolve_product(@product)
+      if @identifier.present?
+        resolve_bound_to_identifier
+      elsif @inventory_unit || @variant || @product
+        # Selections without an identifier are never a valid unlinked-return basis.
+        raise Pos::InvalidatedDialogBasis, SELECTION_MISMATCH_MESSAGE
       else
-        resolve_identifier
+        unavailable("merchandise not found")
       end
     rescue Identifiers::NormalizationError => e
       unavailable(e.message)
@@ -57,38 +58,90 @@ module Pos
 
     private
 
-    def resolve_identifier
-      result = Identifiers::Lookup.call(@identifier)
-      case result.status
-      when :variant
-        resolve_variant(result.variant)
-      when :product
-        resolve_product(result.product)
-      when :multiple_products
-        Result.new(
-          outcome: :product_choice_required,
-          products: sorted_products(result.products)
-        )
+    def resolve_bound_to_identifier
+      lookup = Identifiers::Lookup.call(@identifier)
+      case lookup.status
       when :inventory_unit
-        resolve_unit(result.inventory_unit)
+        bind_direct_unit!(lookup.inventory_unit)
+      when :variant
+        bind_direct_variant!(lookup.variant)
+      when :product
+        resolve_from_product_matches([ lookup.product ])
+      when :multiple_products
+        resolve_from_product_matches(Array(lookup.products))
       when :retired
         unavailable("identifier is retired")
+      when :not_found, :invalid
+        unavailable("merchandise not found")
       else
         unavailable("merchandise not found")
       end
     end
 
-    def resolve_product(product)
-      return unavailable("merchandise not found") if product.nil?
+    def bind_direct_unit!(matched_unit)
+      raise Pos::InvalidatedDialogBasis, SELECTION_MISMATCH_MESSAGE if matched_unit.nil?
+
+      if @product && @product.id != matched_unit.product_variant&.product_id
+        raise Pos::InvalidatedDialogBasis, SELECTION_MISMATCH_MESSAGE
+      end
+      if @variant && @variant.id != matched_unit.product_variant_id
+        raise Pos::InvalidatedDialogBasis, SELECTION_MISMATCH_MESSAGE
+      end
+      if @inventory_unit && @inventory_unit.id != matched_unit.id
+        raise Pos::InvalidatedDialogBasis, SELECTION_MISMATCH_MESSAGE
+      end
+
+      resolve_unit(matched_unit)
+    end
+
+    def bind_direct_variant!(matched_variant)
+      raise Pos::InvalidatedDialogBasis, SELECTION_MISMATCH_MESSAGE if matched_variant.nil?
+
+      if @product && @product.id != matched_variant.product_id
+        raise Pos::InvalidatedDialogBasis, SELECTION_MISMATCH_MESSAGE
+      end
+      if @variant && @variant.id != matched_variant.id
+        raise Pos::InvalidatedDialogBasis, SELECTION_MISMATCH_MESSAGE
+      end
+
+      if @inventory_unit
+        unless @inventory_unit.product_variant_id == matched_variant.id
+          raise Pos::InvalidatedDialogBasis, SELECTION_MISMATCH_MESSAGE
+        end
+        return resolve_unit(@inventory_unit)
+      end
+
+      resolve_variant(matched_variant)
+    end
+
+    def resolve_from_product_matches(matched_products)
+      matched_products = Array(matched_products).compact
+      return unavailable("merchandise not found") if matched_products.empty?
+
+      product = selected_product_from!(matched_products)
+      return Result.new(outcome: :product_choice_required, products: sorted_products(matched_products)) if product.nil?
 
       candidates = product.product_variants.select { |variant| return_identity_eligible?(variant) }
       return unavailable("merchandise not found") if candidates.empty?
 
-      individual, others = candidates.partition { |variant| tracking_for(variant) == "individual" }
-
-      if others.empty?
-        return unavailable("scan the unit identifier")
+      if @variant
+        unless candidates.any? { |candidate| candidate.id == @variant.id } && @variant.product_id == product.id
+          raise Pos::InvalidatedDialogBasis, SELECTION_MISMATCH_MESSAGE
+        end
+        return continue_from_variant!(@variant)
       end
+
+      if @inventory_unit
+        unit_variant = @inventory_unit.product_variant
+        unless unit_variant && candidates.any? { |candidate| candidate.id == unit_variant.id } &&
+               unit_variant.product_id == product.id
+          raise Pos::InvalidatedDialogBasis, SELECTION_MISMATCH_MESSAGE
+        end
+        return continue_from_variant!(unit_variant, preferred_unit: @inventory_unit)
+      end
+
+      individual, others = candidates.partition { |variant| tracking_for(variant) == "individual" }
+      return unavailable("scan the unit identifier") if others.empty?
 
       if others.many? || individual.any?
         return Result.new(
@@ -99,6 +152,45 @@ module Pos
       end
 
       resolve_variant(others.first)
+    end
+
+    def selected_product_from!(matched_products)
+      if @product
+        unless matched_products.any? { |product| product.id == @product.id }
+          raise Pos::InvalidatedDialogBasis, SELECTION_MISMATCH_MESSAGE
+        end
+        return @product
+      end
+
+      if @variant
+        product = matched_products.find { |match| match.id == @variant.product_id }
+        raise Pos::InvalidatedDialogBasis, SELECTION_MISMATCH_MESSAGE if product.nil?
+
+        return product
+      end
+
+      if @inventory_unit
+        product_id = @inventory_unit.product_variant&.product_id
+        product = matched_products.find { |match| match.id == product_id }
+        raise Pos::InvalidatedDialogBasis, SELECTION_MISMATCH_MESSAGE if product.nil?
+
+        return product
+      end
+
+      return matched_products.first if matched_products.one?
+
+      nil
+    end
+
+    def continue_from_variant!(variant, preferred_unit: nil)
+      if preferred_unit
+        unless preferred_unit.product_variant_id == variant.id
+          raise Pos::InvalidatedDialogBasis, SELECTION_MISMATCH_MESSAGE
+        end
+        return resolve_unit(preferred_unit)
+      end
+
+      resolve_variant(variant)
     end
 
     def resolve_variant(variant)

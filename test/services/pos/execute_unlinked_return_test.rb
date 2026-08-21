@@ -226,6 +226,61 @@ class PosExecuteUnlinkedReturnTest < ActiveSupport::TestCase
     assert_equal 1, transaction.reload.pos_transaction_lines.count
   end
 
+  test "reject product selection that is not among shared lookup matches" do
+    @variant.product.update!(lookup_code: "UNL-BOUND")
+    Products::Create.call(
+      attributes: { name: "Shared Peer", status: "active" },
+      actor: @admin,
+      lookup_code: "UNL-BOUND"
+    )
+    outsider = pos_sellable_variant(actor: @admin, tax_class: @tax, name: "Outsider")
+
+    transaction = start_transaction(@manager)
+    error = assert_raises(Pos::InvalidatedDialogBasis) do
+      add_unlinked!(
+        transaction,
+        @manager,
+        identifier: "unl-bound",
+        product_id: outsider.product_id
+      )
+    end
+    assert_equal Pos::ResolveUnlinkedReturnMerchandise::SELECTION_MISMATCH_MESSAGE, error.message
+    assert_equal 0, transaction.reload.pos_transaction_lines.count
+  end
+
+  test "reject variant selection that does not belong to the identifier product" do
+    other = pos_sellable_variant(actor: @admin, tax_class: @tax, name: "Unrelated Variant")
+
+    transaction = start_transaction(@manager)
+    error = assert_raises(Pos::InvalidatedDialogBasis) do
+      add_unlinked!(
+        transaction,
+        @manager,
+        identifier: @variant.product.primary_identifier,
+        product_variant_id: other.id
+      )
+    end
+    assert_equal Pos::ResolveUnlinkedReturnMerchandise::SELECTION_MISMATCH_MESSAGE, error.message
+    assert_equal 0, transaction.reload.pos_transaction_lines.count
+  end
+
+  test "reject unit selection unrelated to the scanned variant identifier" do
+    _foreign_variant, foreign_unit = pos_on_hand_unit(store: @store, actor: @admin, tax_class: @tax, name: "Foreign Unit")
+    foreign_unit.update_columns(lifecycle_state: "removed", removed_at: Time.current)
+
+    transaction = start_transaction(@manager)
+    error = assert_raises(Pos::InvalidatedDialogBasis) do
+      add_unlinked!(
+        transaction,
+        @manager,
+        identifier: @variant.sku,
+        inventory_unit_id: foreign_unit.id
+      )
+    end
+    assert_equal Pos::ResolveUnlinkedReturnMerchandise::SELECTION_MISMATCH_MESSAGE, error.message
+    assert_equal 0, transaction.reload.pos_transaction_lines.count
+  end
+
   test "unlinked returns do not merge on rescan" do
     transaction = start_transaction(@manager)
     first = add_unlinked!(transaction, @manager)

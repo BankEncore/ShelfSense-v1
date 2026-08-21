@@ -184,6 +184,8 @@ module Pos
       render json: serialize_unlinked_resolution(result)
     rescue Pos::Denied
       render json: { error: "You are not authorized to perform that action." }, status: :forbidden
+    rescue Pos::InvalidatedDialogBasis => e
+      render json: { outcome: "unavailable", error: e.message, message: e.message }, status: :unprocessable_entity
     rescue Identifiers::NormalizationError, Pos::Error => e
       render json: { outcome: "unavailable", error: e.message, message: e.message }, status: :unprocessable_entity
     end
