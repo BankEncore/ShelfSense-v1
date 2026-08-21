@@ -214,6 +214,14 @@ Phase 6 extends the Phase 5 Cash register with Used/non-inventory sales, mixed t
 
 Authoritative plan: [phase6-plan.md](docs/planning/phase4-6-point-of-sale/phase6-pos-mvp/phase6-plan.md). Contract: [mvp-contract.md](docs/planning/phase4-6-point-of-sale/phase6-pos-mvp/mvp-contract.md). Workflow: [pos-workflow.md](docs/planning/phase4-6-point-of-sale/phase6-pos-mvp/pos-workflow.md). Closeout: [mvp-closeout.md](docs/planning/phase4-6-point-of-sale/phase6-pos-mvp/mvp-closeout.md). Returns: [returns.md](docs/planning/phase4-6-point-of-sale/phase6-pos-mvp/returns.md). Post-void: [post-void.md](docs/planning/phase4-6-point-of-sale/phase6-pos-mvp/post-void.md).
 
+### Phase 6.1: Merchandise classification and identifiers
+
+Status: proposed (not implemented).
+
+Phase 6.1 cuts over classification and product identity before later domains consume the Phase 2 contracts. Data is disposable; the implementing migrations ship the final schema. Departments remain reporting + GL owners; merchandise classes belong to one department and own creation-time defaults; variants persist inventory mode, pricing method, margin, supplier returnability, and tax class; products always receive generated `222` identifiers; manufacturer GTINs stay on variants; lookup codes are optional and may be shared; POS and inventory identifier entry use registry hits first, then lookup codes, with product selection when a code matches more than one product.
+
+Authoritative packet: [Phase 6.1](docs/planning/phase6.1-merchandise-classification-and-identifiers/README.md).
+
 ## Phase 1 authorization model
 
 Permissions are additive and supplied by roles:
@@ -249,7 +257,7 @@ Start with the [documentation index](docs/README.md). Key references include:
 - [Phase 1 plan](docs/planning/phase1-operational-foundation/phase1-plan.md), [schema](docs/planning/phase1-operational-foundation/phase1-schema.md), and [authorization contract](docs/planning/phase1-operational-foundation/phase1-authorization.md)
 - [Phase 2 plan](docs/planning/phase2-financial-classification-and-merchandise-foundation/phase2-plan.md), [schema](docs/planning/phase2-financial-classification-and-merchandise-foundation/phase-2-database-schema.md), and [authorization contract](docs/planning/phase2-financial-classification-and-merchandise-foundation/phase2-authorization.md)
 - [Phase 2.2 UX foundation](docs/planning/phase2.2-ux-foundation/phase-2.2-ux-foundation.md) and [UX conventions](docs/ux-conventions.md)
-- [Phase 4 POS plan](docs/planning/phase4-6-point-of-sale/phase4-point-of-sale/phase4-plan.md), [Phase 5 cash register plan](docs/planning/phase4-6-point-of-sale/phase5-cash-register/phase5-plan.md), and [Phase 6 POS MVP plan](docs/planning/phase4-6-point-of-sale/phase6-pos-mvp/phase6-plan.md)
+- [Phase 4 POS plan](docs/planning/phase4-6-point-of-sale/phase4-point-of-sale/phase4-plan.md), [Phase 5 cash register plan](docs/planning/phase4-6-point-of-sale/phase5-cash-register/phase5-plan.md), [Phase 6 POS MVP plan](docs/planning/phase4-6-point-of-sale/phase6-pos-mvp/phase6-plan.md), and [Phase 6.1 classification and identifiers](docs/planning/phase6.1-merchandise-classification-and-identifiers/README.md)
 - [Development guide](docs/development.md)
 - [Testing and CI](docs/testing.md)
 - [GitHub work management](docs/github-workflow.md)
