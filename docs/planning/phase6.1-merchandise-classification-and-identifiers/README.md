@@ -1,6 +1,6 @@
 # Phase 6.1 — Merchandise classification and identifiers
 
-Status: **accepted / implemented** on branch `phase-6.1-classification-and-identifiers` (PR toward `main`). Data was disposable; this packet did not require backward compatibility with the Phase 2–6 schema.
+Status: **accepted / implemented** on `main` (merged via PR #24 from `phase-6.1-classification-and-identifiers`). Data was disposable; this packet did not require backward compatibility with the Phase 2–6 schema.
 
 | Document | Purpose |
 |---|---|

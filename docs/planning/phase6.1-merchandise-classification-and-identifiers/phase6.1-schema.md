@@ -1,6 +1,6 @@
 # Phase 6.1 — Target schema
 
-Status: **accepted**. This is the schema implemented for Phase 6.1. It replaces the classification and product-identity portions of [phase-2-database-schema.md](../phase2-financial-classification-and-merchandise-foundation/phase-2-database-schema.md) for new work. Unlisted tables and columns stay as in `db/schema.rb` unless a later phase changes them.
+Status: **accepted**. This is the schema implemented for Phase 6.1 on `main`. It replaces the classification and product-identity portions of [phase-2-database-schema.md](../phase2-financial-classification-and-merchandise-foundation/phase-2-database-schema.md) for new work. Unlisted tables and columns stay as in `db/schema.rb` unless a later phase changes them.
 
 Conventions match the rest of ShelfSense: UUIDv7 ids (`create_uuid_table` / `id: :uuid, default: nil`), `timestamptz`, `lock_version` on mutable roots, integer cents, integer basis points.
 

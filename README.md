@@ -2,7 +2,7 @@
 
 ShelfSense is an inventory, purchasing, customer-service, and point-of-sale system for independent bookstores. It is designed for one organization operating one or more stores, with a central organization server and store Registers. A future standalone Terminal (ADR-021) may continue ordinary checkout during temporary connectivity loss.
 
-Phases 0–6 are implemented. Phase 6 is the operational POS MVP: slices 6.0–6.8 are implemented (through cashier workflow, customer print, and closeout).
+Phases 0–6 and Phase 6.1 are implemented. Phase 6 is the operational POS MVP: slices 6.0–6.8 are implemented (through cashier workflow, customer print, and closeout). Phase 6.1 is the merchandise classification and product-identity cutover on `main`.
 
 ## Goals
 
@@ -216,9 +216,9 @@ Authoritative plan: [phase6-plan.md](docs/planning/phase4-6-point-of-sale/phase6
 
 ### Phase 6.1: Merchandise classification and identifiers
 
-Status: proposed (not implemented).
+Status: implemented (merged to `main`).
 
-Phase 6.1 cuts over classification and product identity before later domains consume the Phase 2 contracts. Data is disposable; the implementing migrations ship the final schema. Departments remain reporting and GL posting owners (all classes in a department share those accounts); merchandise classes belong to one department and own policies plus variant defaults, including a live default tax class with optional variant override; variants persist inventory mode, pricing method, margin, and supplier returnability; products always receive generated `222` identifiers and may have a product-level industry GTIN; lookup codes are optional and may be shared; identifier matching uses any registry row (active or retired) before lookup codes; POS and inventory callers apply their own eligibility after a match.
+Phase 6.1 cut over classification and product identity before later domains consume the Phase 2 contracts. Data was disposable; the implementing migrations shipped the final schema. Departments remain reporting and GL posting owners (all classes in a department share those accounts); merchandise classes belong to one department and own policies plus variant defaults, including a live default tax class with optional variant override; variants persist inventory mode, pricing method, margin, and supplier returnability; products always receive generated `222` identifiers and may have a product-level industry GTIN; lookup codes are optional and may be shared; identifier matching uses any registry row (active or retired) before lookup codes; POS and inventory callers apply their own eligibility after a match.
 
 Authoritative packet: [Phase 6.1](docs/planning/phase6.1-merchandise-classification-and-identifiers/README.md).
 

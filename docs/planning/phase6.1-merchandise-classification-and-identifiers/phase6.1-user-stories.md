@@ -1,6 +1,6 @@
 # Phase 6.1 — User stories
 
-Status: **accepted** backlog for [phase6.1-plan.md](phase6.1-plan.md). Acceptance criteria must not be weakened if a story is split across PRs.
+Status: **accepted / completed** backlog for [phase6.1-plan.md](phase6.1-plan.md) (implemented on `main`). Acceptance criteria must not be weakened if a story is revisited.
 
 Existing product, variant, inventory-unit, and POS resolution behavior (unit → variant → product → variant choice → unit choice) is a regression boundary. This backlog **adds** product selection when a lookup code matches multiple products, product-level industry GTIN as a product identifier, and live tax inheritance with an optional override.
 

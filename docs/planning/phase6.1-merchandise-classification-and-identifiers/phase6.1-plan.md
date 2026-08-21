@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted / implemented. Authority for classification and product-identity behavior after cutover.
+Accepted / implemented on `main`. Authority for classification and product-identity behavior after cutover.
 
 **Relative to Phase 2 / 2.1:** Phase 2 said defaults assist creation and approved classifications are not dynamically inherited afterward. Phase 6.1 keeps that for operational fields copied onto the variant (`inventory_mode`, `pricing_method`, `target_margin_bps`, `supplier_returnable`). It **supersedes** that blanket for tax only: effective tax is the variant override when present, otherwise the merchandise class’s **current** default. Clearing the tax override re-inherits the class default (this is intentional and differs from Phase 2.1 “blank means cleared stored tax class”).
 
@@ -258,9 +258,9 @@ Do not put secrets or full row dumps in payloads.
 
 ## Delivery
 
-Implement on the long-lived feature branch `phase-6.1-classification-and-identifiers`. Land Slice A then Slice B on that branch. Run automated CI-equivalent checks and a written **manual test gate** against `docker compose up` before opening a PR to `main`. Do not merge until the manual checklist passes.
+Delivered on feature branch `phase-6.1-classification-and-identifiers` (Slices A then B), with automated CI-equivalent checks and a written manual test gate against `docker compose up`, then merged to `main` (PR #24).
 
-Each slice includes tests, audit, admin/CSV/POS updates, seeds/fixtures, `db/schema.rb`, and documentation as applicable.
+Each slice included tests, audit, admin/CSV/POS updates, seeds/fixtures, `db/schema.rb`, and documentation as applicable.
 
 ### Slice A — Classification cutover
 

@@ -39,7 +39,7 @@ This directory contains the project’s technical authority, development guidanc
 | [Phase 6 POS workflow](planning/phase4-6-point-of-sale/phase6-pos-mvp/pos-workflow.md) | Slice 6.7 cashier Home, keys, pickers, open-price Standard, return entry, X Report (implemented) |
 | [Phase 6 MVP closeout](planning/phase4-6-point-of-sale/phase6-pos-mvp/mvp-closeout.md) | Slice 6.8 presentation, regression; no new commercial behavior (implemented) |
 | [Phase 6 receipt presentation](planning/phase4-6-point-of-sale/phase6-pos-mvp/receipt-presentation.md) | Customer print/reprint layout (implemented in 6.8) |
-| [Phase 6.1 classification and identifiers](planning/phase6.1-merchandise-classification-and-identifiers/README.md) | Proposed classification cutover, live tax inheritance, product industry GTIN, lookup codes, and POS/inventory targeting (disposable data) |
+| [Phase 6.1 classification and identifiers](planning/phase6.1-merchandise-classification-and-identifiers/README.md) | Implemented classification cutover, live tax inheritance, product industry GTIN, lookup codes, and POS/inventory targeting (disposable-data cutover on `main`) |
 | [POS Phases 4–6 plan](planning/phase4-6-point-of-sale/spec.md) | Multi-phase POS sequencing (foundation → cash register → MVP); §6 deferred to the Phase 6 packet |
 | [UX conventions](ux-conventions.md) | Shared admin page anatomy, partials, currency boundaries, palette, and Hotwire deferral |
 | [Development guide](development.md) | Docker-only local setup, PostgreSQL configuration, application commands, and troubleshooting |
