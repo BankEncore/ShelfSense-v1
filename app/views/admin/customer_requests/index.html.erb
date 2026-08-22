@@ -1,0 +1,18 @@
+<% content_for :title, "Customer requests" %>
+<h1>Customer requests</h1>
+<% if effective_permissions.include?("customer_requests.manage") && current_store.present? %>
+  <p><%= link_to "New request", new_admin_customer_request_path %></p>
+<% end %>
+<% if current_store.present? && effective_permissions.include?("customer_requests.locate") %>
+  <p><%= link_to "Open location queue", ops_location_path %></p>
+<% end %>
+<ul>
+  <% @customer_requests.each do |request| %>
+    <li>
+      <%= link_to "Request ##{request.number}", admin_customer_request_path(request) %>
+      — <%= request.customer.display_name %>
+      — <%= request.status %>
+      — <%= request.product_variant.sku %>
+    </li>
+  <% end %>
+</ul>

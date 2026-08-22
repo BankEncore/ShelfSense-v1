@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en" data-turbo="false">
+  <head>
+    <title><%= content_for?(:title) ? "#{content_for(:title)} · ShelfSense" : "Ops · ShelfSense" %></title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+    <%= stylesheet_link_tag "application" %>
+  </head>
+  <body class="ops-body">
+    <header class="ops-header">
+      <div>
+        <%= link_to "ShelfSense Ops", ops_location_path, class: "app-brand" %>
+        <% if current_store.present? %>
+          <div class="app-header-meta"><%= current_store.admin_label %></div>
+        <% end %>
+      </div>
+      <nav class="app-nav" aria-label="Ops">
+        <%= link_to "Location queue", ops_location_path %>
+        <% if effective_permissions.include?("orders.view") %>
+          <%= link_to "Draft POs", ops_draft_pos_path %>
+        <% end %>
+        <% if effective_permissions.include?("purchase_receipts.view") %>
+          <%= link_to "Receiving", ops_receiving_index_path %>
+        <% end %>
+        <%= link_to "Admin", root_path %>
+        <% if effective_permissions.include?("pos.transact") %>
+          <%= link_to "POS", pos_path %>
+        <% end %>
+        <%= button_to "Sign out", session_path, method: :delete, class: "btn btn--ghost" %>
+      </nav>
+    </header>
+    <%= render "shared/flash" %>
+    <main class="ops-content">
+      <%= yield %>
+    </main>
+  </body>
+</html>

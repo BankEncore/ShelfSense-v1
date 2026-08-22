@@ -2,6 +2,8 @@
 
 module Admin
   class ProductVariantsController < BaseController
+    include PurchasingHelper
+
     before_action -> { require_permission!("product_variants.view") }, only: %i[index show]
     before_action -> { require_permission!("product_variants.create") }, only: %i[new create]
     before_action -> { require_permission!("product_variants.update") }, only: %i[edit update]
@@ -16,6 +18,7 @@ module Admin
 
     def show
       @show_inventory = current_store.present? && effective_permissions.include?("inventory.view")
+      load_purchasing_context
       return unless @show_inventory
 
       @inventory_balance = InventoryBalance.find_by(
@@ -200,6 +203,48 @@ module Admin
       end
 
       permitted
+    end
+
+    def load_purchasing_context
+      @can_order_stock = current_store.present? &&
+        effective_permissions.include?("orders.manage") &&
+        stock_orderable_variant?(@product_variant)
+      @can_create_customer_request = current_store.present? &&
+        effective_permissions.include?("customer_requests.manage") &&
+        customer_requestable_variant?(@product_variant, store: current_store)
+
+      if @product_variant.standard? && @product_variant.inventory_mode == "inventory"
+        @supplier_variant_sources = @product_variant.supplier_variant_sources
+          .includes(:supplier, :store_supplier_source_preferences)
+          .admin_ordered
+        @can_manage_supplier_sources = effective_permissions.include?("suppliers.manage")
+        if current_store.present?
+          @store_source_preference = StoreSupplierSourcePreference.find_by(
+            store_id: current_store.id,
+            product_variant_id: @product_variant.id
+          )
+        end
+      end
+
+      return unless current_store.present? && @product_variant.standard?
+
+      @preferred_source = Purchasing::PreferredSourceResolver.call(
+        store: current_store,
+        product_variant: @product_variant
+      )
+      @available_quantity = Inventory::Availability.available(current_store, @product_variant)
+      @reserved_quantity = Inventory::Availability.active_reserved_quantity(current_store, @product_variant)
+      @open_stock_order_quantity = Order
+        .joins(purchase_order_line: :purchase_order)
+        .where(store_id: current_store.id, product_variant_id: @product_variant.id, customer_request_id: nil)
+        .where(purchase_orders: { status: %w[draft sent] })
+        .sum(:requested_quantity)
+      @open_customer_order_quantity = Order
+        .joins(purchase_order_line: :purchase_order)
+        .where(store_id: current_store.id, product_variant_id: @product_variant.id)
+        .where.not(customer_request_id: nil)
+        .where(purchase_orders: { status: %w[draft sent] })
+        .sum(:requested_quantity)
     end
   end
 end

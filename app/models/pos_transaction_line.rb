@@ -11,6 +11,7 @@ class PosTransactionLine < ApplicationRecord
   belongs_to :tax_class
   belongs_to :default_tax_class, class_name: "TaxClass", optional: true
   belongs_to :inventory_unit, optional: true
+  belongs_to :customer_request_allocation, optional: true
   belongs_to :original_transaction_line, class_name: "PosTransactionLine", optional: true
   belongs_to :post_void_source_line, class_name: "PosTransactionLine", optional: true
   has_many :pos_line_tax_components, dependent: :destroy
@@ -48,6 +49,10 @@ class PosTransactionLine < ApplicationRecord
 
   def unit_line?
     inventory_unit_id.present?
+  end
+
+  def pickup_line?
+    customer_request_allocation_id.present?
   end
 
   def price_overridden?

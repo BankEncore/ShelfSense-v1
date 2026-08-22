@@ -227,11 +227,12 @@ module PosHelper
 
   def pos_live_line_description(line)
     variant = line.product_variant
+    prefix = line.pickup_line? ? "PICKUP · " : ""
     if line.unit_line?
       parts = [ variant.product.name, variant.merchandise_condition&.code, line.inventory_unit&.unit_identifier ]
-      parts.compact.join("  ")
+      "#{prefix}#{parts.compact.join("  ")}"
     else
-      "#{variant.product.name}  #{variant.sku}"
+      "#{prefix}#{variant.product.name}  #{variant.sku}"
     end
   end
 end

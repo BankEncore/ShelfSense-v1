@@ -1,0 +1,138 @@
+<% content_for :title, @purchase_order.admin_label %>
+<h1><%= @purchase_order.admin_label %></h1>
+<p>
+  <%= @purchase_order.supplier.admin_label %>
+  · <%= @purchase_order.store.admin_label %>
+  · <%= @purchase_order.status %>
+  <% if @purchase_order.number.present? %>· number <%= @purchase_order.number %><% end %>
+  · revision <%= @purchase_order.document_revision %>
+  <% if @purchase_order.sent_at.present? %>
+    · sent <%= @purchase_order.sent_at %> via <%= @purchase_order.transmission_method %>
+  <% end %>
+  <% if @purchase_order.closed_at.present? %>
+    · closed <%= @purchase_order.closed_at %>
+  <% end %>
+</p>
+<p>
+  <%= link_to "All purchase orders", admin_purchase_orders_path %>
+  <% if @purchase_order.draft? %>
+    · <%= link_to "Open draft workspace", ops_purchase_order_path(@purchase_order) %>
+  <% end %>
+</p>
+
+<section>
+  <h2>Lines</h2>
+  <% if @lines.empty? %>
+    <p>No lines.</p>
+  <% else %>
+    <% @lines.each do |line| %>
+      <% order = line.order %>
+      <% state = line.line_state %>
+      <article>
+        <h3>
+          Order <%= link_to "##{order.number}", admin_order_path(order) %>
+          · <%= line.product_variant.product.name %>
+          <code><%= line.product_variant.sku %></code>
+        </h3>
+        <p>
+          Ordered <%= line.ordered_quantity %>
+          · open <%= line.open_quantity %>
+          · cancelled <%= line.cancelled_quantity %>
+          · expected cost <%= line.expected_unit_cost_cents_snapshot %> cents
+          <% if order.customer_request %>
+            · request #<%= order.customer_request.number %> (<%= order.customer_request.status %>)
+          <% end %>
+        </p>
+
+        <% if state && (effective_permissions.include?("purchase_orders.cancel") || effective_permissions.include?("orders.view")) %>
+          <h4>Acknowledgment</h4>
+          <% if effective_permissions.include?("purchase_orders.send") && (@purchase_order.sent? || @purchase_order.closed?) %>
+            <%= form_with url: acknowledge_line_admin_purchase_order_path(@purchase_order, line_id: line.id), method: :patch, local: true do %>
+              <%= hidden_field_tag :lock_version, state.lock_version %>
+              <label>
+                Confirmed qty
+                <input type="number" name="confirmed_quantity" value="<%= state.confirmed_quantity %>" min="0">
+              </label>
+              <label>
+                Backordered qty
+                <input type="number" name="backordered_quantity" value="<%= state.backordered_quantity %>" min="0">
+              </label>
+              <label>
+                Expected on
+                <input type="date" name="expected_on" value="<%= state.expected_on %>">
+              </label>
+              <label>
+                Supplier reference
+                <input type="text" name="supplier_reference" value="<%= state.supplier_reference %>">
+              </label>
+              <label>
+                Notes
+                <input type="text" name="notes" value="<%= state.notes %>">
+              </label>
+              <button type="submit">Save acknowledgment</button>
+            <% end %>
+          <% else %>
+            <p>
+              Confirmed <%= state.confirmed_quantity.inspect %>
+              · backordered <%= state.backordered_quantity %>
+              · expected <%= state.expected_on.inspect %>
+              · ref <%= state.supplier_reference.presence || "—" %>
+            </p>
+          <% end %>
+        <% end %>
+
+        <% if effective_permissions.include?("purchase_orders.cancel") && @purchase_order.sent? && line.open_quantity.positive? %>
+          <h4>Cancel / re-source</h4>
+          <%= form_with url: cancel_line_admin_purchase_order_path(@purchase_order, line_id: line.id), method: :post, local: true do %>
+            <label>
+              Quantity
+              <input type="number" name="quantity" value="<%= line.open_quantity %>" min="1" max="<%= line.open_quantity %>" required>
+            </label>
+            <label>
+              Source
+              <select name="source">
+                <option value="buyer">buyer</option>
+                <option value="supplier">supplier</option>
+              </select>
+            </label>
+            <label>
+              Reason
+              <input type="text" name="reason" required>
+            </label>
+            <label>
+              <input type="checkbox" name="re_source" value="1">
+              Re-source to replacement supplier
+            </label>
+            <label>
+              Replacement supplier
+              <select name="replacement_supplier_id">
+                <option value="">Select…</option>
+                <% @suppliers.each do |supplier| %>
+                  <option value="<%= supplier.id %>"><%= supplier.admin_label %></option>
+                <% end %>
+              </select>
+            </label>
+            <label>
+              Expected cost (cents, if no source)
+              <input type="number" name="expected_unit_cost_cents" min="0">
+            </label>
+            <button type="submit">Cancel quantity</button>
+          <% end %>
+        <% end %>
+
+        <% if line.cancellations.any? %>
+          <h4>Cancellations</h4>
+          <ul>
+            <% line.cancellations.order(:occurred_at).each do |cancellation| %>
+              <li>
+                <%= cancellation.quantity %> (<%= cancellation.source %>)
+                · <%= cancellation.reason %>
+                · <%= cancellation.occurred_at %>
+              </li>
+            <% end %>
+          </ul>
+        <% end %>
+      </article>
+    <% end %>
+  <% end %>
+</section>

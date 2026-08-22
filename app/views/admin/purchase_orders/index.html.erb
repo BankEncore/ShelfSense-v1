@@ -1,0 +1,29 @@
+<% content_for :title, "Purchase orders" %>
+<h1>Purchase orders</h1>
+<p>
+  Filter:
+  <%= link_to "All", admin_purchase_orders_path %>
+  · <%= link_to "Draft", admin_purchase_orders_path(status: "draft") %>
+  · <%= link_to "Sent", admin_purchase_orders_path(status: "sent") %>
+  · <%= link_to "Closed", admin_purchase_orders_path(status: "closed") %>
+</p>
+<% if @status_filter.present? %>
+  <p>Showing status: <%= @status_filter %></p>
+<% end %>
+<% if effective_permissions.include?("orders.manage") && current_store.present? %>
+  <p><%= link_to "Draft PO workspace", ops_draft_pos_path %></p>
+<% end %>
+<ul>
+  <% @purchase_orders.each do |po| %>
+    <li>
+      <%= link_to po.admin_label, admin_purchase_order_path(po) %>
+      · <%= po.supplier.admin_label %>
+      · <%= po.store.admin_label %>
+      · <%= po.status %>
+      <% if po.number.present? %>· #<%= po.number %><% end %>
+    </li>
+  <% end %>
+</ul>
+<% if @purchase_orders.empty? %>
+  <p>No purchase orders.</p>
+<% end %>

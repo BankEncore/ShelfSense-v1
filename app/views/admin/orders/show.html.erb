@@ -1,0 +1,31 @@
+<% content_for :title, @order.admin_label %>
+<h1><%= @order.admin_label %></h1>
+<p><%= link_to "Back", admin_orders_path %></p>
+<dl>
+  <dt>Store</dt><dd><%= @order.store.admin_label %></dd>
+  <dt>Variant</dt><dd><%= @order.product_variant.sku %> — <%= @order.product_variant.product.name %></dd>
+  <dt>Supplier</dt><dd><%= @order.supplier.admin_label %></dd>
+  <dt>Quantity</dt><dd><%= @order.requested_quantity %></dd>
+  <dt>Notes</dt><dd><%= @order.notes.presence || "—" %></dd>
+  <% if @order.customer_request %>
+    <dt>Customer request</dt>
+    <dd><%= link_to @order.customer_request.admin_label, admin_customer_request_path(@order.customer_request) %></dd>
+  <% end %>
+  <% if @purchase_order %>
+    <dt>Purchase order</dt>
+    <dd>
+      <%= @purchase_order.admin_label %> (<%= @purchase_order.status %>)
+      <% if @purchase_order.draft? && effective_permissions.include?("orders.manage") && current_store&.id == @purchase_order.store_id %>
+        · <%= link_to "Open draft workspace", ops_purchase_order_path(@purchase_order) %>
+      <% end %>
+    </dd>
+  <% end %>
+  <% if @line %>
+    <dt>Expected unit cost</dt>
+    <dd><%= @line.expected_unit_cost_cents_snapshot %> cents</dd>
+  <% end %>
+  <% if @order.cancelled? %>
+    <dt>Cancellation</dt>
+    <dd><%= @order.cancellation_reason %> at <%= @order.cancelled_at %></dd>
+  <% end %>
+</dl>

@@ -108,6 +108,13 @@ export default class extends Controller {
     "searchSkuField",
     "searchNameField",
     "searchQueryLabel",
+    "pickupButton",
+    "pickupOverlay",
+    "pickupList",
+    "pickupQueryField",
+    "pickupQueryLabel",
+    "pickupForm",
+    "pickupRequestInput",
     "productOverlay",
     "productList",
     "variantOverlay",
@@ -155,6 +162,8 @@ export default class extends Controller {
     linkedLookupUrl: String,
     resolveUrl: String,
     searchUrl: String,
+    pickupSearchUrl: String,
+    pickupAllowed: Boolean,
     openPriceUrl: String,
     settlement: String,
     refundRemaining: Number,
@@ -231,6 +240,11 @@ export default class extends Controller {
 
     if (this.searchOverlayOpen()) {
       this.onSearchOverlayKeydown(event, key)
+      return
+    }
+
+    if (this.pickupOverlayOpen()) {
+      this.onPickupOverlayKeydown(event, key)
       return
     }
 
@@ -338,6 +352,9 @@ export default class extends Controller {
     } else if (key === "/" && fieldEmpty) {
       event.preventDefault()
       this.openSearchOverlay()
+    } else if (key === "." && fieldEmpty && this.pickupAllowedValue) {
+      event.preventDefault()
+      this.openPickupOverlay()
     } else if ((key === "-" || event.code === "Minus") && fieldEmpty) {
       event.preventDefault()
       this.openReturnChooser()
@@ -920,6 +937,95 @@ export default class extends Controller {
     const variantId = selected.dataset.variantId
     this.closeSearchOverlay()
     this.resolveAndHandle({ product_variant_id: variantId })
+  }
+
+  openPickupOverlay() {
+    if (!this.pickupAllowedValue) return
+    if (!this.hasPickupOverlayTarget) return
+    this.pickupResultsReady = false
+    if (this.hasPickupQueryFieldTarget) this.pickupQueryFieldTarget.value = ""
+    if (this.hasPickupListTarget) this.pickupListTarget.replaceChildren()
+    if (this.hasPickupQueryLabelTarget) this.pickupQueryLabelTarget.textContent = ""
+    this.showOverlay(this.pickupOverlayTarget, this.hasPickupQueryFieldTarget && this.pickupQueryFieldTarget)
+  }
+
+  closePickupOverlay() {
+    this.hideOverlay(this.hasPickupOverlayTarget && this.pickupOverlayTarget)
+  }
+
+  onPickupOverlayKeydown(event, key) {
+    if (key === "Escape") {
+      event.preventDefault()
+      this.closePickupOverlay()
+      return
+    }
+    if (key === "ArrowUp" || key === "ArrowDown") {
+      event.preventDefault()
+      this.movePickerList(this.pickupListTarget, key === "ArrowUp" ? -1 : 1)
+      return
+    }
+    if (key !== "Enter") return
+    event.preventDefault()
+    const inField = event.target === this.pickupQueryFieldTarget
+    if (inField && !this.pickupResultsReady) {
+      this.runPickupSearch()
+      return
+    }
+    if (inField && this.pickupListTarget.querySelectorAll("li").length === 0) {
+      this.runPickupSearch()
+      return
+    }
+    this.selectHighlightedPickup()
+  }
+
+  async runPickupSearch() {
+    const query = this.hasPickupQueryFieldTarget ? this.pickupQueryFieldTarget.value.trim() : ""
+    if (!query) {
+      this.renderPickupResults([])
+      if (this.hasPickupQueryLabelTarget) this.pickupQueryLabelTarget.textContent = "Enter a search."
+      return
+    }
+    const url = new URL(this.pickupSearchUrlValue, window.location.origin)
+    url.searchParams.set("q", query)
+    try {
+      const response = await fetch(url, { headers: { Accept: "application/json" } })
+      const payload = await response.json()
+      if (!response.ok) throw new Error(payload.error || "pickup search failed")
+      this.renderPickupResults(payload.results || [])
+    } catch (_error) {
+      this.renderPickupResults([])
+      if (this.hasPickupQueryLabelTarget) this.pickupQueryLabelTarget.textContent = "Search failed."
+    }
+  }
+
+  renderPickupResults(rows) {
+    if (!this.hasPickupListTarget) return
+    this.pickupListTarget.replaceChildren()
+    this.pickupResultsReady = true
+    if (this.hasPickupQueryLabelTarget) {
+      this.pickupQueryLabelTarget.textContent = rows.length === 0 ? "No available customer requests." : ""
+    }
+    rows.forEach((row, index) => {
+      const item = document.createElement("li")
+      item.setAttribute("role", "option")
+      item.className = index === 0 ? "is-selected" : ""
+      item.dataset.requestId = row.customer_request_id
+      item.dataset.allocationType = row.allocation_type || ""
+      const detail = row.allocation_type === "used_unit"
+        ? `Used unit ${row.unit_identifier || ""}`.trim()
+        : "Standard reserved copy"
+      item.textContent = `${row.label} · ${detail}`
+      this.pickupListTarget.append(item)
+    })
+  }
+
+  selectHighlightedPickup() {
+    const selected = this.hasPickupListTarget && this.pickupListTarget.querySelector("li.is-selected")
+    if (!selected) return
+    this.closePickupOverlay()
+    if (!this.hasPickupFormTarget || !this.hasPickupRequestInputTarget) return
+    this.pickupRequestInputTarget.value = selected.dataset.requestId
+    this.pickupFormTarget.requestSubmit()
   }
 
   openProductPicker(products) {
@@ -1789,6 +1895,7 @@ export default class extends Controller {
       this.hasControlOverlayTarget && this.controlOverlayTarget,
       this.hasOtherOverlayTarget && this.otherOverlayTarget,
       this.hasSearchOverlayTarget && this.searchOverlayTarget,
+      this.hasPickupOverlayTarget && this.pickupOverlayTarget,
       this.hasProductOverlayTarget && this.productOverlayTarget,
       this.hasVariantOverlayTarget && this.variantOverlayTarget,
       this.hasUnitOverlayTarget && this.unitOverlayTarget,
@@ -1889,6 +1996,10 @@ export default class extends Controller {
 
   searchOverlayOpen() {
     return this.hasSearchOverlayTarget && !this.searchOverlayTarget.hidden
+  }
+
+  pickupOverlayOpen() {
+    return this.hasPickupOverlayTarget && !this.pickupOverlayTarget.hidden
   }
 
   productOverlayOpen() {

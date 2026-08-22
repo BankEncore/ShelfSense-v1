@@ -1,0 +1,276 @@
+<% content_for :title, "#{@receipt.admin_label} · #{@receipt.supplier.admin_label}" %>
+<header class="ops-doc-header">
+  <div>
+    <h1><%= @receipt.admin_label %></h1>
+    <p>
+      <%= @receipt.supplier.admin_label %>
+      · <%= current_store.admin_label %>
+      · <%= @receipt.status %>
+      · <%= @lines.size %> lines
+      · merchandise <%= @receipt.merchandise_total_cents %> cents
+      · ancillary <%= @receipt.ancillary_total_cents %> cents
+    </p>
+  </div>
+  <p>
+    <%= link_to "All drafts", ops_receiving_index_path %>
+    · <%= link_to "Exit to Purchasing", admin_orders_path %>
+  </p>
+</header>
+
+<% if @receipt.draft? && effective_permissions.include?("purchase_receipts.manage") %>
+  <section class="ops-actions">
+    <h2>Receipt header</h2>
+    <%= form_with url: ops_receiving_update_path(@receipt), method: :patch, local: true do %>
+      <label>
+        Received at
+        <input type="datetime-local" name="received_at" value="<%= @receipt.received_at&.strftime("%Y-%m-%dT%H:%M") %>">
+      </label>
+      <label>
+        Supplier document #
+        <input type="text" name="supplier_document_number" value="<%= @receipt.supplier_document_number %>">
+      </label>
+      <label>
+        Supplier document date
+        <input type="date" name="supplier_document_date" value="<%= @receipt.supplier_document_date %>">
+      </label>
+      <label>
+        Freight (cents)
+        <input type="number" name="freight_cents" min="0" value="<%= @receipt.freight_cents %>">
+      </label>
+      <label>
+        Handling (cents)
+        <input type="number" name="handling_cents" min="0" value="<%= @receipt.handling_cents %>">
+      </label>
+      <label>
+        Supplier tax (cents)
+        <input type="number" name="supplier_tax_cents" min="0" value="<%= @receipt.supplier_tax_cents %>">
+      </label>
+      <label>
+        Misc charges (cents)
+        <input type="number" name="miscellaneous_charges_cents" min="0" value="<%= @receipt.miscellaneous_charges_cents %>">
+      </label>
+      <label>
+        Charge notes
+        <input type="text" name="charge_notes" value="<%= @receipt.charge_notes %>">
+      </label>
+      <label>
+        Notes
+        <input type="text" name="notes" value="<%= @receipt.notes %>">
+      </label>
+      <button type="submit">Save header</button>
+    <% end %>
+    <p class="ops-hint">Ancillary charges are recorded but never enter inventory valuation.</p>
+  </section>
+
+  <section class="ops-scan">
+    <h2>Add open PO line</h2>
+    <% if @open_po_lines.empty? %>
+      <p>No open sent PO lines for this supplier/store.</p>
+    <% else %>
+      <%= form_with url: ops_receiving_add_line_path(@receipt), method: :post, local: true do %>
+        <%= hidden_field_tag :lock_version, @receipt.lock_version %>
+        <label>
+          PO line
+          <select name="purchase_order_line_id" required>
+            <option value="">Select…</option>
+            <% @open_po_lines.each do |po_line| %>
+              <option value="<%= po_line.id %>">
+                PO #<%= po_line.purchase_order.number %>
+                · <%= po_line.product_variant.product.name %>
+                · open <%= po_line.open_quantity %>
+                · expected <%= po_line.expected_unit_cost_cents_snapshot %>¢
+                <% if po_line.order.customer_request.present? %>
+                  · request #<%= po_line.order.customer_request.number %>
+                <% end %>
+              </option>
+            <% end %>
+          </select>
+        </label>
+        <label>
+          Qty received
+          <input type="number" name="received_quantity" min="1" value="1" required>
+        </label>
+        <label>
+          Actual unit cost (cents)
+          <input type="number" name="actual_unit_cost_cents" min="0" required>
+        </label>
+        <button type="submit">Add line</button>
+      <% end %>
+    <% end %>
+  </section>
+<% end %>
+
+<section>
+  <h2>Lines</h2>
+  <% if @lines.empty? %>
+    <p>No lines yet.</p>
+  <% else %>
+    <table class="ops-queue">
+      <thead>
+        <tr>
+          <th scope="col">PO</th>
+          <th scope="col">Item</th>
+          <th scope="col">Received</th>
+          <th scope="col">Matched*</th>
+          <th scope="col">Unplanned*</th>
+          <th scope="col">Unit cost</th>
+          <th scope="col">Customer</th>
+          <% if @receipt.draft? && effective_permissions.include?("purchase_receipts.manage") %>
+            <th scope="col">Edit</th>
+          <% end %>
+        </tr>
+      </thead>
+      <tbody>
+        <% @lines.each do |line| %>
+          <% po_line = line.purchase_order_line %>
+          <tr>
+            <td>#<%= po_line.purchase_order.number %></td>
+            <td>
+              <%= line.product_variant.product.name %>
+              <code><%= line.product_variant.sku %></code>
+            </td>
+            <td><%= line.received_quantity %></td>
+            <td><%= line.matched_quantity %></td>
+            <td><%= line.unplanned_quantity %></td>
+            <td><%= line.actual_unit_cost_cents %></td>
+            <td>
+              <% if po_line.order.customer_request.present? %>
+                Req #<%= po_line.order.customer_request.number %>
+              <% else %>
+                —
+              <% end %>
+            </td>
+            <% if @receipt.draft? && effective_permissions.include?("purchase_receipts.manage") %>
+              <td>
+                <%= form_with url: ops_receiving_update_line_path(@receipt, line), method: :patch, local: true, html: { class: "ops-inline-form" } do %>
+                  <%= hidden_field_tag :lock_version, @receipt.lock_version %>
+                  <label>
+                    Qty
+                    <input type="number" name="received_quantity" value="<%= line.received_quantity %>" min="1" required>
+                  </label>
+                  <label>
+                    Cost
+                    <input type="number" name="actual_unit_cost_cents" value="<%= line.actual_unit_cost_cents %>" min="0" required>
+                  </label>
+                  <button type="submit">Save</button>
+                <% end %>
+              </td>
+            <% end %>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+    <p class="ops-hint">* Matched/unplanned are provisional on drafts and frozen at post.</p>
+  <% end %>
+</section>
+
+<% if @receipt.draft? && effective_permissions.include?("purchase_receipts.post") && @lines.any? %>
+  <section class="ops-actions">
+    <h2>Post</h2>
+    <p><%= link_to "Review and post", ops_receiving_review_path(@receipt) %></p>
+  </section>
+<% end %>
+
+<% if @receipt.posted? %>
+  <section>
+    <h2>Corrections</h2>
+    <p>
+      Posted facts are immutable.
+      Reverse eligible lines or post cost-only corrections.
+      If exact reversal is unsafe (for example sold stock), authorize a compensating adjustment with
+      <code>purchase_receipts.compensate</code> — do not force an approximate receipt reverse.
+      Completed customer pickup cannot be undone.
+    </p>
+    <% if @can_correct %>
+      <table class="ops-queue">
+        <thead>
+          <tr>
+            <th scope="col">Item</th>
+            <th scope="col">Remaining</th>
+            <th scope="col">Unit cost</th>
+            <th scope="col">Reverse</th>
+            <th scope="col">Cost correct</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @lines.each do |line| %>
+            <tr>
+              <td>
+                <%= line.product_variant.product.name %>
+                <code><%= line.product_variant.sku %></code>
+              </td>
+              <td><%= line.remaining_reversible_quantity %> / <%= line.received_quantity %></td>
+              <td><%= line.actual_unit_cost_cents %></td>
+              <td>
+                <% if line.remaining_reversible_quantity.positive? %>
+                  <%= form_with url: ops_receiving_reverse_line_path(@receipt, line), method: :post, local: true, html: { class: "ops-inline-form" } do %>
+                    <label>
+                      Reason
+                      <input type="text" name="reason" required>
+                    </label>
+                    <label>
+                      Qty
+                      <input type="number" name="quantity" min="1" max="<%= line.remaining_reversible_quantity %>" value="<%= line.remaining_reversible_quantity %>" required>
+                    </label>
+                    <% if @can_compensate %>
+                      <label>
+                        <input type="checkbox" name="authorize_compensate" value="1">
+                        Compensate if unsafe
+                      </label>
+                    <% end %>
+                    <button type="submit">Reverse</button>
+                  <% end %>
+                <% else %>
+                  —
+                <% end %>
+              </td>
+              <td>
+                <% if line.remaining_reversible_quantity.positive? %>
+                  <%= form_with url: ops_receiving_correct_cost_path(@receipt, line), method: :post, local: true, html: { class: "ops-inline-form" } do %>
+                    <label>
+                      Reason
+                      <input type="text" name="reason" required>
+                    </label>
+                    <label>
+                      Corrected unit cost
+                      <input type="number" name="corrected_unit_cost_cents" min="0" required>
+                    </label>
+                    <button type="submit">Correct cost</button>
+                  <% end %>
+                <% else %>
+                  —
+                <% end %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+
+      <% if @lines.any? { |l| l.remaining_reversible_quantity.positive? } %>
+        <h3>Reverse whole receipt</h3>
+        <%= form_with url: ops_receiving_reverse_path(@receipt), method: :post, local: true do %>
+          <label>
+            Reason
+            <input type="text" name="reason" required>
+          </label>
+          <button type="submit">Reverse all lines</button>
+        <% end %>
+      <% end %>
+    <% end %>
+
+    <% corrections = @lines.flat_map(&:corrections).sort_by(&:recorded_at) %>
+    <% if corrections.any? %>
+      <h3>Correction history</h3>
+      <ul>
+        <% corrections.each do |correction| %>
+          <li>
+            <%= correction.correction_type %>
+            <% if correction.quantity.present? %>· qty <%= correction.quantity %><% end %>
+            <% if correction.value_delta_cents.present? %>· Δ<%= correction.value_delta_cents %>¢<% end %>
+            · <%= correction.reason %>
+          </li>
+        <% end %>
+      </ul>
+    <% end %>
+  </section>
+<% end %>

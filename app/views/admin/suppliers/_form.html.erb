@@ -1,0 +1,26 @@
+<%= form_with model: [:admin, supplier] do |form| %>
+  <% if supplier.errors.any? %><ul><% supplier.errors.full_messages.each do |m| %><li><%= m %></li><% end %></ul><% end %>
+  <%= form.hidden_field :lock_version %>
+  <% if supplier.persisted? %>
+    <p>Code: <code><%= supplier.code %></code> (immutable)</p>
+  <% else %>
+    <p>
+      <%= form.label :code, "Key / code" %>
+      <%= form.text_field :code %>
+      <span>Leave blank to generate from the name. Later changes are not allowed.</span>
+    </p>
+  <% end %>
+  <p><%= form.label :name %><%= form.text_field :name %></p>
+  <p><%= form.label :account_number %><%= form.text_field :account_number %></p>
+  <p><%= form.label :contact_name %><%= form.text_field :contact_name %></p>
+  <p><%= form.label :email %><%= form.email_field :email %></p>
+  <p><%= form.label :phone %><%= form.telephone_field :phone %></p>
+  <p><%= form.label :street_address_1, "Street address 1" %><%= form.text_field :street_address_1 %></p>
+  <p><%= form.label :street_address_2, "Street address 2" %><%= form.text_field :street_address_2 %></p>
+  <p><%= form.label :city %><%= form.text_field :city %></p>
+  <p><%= form.label :region_code, "Region" %><%= form.text_field :region_code %></p>
+  <p><%= form.label :postal_code, "Postal code" %><%= form.text_field :postal_code %></p>
+  <p><%= form.label :country_code, "Country" %><%= form.text_field :country_code, maxlength: 2 %></p>
+  <p><%= form.label :ordering_notes %><%= form.text_area :ordering_notes %></p>
+  <p><%= form.submit %></p>
+<% end %>

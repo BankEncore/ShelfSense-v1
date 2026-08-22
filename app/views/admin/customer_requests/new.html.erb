@@ -1,0 +1,67 @@
+<% content_for :title, "New customer request" %>
+<%= render "shared/breadcrumbs", crumbs: [
+  { name: "Home", path: root_path },
+  { name: "Customer requests", path: admin_customer_requests_path },
+  { name: "New request" }
+] %>
+
+<%= render "shared/page_header",
+      title: "New customer request",
+      subtitle: "In-stock Standard or Used enters the location queue. Out-of-stock Standard becomes a special order." %>
+
+<% if @product_variant %>
+  <section class="section surface">
+    <%= render "shared/definition_list", rows: [
+          ["Product", link_to(@product_variant.product.name, admin_product_path(@product_variant.product))],
+          ["Variant", link_to(@product_variant.name.presence || @product_variant.sku, admin_product_variant_path(@product_variant))],
+          ["SKU", @product_variant.sku],
+          ["Type", @product_variant.variant_type.humanize],
+          ["Apparent available", (@available_quantity.nil? ? "—" : @available_quantity)]
+        ] %>
+  </section>
+<% end %>
+
+<section class="section surface">
+  <%= form_with url: admin_customer_requests_path, scope: :customer_request do |form| %>
+    <p>
+      <%= form.label :customer_id, "Customer" %>
+      <%= form.collection_select :customer_id, @customers, :id, :admin_label,
+            { selected: params[:customer_id] || @customer_request.customer_id, include_blank: "Select…" },
+            { required: true } %>
+      <% if effective_permissions.include?("customers.manage") %>
+        <span class="muted"><%= link_to "New customer", new_admin_customer_path %></span>
+      <% end %>
+    </p>
+    <% if @product_variant %>
+      <%= form.hidden_field :product_variant_id, value: @product_variant.id %>
+    <% else %>
+      <p>
+        <%= form.label :product_variant_id, "Product variant ID" %>
+        <%= form.text_field :product_variant_id, value: @customer_request.product_variant_id, required: true %>
+        <span class="muted">Prefer starting from a product or variant page.</span>
+      </p>
+    <% end %>
+    <% if @product_variant.nil? || @product_variant.standard? %>
+      <p>
+        <%= form.label :supplier_id, "Supplier (OOS Standard)" %>
+        <%= form.collection_select :supplier_id, @suppliers, :id, :admin_label,
+              { selected: @preferred_source&.supplier_id, include_blank: "Preferred source (if any)" } %>
+      </p>
+      <p>
+        <%= form.label :expected_unit_cost_cents, "Expected unit cost (cents, OOS Standard)" %>
+        <%= form.number_field :expected_unit_cost_cents, min: 0, value: @preferred_source&.derived_expected_unit_cost_cents %>
+      </p>
+    <% end %>
+    <p>
+      <%= form.label :estimated_price_cents, "Estimated price (cents)" %>
+      <%= form.number_field :estimated_price_cents, min: 0 %>
+    </p>
+    <p>
+      <%= form.label :notes %>
+      <%= form.text_area :notes %>
+    </p>
+    <p><%= form.submit "Create request", class: "btn" %></p>
+  <% end %>
+</section>
+
+<p><%= link_to "Back", (@product_variant ? admin_product_variant_path(@product_variant) : admin_customer_requests_path) %></p>

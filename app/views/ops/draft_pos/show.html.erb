@@ -1,0 +1,140 @@
+<% content_for :title, "#{@purchase_order.admin_label} · #{@purchase_order.supplier.admin_label}" %>
+<header class="ops-doc-header">
+  <div>
+    <h1><%= @purchase_order.admin_label %></h1>
+    <p>
+      <%= @purchase_order.supplier.admin_label %>
+      · <%= current_store.admin_label %>
+      · <%= @purchase_order.status %>
+      <% if @purchase_order.generated? %>· generated rev <%= @purchase_order.document_revision %><% end %>
+      · <%= @lines.size %> lines
+      · <%= @purchase_order.expected_merchandise_total_cents %> cents expected
+    </p>
+  </div>
+  <p>
+    <%= link_to "All drafts", ops_draft_pos_path %>
+    · <%= link_to "Purchase orders", admin_purchase_orders_path %>
+    · <%= link_to "Exit to Purchasing", admin_orders_path %>
+  </p>
+</header>
+
+<% if effective_permissions.include?("purchase_orders.send") %>
+  <section class="ops-actions">
+    <h2>Generate / send</h2>
+    <% unless @purchase_order.generated? %>
+      <%= form_with url: ops_purchase_order_generate_path(@purchase_order), method: :post, local: true do %>
+        <%= hidden_field_tag :lock_version, @purchase_order.lock_version %>
+        <button type="submit">Generate PO number</button>
+      <% end %>
+    <% else %>
+      <p>Generated #<%= @purchase_order.number %> (revision <%= @purchase_order.document_revision %>).</p>
+      <%= form_with url: ops_purchase_order_return_to_draft_path(@purchase_order), method: :post, local: true do %>
+        <%= hidden_field_tag :lock_version, @purchase_order.lock_version %>
+        <button type="submit">Return to draft</button>
+      <% end %>
+      <%= form_with url: ops_purchase_order_send_path(@purchase_order), method: :post, local: true do %>
+        <%= hidden_field_tag :lock_version, @purchase_order.lock_version %>
+        <label>
+          Transmission method
+          <select name="transmission_method" required>
+            <option value="">Select…</option>
+            <% PurchaseOrder::TRANSMISSION_METHODS.each do |method| %>
+              <option value="<%= method %>"><%= method %></option>
+            <% end %>
+          </select>
+        </label>
+        <button type="submit">Record send</button>
+      <% end %>
+    <% end %>
+  </section>
+<% end %>
+
+<% if effective_permissions.include?("orders.manage") && !@purchase_order.generated? %>
+  <section class="ops-scan">
+    <h2>Add stock line</h2>
+    <%= form_with url: ops_purchase_order_add_line_path(@purchase_order), method: :post, local: true do %>
+      <%= hidden_field_tag :lock_version, @purchase_order.lock_version %>
+      <label>
+        Scan / identifier
+        <input type="text" name="identifier" autocomplete="off" autofocus inputmode="text">
+      </label>
+      <label>
+        or variant ID
+        <input type="text" name="product_variant_id" autocomplete="off">
+      </label>
+      <label>
+        Qty
+        <input type="number" name="quantity" value="1" min="1" required>
+      </label>
+      <label>
+        Expected cost (cents)
+        <input type="number" name="expected_unit_cost_cents" min="0">
+      </label>
+      <button type="submit">Add</button>
+    <% end %>
+    <p class="ops-hint">Creates a stock order and dedicated PO line. Used merchandise is rejected.</p>
+  </section>
+<% end %>
+
+<section>
+  <h2>Lines</h2>
+  <% if @lines.empty? %>
+    <p>No lines yet.</p>
+  <% else %>
+    <table class="ops-queue">
+      <thead>
+        <tr>
+          <th scope="col">Order</th>
+          <th scope="col">Item</th>
+          <th scope="col">Qty</th>
+          <th scope="col">Expected cost</th>
+          <th scope="col">Customer</th>
+          <th scope="col">Notes</th>
+          <% if effective_permissions.include?("orders.manage") && !@purchase_order.generated? %><th scope="col">Edit</th><% end %>
+        </tr>
+      </thead>
+      <tbody>
+        <% @lines.each do |line| %>
+          <% order = line.order %>
+          <tr>
+            <td><%= link_to "##{order.number}", admin_order_path(order) %></td>
+            <td>
+              <%= line.product_variant.product.name %>
+              <code><%= line.product_variant.sku %></code>
+            </td>
+            <td><%= line.ordered_quantity %></td>
+            <td><%= line.expected_unit_cost_cents_snapshot %></td>
+            <td>
+              <% if order.customer_request %>
+                Req #<%= order.customer_request.number %>
+              <% else %>
+                —
+              <% end %>
+            </td>
+            <td><%= line.notes_snapshot.presence || "—" %></td>
+            <% if effective_permissions.include?("orders.manage") && !@purchase_order.generated? && !order.cancelled? %>
+              <td>
+                <%= form_with url: ops_purchase_order_update_line_path(@purchase_order, line), method: :patch, local: true, html: { class: "ops-inline-form" } do %>
+                  <%= hidden_field_tag :lock_version, order.lock_version %>
+                  <label>
+                    Qty
+                    <input type="number" name="quantity" value="<%= line.ordered_quantity %>" min="1" <%= "readonly" if order.customer_order? %>>
+                  </label>
+                  <label>
+                    Cost
+                    <input type="number" name="expected_unit_cost_cents" value="<%= line.expected_unit_cost_cents_snapshot %>" min="0">
+                  </label>
+                  <label>
+                    Notes
+                    <input type="text" name="notes" value="<%= order.notes %>">
+                  </label>
+                  <button type="submit">Save</button>
+                <% end %>
+              </td>
+            <% end %>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  <% end %>
+</section>

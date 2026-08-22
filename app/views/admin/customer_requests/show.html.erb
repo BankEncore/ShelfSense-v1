@@ -1,0 +1,68 @@
+<% content_for :title, @customer_request.admin_label %>
+<h1><%= @customer_request.admin_label %></h1>
+<p><%= link_to "Back", admin_customer_requests_path %></p>
+<dl>
+  <dt>Store</dt><dd><%= @customer_request.store.admin_label %></dd>
+  <dt>Customer</dt><dd><%= link_to @customer_request.customer.admin_label, admin_customer_path(@customer_request.customer) %></dd>
+  <dt>Variant</dt><dd><%= @customer_request.product_variant.sku %> (<%= @customer_request.product_variant.variant_type %>)</dd>
+  <dt>Status</dt><dd><%= @customer_request.status %></dd>
+  <dt>Notes</dt><dd><%= @customer_request.notes.presence || "—" %></dd>
+  <% if @customer_request.cancelled? %>
+    <dt>Cancellation</dt>
+    <dd><%= @customer_request.cancellation_reason %> at <%= @customer_request.cancelled_at %></dd>
+  <% end %>
+</dl>
+
+<% if @customer_request.active_allocation %>
+  <p>Active allocation: <%= @customer_request.active_allocation.allocation_type %> (reserved)</p>
+<% end %>
+
+<% related_orders = @customer_request.orders.includes(:supplier, purchase_order_line: :purchase_order) %>
+<% if related_orders.any? %>
+  <h2>Related orders</h2>
+  <ul>
+    <% related_orders.each do |order| %>
+      <li>
+        <%= link_to order.admin_label, admin_order_path(order) %>
+        · <%= order.supplier.admin_label %>
+        <% if order.purchase_order %>
+          · <%= order.purchase_order.admin_label %> (<%= order.purchase_order.status %>)
+          <% if order.purchase_order.draft? && effective_permissions.include?("orders.manage") && current_store&.id == order.store_id %>
+            · <%= link_to "Draft workspace", ops_purchase_order_path(order.purchase_order) %>
+          <% end %>
+        <% end %>
+        <% if order.cancelled? %> · cancelled<% end %>
+      </li>
+    <% end %>
+  </ul>
+<% end %>
+
+<% if @customer_request.pending_location? && effective_permissions.include?("customer_requests.locate") && current_store&.id == @customer_request.store_id %>
+  <p><%= link_to "Locate in ops workspace", ops_location_path %></p>
+<% end %>
+
+<% if !@customer_request.cancelled? && !@customer_request.completed? && effective_permissions.include?("customer_requests.manage") %>
+  <% unsent = @customer_request.unsent_special_orders %>
+  <%= form_with url: cancel_admin_customer_request_path(@customer_request), method: :post do %>
+    <%= hidden_field_tag :lock_version, @customer_request.lock_version %>
+    <p>
+      <label for="cancellation_reason">Cancel reason</label>
+      <input type="text" name="cancellation_reason" id="cancellation_reason" required>
+    </p>
+    <% if unsent.any? %>
+      <fieldset>
+        <legend>Unsent special order</legend>
+        <p>This request has an unsent order. Choose whether to cancel the draft order too.</p>
+        <label>
+          <input type="radio" name="cancel_draft_order" value="true" required>
+          Cancel the draft order
+        </label>
+        <label>
+          <input type="radio" name="cancel_draft_order" value="false" required>
+          Keep the draft order on the PO
+        </label>
+      </fieldset>
+    <% end %>
+    <p><button type="submit">Cancel request</button></p>
+  <% end %>
+<% end %>

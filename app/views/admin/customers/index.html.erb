@@ -1,0 +1,13 @@
+<% content_for :title, "Customers" %>
+<h1>Customers</h1>
+<% if effective_permissions.include?("customers.manage") %><p><%= link_to "New customer", new_admin_customer_path %></p><% end %>
+<ul>
+  <% @customers.each do |customer| %>
+    <li>
+      <%= link_to customer.admin_label, admin_customer_path(customer) %>
+      <%= customer.email %>
+      <%= customer.phone %>
+      <%= "inactive" unless customer.active? %>
+    </li>
+  <% end %>
+</ul>

@@ -36,6 +36,7 @@ Rails.application.routes.draw do
         member do
           post :discontinue
         end
+        resources :supplier_variant_sources, only: %i[new create]
       end
     end
     resources :merchandise_lookups, only: %i[new create]
@@ -77,7 +78,59 @@ Rails.application.routes.draw do
     resources :tender_types do
       member { post :reactivate }
     end
+    resources :suppliers do
+      member { post :reactivate }
+      resources :supplier_variant_sources, shallow: true, except: :index do
+        member { post :reactivate }
+        resources :store_supplier_source_preferences, only: %i[create destroy]
+      end
+    end
+    resources :customers do
+      member { post :reactivate }
+    end
+    resources :customer_requests, only: %i[index show new create] do
+      member { post :cancel }
+    end
+    resources :orders, only: %i[index show new create]
+    resources :purchase_orders, only: %i[index show] do
+      member do
+        post "lines/:line_id/cancel", action: :cancel_line, as: :cancel_line
+        patch "lines/:line_id/acknowledge", action: :acknowledge_line, as: :acknowledge_line
+      end
+    end
+    resources :purchase_receipts, only: %i[index show] do
+      member do
+        post :reverse
+        post "lines/:line_id/reverse", action: :reverse_line, as: :reverse_line
+        post "lines/:line_id/correct_cost", action: :correct_cost, as: :correct_cost
+      end
+    end
     resource :inventory_reconciliation, only: %i[show], controller: "inventory_reconciliations"
+  end
+
+  namespace :ops do
+    get "location", to: "locations#show", as: :location
+    post "location/requests/:id/confirm", to: "locations#confirm", as: :location_confirm
+    post "location/requests/:id/not_located", to: "locations#not_located", as: :location_not_located
+    get "draft_pos", to: "draft_pos#index", as: :draft_pos
+    get "purchase_orders/:id", to: "draft_pos#show", as: :purchase_order
+    post "purchase_orders/:id/lines", to: "draft_pos#add_line", as: :purchase_order_add_line
+    patch "purchase_orders/:id/lines/:line_id", to: "draft_pos#update_line", as: :purchase_order_update_line
+    post "purchase_orders/:id/generate", to: "draft_pos#generate", as: :purchase_order_generate
+    post "purchase_orders/:id/send", to: "draft_pos#send_po", as: :purchase_order_send
+    post "purchase_orders/:id/return_to_draft", to: "draft_pos#return_to_draft", as: :purchase_order_return_to_draft
+
+    get "receiving", to: "receiving#index", as: :receiving_index
+    post "receiving", to: "receiving#create", as: :receiving_create
+    get "receiving/:id", to: "receiving#show", as: :receiving
+    patch "receiving/:id", to: "receiving#update", as: :receiving_update
+    post "receiving/:id/lines", to: "receiving#add_line", as: :receiving_add_line
+    patch "receiving/:id/lines/:line_id", to: "receiving#update_line", as: :receiving_update_line
+    get "receiving/:id/review", to: "receiving#review", as: :receiving_review
+    post "receiving/:id/post", to: "receiving#post", as: :receiving_post
+    post "receiving/:id/reverse", to: "receiving#reverse", as: :receiving_reverse
+    post "receiving/:id/lines/:line_id/reverse", to: "receiving#reverse_line", as: :receiving_reverse_line
+    post "receiving/:id/lines/:line_id/correct_cost", to: "receiving#correct_cost", as: :receiving_correct_cost
   end
 
   get "/pos", to: "pos/homes#show", as: :pos
@@ -95,7 +148,9 @@ Rails.application.routes.draw do
     get "register", to: "workspaces#show", as: :register_workspace
     get "register/merchandise_search", to: "workspaces#search", as: :register_merchandise_search
     get "register/merchandise_resolve", to: "workspaces#resolve", as: :register_merchandise_resolve
+    get "register/pickup_search", to: "workspaces#pickup_search", as: :register_pickup_search
     post "register/merchandise", to: "workspaces#merchandise"
+    post "register/pickup", to: "workspaces#pickup"
     post "register/open_price", to: "workspaces#open_price"
     post "register/quantity", to: "workspaces#quantity"
     post "register/remove", to: "workspaces#remove"

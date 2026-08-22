@@ -1,0 +1,114 @@
+<% content_for :title, @receipt.admin_label %>
+<h1><%= @receipt.admin_label %></h1>
+<p>
+  <%= @receipt.supplier.admin_label %>
+  · <%= @receipt.store.admin_label %>
+  · <%= @receipt.status %>
+  · merchandise <%= @receipt.merchandise_total_cents %> cents
+  · ancillary <%= @receipt.ancillary_total_cents %> cents
+</p>
+<p>
+  <%= link_to "All receipts", admin_purchase_receipts_path %>
+  <% if current_store.present? && @receipt.store_id == current_store.id %>
+    · <%= link_to "Ops receiving view", ops_receiving_path(@receipt) %>
+  <% end %>
+</p>
+
+<table>
+  <thead>
+    <tr>
+      <th scope="col">PO</th>
+      <th scope="col">Item</th>
+      <th scope="col">Received</th>
+      <th scope="col">Reversed</th>
+      <th scope="col">Matched (net)</th>
+      <th scope="col">Unit cost</th>
+      <th scope="col">Corrections</th>
+      <% if @can_correct && @receipt.posted? %>
+        <th scope="col">Actions</th>
+      <% end %>
+    </tr>
+  </thead>
+  <tbody>
+    <% @lines.each do |line| %>
+      <% po_line = line.purchase_order_line %>
+      <tr>
+        <td>#<%= po_line.purchase_order.number %></td>
+        <td>
+          <%= line.product_variant.product.name %>
+          <code><%= line.product_variant.sku %></code>
+        </td>
+        <td><%= line.received_quantity %></td>
+        <td><%= line.reversed_quantity %></td>
+        <td><%= line.net_matched_quantity %></td>
+        <td><%= line.actual_unit_cost_cents %></td>
+        <td>
+          <% if line.corrections.any? %>
+            <ul>
+              <% line.corrections.order(:recorded_at).each do |correction| %>
+                <li>
+                  <%= correction.correction_type %>
+                  <% if correction.quantity.present? %>· qty <%= correction.quantity %><% end %>
+                  <% if correction.value_delta_cents.present? %>· Δ<%= correction.value_delta_cents %>¢<% end %>
+                  · <%= correction.reason %>
+                </li>
+              <% end %>
+            </ul>
+          <% else %>
+            —
+          <% end %>
+        </td>
+        <% if @can_correct && @receipt.posted? %>
+          <td>
+            <% if line.remaining_reversible_quantity.positive? %>
+              <%= form_with url: reverse_line_admin_purchase_receipt_path(@receipt, line_id: line.id), method: :post, local: true do %>
+                <label>
+                  Reason
+                  <input type="text" name="reason" required>
+                </label>
+                <label>
+                  Qty
+                  <input type="number" name="quantity" min="1" max="<%= line.remaining_reversible_quantity %>" value="<%= line.remaining_reversible_quantity %>" required>
+                </label>
+                <% if @can_compensate %>
+                  <label>
+                    <input type="checkbox" name="authorize_compensate" value="1">
+                    Authorize compensate if unsafe
+                  </label>
+                <% end %>
+                <button type="submit">Reverse line</button>
+              <% end %>
+              <%= form_with url: correct_cost_admin_purchase_receipt_path(@receipt, line_id: line.id), method: :post, local: true do %>
+                <label>
+                  Reason
+                  <input type="text" name="reason" required>
+                </label>
+                <label>
+                  Corrected unit cost (cents)
+                  <input type="number" name="corrected_unit_cost_cents" min="0" required>
+                </label>
+                <button type="submit">Correct cost</button>
+              <% end %>
+            <% else %>
+              Fully reversed
+            <% end %>
+          </td>
+        <% end %>
+      </tr>
+    <% end %>
+  </tbody>
+</table>
+
+<% if @can_correct && @receipt.posted? && @lines.any? { |l| l.remaining_reversible_quantity.positive? } %>
+  <section>
+    <h2>Reverse whole receipt</h2>
+    <p>Creates one eligible line reversal per remaining quantity atomically. Compensating adjustments are not used on whole-receipt reverse.</p>
+    <%= form_with url: reverse_admin_purchase_receipt_path(@receipt), method: :post, local: true do %>
+      <label>
+        Reason
+        <input type="text" name="reason" required>
+      </label>
+      <button type="submit">Reverse receipt</button>
+    <% end %>
+  </section>
+<% end %>

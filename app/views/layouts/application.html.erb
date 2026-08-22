@@ -59,6 +59,29 @@
             <% if effective_permissions.include?("inventory.view") %>
               <%= link_to "Inventory", admin_inventory_balances_path %>
             <% end %>
+            <% if effective_permissions.include?("orders.view") %>
+              <%= link_to "Orders", admin_orders_path %>
+              <%= link_to "Purchase orders", admin_purchase_orders_path %>
+            <% end %>
+            <% if effective_permissions.include?("purchase_receipts.view") %>
+              <%= link_to "Purchase receipts", admin_purchase_receipts_path %>
+            <% end %>
+            <% if effective_permissions.include?("purchase_receipts.manage") && current_store.present? %>
+              <%= link_to "Receiving ops", ops_receiving_index_path %>
+            <% end %>
+            <% if effective_permissions.include?("suppliers.view") %>
+              <%= link_to "Suppliers", admin_suppliers_path %>
+            <% end %>
+            <% if effective_permissions.include?("customers.view") %>
+              <%= link_to "Customers", admin_customers_path %>
+              <%= link_to "Customer requests", admin_customer_requests_path %>
+            <% end %>
+            <% if effective_permissions.include?("customer_requests.locate") && current_store.present? %>
+              <%= link_to "Location ops", ops_location_path %>
+            <% end %>
+            <% if effective_permissions.include?("orders.manage") && current_store.present? %>
+              <%= link_to "Draft PO ops", ops_draft_pos_path %>
+            <% end %>
             <% if effective_permissions.include?("pos.manage_tender_types") %>
               <%= link_to "Tender types", admin_tender_types_path %>
             <% end %>

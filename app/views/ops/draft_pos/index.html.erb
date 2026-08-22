@@ -1,0 +1,29 @@
+<% content_for :title, "Draft purchase orders" %>
+<h1>Draft purchase orders</h1>
+<p>Open drafts for <%= current_store.admin_label %>. Scan or search on a draft to create a stock order and dedicated line.</p>
+
+<% if @draft_pos.empty? %>
+  <p>No open draft purchase orders. Create a stock order or customer special order to open one.</p>
+<% else %>
+  <table class="ops-queue">
+    <thead>
+      <tr>
+        <th scope="col">Supplier</th>
+        <th scope="col">Lines</th>
+        <th scope="col">Expected total</th>
+        <th scope="col"></th>
+      </tr>
+    </thead>
+    <tbody>
+      <% @draft_pos.each do |po| %>
+        <tr>
+          <td><%= po.supplier.admin_label %></td>
+          <td><%= po.purchase_order_lines.size %></td>
+          <td><%= po.expected_merchandise_total_cents %> cents</td>
+          <td><%= link_to "Open", ops_purchase_order_path(po) %></td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+<% end %>
+<p><%= link_to "Exit to Orders", admin_orders_path %></p>

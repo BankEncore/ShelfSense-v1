@@ -78,6 +78,23 @@ module Inventory
         unit = original.inventory_unit
         if unit
           unit = InventoryUnit.lock.find(unit.id)
+        end
+
+        if qty_delta.negative?
+          begin
+            Availability.assert_depletion_allowed!(
+              store: original.store,
+              variant: original.product_variant,
+              quantity_delta: qty_delta,
+              inventory_unit: unit,
+              balance: balance
+            )
+          rescue Availability::Error => e
+            raise Error, e.message
+          end
+        end
+
+        if unit
           if original.quantity_delta.positive?
             raise Error, "unit must still be on hand to reverse acquisition" unless unit.on_hand?
             unit.update!(lifecycle_state: "removed", removed_at: Time.current)

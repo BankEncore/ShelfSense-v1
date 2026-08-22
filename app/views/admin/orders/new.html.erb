@@ -1,0 +1,56 @@
+<% content_for :title, "New stock order" %>
+<%= render "shared/breadcrumbs", crumbs: [
+  { name: "Home", path: root_path },
+  { name: "Orders", path: admin_orders_path },
+  { name: "New stock order" }
+] %>
+
+<%= render "shared/page_header", title: "New stock order" %>
+
+<% if @product_variant %>
+  <section class="section surface">
+    <%= render "shared/definition_list", rows: [
+          ["Product", link_to(@product_variant.product.name, admin_product_path(@product_variant.product))],
+          ["Variant", link_to(@product_variant.name.presence || @product_variant.sku, admin_product_variant_path(@product_variant))],
+          ["SKU", @product_variant.sku],
+          ["Type", @product_variant.variant_type.humanize],
+          ["Preferred supplier", @preferred_supplier&.admin_label || "—"],
+          ["Preferred expected cost", (@preferred_expected_cost_cents ? format_money_cents(@preferred_expected_cost_cents) : "—")]
+        ] %>
+  </section>
+<% end %>
+
+<section class="section surface">
+  <%= form_with url: admin_orders_path, scope: :order do |form| %>
+    <% if @product_variant %>
+      <%= form.hidden_field :product_variant_id, value: @product_variant.id %>
+    <% else %>
+      <p>
+        <%= form.label :product_variant_id, "Product variant ID" %>
+        <%= form.text_field :product_variant_id, value: @order.product_variant_id, required: true %>
+        <span class="muted">Standard inventory variant UUID only. Prefer starting from a product or variant page.</span>
+      </p>
+    <% end %>
+    <p>
+      <%= form.label :supplier_id, "Supplier" %>
+      <%= form.collection_select :supplier_id, @suppliers, :id, :admin_label,
+            { selected: @order.supplier_id.presence || @preferred_supplier&.id, include_blank: "Preferred source (if any)" } %>
+    </p>
+    <p>
+      <%= form.label :requested_quantity, "Quantity" %>
+      <%= form.number_field :requested_quantity, value: @order.requested_quantity || 1, min: 1, required: true %>
+    </p>
+    <p>
+      <%= form.label :expected_unit_cost_cents, "Expected unit cost (cents)" %>
+      <%= form.number_field :expected_unit_cost_cents, min: 0, value: @preferred_expected_cost_cents %>
+      <span class="muted">Required when no preferred source supplies cost.</span>
+    </p>
+    <p>
+      <%= form.label :notes %>
+      <%= form.text_area :notes, value: @order.notes %>
+    </p>
+    <p><%= form.submit "Create stock order", class: "btn" %></p>
+  <% end %>
+</section>
+
+<p><%= link_to "Back", (@product_variant ? admin_product_variant_path(@product_variant) : admin_orders_path) %></p>

@@ -26,6 +26,7 @@ module Pos
         Pos::Support.clear_working_tenders!(transaction)
         line = transaction.pos_transaction_lines.find(@line.id)
         raise Pos::Error, "quantity must be 1 for individually tracked merchandise" if line.unit_line? && @quantity != 1
+        raise Pos::Error, "quantity must be 1 for customer request pickup" if line.pickup_line? && @quantity != 1
         if line.sale? && (line.price_overridden? || line.manually_discounted?)
           raise Pos::Error, "Remove the price override or discount before changing quantity."
         end

@@ -1,0 +1,87 @@
+<% content_for :title, "Location queue" %>
+<h1>Location queue</h1>
+<p>Pending in-store customer requests for <%= current_store.admin_label %>. Confirm location to reserve, or mark not located.</p>
+
+<% if @pending_requests.empty? %>
+  <p>No pending location requests.</p>
+<% else %>
+  <table class="ops-queue">
+    <thead>
+      <tr>
+        <th scope="col">#</th>
+        <th scope="col">Customer</th>
+        <th scope="col">Merchandise</th>
+        <th scope="col">Type</th>
+        <th scope="col">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% @pending_requests.each do |request| %>
+        <% variant = request.product_variant %>
+        <tr>
+          <td><%= request.number %></td>
+          <td><%= request.customer.display_name %></td>
+          <td>
+            <%= variant.product.name %>
+            <code><%= variant.sku %></code>
+          </td>
+          <td><%= variant.variant_type.capitalize %></td>
+          <td>
+            <%= form_with url: ops_location_confirm_path(request), method: :post, local: true, html: { class: "ops-inline-form" } do %>
+              <%= hidden_field_tag :lock_version, request.lock_version %>
+              <% if variant.used? %>
+                <% units = Inventory::Availability.unreserved_on_hand_units(current_store, variant).order(:unit_identifier) %>
+                <label>
+                  Unit
+                  <select name="inventory_unit_id" required>
+                    <option value="">Select unit…</option>
+                    <% units.each do |unit| %>
+                      <option value="<%= unit.id %>"><%= unit.unit_identifier %></option>
+                    <% end %>
+                  </select>
+                </label>
+                <label>
+                  or scan
+                  <input type="text" name="unit_identifier" autocomplete="off" inputmode="numeric">
+                </label>
+              <% end %>
+              <button type="submit"<%= " autofocus" if request == @pending_requests.first %>>Located</button>
+            <% end %>
+            <%= form_with url: ops_location_not_located_path(request), method: :post, local: true, html: { class: "ops-inline-form" } do %>
+              <%= hidden_field_tag :lock_version, request.lock_version %>
+              <label>
+                Notes
+                <input type="text" name="notes" autocomplete="off">
+              </label>
+              <button type="submit">Not located — cancel</button>
+            <% end %>
+            <% if variant.standard? %>
+              <%= form_with url: ops_location_not_located_path(request), method: :post, local: true, html: { class: "ops-inline-form" } do %>
+                <%= hidden_field_tag :lock_version, request.lock_version %>
+                <%= hidden_field_tag :convert_to_special_order, "1" %>
+                <label>
+                  Notes
+                  <input type="text" name="notes" autocomplete="off">
+                </label>
+                <label>
+                  Supplier (optional if preferred)
+                  <select name="supplier_id">
+                    <option value="">Preferred source…</option>
+                    <% Supplier.active.admin_ordered.each do |supplier| %>
+                      <option value="<%= supplier.id %>"><%= supplier.admin_label %></option>
+                    <% end %>
+                  </select>
+                </label>
+                <label>
+                  Expected cost (cents)
+                  <input type="number" name="expected_unit_cost_cents" min="0">
+                </label>
+                <button type="submit">Not located — special order</button>
+              <% end %>
+            <% end %>
+          </td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+<% end %>

@@ -101,9 +101,11 @@ module Pos
 
     def available_quantity(variant, tracking)
       return "—" if tracking == "non_inventory"
-      return InventoryUnit.on_hand.where(store: @store, product_variant: variant).count if tracking == "individual"
+      if tracking == "individual"
+        return Inventory::Availability.unreserved_on_hand_units(@store, variant).count
+      end
 
-      InventoryBalance.find_by(store: @store, product_variant: variant)&.on_hand_quantity || 0
+      Inventory::Availability.available(@store, variant)
     end
 
     def sanitize_like(value)

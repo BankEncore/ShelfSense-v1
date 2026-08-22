@@ -53,6 +53,8 @@ module Inventory
       quantity_delta = -@line.quantity
 
       balance = Balances.lock_or_create!(store: store, product_variant: variant)
+      lock_pickup_allocation!
+      assert_availability!(store: store, variant: variant, quantity_delta: quantity_delta, balance: balance)
       effects = deplete_moving_average(balance, quantity_delta)
       apply_negative_stock_policy!(effects)
 
@@ -76,6 +78,14 @@ module Inventory
       raise Error, "unit variant mismatch" unless unit.product_variant_id == variant.id
 
       quantity_delta = -1
+      lock_pickup_allocation!(inventory_unit: unit)
+      assert_availability!(
+        store: store,
+        variant: variant,
+        quantity_delta: quantity_delta,
+        inventory_unit: unit,
+        balance: balance
+      )
       carrying_value_cents = unit.carrying_value_cents
       effects = deplete_specific_identification(balance, carrying_value_cents)
       apply_negative_stock_policy!(effects)
@@ -207,6 +217,44 @@ module Inventory
       return if effects[:resulting_on_hand] >= 0 && effects[:resulting_value_cents] >= 0
 
       raise Error, "posting would reduce on-hand or value below zero"
+    end
+
+    def assert_availability!(store:, variant:, quantity_delta:, inventory_unit: nil, balance: nil)
+      Availability.assert_depletion_allowed!(
+        store: store,
+        variant: variant,
+        quantity_delta: quantity_delta,
+        inventory_unit: inventory_unit,
+        exclude_allocation_id: @line.customer_request_allocation_id,
+        balance: balance
+      )
+    rescue Availability::Error => e
+      raise Error, e.message
+    end
+
+    # Lock order: InventoryBalance → InventoryUnit (Used) → allocation / request.
+    def lock_pickup_allocation!(inventory_unit: nil)
+      allocation_id = @line.customer_request_allocation_id
+      return if allocation_id.blank?
+
+      allocation = CustomerRequestAllocation.lock.find(allocation_id)
+      raise Error, "allocation is not reserved for pickup" unless allocation.reserved?
+
+      request = allocation.customer_request
+      raise Error, "customer request is not available for pickup" unless request.available?
+      raise Error, "allocation store mismatch" unless request.store_id == @line.pos_transaction.store_id
+      raise Error, "allocation variant mismatch" unless request.product_variant_id == @line.product_variant_id
+
+      if allocation.used_unit?
+        raise Error, "pickup line requires the allocated inventory unit" if inventory_unit.blank?
+        raise Error, "inventory unit does not match the allocation" unless allocation.inventory_unit_id == inventory_unit.id
+      elsif inventory_unit.present?
+        raise Error, "standard pickup cannot include an inventory unit"
+      end
+
+      allocation
+    rescue ActiveRecord::RecordNotFound
+      raise Error, "allocation is not reserved for pickup"
     end
   end
 end

@@ -75,6 +75,8 @@
      data-register-workspace-linked-lookup-url-value="<%= pos_register_linked_return_lookup_path(register_scope) %>"
      data-register-workspace-resolve-url-value="<%= pos_register_merchandise_resolve_path(register_scope) %>"
      data-register-workspace-search-url-value="<%= pos_register_merchandise_search_path(register_scope) %>"
+     data-register-workspace-pickup-search-url-value="<%= pos_register_pickup_search_path(register_scope) %>"
+     data-register-workspace-pickup-allowed-value="<%= @pickup_allowed ? "true" : "false" %>"
      data-register-workspace-open-price-url-value="<%= pos_register_open_price_path(register_scope) %>"
      data-action="turbo:submit-end->register-workspace#onSubmitEnd">
   <div data-register-workspace-target="chrome">
@@ -239,6 +241,9 @@
               data: { register_workspace_target: "abandonButton" } %>
       <% else %>
         <button type="button" class="btn btn--secondary" data-action="register-workspace#openReturnChooser" data-register-workspace-target="returnButton">Return (-)</button>
+        <% if @pickup_allowed %>
+          <button type="button" class="btn btn--secondary" data-action="register-workspace#openPickupOverlay" data-register-workspace-target="pickupButton">Pickup</button>
+        <% end %>
         <button type="button" class="btn btn--secondary" data-action="register-workspace#enterQuantity" data-register-workspace-target="quantityButton" disabled>Quantity (*)</button>
         <button type="button" class="btn btn--secondary" data-action="register-workspace#openPriceOverride" data-register-workspace-target="overrideButton" disabled>Price (F6)</button>
         <button type="button" class="btn btn--secondary" data-action="register-workspace#openLineDiscount" data-register-workspace-target="discountButton" disabled>Discount (F7)</button>
@@ -277,6 +282,12 @@
       <%= hidden_field_tag :product_variant_id, "", data: { register_workspace_target: "variantInput" } %>
       <%= hidden_field_tag :inventory_unit_id, "", data: { register_workspace_target: "unitInput" } %>
       <%= hidden_field_tag :selling_price, "", data: { register_workspace_target: "openPriceInput" } %>
+    <% end %>
+
+    <%= form_with url: pos_register_pickup_path(register_scope), method: :post, html: { class: "pos-hidden", data: { register_workspace_target: "pickupForm", turbo: true } } do %>
+      <%= hidden_field_tag :register_id, @register.id %>
+      <%= hidden_field_tag :lock_version, @transaction.lock_version %>
+      <%= hidden_field_tag :customer_request_id, "", data: { register_workspace_target: "pickupRequestInput" } %>
     <% end %>
 
     <%= form_with url: pos_register_quantity_path(register_scope), method: :post, html: { class: "pos-hidden", data: { register_workspace_target: "quantityForm", turbo: true } } do %>
@@ -523,6 +534,26 @@
       <ul class="pos-picker" role="listbox" aria-labelledby="pos-search-title" data-register-workspace-target="searchList"></ul>
       <p class="muted">Enter searches, then Enter selects the highlighted item. Esc cancels.</p>
       <button type="button" class="btn btn--secondary" data-action="register-workspace#closeSearchOverlay">Cancel (Esc)</button>
+    </div>
+  </div>
+
+  <div class="pos-overlay"
+       id="pos_pickup_overlay"
+       hidden
+       data-register-workspace-target="pickupOverlay"
+       role="dialog"
+       aria-modal="true"
+       aria-labelledby="pos-pickup-title">
+    <div class="pos-overlay__panel">
+      <h2 id="pos-pickup-title">Customer request pickup</h2>
+      <label class="field">
+        <span>Name, phone, request #, or merchandise</span>
+        <input type="text" autocomplete="off" data-register-workspace-target="pickupQueryField">
+      </label>
+      <p class="muted" data-register-workspace-target="pickupQueryLabel"></p>
+      <ul class="pos-picker" role="listbox" aria-labelledby="pos-pickup-title" data-register-workspace-target="pickupList"></ul>
+      <p class="muted">Enter searches, then Enter selects the highlighted available request. Esc cancels.</p>
+      <button type="button" class="btn btn--secondary" data-action="register-workspace#closePickupOverlay">Cancel (Esc)</button>
     </div>
   </div>
 
