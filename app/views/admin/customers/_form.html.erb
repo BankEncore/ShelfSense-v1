@@ -1,4 +1,5 @@
 <%= form_with model: [:admin, customer] do |form| %>
+  <%= hidden_field_tag :return_to, @return_to if @return_to.present? %>
   <% if customer.errors.any? %><ul><% customer.errors.full_messages.each do |m| %><li><%= m %></li><% end %></ul><% end %>
   <%= form.hidden_field :lock_version %>
   <p><%= form.label :display_name %><%= form.text_field :display_name, autofocus: true %></p>

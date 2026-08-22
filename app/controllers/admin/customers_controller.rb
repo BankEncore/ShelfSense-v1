@@ -16,6 +16,7 @@ module Admin
 
     def new
       @customer = Customer.new
+      @return_to = valid_customer_request_return_path
     end
 
     def create
@@ -25,8 +26,16 @@ module Admin
         action: "customers.create",
         after_values: { display_name: @customer.display_name, email: @customer.email, phone: @customer.phone }
       )
-        redirect_to admin_customer_path(@customer), notice: "Customer created."
+        if (return_path = valid_customer_request_return_path)
+          uri = URI.parse(return_path)
+          query = Rack::Utils.parse_nested_query(uri.query.to_s)
+          query["customer_id"] = @customer.id
+          redirect_to "#{uri.path}?#{query.to_query}", notice: "Customer created. Continue the customer request."
+        else
+          redirect_to admin_customer_path(@customer), notice: "Customer created."
+        end
       else
+        @return_to = valid_customer_request_return_path
         render :new, status: :unprocessable_entity
       end
     end
@@ -63,6 +72,18 @@ module Admin
     end
 
     private
+
+    def valid_customer_request_return_path
+      value = params[:return_to].to_s
+      return if value.blank?
+
+      uri = URI.parse(value)
+      return unless uri.host.nil? && uri.path == new_admin_customer_request_path
+
+      value
+    rescue URI::InvalidURIError
+      nil
+    end
 
     def set_customer
       @customer = Customer.find(params[:id])

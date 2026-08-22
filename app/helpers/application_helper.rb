@@ -10,6 +10,9 @@ module ApplicationHelper
     configuration: {
       "active" => "active",
       "inactive" => "inactive"
+    }.freeze,
+    customer_request: CustomerRequest::STATUSES.index_with { |status|
+      CustomerRequest::ACTIVE_STATUSES.include?(status) ? "active" : "inactive"
     }.freeze
   }.freeze
 

@@ -89,6 +89,10 @@ Rails.application.routes.draw do
       member { post :reactivate }
     end
     resources :customer_requests, only: %i[index show new create] do
+      collection do
+        get :customer_lookup
+        get :merchandise_lookup
+      end
       member { post :cancel }
     end
     resources :orders, only: %i[index show new create]
