@@ -157,19 +157,36 @@
 <% if !@customer_request.cancelled? && !@customer_request.completed? && effective_permissions.include?("customer_requests.manage") %>
   <section class="section surface" aria-labelledby="cancel-request-heading">
     <h2 id="cancel-request-heading">Cancel request</h2>
-    <%= form_with url: cancel_admin_customer_request_path(@customer_request), method: :post do %>
-      <%= hidden_field_tag :lock_version, @customer_request.lock_version %>
-      <p><%= label_tag :cancellation_reason, "Cancellation reason" %><%= text_field_tag :cancellation_reason, nil, required: true %></p>
-      <% if @unsent_special_orders.any? %>
-        <fieldset>
-          <legend>Unsent special order</legend>
-          <p>This request has an unsent order. Choose whether to cancel the draft order too.</p>
-          <label><%= radio_button_tag :cancel_draft_order, true, false, required: true %> Cancel the draft order</label>
-          <label><%= radio_button_tag :cancel_draft_order, false, false, required: true %> Keep the draft order on the PO</label>
-        </fieldset>
-      <% end %>
-      <p><%= submit_tag "Cancel request", class: "btn btn--danger" %></p>
-    <% end %>
+    <div data-controller="review-dialog">
+      <button type="button" class="btn btn--danger" data-review-dialog-target="trigger" data-action="review-dialog#open">Review cancellation</button>
+      <dialog class="review-dialog review-dialog--danger" data-review-dialog-target="dialog" data-action="close->review-dialog#restoreFocus">
+        <div class="review-dialog__body">
+          <h3>Review cancelling request #<%= @customer_request.number %></h3>
+          <dl class="review-dialog__facts">
+            <dt>Customer</dt><dd><%= @customer_request.customer.admin_label %></dd>
+            <dt>Merchandise</dt><dd><%= @customer_request.product_variant.product.name %></dd>
+            <dt>Allocation release</dt><dd><%= @active_allocation ? "The active allocation will be released for other sales." : "No active allocation will be released." %></dd>
+            <dt>Related unsent order</dt><dd><%= @unsent_special_orders.any? ? "An explicit keep-or-cancel decision is required below." : "No unsent related order requires a decision." %></dd>
+          </dl>
+          <p class="review-dialog__consequences">Sent supplier quantity is not cancelled. Any later receipt for this cancelled request becomes ordinary stock.</p>
+          <%= form_with url: cancel_admin_customer_request_path(@customer_request), method: :post do %>
+            <%= hidden_field_tag :lock_version, @customer_request.lock_version %>
+            <p><%= label_tag :cancellation_reason, "Cancellation reason" %><%= text_field_tag :cancellation_reason, nil, required: true, data: { review_dialog_target: "initialFocus" } %></p>
+            <% if @unsent_special_orders.any? %>
+              <fieldset>
+                <legend>Explicit unsent-order decision</legend>
+                <label><%= radio_button_tag :cancel_draft_order, true, false, required: true %> Cancel the unsent draft order</label>
+                <label><%= radio_button_tag :cancel_draft_order, false, false, required: true %> Keep the unsent draft order on the PO</label>
+              </fieldset>
+            <% end %>
+            <div class="review-dialog__actions">
+              <%= submit_tag "Cancel request and release allocation", class: "btn btn--danger" %>
+              <button type="button" data-action="review-dialog#close">Keep request active</button>
+            </div>
+          <% end %>
+        </div>
+      </dialog>
+    </div>
   </section>
 <% end %>
 

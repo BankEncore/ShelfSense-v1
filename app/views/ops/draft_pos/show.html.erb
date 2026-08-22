@@ -37,20 +37,37 @@
         <button type="submit" <%= "autofocus aria-describedby=po_return_error" if @error_action == :return_to_draft %>>Return to draft</button>
         <%= render "ops/shared/inline_row_error", action: :return_to_draft, id: "po_return_error" %>
       <% end %>
-      <%= form_with url: ops_purchase_order_send_path(@purchase_order), method: :post, local: true do %>
-        <%= hidden_field_tag :lock_version, @purchase_order.lock_version %>
-        <label>
-          Transmission method
-          <select name="transmission_method" required <%= "autofocus aria-describedby=po_action_error" if @error_action == :send_po %>>
-            <option value="">Select…</option>
-            <% PurchaseOrder::TRANSMISSION_METHODS.each do |method| %>
-              <option value="<%= method %>" <%= "selected" if @submitted&.fetch("transmission_method", nil) == method %>><%= method %></option>
+      <div data-controller="review-dialog" <%= 'data-review-dialog-open-value="true"' if @error_action == :send_po %>>
+        <button type="button" data-review-dialog-target="trigger" data-action="review-dialog#open">Review send</button>
+        <dialog class="review-dialog review-dialog--warning" data-review-dialog-target="dialog" data-action="close->review-dialog#restoreFocus">
+          <div class="review-dialog__body">
+            <h3>Review sending <%= @purchase_order.admin_label %></h3>
+            <dl class="review-dialog__facts">
+              <dt>Supplier</dt><dd><%= @purchase_order.supplier.admin_label %></dd>
+              <dt>Destination</dt><dd><%= current_store.admin_label %></dd>
+              <dt>Line count</dt><dd><%= @lines.size %></dd>
+              <dt>Expected total</dt><dd><%= format_money_cents(@purchase_order.expected_merchandise_total_cents) %></dd>
+            </dl>
+            <p class="review-dialog__consequences"><strong>After send:</strong> supplier-facing PO and line snapshots become immutable. Corrections require cancellation or re-sourcing rather than editing the snapshots.</p>
+            <%= form_with url: ops_purchase_order_send_path(@purchase_order), method: :post, local: true do %>
+              <%= hidden_field_tag :lock_version, @purchase_order.lock_version %>
+              <label>Transmission method
+                <select name="transmission_method" required data-review-dialog-target="initialFocus" <%= "aria-describedby=po_action_error" if @error_action == :send_po %>>
+                  <option value="">Select…</option>
+                  <% PurchaseOrder::TRANSMISSION_METHODS.each do |method| %>
+                    <option value="<%= method %>" <%= "selected" if @submitted&.fetch("transmission_method", nil) == method %>><%= method %></option>
+                  <% end %>
+                </select>
+              </label>
+              <%= render "ops/shared/inline_row_error", action: :send_po, id: "po_action_error" %>
+              <div class="review-dialog__actions">
+                <button type="submit">Send PO and freeze snapshots</button>
+                <button type="button" data-action="review-dialog#close">Keep PO generated</button>
+              </div>
             <% end %>
-          </select>
-        </label>
-        <%= render "ops/shared/inline_row_error", action: :send_po, id: "po_action_error" %>
-        <button type="submit">Record send</button>
-      <% end %>
+          </div>
+        </dialog>
+      </div>
     <% end %>
   </section>
 <% end %>
