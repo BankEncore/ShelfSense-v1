@@ -22,7 +22,8 @@ class CustomerRequestsAdminTest < ActionDispatch::IntegrationTest
       phone: "555-0199",
       email: "alex.lookup@example.com"
     )
-    @request = Customers::CreateRequest.call(
+    open_quantity_stock(store: @store, variant: @variant, actor: @admin, quantity: 1, unit_cost_cents: 500)
+    @customer_request = Customers::CreateRequest.call(
       store: @store,
       customer: @customer,
       product_variant: @variant,
@@ -72,7 +73,7 @@ class CustomerRequestsAdminTest < ActionDispatch::IntegrationTest
   end
 
   test "index searches filters sorts active first and paginates" do
-    @request.update_columns(status: "completed", updated_at: Time.current) # historical fixture setup
+    @customer_request.update_columns(status: "completed", updated_at: Time.current) # historical fixture setup
     active_customer = Customer.create!(display_name: "Current Reader", phone: "555-0110")
     active_request = Customers::CreateRequest.call(
       store: @store,
@@ -90,17 +91,17 @@ class CustomerRequestsAdminTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "Page 1 of 1"
 
     get admin_customer_requests_path
-    assert_operator response.body.index("##{active_request.number}"), :<, response.body.index("##{@request.number}")
+    assert_operator response.body.index("##{active_request.number}"), :<, response.body.index("##{@customer_request.number}")
   end
 
   test "show presents current promise and chronological fulfillment summary" do
     sign_in_as("admin")
     select_store
 
-    get admin_customer_request_path(@request)
+    get admin_customer_request_path(@customer_request)
 
     assert_response :success
-    assert_select "h2", text: "Needs locating"
+    assert_select "h2#current-state-heading", text: "Needs locating"
     assert_select "h2", text: "Fulfillment timeline"
     assert_select ".request-summary", text: /Alex Similar/
     assert_select ".request-summary", text: /555-0199/

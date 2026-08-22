@@ -93,7 +93,7 @@
                   <dt>Customer impact</dt><dd><%= line.order.customer_request ? "Customer request ##{line.order.customer_request.number} remains linked to any replacement; without one, later receipt will not fulfill it." : "Stock order; no customer request is linked." %></dd>
                   <dt>Original supplier</dt><dd><%= @purchase_order.supplier.admin_label %></dd>
                   <dt>Replacement supplier</dt><dd>Select below when re-sourcing.</dd>
-                  <dt>Expected cost</dt><dd><%= format_money_cents(line.expected_unit_cost_cents) %> current; enter the replacement cost below.</dd>
+                  <dt>Expected cost</dt><dd><%= format_money_cents(line.expected_unit_cost_cents_snapshot) %> current; enter the replacement cost below.</dd>
                 </dl>
                 <p class="review-dialog__consequences">The cancelled quantity immediately stops being open on the original PO. Re-sourcing atomically creates a linked replacement order and draft PO line; history is not rewritten.</p>
                 <%= form_with url: cancel_line_admin_purchase_order_path(@purchase_order, line_id: line.id), method: :post, local: true do %>

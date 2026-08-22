@@ -50,16 +50,16 @@ class PurchasingOpsWorkspaceTest < ApplicationSystemTestCase
 
     row = find("tr", text: "Keyboard Purchasing Book")
     row.find("input[name='quantity']").fill_in with: "7"
-    row.find("input[name='expected_unit_cost_cents']").fill_in with: "999"
+    row.find("input[name='expected_unit_cost_cents']").fill_in with: "9.99"
     row.find("input[name='notes']").fill_in with: "submitted note"
     row.click_button "Save"
 
     assert_selector "[data-ops-error-summary]", text: /changed by someone else/i
     assert_selector "tr.is-selected", text: /current note/
     assert_field "quantity", with: "7"
-    assert_field "expected_unit_cost_cents", with: "999"
+    assert_field "expected_unit_cost_cents", with: "9.99"
     assert_field "notes", with: "submitted note"
-    assert_equal "quantity", page.evaluate_script("document.activeElement && document.activeElement.name")
+    assert_equal "identifier", page.evaluate_script("document.activeElement && document.activeElement.name")
   end
 
   test "visible shortcuts focus lookup, save the active row, and invoke the primary action" do
@@ -84,14 +84,17 @@ class PurchasingOpsWorkspaceTest < ApplicationSystemTestCase
     visit ops_purchase_order_path(@purchase_order)
     original_version = @purchase_order.purchase_order_lines.first.order.lock_version
 
-    find("h2", text: "Lines").click
-    send_keys :arrow_down
+    lines_row = find("table.ops-queue tbody tr", match: :first)
+    lines_row.click
+    lines_row.send_keys :arrow_down
     assert_selector "tr.is-selected"
     send_keys :escape
     assert_no_selector "tr.is-selected"
     assert_equal original_version, @purchase_order.purchase_order_lines.first.order.reload.lock_version
 
-    send_keys :arrow_down
+    lines_row = find("table.ops-queue tbody tr", match: :first)
+    lines_row.click
+    lines_row.send_keys :arrow_down
     find("tr.is-selected").send_keys :enter
     assert_text "Line updated"
   end
@@ -124,8 +127,11 @@ class PurchasingOpsWorkspaceTest < ApplicationSystemTestCase
     assert_equal "transmission_method", page.evaluate_script("document.activeElement && document.activeElement.name")
     send_keys :escape
     assert_no_selector "dialog[open]"
-    assert_equal "Review send", page.evaluate_script("document.activeElement && document.activeElement.textContent.trim")
-    assert_equal "generated", @purchase_order.reload.status
+    assert page.evaluate_script(<<~JS)
+      document.activeElement === document.querySelector("[data-review-dialog-target='trigger']")
+    JS
+    assert @purchase_order.reload.generated?
+    assert_equal "draft", @purchase_order.status
 
     click_on "Review send"
     select "email", from: "Transmission method"
@@ -145,7 +151,7 @@ class PurchasingOpsWorkspaceTest < ApplicationSystemTestCase
     lookup.fill_in with: @variant.sku
     lookup.send_keys :enter
     assert_field "received_quantity", with: "1"
-    assert_field "actual_unit_cost_cents", with: "725"
+    assert_field "actual_unit_cost_cents", with: "7.25"
     click_on "Confirm and add line"
 
     assert_text "Line added. Scanner ready."

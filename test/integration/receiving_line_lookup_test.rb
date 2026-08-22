@@ -25,7 +25,8 @@ class ReceivingLineLookupTest < ActionDispatch::IntegrationTest
     body = response.parsed_body
     assert_equal "selected", body["outcome"]
     assert_equal 3, body.dig("matches", 0, "open_quantity")
-    assert_equal 725, body.dig("matches", 0, "expected_unit_cost_cents")
+    assert_equal "7.25", body.dig("matches", 0, "expected_unit_cost")
+    assert_equal "$7.25", body.dig("matches", 0, "expected_unit_cost_formatted")
 
     Purchasing::AddPurchaseReceiptLine.call(purchase_receipt: receipt,
       purchase_order_line: first.purchase_order_line, actor: @actor,
