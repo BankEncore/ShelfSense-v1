@@ -114,6 +114,26 @@ class PurchasingOpsWorkspaceTest < ApplicationSystemTestCase
     assert_nil @purchase_order.purchase_order_lines.first.order.reload.notes
   end
 
+  test "send review dialog describes immutable effects and Escape returns focus without sending" do
+    Purchasing::GeneratePurchaseOrder.call(purchase_order: @purchase_order, actor: @actor)
+
+    visit ops_purchase_order_path(@purchase_order.reload)
+    click_on "Review send"
+
+    assert_selector "dialog[open]", text: "supplier-facing PO and line snapshots become immutable"
+    assert_equal "transmission_method", page.evaluate_script("document.activeElement && document.activeElement.name")
+    send_keys :escape
+    assert_no_selector "dialog[open]"
+    assert_equal "Review send", page.evaluate_script("document.activeElement && document.activeElement.textContent.trim")
+    assert_equal "generated", @purchase_order.reload.status
+
+    click_on "Review send"
+    select "email", from: "Transmission method"
+    click_on "Send PO and freeze snapshots"
+    assert_text "Purchase order sent"
+    assert_equal "sent", @purchase_order.reload.status
+  end
+
   test "receiving scan selects defaults, updates through Turbo, and restores scanner focus" do
     Purchasing::GeneratePurchaseOrder.call(purchase_order: @purchase_order, actor: @actor)
     Purchasing::SendPurchaseOrder.call(purchase_order: @purchase_order.reload, actor: @actor, transmission_method: "email")
