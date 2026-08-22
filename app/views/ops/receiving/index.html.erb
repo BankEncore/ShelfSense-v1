@@ -5,8 +5,8 @@
     <p>Draft purchase receipts for <%= current_store.admin_label %>.</p>
   </div>
   <p>
-    <%= link_to "Draft POs", ops_draft_pos_path %>
-    · <%= link_to "Exit to Purchasing", admin_orders_path %>
+    <%= action_link_to("Draft POs", ops_draft_pos_path, style: :link, intent: :neutral) %>
+    · <%= action_link_to("Exit to Purchasing", admin_orders_path, style: :link, intent: :neutral) %>
   </p>
 </header>
 <%= render "ops/shared/error_summary", errors: @mutation_errors, conflict: false, title: "Draft receipt could not be created" %>
@@ -14,7 +14,7 @@
 <% if effective_permissions.include?("purchase_receipts.manage") %>
   <section class="ops-actions">
     <h2>New draft receipt</h2>
-    <%= form_with url: ops_receiving_create_path, method: :post, local: true do %>
+    <%= form_with url: ops_receiving_create_path, method: :post, local: true do |form| %>
       <label>
         Supplier
         <select name="supplier_id" required <%= "autofocus aria-describedby=receipt_create_error" if @error_action == :create %>>
@@ -32,7 +32,7 @@
         Supplier document #
         <input type="text" name="supplier_document_number" value="<%= @submitted&.fetch("supplier_document_number", nil) %>" autocomplete="off">
       </label>
-      <button type="submit">Create draft</button>
+      <%= action_submit(form, "Create draft", style: :solid, intent: :brand) %>
       <%= render "ops/shared/inline_row_error", action: :create, id: "receipt_create_error" %>
     <% end %>
   </section>
@@ -58,7 +58,7 @@
             <td><%= receipt.supplier.admin_label %></td>
             <td><%= receipt.purchase_receipt_lines.size %></td>
             <td><%= l(receipt.received_at, format: :long) %></td>
-            <td><%= link_to "Open", ops_receiving_path(receipt) %></td>
+            <td><%= action_link_to("Open", ops_receiving_path(receipt), style: :link, intent: :neutral) %></td>
           </tr>
         <% end %>
       </tbody>

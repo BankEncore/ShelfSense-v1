@@ -6,7 +6,7 @@
            data-focus-restore-target="lookup" data-receiving-lookup-target="query"
            data-action="keydown.enter->receiving-lookup#search input->receiving-lookup#clearMessage">
   </label>
-  <button type="button" data-action="receiving-lookup#search">Search</button>
+  <%= action_button("Search", style: :outline, intent: :neutral, data: { action: "receiving-lookup#search" }) %>
   <p class="ops-hint">Results are limited to open Standard purchase-order lines for <%= @receipt.supplier.admin_label %> at <%= current_store.admin_label %>.</p>
   <p role="status" aria-live="polite" data-receiving-lookup-target="message"><%= @scan_notice %></p>
 
@@ -16,7 +16,7 @@
     <h3>Current line</h3>
     <p data-receiving-lookup-target="selection"><%= @error_action == :add_line ? "Selected purchase-order line retained; correct the values and retry." : "Scan or search to select an eligible PO line." %></p>
     <%= form_with url: ops_receiving_add_line_path(@receipt), method: :post,
-          data: { receiving_lookup_target: "form" } do %>
+          data: { receiving_lookup_target: "form" } do |form| %>
       <%= hidden_field_tag :lock_version, @receipt.lock_version %>
       <input type="hidden" name="purchase_order_line_id" value="<%= @error_action == :add_line ? @submitted&.fetch("purchase_order_line_id", nil) : nil %>" data-receiving-lookup-target="lineId">
       <label>
@@ -28,7 +28,14 @@
         <input type="text" inputmode="decimal" name="actual_unit_cost_cents" value="<%= @error_action == :add_line ? @submitted&.fetch("actual_unit_cost_cents", nil) : nil %>" required <%= "disabled" unless @error_action == :add_line %> aria-invalid="<%= @error_field == :actual_unit_cost_cents %>" data-receiving-lookup-target="cost">
       </label>
       <label>Notes <input type="text" name="notes" value="<%= @error_action == :add_line ? @submitted&.fetch("notes", nil) : nil %>"></label>
-      <button type="submit" <%= "disabled" unless @error_action == :add_line %> data-receiving-lookup-target="confirm">Confirm and add line</button>
+      <%= action_submit(
+            form,
+            "Confirm and add line",
+            style: :solid,
+            intent: :brand,
+            disabled: @error_action != :add_line,
+            data: { receiving_lookup_target: "confirm" }
+          ) %>
       <%= render "ops/shared/inline_row_error", action: :add_line, id: "receipt_add_error" %>
     <% end %>
   </div>

@@ -90,8 +90,8 @@
           <%= link_to "Transactions", pos_transactions_path, class: "pos-header__link" %>
           <%= link_to "X Report", pos_x_report_path, class: "pos-header__link" %>
           <% if @ui_mode == "sale_entry" && lines.empty? && tenders.empty? %>
-            <%= button_to "Close register", pos_register_close_path, method: :post,
-                  params: { session_id: @session_record.id, register_id: @register.id }, class: "btn btn--secondary" %>
+            <%= action_button_to "Close register", pos_register_close_path, style: :outline, intent: :neutral, size: :standard, method: :post,
+                  params: { session_id: @session_record.id, register_id: @register.id } %>
           <% end %>
         </nav>
       </div>
@@ -134,26 +134,41 @@
                   aria-selected="<%= line.id == selected_id %>">
                 <td><%= line.id == selected_id ? ">" : "" %> <%= line.quantity %></td>
                 <td>
-                  <%= line.return? ? "RETURN · #{pos_line_description(line)}" : pos_line_description(line) %>
+                  <div class="pos-line__title">
+                    <%= line.return? ? "RETURN · " : "" %><%= pos_basket_line_title(line) %>
+                  </div>
+                  <% metadata = pos_basket_line_metadata(line) %>
+                  <% if metadata.any? %>
+                    <div class="pos-line__meta">
+                      <% metadata.each_with_index do |part, index| %>
+                        <%= " · " if index.positive? %>
+                        <% if part[:mono] %>
+                          <span class="pos-line__id"><%= part[:text] %></span>
+                        <% else %>
+                          <%= part[:text] %>
+                        <% end %>
+                      <% end %>
+                    </div>
+                  <% end %>
                   <% if pos_line_controlled?(line) %>
                     <span class="pos-line-flags"><%= pos_line_control_flags(line) %></span>
                   <% end %>
                   <% if line.linked_return? %>
-                    <div class="muted">
+                    <div class="pos-line__provenance">
                       <% if original %>From <%= original.transaction_reference %><% end %>
                       <% if line.return_reason_name_snapshot.present? %>
                         <%= original ? " · " : "" %><%= line.return_reason_name_snapshot %>
                       <% end %>
                     </div>
                   <% elsif line.unlinked_return? %>
-                    <div class="muted">
+                    <div class="pos-line__provenance">
                       Unlinked return
                       <% if line.return_reason_name_snapshot.present? %>
                         · <%= line.return_reason_name_snapshot %>
                       <% end %>
                     </div>
                     <% if pos_unlinked_return_price_adjusted?(line) %>
-                      <div class="muted">
+                      <div class="pos-line__provenance">
                         Reference <%= format_money_cents(line.reference_unit_price_cents) %>
                         · Return <%= format_money_cents(line.selling_unit_price_cents) %>
                       </div>
@@ -233,45 +248,66 @@
 
     <div id="pos_actions" class="pos-actions">
       <% if completion_recovery %>
-        <button type="button" class="btn" data-action="register-workspace#submitComplete" data-register-workspace-target="retry" autofocus>Retry complete</button>
-        <%= button_to "Return to sale", pos_register_abandon_tender_path, method: :post,
-              params: { lock_version: @transaction.lock_version, register_id: @register.id },
-              class: "btn btn--secondary",
-              form: { data: { turbo: true } },
-              data: { register_workspace_target: "abandonButton" } %>
-      <% else %>
-        <button type="button" class="btn btn--secondary" data-action="register-workspace#openReturnChooser" data-register-workspace-target="returnButton">Return (-)</button>
-        <% if @pickup_allowed %>
-          <button type="button" class="btn btn--secondary" data-action="register-workspace#openPickupOverlay" data-register-workspace-target="pickupButton">Pickup</button>
-        <% end %>
-        <button type="button" class="btn btn--secondary" data-action="register-workspace#enterQuantity" data-register-workspace-target="quantityButton" disabled>Quantity (*)</button>
-        <button type="button" class="btn btn--secondary" data-action="register-workspace#openPriceOverride" data-register-workspace-target="overrideButton" disabled>Price (F6)</button>
-        <button type="button" class="btn btn--secondary" data-action="register-workspace#openLineDiscount" data-register-workspace-target="discountButton" disabled>Discount (F7)</button>
-        <button type="button" class="btn btn--secondary" data-action="register-workspace#openTaxClassOverride" data-register-workspace-target="taxClassButton" disabled>Tax Class</button>
-        <button type="button" class="btn btn--secondary" data-action="register-workspace#chooseCash" data-register-workspace-target="cashButton" disabled>Cash (F1)</button>
-        <button type="button" class="btn btn--secondary" data-action="register-workspace#chooseCard" data-register-workspace-target="cardButton" disabled>Card (F2)</button>
-        <button type="button" class="btn btn--secondary" data-action="register-workspace#chooseCheck" data-register-workspace-target="checkButton" disabled>Check (F3)</button>
-        <button type="button" class="btn btn--secondary" data-action="register-workspace#chooseOther" data-register-workspace-target="otherButton" disabled>Other (F4)</button>
-        <button type="button" class="btn btn--secondary" data-action="register-workspace#enterTender" data-register-workspace-target="tenderButton" disabled><%= even_exchange ? "Complete (+)" : (refund_mode ? "Refund (+)" : "Tender (+)") %></button>
-        <button type="button" class="btn btn--secondary" data-action="register-workspace#removeSelected" data-register-workspace-target="removeButton" disabled>Remove (F8)</button>
-        <% if @ui_mode == "tender" && tenders.any? %>
-          <%= button_to "Return to sale", pos_register_abandon_tender_path, method: :post,
+        <div class="pos-actions__group" role="group" aria-label="Completion recovery">
+          <%= action_button "Retry complete", style: :solid, intent: :brand, size: :large,
+                data: { action: "register-workspace#submitComplete", register_workspace_target: "retry" },
+                autofocus: true %>
+          <%= action_button_to "Return to sale", pos_register_abandon_tender_path, style: :outline, intent: :neutral, size: :large, method: :post,
                 params: { lock_version: @transaction.lock_version, register_id: @register.id },
-                class: "btn btn--secondary",
                 form: { data: { turbo: true } },
                 data: { register_workspace_target: "abandonButton" } %>
-        <% end %>
+        </div>
+      <% else %>
+        <div class="pos-actions__group" role="group" aria-label="Returns and pickup">
+          <%= action_button "Return (-)", style: :outline, intent: :neutral, size: :large,
+                data: { action: "register-workspace#openReturnChooser", register_workspace_target: "returnButton" } %>
+          <% if @pickup_allowed %>
+            <%= action_button "Pickup", style: :outline, intent: :neutral, size: :large,
+                  data: { action: "register-workspace#openPickupOverlay", register_workspace_target: "pickupButton" } %>
+          <% end %>
+        </div>
+        <div class="pos-actions__group" role="group" aria-label="Line controls">
+          <%= action_button "Quantity (*)", style: :outline, intent: :neutral, size: :large, disabled: true,
+                data: { action: "register-workspace#enterQuantity", register_workspace_target: "quantityButton" } %>
+          <%= action_button "Price (F6)", style: :outline, intent: :neutral, size: :large, disabled: true,
+                data: { action: "register-workspace#openPriceOverride", register_workspace_target: "overrideButton" } %>
+          <%= action_button "Discount (F7)", style: :outline, intent: :neutral, size: :large, disabled: true,
+                data: { action: "register-workspace#openLineDiscount", register_workspace_target: "discountButton" } %>
+          <%= action_button "Tax Class", style: :outline, intent: :neutral, size: :large, disabled: true,
+                data: { action: "register-workspace#openTaxClassOverride", register_workspace_target: "taxClassButton" } %>
+        </div>
+        <div class="pos-actions__group" role="group" aria-label="Tender">
+          <%= action_button "Cash (F1)", style: :outline, intent: :neutral, size: :large, disabled: true,
+                data: { action: "register-workspace#chooseCash", register_workspace_target: "cashButton" } %>
+          <%= action_button "Card (F2)", style: :outline, intent: :neutral, size: :large, disabled: true,
+                data: { action: "register-workspace#chooseCard", register_workspace_target: "cardButton" } %>
+          <%= action_button "Check (F3)", style: :outline, intent: :neutral, size: :large, disabled: true,
+                data: { action: "register-workspace#chooseCheck", register_workspace_target: "checkButton" } %>
+          <%= action_button "Other (F4)", style: :outline, intent: :neutral, size: :large, disabled: true,
+                data: { action: "register-workspace#chooseOther", register_workspace_target: "otherButton" } %>
+          <%= action_button (even_exchange ? "Complete (+)" : (refund_mode ? "Refund (+)" : "Tender (+)")),
+                style: :outline, intent: :neutral, size: :large, disabled: true,
+                data: { action: "register-workspace#enterTender", register_workspace_target: "tenderButton" } %>
+        </div>
+        <div class="pos-actions__group" role="group" aria-label="Remove line">
+          <%= action_button "Remove (F8)", style: :outline, intent: :neutral, size: :large, disabled: true,
+                data: { action: "register-workspace#removeSelected", register_workspace_target: "removeButton" } %>
+          <% if @ui_mode == "tender" && tenders.any? %>
+            <%= action_button_to "Return to sale", pos_register_abandon_tender_path, style: :outline, intent: :neutral, size: :large, method: :post,
+                  params: { lock_version: @transaction.lock_version, register_id: @register.id },
+                  form: { data: { turbo: true } },
+                  data: { register_workspace_target: "abandonButton" } %>
+          <% end %>
+        </div>
       <% end %>
       <div data-register-workspace-target="clientRecovery" hidden>
-        <button type="button" class="btn" data-action="register-workspace#submitComplete">Retry complete</button>
+        <%= action_button "Retry complete", style: :solid, intent: :brand, size: :large,
+              data: { action: "register-workspace#submitComplete" } %>
       </div>
-      <button type="button"
-              class="btn btn--danger"
-              data-action="register-workspace#openOverlay"
-              data-register-workspace-target="cancelButton"
-              disabled>
-        Cancel (F9)
-      </button>
+      <div class="pos-actions__group pos-actions__group--escape" role="group" aria-label="Cancel transaction">
+        <%= action_button "Cancel (F9)", style: :outline, intent: :danger, size: :large, disabled: true,
+              data: { action: "register-workspace#openOverlay", register_workspace_target: "cancelButton" } %>
+      </div>
     </div>
 
     <%= form_with url: pos_register_merchandise_path(register_scope), method: :post, html: { class: "pos-hidden", data: { register_workspace_target: "merchandiseForm", turbo: true } } do %>
@@ -390,8 +426,10 @@
     <div class="pos-overlay__panel">
       <h2 id="pos-cancel-title">Cancel this transaction?</h2>
       <p>Lines will not be sold or returned. No receipt. No inventory movement.</p>
-      <button type="button" class="btn btn--secondary" data-action="register-workspace#closeOverlay" data-register-workspace-target="dontCancel">Don't cancel (Esc)</button>
-      <button type="button" class="btn btn--danger" data-action="register-workspace#confirmCancel" data-register-workspace-target="confirmCancel">Cancel transaction (F9)</button>
+      <%= action_button "Don't cancel (Esc)", style: :outline, intent: :neutral, size: :standard,
+            data: { action: "register-workspace#closeOverlay", register_workspace_target: "dontCancel" } %>
+      <%= action_button "Cancel transaction (F9)", style: :solid, intent: :danger, size: :standard,
+            data: { action: "register-workspace#confirmCancel", register_workspace_target: "confirmCancel" } %>
     </div>
   </div>
 
@@ -442,9 +480,12 @@
       </div>
 
       <div class="pos-overlay__actions">
-        <button type="button" class="btn btn--secondary" data-action="register-workspace#closeControlOverlay" data-register-workspace-target="controlCancel">Don't apply (Esc)</button>
-        <button type="button" class="btn" data-action="register-workspace#submitControlApply" data-register-workspace-target="controlApply">Apply</button>
-        <button type="button" class="btn btn--secondary" data-action="register-workspace#submitControlRemove" data-register-workspace-target="controlRemove" hidden>Remove</button>
+        <%= action_button "Don't apply (Esc)", style: :outline, intent: :neutral, size: :standard,
+              data: { action: "register-workspace#closeControlOverlay", register_workspace_target: "controlCancel" } %>
+        <%= action_button "Apply", style: :solid, intent: :brand, size: :standard,
+              data: { action: "register-workspace#submitControlApply", register_workspace_target: "controlApply" } %>
+        <%= action_button "Remove", style: :outline, intent: :warning, size: :standard, hidden: true,
+              data: { action: "register-workspace#submitControlRemove", register_workspace_target: "controlRemove" } %>
       </div>
     </div>
   </div>
@@ -492,8 +533,10 @@
       </div>
 
       <div class="pos-overlay__actions">
-        <button type="button" class="btn btn--secondary" data-action="register-workspace#closeUnlinkedOverlay" data-register-workspace-target="unlinkedCancel">Don't return (Esc)</button>
-        <button type="button" class="btn" data-action="register-workspace#submitUnlinkedReturn" data-register-workspace-target="unlinkedApply" hidden>Add return</button>
+        <%= action_button "Don't return (Esc)", style: :outline, intent: :neutral, size: :standard,
+              data: { action: "register-workspace#closeUnlinkedOverlay", register_workspace_target: "unlinkedCancel" } %>
+        <%= action_button "Add return", style: :solid, intent: :brand, size: :standard, hidden: true,
+              data: { action: "register-workspace#submitUnlinkedReturn", register_workspace_target: "unlinkedApply" } %>
       </div>
     </div>
   </div>
@@ -509,7 +552,8 @@
       <h2 id="pos-other-title">Other tender</h2>
       <ul class="pos-picker" role="listbox" aria-labelledby="pos-other-title" data-register-workspace-target="otherList"></ul>
       <p class="muted">Enter selects the highlighted tender. Esc cancels.</p>
-      <button type="button" class="btn btn--secondary" data-action="register-workspace#closeOtherOverlay">Cancel (Esc)</button>
+      <%= action_button "Cancel (Esc)", style: :outline, intent: :neutral, size: :standard,
+            data: { action: "register-workspace#closeOtherOverlay" } %>
     </div>
   </div>
 
@@ -533,7 +577,8 @@
       <p class="muted" data-register-workspace-target="searchQueryLabel"></p>
       <ul class="pos-picker" role="listbox" aria-labelledby="pos-search-title" data-register-workspace-target="searchList"></ul>
       <p class="muted">Enter searches, then Enter selects the highlighted item. Esc cancels.</p>
-      <button type="button" class="btn btn--secondary" data-action="register-workspace#closeSearchOverlay">Cancel (Esc)</button>
+      <%= action_button "Cancel (Esc)", style: :outline, intent: :neutral, size: :standard,
+            data: { action: "register-workspace#closeSearchOverlay" } %>
     </div>
   </div>
 
@@ -553,7 +598,8 @@
       <p class="muted" data-register-workspace-target="pickupQueryLabel"></p>
       <ul class="pos-picker" role="listbox" aria-labelledby="pos-pickup-title" data-register-workspace-target="pickupList"></ul>
       <p class="muted">Enter searches, then Enter selects the highlighted available request. Esc cancels.</p>
-      <button type="button" class="btn btn--secondary" data-action="register-workspace#closePickupOverlay">Cancel (Esc)</button>
+      <%= action_button "Cancel (Esc)", style: :outline, intent: :neutral, size: :standard,
+            data: { action: "register-workspace#closePickupOverlay" } %>
     </div>
   </div>
 
@@ -568,7 +614,8 @@
       <h2 id="pos-product-title">Choose product</h2>
       <ul class="pos-picker" role="listbox" aria-labelledby="pos-product-title" data-register-workspace-target="productList"></ul>
       <p class="muted">Several products share that lookup code. Enter selects the highlighted product. Esc cancels without adding merchandise.</p>
-      <button type="button" class="btn btn--secondary" data-action="register-workspace#closeProductOverlay">Cancel (Esc)</button>
+      <%= action_button "Cancel (Esc)", style: :outline, intent: :neutral, size: :standard,
+            data: { action: "register-workspace#closeProductOverlay" } %>
     </div>
   </div>
 
@@ -583,7 +630,8 @@
       <h2 id="pos-variant-title">Choose variant</h2>
       <ul class="pos-picker" role="listbox" aria-labelledby="pos-variant-title" data-register-workspace-target="variantList"></ul>
       <p class="muted">Enter selects the highlighted variant. Esc cancels.</p>
-      <button type="button" class="btn btn--secondary" data-action="register-workspace#closeVariantOverlay">Cancel (Esc)</button>
+      <%= action_button "Cancel (Esc)", style: :outline, intent: :neutral, size: :standard,
+            data: { action: "register-workspace#closeVariantOverlay" } %>
     </div>
   </div>
 
@@ -598,7 +646,8 @@
       <h2 id="pos-unit-title">Choose unit</h2>
       <ul class="pos-picker" role="listbox" aria-labelledby="pos-unit-title" data-register-workspace-target="unitList"></ul>
       <p class="muted">Enter selects the highlighted unit. Esc cancels.</p>
-      <button type="button" class="btn btn--secondary" data-action="register-workspace#closeUnitOverlay">Cancel (Esc)</button>
+      <%= action_button "Cancel (Esc)", style: :outline, intent: :neutral, size: :standard,
+            data: { action: "register-workspace#closeUnitOverlay" } %>
     </div>
   </div>
 
@@ -618,8 +667,10 @@
         <input type="text" inputmode="decimal" autocomplete="off" data-register-workspace-target="openPriceField">
       </label>
       <div class="pos-overlay__actions">
-        <button type="button" class="btn btn--secondary" data-action="register-workspace#closeOpenPriceOverlay">Cancel (Esc)</button>
-        <button type="button" class="btn" data-action="register-workspace#submitOpenPricePrompt">Apply</button>
+        <%= action_button "Cancel (Esc)", style: :outline, intent: :neutral, size: :standard,
+              data: { action: "register-workspace#closeOpenPriceOverlay" } %>
+        <%= action_button "Apply", style: :solid, intent: :brand, size: :standard,
+              data: { action: "register-workspace#submitOpenPricePrompt" } %>
       </div>
     </div>
   </div>
@@ -638,7 +689,8 @@
         <li data-choice="unlinked" role="option" tabindex="-1" aria-selected="false">Unlinked return</li>
       </ul>
       <p class="muted">Enter chooses. Esc cancels.</p>
-      <button type="button" class="btn btn--secondary" data-action="register-workspace#closeReturnChooser">Cancel (Esc)</button>
+      <%= action_button "Cancel (Esc)", style: :outline, intent: :neutral, size: :standard,
+            data: { action: "register-workspace#closeReturnChooser" } %>
     </div>
   </div>
 
@@ -670,7 +722,8 @@
         <input type="text" maxlength="200" autocomplete="off" data-register-workspace-target="linkedNoteField">
       </label>
       <p class="muted">Enter in the lookup field searches. Enter on a highlighted line adds it. Esc cancels.</p>
-      <button type="button" class="btn btn--secondary" data-action="register-workspace#closeLinkedOverlay">Cancel (Esc)</button>
+      <%= action_button "Cancel (Esc)", style: :outline, intent: :neutral, size: :standard,
+            data: { action: "register-workspace#closeLinkedOverlay" } %>
     </div>
   </div>
 </div>

@@ -1,8 +1,8 @@
 # Warm Parchment visual system
 
-Status: **Proposed candidate, contrast-complete for ADR-022 review**
+Status: **Implemented** (contrast-complete; UDS-1 live in `application.css`)
 
-Authority for visual tokens and density. Action wording/style/size: [button-action-semantics.md](button-action-semantics.md). Shell boundaries: [README.md](README.md). Palette supersession: [ADR-022](../../adr/ADR-022-warm-parchment-visual-tokens.md).
+Authority for visual tokens and density. Action wording/style/size: [button-action-semantics.md](button-action-semantics.md). Shell boundaries: [README.md](README.md). Palette supersession: [ADR-022](../../adr/ADR-022-warm-parchment-visual-tokens.md) (Implemented).
 
 Inspirational mockups: [`docs/drafts/phase-7.1-ux-refactor/`](../../drafts/phase-7.1-ux-refactor/) (not binding). Contrast-complete palette demo: [warm-parchment-palette-mockup.html](warm-parchment-palette-mockup.html).
 
@@ -129,7 +129,7 @@ Each row reports: foreground on quiet fill / quiet-hover fill; border on quiet f
 
 ## Existing hard-coded CSS migration map
 
-UDS-1 must replace these literals in `app/assets/stylesheets/application.css`; until ADR-022 is accepted this table is a migration instruction, not a claim that CSS is already changed.
+UDS-1 replaced hard-coded cool-slate / translucent dialog literals in `application.css` (UDS-1c). Retain this table as the migration record.
 
 | Existing selector/value | Warm Parchment token mapping | Note |
 |---|---|---|
@@ -148,7 +148,7 @@ UDS-1 must replace these literals in `app/assets/stylesheets/application.css`; u
 
 | Role | Guidance |
 |---|---|
-| Primary sans | Data grids, forms, navigation, tabular UI. Prefer a packaged webfont or system UI stack. Candidates: Plus Jakarta Sans (self-hosted) or keep/extend Source Sans 3. |
+| Primary sans | Data grids, forms, navigation, tabular UI. **Implemented (UDS-1c):** locally packaged Source Sans 3 (latin 400/700) with system fallbacks. |
 | Serif (optional) | Brand wordmark and top-level page titles only—not table cells. |
 | Mono | ISBN-13, transaction references, barcodes. Prefer packaged mono or existing receipt mono (`Inconsolata` / `--font-receipt`). |
 

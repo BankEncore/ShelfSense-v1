@@ -1,12 +1,27 @@
 <% content_for :title, "Suppliers" %>
-<h1>Suppliers</h1>
-<% if effective_permissions.include?("suppliers.manage") %><p><%= link_to "New supplier", new_admin_supplier_path %></p><% end %>
-<ul>
-  <% @suppliers.each do |supplier| %>
-    <li>
-      <%= link_to supplier.admin_label, admin_supplier_path(supplier) %>
-      <code><%= supplier.code %></code>
-      <%= "inactive" unless supplier.active? %>
-    </li>
-  <% end %>
-</ul>
+
+<%= render "shared/breadcrumbs", crumbs: [
+  { name: "Home", path: root_path },
+  { name: "Suppliers" }
+] %>
+
+<% header_actions = nil %>
+<% if effective_permissions.include?("suppliers.manage") %>
+  <% header_actions = action_link_to("New supplier", new_admin_supplier_path, style: :solid, intent: :brand) %>
+<% end %>
+
+<%= render "shared/page_header", title: "Suppliers", actions: header_actions %>
+
+<% rows = @suppliers.map { |supplier|
+     [
+       link_to(supplier.admin_label, admin_supplier_path(supplier)),
+       content_tag(:code, supplier.code),
+       configuration_status_badge(supplier.active?)
+     ]
+   } %>
+<%= render "shared/data_table",
+      headers: ["Name", "Code", "Status"],
+      rows: rows,
+      empty: render("shared/empty_state",
+                    title: "No suppliers yet",
+                    body: "Create a supplier to link merchandise sources and purchase orders.") %>

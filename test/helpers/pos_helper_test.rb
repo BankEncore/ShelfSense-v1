@@ -65,6 +65,49 @@ class PosHelperTest < ActionView::TestCase
     refute_includes pos_history_line_description(line), "Live Product Name"
   end
 
+  test "basket title uses snapshot description only" do
+    product = Product.new(name: "Live Product Name")
+    variant = ProductVariant.new(sku: "LIVE-SKU", product: product)
+    line = PosTransactionLine.new(
+      product_variant: variant,
+      merchandise_snapshot: {
+        "description" => "Snapshot Used Book",
+        "sku" => "OLD-SKU",
+        "unit_identifier" => "2200000000001",
+        "condition_code" => "like_new"
+      }
+    )
+
+    assert_equal "Snapshot Used Book", pos_basket_line_title(line)
+    assert_equal(
+      [ { text: "like_new", mono: false }, { text: "2200000000001", mono: true } ],
+      pos_basket_line_metadata(line)
+    )
+    refute_includes pos_basket_line_title(line), "Live Product Name"
+  end
+
+  test "basket metadata prefers sku when unit is absent" do
+    line = PosTransactionLine.new(
+      merchandise_snapshot: { "description" => "Snapshot Book", "sku" => "OLD" }
+    )
+
+    assert_equal [ { text: "OLD", mono: true } ], pos_basket_line_metadata(line)
+  end
+
+  test "print line description remains one-line after basket helpers" do
+    line = PosTransactionLine.new(
+      merchandise_snapshot: {
+        "description" => "Snapshot Used Book",
+        "sku" => "OLD-SKU",
+        "unit_identifier" => "2200000000001",
+        "condition_code" => "like_new"
+      }
+    )
+
+    assert_equal "Snapshot Used Book  like_new  2200000000001", pos_print_line_description(line)
+    assert_equal "Snapshot Used Book  like_new  2200000000001", pos_line_description(line)
+  end
+
   test "controlled-line flags use Core facts only" do
     line = PosTransactionLine.new(
       direction: "sale",

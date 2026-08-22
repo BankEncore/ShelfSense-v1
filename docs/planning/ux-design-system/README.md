@@ -1,6 +1,6 @@
 # UX design system
 
-Status: **Proposed** (docs packet). Phase 2.2 visual tokens remain **implemented** until the foundation program ships. See [ADR-022](../../adr/ADR-022-warm-parchment-visual-tokens.md) (Proposed) for palette supersession.
+Status: **UDS-1 Implemented**; **UDS-2 Implemented** for reference screens; **UDS-3 Implemented** for Register visual refinement (basket hierarchy, shortcut groups, overlays) with ActionButtonHelper. Matrix rows remain **partial** until [accessibility-ergonomic-test-matrix.md](accessibility-ergonomic-test-matrix.md) evidence is attached. Phase 2.2 **architecture** remains; teal/plum palette superseded. Grouped admin navigation remains Proposed until its prototype gate passes.
 
 This packet is the cross-phase authority for ShelfSense presentation: Warm Parchment visual direction, button and action semantics, administrative navigation grouping, surface contracts (Register basket vs history vs print), deferred interaction patterns, and an incremental adoption program.
 
@@ -26,18 +26,24 @@ Do not fold POS into a shared ops shell. Do not replace admin show pages with dr
 | Document | Purpose | Authority |
 |---|---|---|
 | [program-plan.md](program-plan.md) | Adoption slices UDS-0–UDS-3, rollout contract, deferrals, acceptance | Proposed |
+| [uds-1-plan.md](uds-1-plan.md) | UDS-1 implementation plan (tokens, ActionButtonHelper, shared primitives; not a Phase N.M) | Implemented (UDS-1a–1d) |
+| [uds-1-user-stories.md](uds-1-user-stories.md) | Issue-ready backlog stories for UDS-1a–1d | Implemented (acceptance checked) |
+| [uds-2-plan.md](uds-2-plan.md) | UDS-2 representative screen convergence (Suppliers, Receiving, history, review dialogs) | Implemented (partial matrix; a11y evidence pending) |
+| [uds-2-user-stories.md](uds-2-user-stories.md) | Issue-ready backlog stories for UDS-2a–2d | Implemented |
+| [uds-3-plan.md](uds-3-plan.md) | UDS-3 Register visual refinement (basket hierarchy, shortcut groups, overlays) | Implemented (partial matrix; a11y evidence pending) |
+| [uds-3-user-stories.md](uds-3-user-stories.md) | Issue-ready backlog stories for UDS-3a–3c | Implemented |
 | [accessibility-ergonomic-test-matrix.md](accessibility-ergonomic-test-matrix.md) | Manual a11y/ergonomic gate + timed cashier scenarios for UDS-2/UDS-3 | Proposed acceptance gate |
-| [warm-parchment.md](warm-parchment.md) | Tokens, typography, density, contrast (AA baseline) | Proposed candidate (contrast-complete) |
+| [warm-parchment.md](warm-parchment.md) | Tokens, typography, density, contrast (AA baseline) | Implemented (UDS-1) |
 | [warm-parchment-palette-mockup.html](warm-parchment-palette-mockup.html) | Static HTML demo of the contrast-complete palette | Inspirational |
 | [receipt-overview-mockup.html](receipt-overview-mockup.html) | Inspirational completed-transaction / history layout | Inspirational |
 | [shelvesense-warm-parchment-product-mockups.html](shelvesense-warm-parchment-product-mockups.html) | Inspirational product admin chrome (sidebar/Cmd+K shown are deferred) | Inspirational |
-| [button-action-semantics.md](button-action-semantics.md) | Labels, intents, styles, sizes, review dialogs | Proposed |
+| [button-action-semantics.md](button-action-semantics.md) | Labels, intents, styles, sizes, review dialogs | Implemented helper (UDS-1b); broad adoption UDS-2 |
 | [navigation-proposal.md](navigation-proposal.md) | Permission-gated administrative destinations, canonical groups, accessible responsive pattern, and prototype gate | Proposed (UDS-0 inventory) |
 | [surface-contracts.md](surface-contracts.md) | Basket, transaction history, printed receipt | Proposed |
 | [deferred-patterns.md](deferred-patterns.md) | Drawers, global search, density prefs, etc. | Proposed (explicitly deferred) |
 | [migration-matrix.md](migration-matrix.md) | Area status: legacy / partial / conforming / locked; UDS-0 path-level inventory | Working tracker |
 
-Daily admin conventions remain in [ux-conventions.md](../../ux-conventions.md) until foundation implementation updates that file’s palette and points here for action semantics.
+Daily admin conventions: [ux-conventions.md](../../ux-conventions.md) (Warm Parchment palette; Phase 2.2 architecture). Action semantics and tokens remain authoritative in this packet.
 
 ## Authority labels
 
@@ -54,7 +60,7 @@ Draft mockups and Gemini images under [`docs/drafts/phase-7.1-ux-refactor/`](../
 
 ## Relationship to Phase 2.2
 
-Phase 2.2 established Propshaft tokens, shared partials/helpers, money UX, accessibility baseline, and shell architecture. This program **preserves that architecture** and proposes to **supersede the Phase 2.2 color palette** with Warm Parchment tokens ([ADR-022](../../adr/ADR-022-warm-parchment-visual-tokens.md)).
+Phase 2.2 established Propshaft tokens, shared partials/helpers, money UX, accessibility baseline, and shell architecture. UDS-1 **preserves that architecture** and **supersedes the Phase 2.2 color palette** with Warm Parchment tokens ([ADR-022](../../adr/ADR-022-warm-parchment-visual-tokens.md) Implemented).
 
 ## Out of scope for this packet alone
 

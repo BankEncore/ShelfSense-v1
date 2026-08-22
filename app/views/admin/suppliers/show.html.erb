@@ -1,49 +1,85 @@
 <% content_for :title, @supplier.admin_label %>
-<h1><%= @supplier.admin_label %></h1>
-<p>
-  Code: <%= @supplier.code %> ·
-  <%= @supplier.active? ? "active" : "inactive" %>
-</p>
-<% if @supplier.account_number.present? %><p>Account: <%= @supplier.account_number %></p><% end %>
-<% if @supplier.contact_name.present? || @supplier.email.present? || @supplier.phone.present? %>
-  <p>
-    Contact:
-    <%= [ @supplier.contact_name, @supplier.email, @supplier.phone ].compact_blank.join(" · ") %>
-  </p>
-<% end %>
-<% address_parts = [
-  @supplier.street_address_1, @supplier.street_address_2, @supplier.city,
-  @supplier.region_code, @supplier.postal_code, @supplier.country_code
-].compact_blank %>
-<% if address_parts.any? %><p><%= address_parts.join(", ") %></p><% end %>
-<% if @supplier.ordering_notes.present? %><p><%= simple_format @supplier.ordering_notes %></p><% end %>
 
-<p>
-  <%= link_to "Edit", edit_admin_supplier_path(@supplier) if effective_permissions.include?("suppliers.manage") %>
-  <% if effective_permissions.include?("suppliers.manage") && @supplier.active? %>
-    <%= button_to "Deactivate", admin_supplier_path(@supplier), method: :delete, form: { data: { turbo_confirm: "Deactivate this supplier?" } } %>
-  <% elsif effective_permissions.include?("suppliers.manage") && !@supplier.active? %>
-    <%= button_to "Reactivate", reactivate_admin_supplier_path(@supplier), method: :post, params: { lock_version: @supplier.lock_version } %>
-  <% end %>
-</p>
+<%= render "shared/breadcrumbs", crumbs: [
+  { name: "Home", path: root_path },
+  { name: "Suppliers", path: admin_suppliers_path },
+  { name: @supplier.admin_label }
+] %>
 
-<h2>Variant sources</h2>
+<% actions = [configuration_status_badge(@supplier.active?)] %>
 <% if effective_permissions.include?("suppliers.manage") %>
-  <p><%= link_to "Add source", new_admin_supplier_supplier_variant_source_path(@supplier) %></p>
-<% end %>
-<% if @supplier_variant_sources.any? %>
-  <ul>
-    <% @supplier_variant_sources.each do |source| %>
-      <li>
-        <%= link_to source.admin_label, admin_supplier_variant_source_path(source) %>
-        — <%= source.pricing_method.humanize %>
-        <% if source.organization_preferred? %> · org preferred<% end %>
-        <%= "inactive" unless source.active? %>
-      </li>
-    <% end %>
-  </ul>
-<% else %>
-  <p>No supplier sources yet. Sources are optional for ordering.</p>
+  <% actions << action_link_to("Edit", edit_admin_supplier_path(@supplier), style: :outline, intent: :neutral) %>
+  <% if @supplier.active? %>
+    <% actions << action_button_to(
+         "Deactivate",
+         admin_supplier_path(@supplier),
+         style: :outline,
+         intent: :warning,
+         method: :delete
+       ) %>
+  <% else %>
+    <% actions << action_button_to(
+         "Reactivate",
+         reactivate_admin_supplier_path(@supplier),
+         style: :solid,
+         intent: :brand,
+         method: :post,
+         params: { lock_version: @supplier.lock_version }
+       ) %>
+  <% end %>
 <% end %>
 
-<p><%= link_to "Back to suppliers", admin_suppliers_path %></p>
+<%= render "shared/page_header",
+      title: @supplier.admin_label,
+      subtitle: @supplier.code,
+      actions: safe_join(actions, " ") %>
+
+<section class="section surface">
+  <%= render "shared/definition_list", rows: [
+        ["Account number", @supplier.account_number],
+        ["Contact", [
+          @supplier.contact_name, @supplier.email, @supplier.phone
+        ].compact_blank.join(" · ").presence],
+        ["Address", [
+          @supplier.street_address_1, @supplier.street_address_2, @supplier.city,
+          @supplier.region_code, @supplier.postal_code, @supplier.country_code
+        ].compact_blank.join(", ").presence],
+        ["Ordering notes", @supplier.ordering_notes.presence]
+      ] %>
+</section>
+
+<section class="section">
+  <h2 class="section__title">Variant sources</h2>
+  <% if effective_permissions.include?("suppliers.manage") %>
+    <div class="actions">
+      <%= action_link_to(
+            "Add source",
+            new_admin_supplier_supplier_variant_source_path(@supplier),
+            style: :outline,
+            intent: :neutral
+          ) %>
+    </div>
+  <% end %>
+
+  <% if @supplier_variant_sources.any? %>
+    <% source_rows = @supplier_variant_sources.map { |source|
+         [
+           link_to(source.admin_label, admin_supplier_variant_source_path(source)),
+           source.pricing_method.humanize,
+           source.organization_preferred? ? "Yes" : "No",
+           configuration_status_badge(source.active?)
+         ]
+       } %>
+    <%= render "shared/data_table",
+          headers: ["Source", "Pricing", "Org preferred", "Status"],
+          rows: source_rows %>
+  <% else %>
+    <%= render "shared/empty_state",
+          title: "No supplier sources yet",
+          body: "Sources are optional for ordering." %>
+  <% end %>
+</section>
+
+<p>
+  <%= action_link_to("Back to suppliers", admin_suppliers_path, style: :link, intent: :neutral) %>
+</p>

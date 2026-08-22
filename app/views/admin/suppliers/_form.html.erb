@@ -1,26 +1,45 @@
-<%= form_with model: [:admin, supplier] do |form| %>
-  <% if supplier.errors.any? %><ul><% supplier.errors.full_messages.each do |m| %><li><%= m %></li><% end %></ul><% end %>
+<%= form_with model: [:admin, supplier], class: "form" do |form| %>
+  <%= render "shared/form_errors", record: supplier %>
   <%= form.hidden_field :lock_version %>
+
   <% if supplier.persisted? %>
-    <p>Code: <code><%= supplier.code %></code> (immutable)</p>
+    <div class="form-field">
+      <label>Key / code</label>
+      <p><code><%= supplier.code %></code> <span class="field-help">(immutable)</span></p>
+    </div>
   <% else %>
-    <p>
+    <div class="form-field">
       <%= form.label :code, "Key / code" %>
       <%= form.text_field :code %>
-      <span>Leave blank to generate from the name. Later changes are not allowed.</span>
-    </p>
+      <span class="field-help">Leave blank to generate from the name. Later changes are not allowed.</span>
+    </div>
   <% end %>
-  <p><%= form.label :name %><%= form.text_field :name %></p>
-  <p><%= form.label :account_number %><%= form.text_field :account_number %></p>
-  <p><%= form.label :contact_name %><%= form.text_field :contact_name %></p>
-  <p><%= form.label :email %><%= form.email_field :email %></p>
-  <p><%= form.label :phone %><%= form.telephone_field :phone %></p>
-  <p><%= form.label :street_address_1, "Street address 1" %><%= form.text_field :street_address_1 %></p>
-  <p><%= form.label :street_address_2, "Street address 2" %><%= form.text_field :street_address_2 %></p>
-  <p><%= form.label :city %><%= form.text_field :city %></p>
-  <p><%= form.label :region_code, "Region" %><%= form.text_field :region_code %></p>
-  <p><%= form.label :postal_code, "Postal code" %><%= form.text_field :postal_code %></p>
-  <p><%= form.label :country_code, "Country" %><%= form.text_field :country_code, maxlength: 2 %></p>
-  <p><%= form.label :ordering_notes %><%= form.text_area :ordering_notes %></p>
-  <p><%= form.submit %></p>
+
+  <div class="form-field"><%= form.label :name %><%= form.text_field :name %></div>
+  <div class="form-field"><%= form.label :account_number %><%= form.text_field :account_number %></div>
+  <div class="form-field"><%= form.label :contact_name %><%= form.text_field :contact_name %></div>
+  <div class="form-field"><%= form.label :email %><%= form.email_field :email %></div>
+  <div class="form-field"><%= form.label :phone %><%= form.telephone_field :phone %></div>
+  <div class="form-field"><%= form.label :street_address_1, "Street address 1" %><%= form.text_field :street_address_1 %></div>
+  <div class="form-field"><%= form.label :street_address_2, "Street address 2" %><%= form.text_field :street_address_2 %></div>
+  <div class="form-field"><%= form.label :city %><%= form.text_field :city %></div>
+  <div class="form-field"><%= form.label :region_code, "Region" %><%= form.text_field :region_code %></div>
+  <div class="form-field"><%= form.label :postal_code, "Postal code" %><%= form.text_field :postal_code %></div>
+  <div class="form-field"><%= form.label :country_code, "Country" %><%= form.text_field :country_code, maxlength: 2 %></div>
+  <div class="form-field"><%= form.label :ordering_notes %><%= form.text_area :ordering_notes %></div>
+
+  <div class="actions">
+    <%= action_submit(
+          form,
+          supplier.persisted? ? "Save Changes" : "Create Supplier",
+          style: :solid,
+          intent: :brand
+        ) %>
+    <%= action_link_to(
+          "Cancel",
+          supplier.persisted? ? admin_supplier_path(supplier) : admin_suppliers_path,
+          style: :ghost,
+          intent: :neutral
+        ) %>
+  </div>
 <% end %>
