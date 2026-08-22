@@ -99,18 +99,20 @@ Administrative navigation remains a proposal at this point. Before assigning it 
 
 ### UDS-1 — Tokens and shared visual primitives
 
+**Implementation plan:** [uds-1-plan.md](uds-1-plan.md) (sub-slices UDS-1a–1d; backlog [uds-1-user-stories.md](uds-1-user-stories.md)). Slice id stays **UDS-1**—not a Phase 7 domain number. Start gate: [ADR-022](../../adr/ADR-022-warm-parchment-visual-tokens.md) must be **Accepted** before token supersession merges to `main`.
+
 High-leverage, low-behavior changes:
 
 - Warm Parchment canvas, surface, text, border, semantic, and interaction tokens ([warm-parchment.md](warm-parchment.md)).
 - Controlled migration / aliases so existing components update consistently.
-- Typography hierarchy using **locally packaged or system fonts** (no runtime Google Fonts dependency).
+- Typography hierarchy using **locally packaged or system fonts** (no runtime Google Fonts dependency). Face packaging / stack choice is owned by **UDS-1c** (see [uds-1-plan.md](uds-1-plan.md)); not UDS-1a/1b.
 - Tabular numerals and identifier treatments.
 - Button matrix per [button-action-semantics.md](button-action-semantics.md) via `ActionButtonHelper` (`action_link_to` / `action_button_to` / `action_submit` / `action_button`); no free-form class lists for new work.
 - Map legacy `btn--secondary` → outline/neutral; preserve `btn--ghost` (style) and `btn--danger` (intent) tokens during the documented alias → deprecation sequence.
 - Solid modal surfaces; consequence dialog headers/footers; focus restoration unchanged.
 - Tables, definition lists, cards, forms, validation, flashes, badges, empty states, focus rings.
 - Standard and compact **density classes by screen type**—not a persisted user toggle.
-- Navigation may enter this slice as a shared semantic/responsive primitive only after the [navigation prototype gate](navigation-proposal.md#required-prototype-gate) passes; no Hotwire, permanent sidebar, or global search.
+- Navigation may enter this slice as a shared semantic/responsive primitive only after the [navigation prototype gate](navigation-proposal.md#required-prototype-gate) passes; no Hotwire, permanent sidebar, or global search. Grouped admin nav remains **out of UDS-1** until that gate passes (see implementation plan).
 
 **Deliverable:** many screens improve without rewriting each template; conventions palette section updated when tokens ship.
 

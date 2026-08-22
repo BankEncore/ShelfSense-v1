@@ -6,16 +6,127 @@
   src: url("/inconsolata-latin-700.woff2") format("woff2");
 }
 
+/*
+  Warm Parchment tokens (ADR-022 / UDS-1a).
+
+  legacy-phase-2-2 prior :root color values (rollback contract):
+    --color-background: #f8fafc
+    --color-surface: #ffffff
+    --color-text: #0f172a
+    --color-text-muted: #64748b
+    --color-action: #0d6e6e
+    --color-accent: #7a2e5a
+    --color-warning: #e09214
+    --color-border: #e2e8f0
+    --color-danger: #b91c1c
+
+  Legacy --color-* names below are temporary aliases only. Do not silently
+  reinterpret them; retire via the alias register in migration-matrix.md.
+*/
 :root {
-  --color-background: #f8fafc;
-  --color-surface: #ffffff;
-  --color-text: #0f172a;
-  --color-text-muted: #64748b;
-  --color-action: #0d6e6e;
-  --color-accent: #7a2e5a;
-  --color-warning: #e09214;
-  --color-border: #e2e8f0;
-  --color-danger: #b91c1c;
+  /* Foundation and brand */
+  --color-bg-canvas: #fbf9f5;
+  --color-bg-surface: #ffffff;
+  --color-bg-surface-elevated: #f4f0ea;
+  --color-bg-subtle: #efece6;
+  --color-bg-drawer: #f0eae1;
+  --color-text-primary: #2c2523;
+  --color-text-secondary: #6e6763;
+  --color-text-inverse: #ffffff;
+  --color-border-subtle: #e6dfd5;
+  --color-border-strong: #8b8178;
+  --color-brand-default: #a84320;
+  --color-brand-hover: #8f3518;
+  --color-brand-active: #752a13;
+  --color-brand-soft: #f9ece7;
+  --color-brand-soft-hover: #f3ddd4;
+  --color-focus-ring: #7c3218;
+
+  /* Neutral family */
+  --color-neutral-fg: #2c2523;
+  --color-neutral-border: #8b8178;
+  --color-neutral-fill: #f4f0ea;
+  --color-neutral-fill-hover: #e8e1d8;
+  --color-neutral-solid: #514944;
+  --color-neutral-solid-hover: #403936;
+  --color-neutral-solid-active: #332d2b;
+
+  /* Warning family */
+  --color-warning-fg: #6e4d00;
+  --color-warning-border: #9a6c00;
+  --color-warning-fill: #faf3e5;
+  --color-warning-fill-hover: #f3e5c6;
+  --color-warning-solid: #765300;
+  --color-warning-solid-hover: #624500;
+  --color-warning-solid-active: #503800;
+
+  /* Danger family */
+  --color-danger-fg: #7a2018;
+  --color-danger-border: #a53a2e;
+  --color-danger-fill: #f9ebea;
+  --color-danger-fill-hover: #f1d5d1;
+  --color-danger-solid: #9b2c23;
+  --color-danger-solid-hover: #812219;
+  --color-danger-solid-active: #681a13;
+
+  /* Information family */
+  --color-info-fg: #1d435e;
+  --color-info-border: #39708f;
+  --color-info-fill: #ebf1f5;
+  --color-info-fill-hover: #d8e7f0;
+  --color-info-solid: #245b78;
+  --color-info-solid-hover: #1b4a65;
+  --color-info-solid-active: #153b51;
+
+  /* Success family */
+  --color-success-fg: #2d4731;
+  --color-success-border: #527a58;
+  --color-success-fill: #eaf0eb;
+  --color-success-fill-hover: #d8e6da;
+  --color-success-solid: #37603d;
+  --color-success-solid-hover: #2c5032;
+  --color-success-solid-active: #234128;
+
+  /* Disabled and validation */
+  --color-disabled-text: #6e6763;
+  --color-disabled-border: #8f8882;
+  --color-disabled-surface: #f1eeea;
+  --color-field-invalid-text: #7a2018;
+  --color-field-invalid-border: #a53a2e;
+  --color-field-invalid-fill: #f9ebea;
+  --color-field-invalid-ring: #7c3218;
+
+  /* Dialog, link, and collection state */
+  --color-overlay-scrim: rgb(23 19 17 / 60%);
+  --color-dialog-surface: #ffffff;
+  --color-dialog-elevated-boundary: #8b8178;
+  --color-link: #a84320;
+  --color-link-hover: #8f3518;
+  --color-link-active: #752a13;
+  --color-link-visited: #6d3a63;
+  --color-table-row-hover: #f0eae1;
+  --color-table-row-selected: #ebe3d5;
+  --color-table-row-focus: #f7f1e8;
+
+  /*
+    Phase 2.2 compatibility aliases (temporary).
+    --color-accent has no catch-all destination in warm-parchment.md; map to
+    neutral foreground so secondary/outline-bound consumers stay readable until
+    ActionButtonHelper adoption (UDS-1b / UDS-2).
+    --color-border maps to subtle (decorative majority); controls that need a
+    3:1 boundary move to --color-border-strong in later UDS-1 work.
+    --color-warning / --color-danger map to solid fills (legacy solid-control use).
+  */
+  --color-background: var(--color-bg-canvas);
+  --color-surface: var(--color-bg-surface);
+  --color-text: var(--color-text-primary);
+  --color-text-muted: var(--color-text-secondary);
+  --color-action: var(--color-brand-default);
+  --color-accent: var(--color-neutral-fg);
+  --color-warning: var(--color-warning-solid);
+  --color-border: var(--color-border-subtle);
+  --color-danger: var(--color-danger-solid);
+
   --space-1: 0.25rem;
   --space-2: 0.5rem;
   --space-3: 0.75rem;
@@ -295,6 +406,13 @@ form[data-dirty="true"] {
   margin: var(--space-4) 0;
 }
 
+/*
+  Action button matrix (UDS-1b / button-action-semantics.md).
+
+  Element reset is shared chrome only. Primary fill is reserved for:
+  - explicit .btn--solid.btn--brand (and other solid intents)
+  - temporary compatibility: bare .btn, unclassed button/submit, legacy shorthand
+*/
 .btn,
 button,
 input[type="submit"] {
@@ -308,33 +426,221 @@ input[type="submit"] {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: var(--color-action);
-  color: #fff;
+  gap: var(--space-1);
+  background: transparent;
+  color: var(--color-text-primary);
+  min-height: 2.5rem;
+  line-height: 1.2;
 }
 
 .btn:hover,
 button:hover,
 input[type="submit"]:hover {
-  filter: brightness(0.95);
+  filter: none;
 }
 
+/* Compatibility: bare .btn and unclassed native controls = solid brand standard */
+.btn:not([class*="btn--"]),
+button:not([class]),
+input[type="submit"]:not([class]) {
+  background: var(--color-brand-default);
+  color: var(--color-text-inverse);
+  border-color: transparent;
+}
+
+.btn:not([class*="btn--"]):hover,
+button:not([class]):hover,
+input[type="submit"]:not([class]):hover {
+  background: var(--color-brand-hover);
+}
+
+.btn:not([class*="btn--"]):active,
+button:not([class]):active,
+input[type="submit"]:not([class]):active {
+  background: var(--color-brand-active);
+}
+
+/* Sizes */
+.btn--small {
+  min-height: 2rem;
+  padding: var(--space-1) var(--space-3);
+  font-size: 0.875rem;
+}
+
+.btn--standard {
+  min-height: 2.5rem;
+  padding: var(--space-2) var(--space-4);
+}
+
+.btn--large {
+  min-height: 3rem;
+  padding: var(--space-3) var(--space-5);
+  font-size: 1.0625rem;
+}
+
+/* Solid intents */
+.btn--solid.btn--brand {
+  background: var(--color-brand-default);
+  color: var(--color-text-inverse);
+  border-color: transparent;
+}
+
+.btn--solid.btn--brand:hover {
+  background: var(--color-brand-hover);
+}
+
+.btn--solid.btn--brand:active {
+  background: var(--color-brand-active);
+}
+
+.btn--solid.btn--warning {
+  background: var(--color-warning-solid);
+  color: var(--color-text-inverse);
+  border-color: transparent;
+}
+
+.btn--solid.btn--warning:hover {
+  background: var(--color-warning-solid-hover);
+}
+
+.btn--solid.btn--warning:active {
+  background: var(--color-warning-solid-active);
+}
+
+.btn--solid.btn--danger {
+  background: var(--color-danger-solid);
+  color: var(--color-text-inverse);
+  border-color: transparent;
+}
+
+.btn--solid.btn--danger:hover {
+  background: var(--color-danger-solid-hover);
+}
+
+.btn--solid.btn--danger:active {
+  background: var(--color-danger-solid-active);
+}
+
+/* Outline intents */
+.btn--outline {
+  background: var(--color-bg-surface);
+  border-width: 2px;
+}
+
+.btn--outline.btn--brand {
+  color: var(--color-brand-default);
+  border-color: var(--color-brand-default);
+}
+
+.btn--outline.btn--brand:hover {
+  background: var(--color-brand-soft-hover);
+}
+
+.btn--outline.btn--neutral {
+  color: var(--color-neutral-fg);
+  border-color: var(--color-neutral-border);
+}
+
+.btn--outline.btn--neutral:hover {
+  background: var(--color-neutral-fill-hover);
+}
+
+.btn--outline.btn--warning {
+  color: var(--color-warning-fg);
+  border-color: var(--color-warning-border);
+}
+
+.btn--outline.btn--warning:hover {
+  background: var(--color-warning-fill-hover);
+}
+
+.btn--outline.btn--danger {
+  color: var(--color-danger-fg);
+  border-color: var(--color-danger-border);
+}
+
+.btn--outline.btn--danger:hover {
+  background: var(--color-danger-fill-hover);
+}
+
+/* Ghost (neutral only in allowlist; incomplete shorthand below) */
+.btn--ghost.btn--neutral {
+  background: transparent;
+  color: var(--color-neutral-fg);
+  border: 2px solid var(--color-border-strong);
+}
+
+.btn--ghost.btn--neutral:hover {
+  background: var(--color-neutral-fill-hover);
+}
+
+/* Link style */
+.btn--link.btn--neutral {
+  background: transparent;
+  color: var(--color-link);
+  border-color: transparent;
+  text-decoration: underline;
+  min-height: auto;
+  padding-inline: var(--space-1);
+}
+
+.btn--link.btn--neutral:hover {
+  color: var(--color-link-hover);
+  text-decoration-thickness: 2px;
+}
+
+.btn--link.btn--neutral:active {
+  color: var(--color-link-active);
+}
+
+/*
+  Legacy compatibility aliases (do not change meaning during UDS-1b).
+  Retire after representative adoption per button-action-semantics.md.
+*/
 .btn--secondary,
 .button-secondary {
-  background: var(--color-surface);
-  color: var(--color-accent);
-  border-color: var(--color-border);
+  background: var(--color-bg-surface);
+  color: var(--color-neutral-fg);
+  border: 2px solid var(--color-neutral-border);
 }
 
-.btn--danger,
+.btn--secondary:hover,
+.button-secondary:hover {
+  background: var(--color-neutral-fill-hover);
+}
+
+.btn--danger:not(.btn--solid):not(.btn--outline):not(.btn--ghost):not(.btn--link),
 .button-danger {
-  background: var(--color-danger);
-  color: #fff;
+  background: var(--color-danger-solid);
+  color: var(--color-text-inverse);
+  border-color: transparent;
 }
 
-.btn--ghost {
+.btn--danger:not(.btn--solid):not(.btn--outline):not(.btn--ghost):not(.btn--link):hover,
+.button-danger:hover {
+  background: var(--color-danger-solid-hover);
+}
+
+.btn--ghost:not(.btn--neutral):not(.btn--brand):not(.btn--warning):not(.btn--danger) {
   background: transparent;
-  color: var(--color-action);
-  border-color: var(--color-border);
+  color: var(--color-neutral-fg);
+  border: 2px solid var(--color-border-strong);
+}
+
+.btn--ghost:not(.btn--neutral):not(.btn--brand):not(.btn--warning):not(.btn--danger):hover {
+  background: var(--color-neutral-fill-hover);
+}
+
+.btn:disabled,
+button:disabled,
+input[type="submit"]:disabled,
+.btn[aria-disabled="true"] {
+  background: var(--color-disabled-surface);
+  color: var(--color-disabled-text);
+  border-color: var(--color-disabled-border);
+  cursor: not-allowed;
+  filter: none;
+  text-decoration: none;
 }
 
 .flash {

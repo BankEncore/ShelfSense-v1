@@ -1,6 +1,6 @@
 # UX design system
 
-Status: **Proposed** (docs packet). Phase 2.2 visual tokens remain **implemented** until the foundation program ships. See [ADR-022](../../adr/ADR-022-warm-parchment-visual-tokens.md) (Proposed) for palette supersession.
+Status: **Proposed** (docs packet). [ADR-022](../../adr/ADR-022-warm-parchment-visual-tokens.md) is **Accepted**; UDS-1a Warm Parchment tokens and Phase 2.2 aliases are live in `application.css`. Phase 2.2 architecture remains; palette supersession continues through UDS-1b–1d.
 
 This packet is the cross-phase authority for ShelfSense presentation: Warm Parchment visual direction, button and action semantics, administrative navigation grouping, surface contracts (Register basket vs history vs print), deferred interaction patterns, and an incremental adoption program.
 
@@ -26,6 +26,8 @@ Do not fold POS into a shared ops shell. Do not replace admin show pages with dr
 | Document | Purpose | Authority |
 |---|---|---|
 | [program-plan.md](program-plan.md) | Adoption slices UDS-0–UDS-3, rollout contract, deferrals, acceptance | Proposed |
+| [uds-1-plan.md](uds-1-plan.md) | UDS-1 implementation plan (tokens, ActionButtonHelper, shared primitives; not a Phase N.M) | Proposed / ready to implement |
+| [uds-1-user-stories.md](uds-1-user-stories.md) | Issue-ready backlog stories for UDS-1a–1d | Proposed / ready to implement |
 | [accessibility-ergonomic-test-matrix.md](accessibility-ergonomic-test-matrix.md) | Manual a11y/ergonomic gate + timed cashier scenarios for UDS-2/UDS-3 | Proposed acceptance gate |
 | [warm-parchment.md](warm-parchment.md) | Tokens, typography, density, contrast (AA baseline) | Proposed candidate (contrast-complete) |
 | [warm-parchment-palette-mockup.html](warm-parchment-palette-mockup.html) | Static HTML demo of the contrast-complete palette | Inspirational |

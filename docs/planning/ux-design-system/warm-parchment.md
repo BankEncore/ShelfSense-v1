@@ -1,8 +1,8 @@
 # Warm Parchment visual system
 
-Status: **Proposed candidate, contrast-complete for ADR-022 review**
+Status: **Accepted for implementation** (contrast-complete; UDS-1a tokens live in `application.css`)
 
-Authority for visual tokens and density. Action wording/style/size: [button-action-semantics.md](button-action-semantics.md). Shell boundaries: [README.md](README.md). Palette supersession: [ADR-022](../../adr/ADR-022-warm-parchment-visual-tokens.md).
+Authority for visual tokens and density. Action wording/style/size: [button-action-semantics.md](button-action-semantics.md). Shell boundaries: [README.md](README.md). Palette supersession: [ADR-022](../../adr/ADR-022-warm-parchment-visual-tokens.md) (Accepted).
 
 Inspirational mockups: [`docs/drafts/phase-7.1-ux-refactor/`](../../drafts/phase-7.1-ux-refactor/) (not binding). Contrast-complete palette demo: [warm-parchment-palette-mockup.html](warm-parchment-palette-mockup.html).
 
@@ -129,7 +129,7 @@ Each row reports: foreground on quiet fill / quiet-hover fill; border on quiet f
 
 ## Existing hard-coded CSS migration map
 
-UDS-1 must replace these literals in `app/assets/stylesheets/application.css`; until ADR-022 is accepted this table is a migration instruction, not a claim that CSS is already changed.
+UDS-1 must replace these literals in `app/assets/stylesheets/application.css`. Token definitions and Phase 2.2 aliases landed in UDS-1a; selector-level hard-coded migrations remain for UDS-1c.
 
 | Existing selector/value | Warm Parchment token mapping | Note |
 |---|---|---|
