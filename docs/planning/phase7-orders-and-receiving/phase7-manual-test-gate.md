@@ -22,6 +22,9 @@ Do not mark Phase 7 implemented on `main` until every item below has been exerci
 - [ ] OOS Standard → special order; unlocated Standard converts; unlocated Used cancels
 - [ ] Partial receipt; over-shipment; customer cancel before receipt
 - [ ] Cancel and re-source; duplicate receipt-post idempotency
+- [ ] Customer cancel with `cancel_draft_order: true` after re-source (replacement draft cancelled; sent predecessor and its cancellation history unchanged)
+- [ ] Customer cancel does not leave an orphaned reservation when locate or receipt is in flight
+- [ ] Location-queue special-order convert accepts dollar expected unit cost (consistent with draft PO and receiving)
 - [ ] Automatic PO closure
 
 ### Corrections (Slice 7.7)

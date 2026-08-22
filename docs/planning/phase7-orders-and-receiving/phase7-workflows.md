@@ -327,12 +327,22 @@ Cancellation requires an actor and reason.
 
 ShelfSense:
 
-* releases any active allocation;
+* always serializes through the store/variant inventory balance before locking the request;
+* re-queries and releases any current reserved allocation after the request lock;
 * returns located merchandise to general availability;
-* does not automatically cancel a sent supplier order;
+* does not automatically cancel a sent supplier order or rewrite sent PO history;
 * treats later receipts for that request as ordinary stock.
 
-An unsent related order requires an explicit buyer decision about whether to cancel it.
+### Unsent special order decision
+
+When the request has an unsent draft special order, the buyer must pass `cancel_draft_order: true` or `false`:
+
+* `true` — cancel only the unsent draft order(s) and remove their draft PO line(s); empty draft PO shells are removed when the last line leaves;
+* `false` — cancel the customer request but leave the unsent draft order on its PO.
+
+Sent predecessor orders from re-source lineage are never cancelled by this command. A replacement draft order may be cancelled while the original sent order, its cancellations, and closed PO state remain unchanged.
+
+If an unsent candidate was sent concurrently, cancellation of that draft order fails with a domain conflict rather than deleting sent history or surfacing an unhandled error.
 
 Automatic request expiration is deferred. `system_settings.default_customer_reservation_expiration_days` remains configuration-only in Phase 7.
 

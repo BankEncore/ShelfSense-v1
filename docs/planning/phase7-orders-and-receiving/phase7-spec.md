@@ -574,7 +574,7 @@ Before send:
 - customer/store/variant identity may not change;
 - expected line economics may change;
 - changing supplier atomically moves the order/line to the appropriate supplier/store draft PO;
-- empty draft POs may be retained or removed under the project's unused-draft policy; and
+- when the last line leaves a draft PO (move, cancel, or destroy), ShelfSense removes the empty draft shell so supplier deactivation and draft hygiene do not retain lineless placeholders; and
 - optimistic locking rejects stale edits.
 
 Incorrect store, variant, or customer identity requires cancelling the draft order and creating a new one.
@@ -636,9 +636,12 @@ The outer command posts the receipt, all inventory effects, allocations, audit e
 Customer cancellation:
 
 - requires a reason and actor;
-- releases any active allocation;
-- does not cancel sent supplier quantities;
-- leaves unsent order cancellation to an explicit buyer choice;
+- always serializes through the store/variant `InventoryBalance` before locking the request so concurrent locate or special-order receipt cannot attach a reserved allocation to a request that is about to be cancelled;
+- re-queries and locks any current reserved allocation after the request lock, then releases it;
+- does not cancel sent supplier quantities or rewrite sent PO, line, or cancellation history;
+- when an unsent special order exists, requires an explicit buyer decision via `cancel_draft_order: true` or `false` (no silent keep/cancel);
+- when `cancel_draft_order: true`, cancels only the soft-read **unsent** draft candidates—sent predecessor orders from re-source lineage are ignored and preserved;
+- when `cancel_draft_order: true`, locks each unsent candidate's `PurchaseOrder` before its `Order` and `PurchaseOrderLine`, revalidates `po.draft?` and `sent_at` after the PO lock, and returns a domain conflict if that candidate was sent concurrently;
 - causes later receipts to become ordinary stock; and
 - preserves all order and receipt history.
 
@@ -1155,6 +1158,7 @@ Phase 7 is complete when all of the following are demonstrated.
 - Active allocation is excluded from general availability without reducing on-hand.
 - From Slice 7.2 onward, every stock-depleting path hard-stops against reserved Standard availability and allocated Used units (including `Inventory::PostSale` and negative adjustments).
 - Customer cancellation releases the active allocation and does not cancel sent PO quantity.
+- Customer cancellation with `cancel_draft_order: true` cancels only unsent draft orders; sent predecessor orders and their cancellation history from re-source lineage remain intact.
 - Later receipt for a cancelled request becomes ordinary stock.
 - Slice 7.6 pickup: ordinary capacity = `available`; pickup capacity = `available` + allocation on that line; Used pickup must own the allocation.
 - POS completion consumes the allocation and completes the request only after successful tendered transaction completion.

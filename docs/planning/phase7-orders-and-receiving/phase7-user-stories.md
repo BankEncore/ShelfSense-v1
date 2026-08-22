@@ -39,7 +39,7 @@ Acceptance:
 
 - Request receives a store-scoped number at create (immutable, never reused).
 - In-stock Standard/Used enter `pending_location` without allocation.
-- Out-of-stock Used is rejected; OOS Standard create is feature-gated until 7.3.
+- Out-of-stock Used is rejected; OOS Standard create is delivered in Slice 7.3 (see §7.3.2).
 
 ### 7.2.2 Locate and reserve
 
@@ -68,7 +68,7 @@ Acceptance:
 Acceptance:
 
 - Used not-located forces cancellation; supplier conversion is prohibited.
-- Standard not-located→convert remains feature-gated until 7.3.
+- Standard not-located→convert is delivered in Slice 7.3 (see §7.3.2).
 
 ---
 
@@ -93,6 +93,7 @@ Acceptance:
 - OOS Standard create and Standard convert are enabled (gates from 7.2 removed).
 - UI never leaves a `special_order_pending` request without order+PO line.
 - Customer cancel with unsent special order requires explicit buyer keep/cancel decision.
+- `cancel_draft_order: true` cancels only unsent draft candidates; sent predecessor orders from re-source lineage are preserved.
 
 ---
 
