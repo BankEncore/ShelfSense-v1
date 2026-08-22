@@ -32,22 +32,55 @@ module Customers
         raise Customers::Error, "actor is required" if @actor.blank?
         raise Customers::Error, "cancellation reason is required" if @reason.blank?
 
-        # Lock order: customer_request → allocation → InventoryBalance (and unit when Used)
-        request = CustomerRequest.lock.find(@request.id)
-        assert_lock_version!(request)
-        raise Customers::Error, "request is already cancelled" if request.cancelled?
-        raise Customers::Error, "completed requests cannot be cancelled" if request.completed?
+        # Soft-read for draft-order decisions and reservation targets. Do not hold
+        # customer_request across inventory acquisition.
+        peek = CustomerRequest.find(@request.id)
+        raise Customers::Error, "request is already cancelled" if peek.cancelled?
+        raise Customers::Error, "completed requests cannot be cancelled" if peek.completed?
 
-        unsent_orders = unsent_orders_for(request)
+        unsent_orders = unsent_orders_for(peek)
         if unsent_orders.any?
           if @cancel_draft_order.nil?
             raise Customers::Error, DRAFT_ORDER_DECISION_REQUIRED
           end
+          # Draft Order/PO locks before inventory kernel.
           cancel_unsent_orders!(unsent_orders) if @cancel_draft_order
         end
 
-        allocation = request.customer_request_allocations.reserved.lock.first
-        release_allocation!(allocation) if allocation
+        allocation_peek = peek.customer_request_allocations.reserved.first
+        allocation = nil
+
+        if allocation_peek
+          # Lock order: InventoryBalance → InventoryUnit (Used) → customer_request → allocation
+          store = peek.store
+          variant = peek.product_variant
+          Inventory::Balances.lock_or_create!(store: store, product_variant: variant)
+          if allocation_peek.used_unit?
+            InventoryUnit.lock.find(allocation_peek.inventory_unit_id)
+          end
+
+          request = CustomerRequest.lock.find(@request.id)
+          assert_lock_version!(request)
+          raise Customers::Error, "request is already cancelled" if request.cancelled?
+          raise Customers::Error, "completed requests cannot be cancelled" if request.completed?
+
+          allocation = CustomerRequestAllocation.lock.find(allocation_peek.id)
+          unless allocation.reserved? && allocation.customer_request_id == request.id
+            allocation = nil
+          else
+            allocation.update!(
+              status: "released",
+              released_at: Time.current,
+              released_by: @actor,
+              release_reason: @reason
+            )
+          end
+        else
+          request = CustomerRequest.lock.find(@request.id)
+          assert_lock_version!(request)
+          raise Customers::Error, "request is already cancelled" if request.cancelled?
+          raise Customers::Error, "completed requests cannot be cancelled" if request.completed?
+        end
 
         attrs = {
           status: "cancelled",
@@ -116,7 +149,7 @@ module Customers
 
         if line
           line.destroy!
-          po.touch if po
+          Purchasing::DraftPoPlacement.destroy_if_empty_draft!(po) if po
         end
 
         Audit::Recorder.record!(
@@ -133,23 +166,6 @@ module Customers
           }
         )
       end
-    end
-
-    def release_allocation!(allocation)
-      Inventory::Balances.lock_or_create!(
-        store: allocation.customer_request.store,
-        product_variant: allocation.customer_request.product_variant
-      )
-      if allocation.used_unit?
-        InventoryUnit.lock.find(allocation.inventory_unit_id)
-      end
-
-      allocation.update!(
-        status: "released",
-        released_at: Time.current,
-        released_by: @actor,
-        release_reason: @reason
-      )
     end
   end
 end

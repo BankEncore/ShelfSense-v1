@@ -29,8 +29,9 @@ class Supplier < ApplicationRecord
     []
   end
 
-  def draft_purchase_order_count
-    purchase_orders.where(status: "draft").count
+  # Draft POs that still have lines (empty draft shells do not block).
+  def draft_purchase_orders_with_lines_count
+    purchase_orders.draft.joins(:purchase_order_lines).distinct.count
   end
 
   def unsent_order_count
@@ -50,12 +51,14 @@ class Supplier < ApplicationRecord
   end
 
   def cannot_deactivate_with_open_drafts
-    draft_pos = draft_purchase_order_count
+    draft_with_lines = draft_purchase_orders_with_lines_count
     unsent = unsent_order_count
-    return if draft_pos.zero? && unsent.zero?
+    return if draft_with_lines.zero? && unsent.zero?
 
     parts = []
-    parts << "#{draft_pos} draft purchase #{"order".pluralize(draft_pos)}" if draft_pos.positive?
+    if draft_with_lines.positive?
+      parts << "#{draft_with_lines} draft purchase #{"order".pluralize(draft_with_lines)} with lines"
+    end
     parts << "#{unsent} unsent #{"order".pluralize(unsent)}" if unsent.positive?
     errors.add(
       :base,

@@ -142,7 +142,9 @@ module Purchasing
       line.purchase_order = new_po
       order.save!
       line.save!
-      old_po.touch if old_po.id != new_po.id
+      if old_po.id != new_po.id
+        DraftPoPlacement.destroy_if_empty_draft!(old_po)
+      end
       new_po.touch
     end
 

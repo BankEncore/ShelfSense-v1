@@ -51,6 +51,50 @@ class SupplierTest < ActiveSupport::TestCase
     assert supplier.reload.active?
   end
 
+  test "can deactivate after last draft order is reassigned and empty draft is removed" do
+    bootstrap = bootstrap!
+    store = bootstrap[:store]
+    actor = bootstrap[:administrator]
+    tax = tax_class(code: "sup3_#{SecureRandom.hex(2)}")
+    variant = pos_sellable_variant(actor: actor, tax_class: tax, name: "Supplier Move")
+    supplier_a = Supplier.create!(name: "Old Supp", code: "old_#{SecureRandom.hex(2)}")
+    supplier_b = Supplier.create!(name: "New Supp", code: "new_#{SecureRandom.hex(2)}")
+    SupplierVariantSource.create!(
+      supplier: supplier_a,
+      product_variant: variant,
+      pricing_method: "direct_unit_cost",
+      expected_unit_cost_cents: 300,
+      organization_preferred: true
+    )
+    SupplierVariantSource.create!(
+      supplier: supplier_b,
+      product_variant: variant,
+      pricing_method: "direct_unit_cost",
+      expected_unit_cost_cents: 320
+    )
+
+    order = Purchasing::CreateStockOrder.call(
+      store: store,
+      product_variant: variant,
+      actor: actor,
+      quantity: 1,
+      supplier: supplier_a
+    )
+    old_po_id = order.purchase_order.id
+
+    Purchasing::UpdateDraftOrder.call(
+      order: order,
+      actor: actor,
+      supplier: supplier_b,
+      expected_lock_version: order.lock_version
+    )
+
+    assert_nil PurchaseOrder.find_by(id: old_po_id)
+    assert_equal supplier_b.id, order.reload.supplier_id
+    assert supplier_a.update(active: false)
+    assert_not supplier_a.reload.active?
+  end
+
   test "can deactivate when only sent purchase orders remain" do
     bootstrap = bootstrap!
     store = bootstrap[:store]

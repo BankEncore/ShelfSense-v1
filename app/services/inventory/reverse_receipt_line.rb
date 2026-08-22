@@ -86,16 +86,24 @@ module Inventory
       variant = line.product_variant
       store = receipt.store
 
-      # Lock order: InventoryBalance before allocation / request
+      # Lock order: InventoryBalance → customer_request → allocation
       balance = Balances.lock_or_create!(store: store, product_variant: variant)
-      allocation = CustomerRequestAllocation.lock.find_by(purchase_receipt_line_id: line.id)
-      if allocation&.fulfilled?
-        raise UnsafeReversalError.new(
-          "cannot reverse receipt line after customer pickup was fulfilled; " \
-          "use an authorized compensating adjustment (purchase_receipts.compensate) if inventory " \
-          "must be corrected without undoing the completed pickup",
-          reason_code: :fulfilled_allocation
-        )
+
+      allocation_peek = CustomerRequestAllocation.find_by(purchase_receipt_line_id: line.id)
+      allocation = nil
+      active_allocation = nil
+      if allocation_peek
+        request = CustomerRequest.lock.find(allocation_peek.customer_request_id)
+        allocation = CustomerRequestAllocation.lock.find(allocation_peek.id)
+        if allocation.fulfilled?
+          raise UnsafeReversalError.new(
+            "cannot reverse receipt line after customer pickup was fulfilled; " \
+            "use an authorized compensating adjustment (purchase_receipts.compensate) if inventory " \
+            "must be corrected without undoing the completed pickup",
+            reason_code: :fulfilled_allocation
+          )
+        end
+        active_allocation = allocation.reserved? ? allocation : nil
       end
 
       resulting_qty = balance.on_hand_quantity + quantity_delta
@@ -115,7 +123,6 @@ module Inventory
         )
       end
 
-      active_allocation = allocation&.reserved? ? allocation : nil
       begin
         Availability.assert_depletion_allowed!(
           store: store,
@@ -132,7 +139,6 @@ module Inventory
       end
 
       if active_allocation
-        request = CustomerRequest.lock.find(active_allocation.customer_request_id)
         release_allocation!(active_allocation, request)
       end
 

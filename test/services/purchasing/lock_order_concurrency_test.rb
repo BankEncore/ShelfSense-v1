@@ -36,7 +36,7 @@ class Purchasing::LockOrderConcurrencyTest < ActiveSupport::TestCase
     end
   end
 
-  test "post receipt and locate same variant complete without deadlock" do
+  test "post receipt and locate compete on the same InventoryBalance without deadlock" do
     Inventory::PostAdjustment.call(
       store: @store,
       product_variant: @variant,
@@ -55,28 +55,21 @@ class Purchasing::LockOrderConcurrencyTest < ActiveSupport::TestCase
     )
     assert_equal "pending_location", locate_request.status
 
-    oos = pos_sellable_variant(actor: @actor, tax_class: @tax, name: "OOS Lock #{@suffix}")
-    SupplierVariantSource.create!(
-      supplier: @supplier,
-      product_variant: oos,
-      pricing_method: "direct_unit_cost",
-      expected_unit_cost_cents: 500,
-      organization_preferred: true
-    )
-    special = Customers::CreateRequest.call(
+    # Stock receipt for the same variant so PostReceipt and ConfirmLocation share one balance.
+    order = Purchasing::CreateStockOrder.call(
       store: @store,
-      customer: @customer,
-      product_variant: oos,
-      actor: @actor
+      product_variant: @variant,
+      actor: @actor,
+      quantity: 1,
+      supplier: @supplier
     )
-    po = special.orders.first.purchase_order
+    po = order.purchase_order
     Purchasing::GeneratePurchaseOrder.call(purchase_order: po, actor: @actor)
     Purchasing::SendPurchaseOrder.call(
       purchase_order: po.reload,
       actor: @actor,
       transmission_method: "email"
     )
-    po_line = po.purchase_order_lines.first
     receipt = Purchasing::CreateDraftPurchaseReceipt.call(
       store: @store,
       supplier: @supplier,
@@ -84,10 +77,10 @@ class Purchasing::LockOrderConcurrencyTest < ActiveSupport::TestCase
     )
     Purchasing::AddPurchaseReceiptLine.call(
       purchase_receipt: receipt,
-      purchase_order_line: po_line,
+      purchase_order_line: po.purchase_order_lines.first,
       actor: @actor,
       received_quantity: 1,
-      actual_unit_cost_cents: 500
+      actual_unit_cost_cents: 400
     )
 
     errors = Array.new(2)
@@ -115,27 +108,28 @@ class Purchasing::LockOrderConcurrencyTest < ActiveSupport::TestCase
       end
     ]
     threads.each { |thread| assert thread.join(30), "thread did not finish (possible deadlock)" }
+    assert_no_lock_failures!(errors)
     assert_nil errors[0], errors[0]&.full_message
     assert_nil errors[1], errors[1]&.full_message
     assert_equal "available", locate_request.reload.status
     assert_equal "posted", receipt.reload.status
   end
 
-  test "reverse receipt and cancel request complete without deadlock" do
-    oos = pos_sellable_variant(actor: @actor, tax_class: @tax, name: "RevCancel #{@suffix}")
-    SupplierVariantSource.create!(
-      supplier: @supplier,
-      product_variant: oos,
-      pricing_method: "direct_unit_cost",
-      expected_unit_cost_cents: 700,
-      organization_preferred: true
+  test "reverse receipt and cancel request on same allocation complete without deadlock" do
+    InventoryBalance.find_or_create_by!(store: @store, product_variant: @variant).update!(
+      on_hand_quantity: 0,
+      inventory_value_cents: 0
     )
     request = Customers::CreateRequest.call(
       store: @store,
       customer: @customer,
-      product_variant: oos,
-      actor: @actor
+      product_variant: @variant,
+      actor: @actor,
+      supplier: @supplier,
+      expected_unit_cost_cents: 700
     )
+    assert request.orders.any?, "expected special-order path for OOS variant"
+
     po = request.orders.first.purchase_order
     Purchasing::GeneratePurchaseOrder.call(purchase_order: po, actor: @actor)
     Purchasing::SendPurchaseOrder.call(
@@ -191,14 +185,26 @@ class Purchasing::LockOrderConcurrencyTest < ActiveSupport::TestCase
       end
     ]
     threads.each { |thread| assert thread.join(30), "thread did not finish (possible deadlock)" }
+    assert_no_lock_failures!(errors)
 
-    # One or both may succeed depending on interleaving; neither may hang.
-    # At least one must complete cleanly; the other may raise a domain error.
     assert(
       errors[0].nil? || errors[1].nil? ||
-        errors.all? { |e| e.is_a?(Purchasing::Error) || e.is_a?(Customers::Error) },
-      "unexpected errors: #{errors.map { |e| e&.full_message }.inspect}"
+        errors.compact.all? { |e|
+          e.is_a?(Purchasing::Error) || e.is_a?(Customers::Error) || e.is_a?(ActiveRecord::StaleObjectError)
+        },
+      "unexpected errors: #{errors.map { |e| e&.class&.name }.inspect} #{errors.map { |e| e&.full_message }.inspect}"
     )
-    assert_not InventoryBalance.find_by!(store: @store, product_variant: oos).on_hand_quantity.negative?
+    assert_not InventoryBalance.find_by!(store: @store, product_variant: @variant).on_hand_quantity.negative?
+  end
+
+  private
+
+  def assert_no_lock_failures!(errors)
+    errors.compact.each do |error|
+      message = "#{error.class}: #{error.message}"
+      assert_not_kind_of ActiveRecord::Deadlocked, error, message
+      assert_not_kind_of ActiveRecord::LockWaitTimeout, error, message
+      assert_no_match(/deadlock detected|lock timeout|canceling statement due to statement timeout/i, message)
+    end
   end
 end

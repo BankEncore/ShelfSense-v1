@@ -88,5 +88,17 @@ module Purchasing
 
       [ resolved_supplier, source ]
     end
+
+    # Hard-delete an unused empty draft PO (ADR-012). No-op when not draft or still has lines.
+    def destroy_if_empty_draft!(purchase_order)
+      return if purchase_order.blank?
+
+      po = PurchaseOrder.lock.find_by(id: purchase_order.id)
+      return if po.blank?
+      return unless po.draft?
+      return if po.purchase_order_lines.exists?
+
+      po.destroy!
+    end
   end
 end
