@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Inspirational only. Authority: docs/planning/ux-design-system/warm-parchment.md -->
+  <title>Warm Parchment — contrast-complete palette mockup</title>
+  <style>
+    :root {
+      --color-bg-canvas: #FBF9F5;
+      --color-bg-surface: #FFFFFF;
+      --color-bg-surface-elevated: #F4F0EA;
+      --color-bg-subtle: #EFECE6;
+      --color-bg-drawer: #F0EAE1;
+      --color-text-primary: #2C2523;
+      --color-text-secondary: #6E6763;
+      --color-text-inverse: #FFFFFF;
+      --color-border-subtle: #E6DFD5;
+      --color-border-strong: #8B8178;
+      --color-brand-default: #A84320;
+      --color-brand-hover: #8F3518;
+      --color-brand-active: #752A13;
+      --color-brand-soft: #F9ECE7;
+      --color-brand-soft-hover: #F3DDD4;
+      --color-focus-ring: #7C3218;
+      --color-neutral-fg: #2C2523;
+      --color-neutral-border: #8B8178;
+      --color-neutral-fill: #F4F0EA;
+      --color-neutral-fill-hover: #E8E1D8;
+      --color-neutral-solid: #514944;
+      --color-neutral-solid-hover: #403936;
+      --color-neutral-solid-active: #332D2B;
+      --color-warning-fg: #6E4D00;
+      --color-warning-border: #9A6C00;
+      --color-warning-fill: #FAF3E5;
+      --color-warning-fill-hover: #F3E5C6;
+      --color-warning-solid: #765300;
+      --color-warning-solid-hover: #624500;
+      --color-warning-solid-active: #503800;
+      --color-danger-fg: #7A2018;
+      --color-danger-border: #A53A2E;
+      --color-danger-fill: #F9EBEA;
+      --color-danger-fill-hover: #F1D5D1;
+      --color-danger-solid: #9B2C23;
+      --color-danger-solid-hover: #812219;
+      --color-danger-solid-active: #681A13;
+      --color-info-fg: #1D435E;
+      --color-info-border: #39708F;
+      --color-info-fill: #EBF1F5;
+      --color-info-fill-hover: #D8E7F0;
+      --color-info-solid: #245B78;
+      --color-info-solid-hover: #1B4A65;
+      --color-info-solid-active: #153B51;
+      --color-success-fg: #2D4731;
+      --color-success-border: #527A58;
+      --color-success-fill: #EAF0EB;
+      --color-success-fill-hover: #D8E6DA;
+      --color-success-solid: #37603D;
+      --color-success-solid-hover: #2C5032;
+      --color-success-solid-active: #234128;
+      --color-disabled-text: #6E6763;
+      --color-disabled-border: #8F8882;
+      --color-disabled-surface: #F1EEEA;
+      --color-field-invalid-text: #7A2018;
+      --color-field-invalid-border: #A53A2E;
+      --color-field-invalid-fill: #F9EBEA;
+      --color-overlay-scrim: rgb(23 19 17 / 60%);
+      --color-dialog-surface: #FFFFFF;
+      --color-dialog-elevated-boundary: #8B8178;
+      --color-link: #A84320;
+      --color-link-hover: #8F3518;
+      --color-link-active: #752A13;
+      --color-link-visited: #6D3A63;
+      --color-table-row-hover: #F0EAE1;
+      --color-table-row-selected: #EBE3D5;
+      --color-table-row-focus: #F7F1E8;
+      --radius: 0.375rem;
+      --font-sans: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: var(--font-sans);
+      color: var(--color-text-primary);
+      background: var(--color-bg-canvas);
+      line-height: 1.35;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    a:focus-visible,
+    button:focus-visible,
+    input:focus-visible,
+    summary:focus-visible {
+      outline: 2px solid var(--color-focus-ring);
+      outline-offset: 2px;
+    }
+
+    .page {
+      max-width: 72rem;
+      margin: 0 auto;
+      padding: 1.5rem 1.25rem 3rem;
+    }
+
+    .hero {
+      margin-bottom: 1.5rem;
+    }
+
+    .hero h1 {
+      margin: 0 0 0.35rem;
+      font-size: 1.75rem;
+      font-weight: 700;
+    }
+
+    .hero p {
+      margin: 0;
+      color: var(--color-text-secondary);
+      max-width: 42rem;
+    }
+
+    .meta {
+      margin-top: 0.75rem;
+      font-size: 0.85rem;
+      color: var(--color-text-secondary);
+    }
+
+    .meta code {
+      font-size: 0.8em;
+      background: var(--color-bg-subtle);
+      padding: 0.1em 0.35em;
+      border-radius: 0.25rem;
+    }
+
+    .compare {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    @media (max-width: 720px) {
+      .compare { grid-template-columns: 1fr; }
+    }
+
+    .swatch-card {
+      background: var(--color-bg-surface);
+      border: 1px solid var(--color-border-subtle);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .swatch-card h2 {
+      margin: 0;
+      padding: 0.65rem 1rem;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--color-text-secondary);
+      background: var(--color-bg-subtle);
+      border-bottom: 1px solid var(--color-border-subtle);
+    }
+
+    .swatch-row {
+      display: flex;
+      align-items: stretch;
+      min-height: 3rem;
+      border-bottom: 1px solid var(--color-border-subtle);
+    }
+
+    .swatch-row:last-child { border-bottom: 0; }
+
+    .chip {
+      width: 4.5rem;
+      flex-shrink: 0;
+    }
+
+    .swatch-meta {
+      padding: 0.5rem 0.75rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 0.1rem;
+      font-size: 0.8rem;
+    }
+
+    .swatch-meta strong { font-weight: 600; }
+    .swatch-meta span { color: var(--color-text-secondary); font-variant-numeric: tabular-nums; }
+
+    .section {
+      background: var(--color-bg-surface);
+      border: 1px solid var(--color-border-subtle);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .section h2 {
+      margin: 0 0 0.35rem;
+      font-size: 1.15rem;
+    }
+
+    .section > .lede {
+      margin: 0 0 1rem;
+      color: var(--color-text-secondary);
+      font-size: 0.9rem;
+    }
+
+    .stack {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      align-items: center;
+    }
+
+    .stack--col {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .btn {
+      appearance: none;
+      border: 2px solid transparent;
+      border-radius: var(--radius);
+      padding: 0.5rem 1rem;
+      font: inherit;
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      text-decoration: none;
+    }
+
+    .btn--brand {
+      background: var(--color-brand-default);
+      color: var(--color-text-inverse);
+    }
+    .btn--brand:hover { background: var(--color-brand-hover); }
+    .btn--brand:active { background: var(--color-brand-active); }
+
+    .btn--outline {
+      background: var(--color-bg-surface);
+      color: var(--color-text-primary);
+      border-color: var(--color-border-strong);
+    }
+    .btn--outline:hover { background: var(--color-neutral-fill-hover); }
+
+    .btn--ghost {
+      background: transparent;
+      color: var(--color-brand-default);
+      border-color: var(--color-border-strong);
+    }
+    .btn--ghost:hover { background: var(--color-brand-soft); }
+
+    .btn--danger-outline {
+      background: var(--color-bg-surface);
+      color: var(--color-danger-fg);
+      border-color: var(--color-danger-border);
+    }
+    .btn--danger-outline:hover { background: var(--color-danger-fill-hover); }
+
+    .btn--danger-solid {
+      background: var(--color-danger-solid);
+      color: var(--color-text-inverse);
+    }
+    .btn--danger-solid:hover { background: var(--color-danger-solid-hover); }
+    .btn--danger-solid:active { background: var(--color-danger-solid-active); }
+
+    .btn--warning-solid {
+      background: var(--color-warning-solid);
+      color: var(--color-text-inverse);
+    }
+
+    .btn--success-solid {
+      background: var(--color-success-solid);
+      color: var(--color-text-inverse);
+    }
+
+    .btn--info-solid {
+      background: var(--color-info-solid);
+      color: var(--color-text-inverse);
+    }
+
+    .btn--neutral-solid {
+      background: var(--color-neutral-solid);
+      color: var(--color-text-inverse);
+    }
+
+    .btn:disabled,
+    .btn[disabled] {
+      background: var(--color-disabled-surface);
+      color: var(--color-disabled-text);
+      border-color: var(--color-disabled-border);
+      cursor: not-allowed;
+    }
+
+    .family-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+      gap: 0.75rem;
+    }
+
+    .family {
+      border: 1px solid var(--color-border-subtle);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .family__label {
+      padding: 0.4rem 0.65rem;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .family__quiet {
+      padding: 0.75rem;
+      border-top: 1px solid transparent;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    .family__solid {
+      padding: 0.65rem 0.75rem;
+      color: var(--color-text-inverse);
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      padding: 0.15rem 0.5rem;
+      border-radius: 0.25rem;
+      border: 1px solid;
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+
+    .flash {
+      padding: 0.75rem 1rem;
+      border: 2px solid;
+      border-radius: var(--radius);
+      font-size: 0.9rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .flash strong { display: block; margin-bottom: 0.15rem; }
+
+    .form-demo {
+      display: grid;
+      gap: 0.85rem;
+      max-width: 24rem;
+    }
+
+    label {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    input[type="text"] {
+      font: inherit;
+      padding: 0.5rem 0.65rem;
+      border: 2px solid var(--color-border-strong);
+      border-radius: var(--radius);
+      background: var(--color-bg-surface);
+      color: var(--color-text-primary);
+    }
+
+    input[type="text"]::placeholder {
+      color: var(--color-text-secondary);
+    }
+
+    input[type="text"]:disabled {
+      background: var(--color-disabled-surface);
+      color: var(--color-disabled-text);
+      border-color: var(--color-disabled-border);
+    }
+
+    input[aria-invalid="true"] {
+      border-color: var(--color-field-invalid-border);
+      background: var(--color-field-invalid-fill);
+      color: var(--color-field-invalid-text);
+    }
+
+    .field-error {
+      color: var(--color-field-invalid-text);
+      font-weight: 500;
+      font-size: 0.8rem;
+    }
+
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .data-table th {
+      text-align: left;
+      background: var(--color-bg-subtle);
+      color: var(--color-text-secondary);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      padding: 0.55rem 0.75rem;
+      border-bottom: 1px solid var(--color-border-subtle);
+    }
+
+    .data-table td {
+      padding: 0.65rem 0.75rem;
+      border-bottom: 1px solid var(--color-border-subtle);
+      vertical-align: top;
+    }
+
+    .data-table tr:hover td {
+      background: var(--color-table-row-hover);
+    }
+
+    .data-table tr.is-selected td {
+      background: var(--color-table-row-selected);
+      box-shadow: inset 3px 0 0 var(--color-brand-default);
+    }
+
+    .data-table tr.is-focus td {
+      background: var(--color-table-row-focus);
+      outline: 2px solid var(--color-focus-ring);
+      outline-offset: -2px;
+    }
+
+    .sku {
+      font-family: ui-monospace, "Cascadia Code", monospace;
+      font-size: 0.8em;
+      color: var(--color-text-secondary);
+      letter-spacing: -0.02em;
+    }
+
+    .links-demo a {
+      color: var(--color-link);
+      text-decoration: underline;
+      text-underline-offset: 0.15em;
+      margin-right: 1rem;
+    }
+    .links-demo a:hover {
+      color: var(--color-link-hover);
+      text-decoration-thickness: 2px;
+    }
+    .links-demo a:active { color: var(--color-link-active); }
+    .links-demo a.visited { color: var(--color-link-visited); }
+
+    .soft-nav {
+      display: flex;
+      gap: 0.35rem;
+      flex-wrap: wrap;
+    }
+
+    .soft-nav a {
+      padding: 0.4rem 0.75rem;
+      border-radius: var(--radius);
+      color: var(--color-text-primary);
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    .soft-nav a:hover { background: var(--color-brand-soft-hover); }
+    .soft-nav a[aria-current="page"] {
+      background: var(--color-brand-soft);
+      font-weight: 700;
+      box-shadow: inset 3px 0 0 var(--color-brand-default);
+    }
+
+    .dialog-stage {
+      position: relative;
+      min-height: 14rem;
+      border-radius: var(--radius);
+      overflow: hidden;
+      border: 1px solid var(--color-border-subtle);
+    }
+
+    .dialog-stage__workspace {
+      padding: 1rem;
+      background: var(--color-bg-canvas);
+      color: var(--color-text-secondary);
+      font-size: 0.85rem;
+      min-height: 14rem;
+    }
+
+    .dialog-stage__scrim {
+      position: absolute;
+      inset: 0;
+      background: var(--color-overlay-scrim);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+
+    .dialog-panel {
+      background: var(--color-dialog-surface);
+      border: 2px solid var(--color-dialog-elevated-boundary);
+      border-radius: 0.65rem;
+      width: min(22rem, 100%);
+      box-shadow: 0 1.25rem 3rem rgb(23 19 17 / 35%);
+      overflow: hidden;
+    }
+
+    .dialog-panel__header {
+      padding: 0.75rem 1rem;
+      font-weight: 700;
+      border-bottom: 1px solid var(--color-border-subtle);
+    }
+
+    .dialog-panel__header--danger {
+      background: var(--color-danger-fill);
+      color: var(--color-danger-fg);
+      border-bottom-color: var(--color-danger-border);
+    }
+
+    .dialog-panel__body {
+      padding: 1rem;
+      font-size: 0.9rem;
+    }
+
+    .dialog-panel__callout {
+      margin: 0.75rem 0 0;
+      padding: 0.65rem 0.75rem;
+      background: var(--color-dialog-surface);
+      border: 1px solid var(--color-danger-border);
+      border-left-width: 0.3rem;
+      color: var(--color-danger-fg);
+      font-size: 0.85rem;
+    }
+
+    .dialog-panel__actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      justify-content: flex-end;
+      padding: 0.75rem 1rem 1rem;
+    }
+
+    .legacy {
+      border: 1px dashed #94a3b8;
+      border-radius: var(--radius);
+      padding: 0.75rem;
+      background: #f8fafc;
+      color: #0f172a;
+    }
+
+    .legacy .btn-legacy {
+      appearance: none;
+      border: 1px solid transparent;
+      border-radius: 0.375rem;
+      padding: 0.5rem 1rem;
+      font: inherit;
+      font-weight: 600;
+      background: #0d6e6e;
+      color: #fff;
+      cursor: default;
+    }
+
+    .legacy .btn-legacy-accent {
+      background: #fff;
+      color: #7a2e5a;
+      border-color: #e2e8f0;
+    }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+
+    @media (max-width: 720px) {
+      .two-col { grid-template-columns: 1fr; }
+    }
+
+    footer.note {
+      margin-top: 0.5rem;
+      font-size: 0.8rem;
+      color: var(--color-text-secondary);
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header class="hero">
+      <h1>Warm Parchment palette</h1>
+      <p>
+        Contrast-complete candidate for ADR-022 / UDS-1: linen canvas, espresso text,
+        AA-safe terracotta commits (<code>#A84320</code>), and full semantic families.
+        Inspirational mockup only—not live application CSS.
+      </p>
+      <p class="meta">
+        Rejected bright terracotta <code>#C85A32</code> for solid labels (~4.23:1).
+        Default brand on white ≈ 6.02:1.
+      </p>
+    </header>
+
+    <div class="compare">
+      <div class="legacy">
+        <strong>Phase 2.2 today (approx.)</strong>
+        <p style="margin:0.5rem 0;font-size:0.85rem;color:#64748b;">Cool slate canvas · teal action · plum accent</p>
+        <div class="stack">
+          <button type="button" class="btn-legacy" tabindex="-1">Save Changes</button>
+          <button type="button" class="btn-legacy-accent" tabindex="-1">Secondary</button>
+        </div>
+      </div>
+      <div class="section" style="margin:0;">
+        <strong>Warm Parchment candidate</strong>
+        <p class="lede" style="margin-top:0.5rem;">Warm linen · rust brand · stronger control borders</p>
+        <div class="stack">
+          <button type="button" class="btn btn--brand">Save Changes</button>
+          <button type="button" class="btn btn--outline">Secondary</button>
+          <button type="button" class="btn btn--ghost">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <section class="section">
+      <h2>Foundation surfaces</h2>
+      <p class="lede">White is reserved for elevated surfaces; canvas stays linen.</p>
+      <div class="family-grid">
+        <div class="swatch-card">
+          <div class="swatch-row"><div class="chip" style="background:#FBF9F5;flex:1"></div><div class="swatch-meta"><strong>Canvas</strong><span>#FBF9F5</span></div></div>
+          <div class="swatch-row"><div class="chip" style="background:#FFFFFF;flex:1;border-right:1px solid #E6DFD5"></div><div class="swatch-meta"><strong>Surface</strong><span>#FFFFFF</span></div></div>
+          <div class="swatch-row"><div class="chip" style="background:#F4F0EA;flex:1"></div><div class="swatch-meta"><strong>Elevated</strong><span>#F4F0EA</span></div></div>
+          <div class="swatch-row"><div class="chip" style="background:#EFECE6;flex:1"></div><div class="swatch-meta"><strong>Subtle</strong><span>#EFECE6</span></div></div>
+          <div class="swatch-row"><div class="chip" style="background:#F0EAE1;flex:1"></div><div class="swatch-meta"><strong>Drawer / line detail</strong><span>#F0EAE1</span></div></div>
+        </div>
+        <div class="swatch-card">
+          <div class="swatch-row"><div class="chip" style="background:#A84320;flex:1"></div><div class="swatch-meta"><strong>Brand default</strong><span>#A84320 · solid commit</span></div></div>
+          <div class="swatch-row"><div class="chip" style="background:#8F3518;flex:1"></div><div class="swatch-meta"><strong>Brand hover</strong><span>#8F3518</span></div></div>
+          <div class="swatch-row"><div class="chip" style="background:#752A13;flex:1"></div><div class="swatch-meta"><strong>Brand active</strong><span>#752A13</span></div></div>
+          <div class="swatch-row"><div class="chip" style="background:#F9ECE7;flex:1"></div><div class="swatch-meta"><strong>Brand soft</strong><span>#F9ECE7</span></div></div>
+          <div class="swatch-row"><div class="chip" style="background:#7C3218;flex:1"></div><div class="swatch-meta"><strong>Focus ring</strong><span>#7C3218</span></div></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Actions (button semantics)</h2>
+      <p class="lede">Tab through controls to see the focus ring. Hover solid brand to see darker rust states.</p>
+      <div class="stack" style="margin-bottom:0.75rem;">
+        <button type="button" class="btn btn--brand">Save Changes</button>
+        <button type="button" class="btn btn--outline">Edit</button>
+        <button type="button" class="btn btn--ghost">Keep Request</button>
+        <button type="button" class="btn btn--danger-outline">Post-Void</button>
+        <button type="button" class="btn btn--danger-solid">Cancel Request</button>
+        <button type="button" class="btn btn--brand" disabled>Disabled</button>
+      </div>
+      <div class="stack">
+        <button type="button" class="btn btn--neutral-solid">Neutral solid</button>
+        <button type="button" class="btn btn--warning-solid">Warning solid</button>
+        <button type="button" class="btn btn--info-solid">Info solid</button>
+        <button type="button" class="btn btn--success-solid">Success solid</button>
+      </div>
+      <div class="soft-nav" style="margin-top:1rem;" aria-label="Soft brand nav example">
+        <a href="#" aria-current="page">Suppliers</a>
+        <a href="#">Sources</a>
+        <a href="#">Preferences</a>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Semantic families</h2>
+      <p class="lede">Quiet fill + border for badges/flashes; solid for rare commits after review.</p>
+      <div class="family-grid">
+        <div class="family">
+          <div class="family__label" style="background:var(--color-neutral-fill);color:var(--color-neutral-fg);">Neutral</div>
+          <div class="family__quiet" style="background:var(--color-neutral-fill);color:var(--color-neutral-fg);border-color:var(--color-neutral-border);border-top-width:1px;border-top-style:solid;">Quiet · Draft metadata</div>
+          <div class="family__solid" style="background:var(--color-neutral-solid);">Solid · #514944</div>
+        </div>
+        <div class="family">
+          <div class="family__label" style="background:var(--color-warning-fill);color:var(--color-warning-fg);">Warning</div>
+          <div class="family__quiet" style="background:var(--color-warning-fill);color:var(--color-warning-fg);border-color:var(--color-warning-border);border-top-width:1px;border-top-style:solid;">Quiet · Low stock / pending</div>
+          <div class="family__solid" style="background:var(--color-warning-solid);">Solid · #765300</div>
+        </div>
+        <div class="family">
+          <div class="family__label" style="background:var(--color-danger-fill);color:var(--color-danger-fg);">Danger</div>
+          <div class="family__quiet" style="background:var(--color-danger-fill);color:var(--color-danger-fg);border-color:var(--color-danger-border);border-top-width:1px;border-top-style:solid;">Quiet · Error / alert</div>
+          <div class="family__solid" style="background:var(--color-danger-solid);">Solid · #9B2C23</div>
+        </div>
+        <div class="family">
+          <div class="family__label" style="background:var(--color-info-fill);color:var(--color-info-fg);">Information</div>
+          <div class="family__quiet" style="background:var(--color-info-fill);color:var(--color-info-fg);border-color:var(--color-info-border);border-top-width:1px;border-top-style:solid;">Quiet · On order / draft</div>
+          <div class="family__solid" style="background:var(--color-info-solid);">Solid · #245B78</div>
+        </div>
+        <div class="family">
+          <div class="family__label" style="background:var(--color-success-fill);color:var(--color-success-fg);">Success</div>
+          <div class="family__quiet" style="background:var(--color-success-fill);color:var(--color-success-fg);border-color:var(--color-success-border);border-top-width:1px;border-top-style:solid;">Quiet · In stock / OK</div>
+          <div class="family__solid" style="background:var(--color-success-solid);">Solid · #37603D</div>
+        </div>
+      </div>
+      <div class="stack" style="margin-top:1rem;">
+        <span class="badge" style="background:var(--color-success-fill);color:var(--color-success-fg);border-color:var(--color-success-border);">In stock</span>
+        <span class="badge" style="background:var(--color-warning-fill);color:var(--color-warning-fg);border-color:var(--color-warning-border);">Pending</span>
+        <span class="badge" style="background:var(--color-danger-fill);color:var(--color-danger-fg);border-color:var(--color-danger-border);">Out of stock</span>
+        <span class="badge" style="background:var(--color-info-fill);color:var(--color-info-fg);border-color:var(--color-info-border);">On order</span>
+      </div>
+      <div style="margin-top:1rem;">
+        <div class="flash" style="background:var(--color-success-fill);border-color:var(--color-success-border);color:var(--color-success-fg);"><strong>Saved</strong> Supplier updated successfully.</div>
+        <div class="flash" style="background:var(--color-warning-fill);border-color:var(--color-warning-border);color:var(--color-warning-fg);"><strong>Review required</strong> Draft order will remain on the PO.</div>
+        <div class="flash" style="background:var(--color-danger-fill);border-color:var(--color-danger-border);color:var(--color-danger-fg);"><strong>Could not post</strong> Receipt has validation errors.</div>
+      </div>
+    </section>
+
+    <div class="two-col">
+      <section class="section">
+        <h2>Forms</h2>
+        <p class="lede">Strong borders (≥3:1). Invalid uses fill + border + text.</p>
+        <div class="form-demo">
+          <label>
+            Expected unit cost ($)
+            <input type="text" placeholder="12.50" value="8.25">
+          </label>
+          <label>
+            Supplier code
+            <input type="text" disabled value="ingram">
+          </label>
+          <label>
+            Display name
+            <input type="text" aria-invalid="true" value="" placeholder="Required">
+            <span class="field-error">Display name can’t be blank.</span>
+          </label>
+        </div>
+        <p class="links-demo" style="margin-top:1rem;">
+          <a href="#">Unvisited link</a>
+          <a href="#" class="visited">Visited link</a>
+        </p>
+      </section>
+
+      <section class="section">
+        <h2>Review dialog on scrim</h2>
+        <p class="lede">Opaque panel + espresso scrim (replaces cool slate backdrop).</p>
+        <div class="dialog-stage" aria-hidden="true">
+          <div class="dialog-stage__workspace">
+            Underlying ops workspace stays linen; inert while modal is open.
+          </div>
+          <div class="dialog-stage__scrim">
+            <div class="dialog-panel">
+              <div class="dialog-panel__header dialog-panel__header--danger">Cancel customer request?</div>
+              <div class="dialog-panel__body">
+                Reserved copy will be released and become available for sale.
+                <p class="dialog-panel__callout">Sent supplier quantity is not cancelled.</p>
+              </div>
+              <div class="dialog-panel__actions">
+                <button type="button" class="btn btn--ghost">Keep Request</button>
+                <button type="button" class="btn btn--danger-solid">Cancel Request</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <section class="section">
+      <h2>Table row states</h2>
+      <p class="lede">Hover cream · selected cream + brand accent bar · focus fill + inset ring.</p>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th scope="col">Title</th>
+            <th scope="col">Status</th>
+            <th scope="col">On hand</th>
+            <th scope="col">Cost</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>The Hobbit<span class="sku" style="display:block;">9780547928227</span></td>
+            <td><span class="badge" style="background:var(--color-success-fill);color:var(--color-success-fg);border-color:var(--color-success-border);">In stock</span></td>
+            <td>12</td>
+            <td>$4.20</td>
+          </tr>
+          <tr class="is-selected">
+            <td>Selected row<span class="sku" style="display:block;">9780000000001</span></td>
+            <td><span class="badge" style="background:var(--color-warning-fill);color:var(--color-warning-fg);border-color:var(--color-warning-border);">Pending</span></td>
+            <td>2</td>
+            <td>$9.15</td>
+          </tr>
+          <tr class="is-focus">
+            <td>Keyboard-focused row<span class="sku" style="display:block;">9780000000002</span></td>
+            <td><span class="badge" style="background:var(--color-info-fill);color:var(--color-info-fg);border-color:var(--color-info-border);">On order</span></td>
+            <td>0</td>
+            <td>$6.00</td>
+          </tr>
+          <tr>
+            <td>Hover any other row<span class="sku" style="display:block;">9780000000003</span></td>
+            <td><span class="badge" style="background:var(--color-danger-fill);color:var(--color-danger-fg);border-color:var(--color-danger-border);">Out of stock</span></td>
+            <td>0</td>
+            <td>$3.50</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <p class="note">
+      Open this file in a browser from
+      <code>docs/planning/ux-design-system/warm-parchment-palette-mockup.html</code>.
+      Printed receipt chrome is intentionally not demonstrated (locked separate contract).
+    </p>
+  </div>
+</body>
+</html>

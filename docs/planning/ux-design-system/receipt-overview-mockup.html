@@ -3,8 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <!-- Inspirational only. Authority: docs/planning/ux-design-system/surface-contracts.md -->
-  <title>Receipt Details - Warm Parchment POS</title>
-  <link href="https://fonts.googleapis.com/css2?family=Lora:wght@500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <title>Inspirational — Receipt Details Warm Parchment Mockup</title>
   <style>
     :root {
       --bg-canvas: #FBF9F5;
@@ -14,7 +13,7 @@
       --text-primary: #2C2523;
       --text-secondary: #6E6763;
       --border-subtle: #E6DFD5;
-      --brand-primary: #C85A32;
+      --brand-primary: #A84320;
       --status-sage-bg: #EAF0EB;
       --status-sage-text: #2D4731;
       --status-rust-bg: #F9EBEA;
@@ -26,7 +25,7 @@
     body {
       background-color: var(--bg-canvas);
       color: var(--text-primary);
-      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       margin: 0;
       padding: 24px;
       -webkit-font-smoothing: antialiased;
@@ -37,6 +36,24 @@
       margin: 0 auto;
     }
 
+    .authority-banner {
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      margin: -24px -24px 24px;
+      padding: 12px 24px;
+      color: #3f3005;
+      background: #fff7df;
+      border-bottom: 2px solid #d4ad45;
+      box-shadow: 0 2px 8px rgb(44 37 35 / 12%);
+      font-size: 0.9rem;
+      line-height: 1.45;
+    }
+
+    .authority-banner strong { display: block; font-size: 1rem; }
+    .authority-banner p { margin: 3px 0 0; }
+    .authority-banner a { color: #694c00; font-weight: 700; }
+
     /* Top Action Bar */
     .header-bar {
       display: flex;
@@ -46,7 +63,7 @@
     }
 
     .header-title h1 {
-      font-family: 'Lora', serif;
+      font-family: Georgia, "Times New Roman", serif;
       font-size: 1.6rem;
       margin: 0 0 4px 0;
     }
@@ -72,10 +89,10 @@
       color: var(--text-primary);
     }
 
-    .btn-primary {
-      background-color: var(--brand-primary);
-      color: #FFFFFF;
-      border: none;
+    .btn-danger-outline {
+      background-color: var(--bg-surface);
+      color: var(--status-rust-text);
+      border: 2px solid var(--status-rust-text);
     }
 
     /* Top Summary Card */
@@ -185,8 +202,8 @@
     .text-discount { color: var(--status-sage-text); font-size: 0.8rem; }
     .text-orig { color: var(--text-secondary); font-size: 0.8rem; text-decoration: line-through; }
 
-    /* Audit Sub-Drawer */
-    .audit-drawer td {
+    /* Line details disclosure (not audit_events) */
+    .line-details td {
       background-color: var(--bg-drawer);
       padding: 8px 14px 8px 36px;
       font-size: 0.8rem;
@@ -194,7 +211,7 @@
       border-bottom: 1px solid var(--border-subtle);
     }
 
-    .audit-drawer span {
+    .line-details span {
       font-weight: 600;
       color: var(--text-primary);
     }
@@ -202,24 +219,31 @@
 </head>
 <body>
 
+<aside class="authority-banner" aria-label="Artifact authority status">
+  <strong>Inspirational — not implementation authority.</strong>
+  <p>Governing Markdown contract: <a href="surface-contracts.md">Surface contracts — basket, history, and print</a>.</p>
+  <p>All actions and links (including Reprint Receipt, Return Items, Post-Void, and receipt references) are nonfunctional; expanded <strong>Line details</strong> are illustrative static content (not <code>audit_events</code>).</p>
+  <p>Production implementations must use design tokens, Rails helpers/partials, authorization gates, and existing workflow controllers rather than copying this mockup markup verbatim.</p>
+</aside>
+
 <div class="container">
   <!-- Top Action Bar -->
   <div class="header-bar">
     <div class="header-title">
-      <h1>Receipt S001-R01-T0000019</h1>
+      <h1>Inspirational receipt overview · S001-R01-T0000019</h1>
       <div class="header-meta">2026-08-22 12:50 &bull; Register 01 &bull; Cashier: Admin User</div>
     </div>
     <div class="action-group">
       <button class="btn">Reprint Receipt</button>
       <button class="btn">Return Items</button>
-      <button class="btn btn-primary">Post-Void</button>
+      <button class="btn btn-danger-outline">Post-Void</button>
     </div>
   </div>
 
   <!-- 3-Column Top Summary Card -->
   <div class="summary-card">
     <div class="badge-change">Change Due: $4.80</div>
-    
+
     <div class="summary-col">
       <h3>Sales Breakdown</h3>
       <div class="summary-row"><span>Sales Subtotal</span><span>$62.00</span></div>
@@ -291,9 +315,9 @@
         <td style="text-align: right;">A ($1.84)</td>
         <td style="text-align: right; font-weight: 600;">$30.60</td>
       </tr>
-      <tr class="audit-drawer">
+      <tr class="line-details">
         <td colspan="7">
-          &#8627; <span>Line Discount Audit:</span> Performed by Admin User &bull; Reason: Customer service &bull; Policy: Direct &bull; Tax Rate: 6.000%
+          &#8627; <span>Line details — Pricing:</span> Discount by Admin User &bull; Reason: Customer service &bull; Policy: Direct &bull; Tax Rate: 6.000%
         </td>
       </tr>
 
@@ -310,9 +334,9 @@
         <td style="text-align: right;">A (-$1.40)</td>
         <td style="text-align: right; font-weight: 600; color: var(--status-rust-text);">-$23.40</td>
       </tr>
-      <tr class="audit-drawer">
+      <tr class="line-details">
         <td colspan="7">
-          &#8627; <span>Return Audit:</span> Reason: Changed Mind &bull; Linked Original Receipt: <a href="#" style="color: var(--brand-primary);">S001-R01-T0000007</a> (Line 1)
+          &#8627; <span>Line details — Origin:</span> Reason: Changed Mind &bull; Linked Original Receipt: <a href="#" style="color: var(--brand-primary);">S001-R01-T0000007</a> (Line 1)
         </td>
       </tr>
 
@@ -332,9 +356,9 @@
         <td style="text-align: right;">B ($0.60)</td>
         <td style="text-align: right; font-weight: 600;">$10.00</td>
       </tr>
-      <tr class="audit-drawer">
+      <tr class="line-details">
         <td colspan="7">
-          &#8627; <span>Price Override Audit:</span> Performed by Admin User &bull; Reason: Customer service &bull; Tax Class: Food/Bev (6.000%)
+          &#8627; <span>Line details — Pricing:</span> Price override by Admin User &bull; Reason: Customer service &bull; Tax Class: Food/Bev (6.000%)
         </td>
       </tr>
     </tbody>

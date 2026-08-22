@@ -176,7 +176,7 @@ The Phase 2.2 deliverable is:
 
 > An authorized administrator can navigate a consistent administrative shell, manage products with searchable/filterable indexes and dollar-oriented price fields, and use the same presentation patterns on Stores and Merchandise Classes.
 
-Authoritative plan: [phase-2.2-ux-foundation.md](docs/planning/phase2.2-ux-foundation/phase-2.2-ux-foundation.md). Conventions: [UX conventions](docs/ux-conventions.md). Proposed cross-phase visual evolution: [UX design system](docs/planning/ux-design-system/README.md) (Warm Parchment; not a Phase 7 slice).
+Authoritative plan: [phase-2.2-ux-foundation.md](docs/planning/phase2.2-ux-foundation/phase-2.2-ux-foundation.md). Conventions: [UX conventions](docs/ux-conventions.md). Proposed cross-phase evolution: [UX design system](docs/planning/ux-design-system/README.md) (Warm Parchment; not a Phase 7 slice), including the [permission-aware administrative navigation proposal](docs/planning/ux-design-system/navigation-proposal.md), which requires privileged and narrowly scoped prototypes before UDS adoption.
 
 ### Phase 3: Inventory foundation
 

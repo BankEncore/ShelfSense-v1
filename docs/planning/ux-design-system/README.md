@@ -2,7 +2,7 @@
 
 Status: **Proposed** (docs packet). Phase 2.2 visual tokens remain **implemented** until the foundation program ships. See [ADR-022](../../adr/ADR-022-warm-parchment-visual-tokens.md) (Proposed) for palette supersession.
 
-This packet is the cross-phase authority for ShelfSense presentation: Warm Parchment visual direction, button and action semantics, surface contracts (Register basket vs history vs print), deferred interaction patterns, and an incremental adoption program.
+This packet is the cross-phase authority for ShelfSense presentation: Warm Parchment visual direction, button and action semantics, administrative navigation grouping, surface contracts (Register basket vs history vs print), deferred interaction patterns, and an incremental adoption program.
 
 It is **not** a Phase 7 slice. Phase 7 domain chrome boundaries stay in the [Phase 7 packet](../phase7-orders-and-receiving/README.md). Future phases (Buyback, reporting, and later) cite this packet for UX adoption targets.
 
@@ -25,9 +25,14 @@ Do not fold POS into a shared ops shell. Do not replace admin show pages with dr
 
 | Document | Purpose | Authority |
 |---|---|---|
-| [program-plan.md](program-plan.md) | Adoption slices UDS-0–UDS-3, deferrals, acceptance | Proposed |
-| [warm-parchment.md](warm-parchment.md) | Tokens, typography, density, contrast (AA baseline) | Proposed |
+| [program-plan.md](program-plan.md) | Adoption slices UDS-0–UDS-3, rollout contract, deferrals, acceptance | Proposed |
+| [accessibility-ergonomic-test-matrix.md](accessibility-ergonomic-test-matrix.md) | Manual a11y/ergonomic gate + timed cashier scenarios for UDS-2/UDS-3 | Proposed acceptance gate |
+| [warm-parchment.md](warm-parchment.md) | Tokens, typography, density, contrast (AA baseline) | Proposed candidate (contrast-complete) |
+| [warm-parchment-palette-mockup.html](warm-parchment-palette-mockup.html) | Static HTML demo of the contrast-complete palette | Inspirational |
+| [receipt-overview-mockup.html](receipt-overview-mockup.html) | Inspirational completed-transaction / history layout | Inspirational |
+| [shelvesense-warm-parchment-product-mockups.html](shelvesense-warm-parchment-product-mockups.html) | Inspirational product admin chrome (sidebar/Cmd+K shown are deferred) | Inspirational |
 | [button-action-semantics.md](button-action-semantics.md) | Labels, intents, styles, sizes, review dialogs | Proposed |
+| [navigation-proposal.md](navigation-proposal.md) | Permission-gated administrative destinations, canonical groups, accessible responsive pattern, and prototype gate | Proposed (UDS-0 inventory) |
 | [surface-contracts.md](surface-contracts.md) | Basket, transaction history, printed receipt | Proposed |
 | [deferred-patterns.md](deferred-patterns.md) | Drawers, global search, density prefs, etc. | Proposed (explicitly deferred) |
 | [migration-matrix.md](migration-matrix.md) | Area status: legacy / partial / conforming / locked; UDS-0 path-level inventory | Working tracker |

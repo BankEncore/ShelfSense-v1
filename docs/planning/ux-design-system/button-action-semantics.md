@@ -470,7 +470,91 @@ Do not use an icon to soften or obscure a destructive action.
 
 ## Implementation semantics
 
-Visual variants should express intent rather than encode domain behavior. Suggested component classes are:
+Visual variants express presentation intent; they do not encode domain behavior. UDS-1 should introduce `ActionButtonHelper` with four deliberately separate entry points:
+
+```ruby
+action_link_to(label, url, style:, intent:, size: :standard, disabled: false, **html_options)
+action_button_to(label, url, style:, intent:, size: :standard, method:, form: {}, **html_options)
+action_submit(form_builder, label, style:, intent:, size: :standard, **html_options)
+action_button(label, style:, intent:, size: :standard, type: :button, **html_options)
+```
+
+The helper owns only validation of the presentation arguments and construction of the controlled class list. Each entry point delegates to the named Rails primitive rather than constructing HTML strings:
+
+| Entry point | Rendering path | Required result |
+|---|---|---|
+| `action_link_to` | Rails `link_to` | An `<a href="…">` for navigation. It must not accept `method:` or turn a link into a state-changing request. |
+| `action_button_to` | Rails `button_to` | A standalone form containing a submit `<button>`. `method:` is required and passed to `button_to`; Rails' authenticity-token and method-override behavior must be preserved. |
+| `action_submit` | The supplied form builder's `button` | A submit button in an existing `form_with`/`form_for` form. It must not create a nested form or accept a URL or HTTP method. |
+| `action_button` | Rails `button_tag` | A non-submitting `<button type="button">` by default, suitable for a dialog trigger, disclosure, printing, or another client-side interface action. |
+
+`action_button(type: :submit)` is not a substitute for `action_submit`; reject it. The only accepted `type:` for `action_button` is `:button`. This makes an accidental submit inside a form impossible. A future reset-button need requires an explicit contract extension rather than a free-form type.
+
+The four methods share these keyword values (symbols or their equivalent strings may be normalized):
+
+| Keyword | Allowed values | Default |
+|---|---|---|
+| `style` | `solid`, `outline`, `ghost`, `link` | None; required |
+| `intent` | `brand`, `neutral`, `warning`, `danger` | None; required |
+| `size` | `small`, `standard`, `large` | `standard` |
+
+Not every pair is valid. UDS-1 must encode this allowlist and raise `ArgumentError` for everything else:
+
+| Style | Allowed intents |
+|---|---|
+| `solid` | `brand`, `warning`, `danger` |
+| `outline` | `brand`, `neutral`, `warning`, `danger` |
+| `ghost` | `neutral` |
+| `link` | `neutral` |
+
+All three sizes are valid for each allowed style/intent pair. Although a large link is valid for a deliberately touch-oriented navigation surface, it is not the ordinary admin choice. The helper must also reject unknown keywords where Ruby would not already do so, caller-supplied `class`, and attempts to smuggle any `btn` or `btn--*` token through another class-related option. It emits exactly `btn btn--STYLE btn--INTENT btn--SIZE`, while unrelated component classes should be placed on a wrapper. Views must not use the helper as an arbitrary class-composition escape hatch.
+
+### What the API does not decide
+
+Choosing one of these rendering paths is a decision made by the calling view; it is not inferred from a label, URL, route name, record state, or permission. Specifically, the helper does **not** decide or enforce:
+
+- Authorization or whether the current actor may see or invoke the action
+- Domain eligibility or whether the record's current lifecycle permits the action
+- Whether review or confirmation is required
+- The HTTP method, route, command/service, or business behavior
+- Audit, optimistic-locking, idempotency, or transaction behavior
+
+The controller and domain boundary remain authoritative even when a view omits or disables a control. The caller must supply an explicit `method:` to `action_button_to`; the helper does not guess `POST`, `PATCH`, or `DELETE`. It also must not inspect label text to infer warning or danger intent.
+
+### Rails and HTML constraints
+
+#### Forms, methods, and CSRF
+
+- Use `action_button_to` for a state change that is not already inside a form. Do not replace `button_to` with a styled link: the generated form, authenticity token, and Rails method override must survive unchanged.
+- Because `button_to` generates a form, never call `action_button_to` inside another form. Use `action_submit(form_builder, ...)` for the existing form's action. If one screen genuinely needs independent commands, place each command form outside the enclosing form and associate its submit button with that form's `id` using the HTML `form` attribute, or restructure the markup; do not emit invalid nested forms.
+- `action_submit` passes `name`, `value`, `disabled`, `form`, `formaction`, `formmethod`, and other valid button attributes through to the builder unchanged. `formaction` or `formmethod` must be explicit in the view and must not bypass the route's authorization or review contract.
+- `action_button_to` passes its `form:` hash to Rails unchanged, including form-level `data`, `class`, and authenticity-token options. The button's `data` belongs in `html_options`, not in `form:`. The helper must not manually create, suppress, copy, or cache CSRF tokens.
+
+#### Disabled and unavailable controls
+
+- Native buttons may use `disabled: true`; retain the real `disabled` attribute and, when supplied, `aria-describedby` pointing to visible explanatory copy.
+- HTML has no disabled anchor. `action_link_to(disabled: true)` must render a non-focusable `<span>` with the controlled button classes, `aria-disabled="true"`, no `href`, and no click/keyboard binding. It may retain safe accessibility attributes such as `aria-describedby`, but must discard navigation-only `target`, `rel`, and `download` attributes. It must never render a live anchor with only `aria-disabled` or CSS/pointer-event suppression.
+- Prefer omitting unavailable navigation when the destination is irrelevant or unauthorized. Use the disabled-span representation only when seeing a temporarily unavailable destination teaches the user the workflow. `aria-disabled` communicates state but does not enforce authorization and does not itself prevent activation.
+
+#### Pass-through attributes and accessible names
+
+- Preserve ordinary HTML attributes and nested Rails `data:` and `aria:` hashes without renaming, filtering, serializing, or merging their values, except for the controlled `class` rule and the disabled-link restrictions above. Rails remains responsible for converting keys such as `data: { action: "review-dialog#open" }` to attributes.
+- A visible text `label` is the default accessible name. Icon-only content requires the caller to provide a nonblank `aria: { label: "…" }`; the helper must raise `ArgumentError` when it can identify icon-only/blank content without one. The helper does not invent an accessible name from a route or icon title.
+- `action_button` must preserve Stimulus and Register bindings exactly, including `data-controller`, `data-action`, target, value, keyboard-command metadata, `id`, `name`, `value`, `aria-controls`, and `aria-expanded`. It must not parse, reorder, prefix, or replace binding strings. Adopting the helper must not change Register command dispatch, shortcut behavior, tab order, or focus restoration.
+- Form association is caller-owned. Preserve an explicit button `form="form-id"` attribute unchanged; do not confuse it with `action_button_to`'s `form:` options hash.
+
+#### Review and confirmation routing
+
+The helper never adds `data-turbo-confirm`, browser `confirm()`, or a review dialog. A consequential page-level trigger must follow the interaction contract selected by its shell:
+
+1. For a server-rendered review page, render the route to review with `action_link_to`; the final state change on that page uses `action_button_to` or `action_submit`.
+2. For an already-established native dialog/Stimulus review, render its opener with `action_button` and pass the dialog's `data`/ARIA bindings unchanged; the final action is the dialog's existing form submit.
+
+The trigger must not submit the state change directly when review is required. The final form must route to the existing authorized command/service and retain its required lock version, idempotency key, reason, or other domain fields.
+
+### Controlled CSS output
+
+The component classes are:
 
 ```text
 btn
@@ -489,7 +573,7 @@ btn--standard
 btn--large
 ```
 
-Prefer a helper or shared partial (for example `action_button`) that emits this matrix so views do not hand-author four-class strings. Concepts that must remain independent:
+Concepts that remain independent are:
 
 - Label
 - HTML behavior (`<a>` vs `<button>` / form)
@@ -498,33 +582,60 @@ Prefer a helper or shared partial (for example `action_button`) that emits this 
 - Size
 - Review requirement
 
-### Legacy class mapping (UDS-1)
+### Legacy alias and deprecation sequence (UDS-1)
 
-| Current class | Direction |
-|---|---|
-| `btn` (default solid/primary) | `btn--solid btn--brand` (or equivalent default) |
-| `btn--secondary` | `btn--outline btn--neutral` |
-| `btn--danger` | Context-dependent: page trigger → often `btn--outline btn--danger`; review final → `btn--solid btn--danger` |
-| `btn--ghost` | `btn--ghost btn--neutral` |
+| Legacy shorthand | Compatibility meaning during migration | Final direction |
+|---|---|---|
+| `btn` alone | `btn--solid btn--brand btn--standard` | Migrate to the helper; a bare `btn` is no longer a complete variant. |
+| `btn--secondary` | `btn--outline btn--neutral btn--standard` | Remove. It is not part of the new vocabulary. |
+| `btn--danger` without a style class | Legacy solid-danger, standard-size appearance | Migrate each use by stage. The `btn--danger` token remains, but only as the canonical **intent** class and never as a complete variant. |
+| `btn--ghost` without an intent or size | `btn--ghost btn--neutral btn--standard` | The token remains as the canonical **style** class, but shorthand use is removed. |
 
-Keep aliases during migration so existing templates do not break in one cutover.
+Use this sequence rather than changing every screen in one cutover:
+
+1. **Alias release:** add the new matrix and narrowly scoped compatibility selectors for the shorthand forms above. Add the helper and its unit tests first. Do not change the meaning of existing templates in this release.
+2. **Representative adoption release:** migrate one administrative form/show flow, one server-rendered or native-dialog review flow, and one Register command cluster. Classify every legacy danger use as outline trigger or solid final action; do not mechanically translate it. Add the selected view/integration tests below.
+3. **Broad adoption releases:** migrate by bounded surface, keeping aliases while repository scans and visual review identify remaining shorthand. New or materially changed views use only the helper contract.
+4. **Deprecation enforcement:** make CI fail on new `btn--secondary`, bare `btn`, style-less `btn--danger`, and incomplete `btn--ghost` usage outside the compatibility stylesheet and an explicit temporary allowlist.
+5. **Alias removal:** after the scan and representative tests prove there are no callers, remove `btn--secondary` and the bare/default, danger-shorthand, and ghost-shorthand compatibility selectors. Retain `btn--danger` as an intent and `btn--ghost` as a style, always paired with an allowed counterpart and size.
 
 Examples:
 
 ```erb
-<%= link_to "Cancel", product_path(@product),
-      class: "btn btn--ghost btn--neutral btn--standard" %>
+<%= action_link_to "Cancel", product_path(@product),
+      style: :ghost, intent: :neutral %>
 
-<button type="button"
-        class="btn btn--outline btn--warning btn--standard">
-  Cancel Request
-</button>
+<%= action_button "Cancel Request",
+      style: :outline, intent: :warning,
+      data: { action: "review-dialog#open" },
+      aria: { controls: "cancel-request-review", expanded: false } %>
 
-<%= button_to "Post-Void", post_void_path(@transaction),
-      class: "btn btn--solid btn--danger btn--standard" %>
+<%# Page-level Post-Void is a danger outline trigger (see surface-contracts.md), not a solid final. %>
+<%= action_button "Post-Void",
+      style: :outline, intent: :danger,
+      data: { action: "review-dialog#open" },
+      aria: { controls: "post-void-review", expanded: false } %>
+
+<%# Solid danger is the review dialog's final commit, via the existing form. %>
+<%= action_submit f, "Post-Void",
+      style: :solid, intent: :danger %>
 ```
 
 Do not infer warning or danger intent by scanning label text for words such as `Cancel`, `Remove`, or `Reverse`.
+
+### Tests required before broad adoption
+
+Implement the following representative tests in the alias and representative-adoption releases; do not defer them until the repository-wide migration:
+
+| Test | Representative assertions |
+|---|---|
+| `test/helpers/action_button_helper_test.rb` | Each entry point generates the expected `a`, standalone `form > button`, existing-form submit button, or `button[type=button]`; exact controlled classes appear once; every allowed style/intent/size value works; invalid values, invalid pairs, caller classes, missing `method:`, and submitting `action_button` raise `ArgumentError`. |
+| `test/helpers/action_button_helper_test.rb` — Rails attributes | `action_button_to` retains the requested method override and authenticity-token behavior; button and form `data` land on the correct elements; a disabled navigation renders a `span[aria-disabled=true]` without `href`; native disabled buttons retain `disabled`; `aria-label`, `aria-describedby`, `form`, `name`, and `value` pass through unchanged. |
+| `test/integration/tender_types_admin_test.rb` | Use Tender Type edit/show as the administrative reference: Cancel is an anchor with no non-GET method; Save is the existing form's submit; Deactivate/Reactivate are standalone CSRF-preserving forms with their explicit route methods; unavailable or unauthorized actions are omitted. |
+| `test/integration/customer_requests_admin_test.rb` | Use customer-request cancellation as the review reference: the page-level `Review cancellation` button only opens the native dialog; the final cancellation is the state-changing form submit with solid-danger classes, explicit HTTP semantics, and required domain fields. No generated confirmation attribute bypasses review. |
+| `test/integration/pos_register_test.rb` | Use the `Cash (F1)` command as the Register reference: it remains `button[type=button]`; its exact `data-action="register-workspace#chooseCash"`, `data-register-workspace-target="cashButton"`, disabled state, accessible name, and relative DOM order remain unchanged after helper adoption. |
+
+Use parsed-element assertions (`assert_select` plus attribute assertions), not class-string-only snapshots. For `button_to`, assert the outer form action/method, hidden method override where applicable, authenticity-token presence under the test environment's configured behavior, and the inner button separately. Controller/service authorization and business-effect tests remain required and are not replaced by these rendering tests.
 
 ## Accessibility requirements
 

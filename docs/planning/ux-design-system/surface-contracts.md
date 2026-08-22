@@ -4,7 +4,7 @@ Status: **Proposed**
 
 Defines presentation contracts for three related but distinct surfaces. Do not apply one layout to all three.
 
-Inspirational receipt layout: [`docs/drafts/phase-7.1-ux-refactor/receipt-overview-mockup.html`](../../drafts/phase-7.1-ux-refactor/receipt-overview-mockup.html).
+Inspirational receipt layout: [`receipt-overview-mockup.html`](receipt-overview-mockup.html) (planning packet; not binding).
 
 ## 1. Register basket (working transaction)
 
