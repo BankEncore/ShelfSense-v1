@@ -1,4 +1,17 @@
-Designing for bookstores is a delightful balancing act. You want to capture that cozy, literary charm—think warm paper, coffee shop wood tones, and soft lighting—without sacrificing the crisp visual hierarchy needed when a user is staring at a 500-row purchase order or processing a rush-hour checkout line.
+# Warm Parchment UX roadmap (draft)
+
+**Status:** Superseded as authority.
+
+Canonical visual and program docs:
+
+- [Warm Parchment](../../planning/ux-design-system/warm-parchment.md)
+- [Program plan](../../planning/ux-design-system/program-plan.md)
+- [UX design system README](../../planning/ux-design-system/README.md)
+
+The text below is retained for history and inspiration only.
+
+---
+ You want to capture that cozy, literary charm—think warm paper, coffee shop wood tones, and soft lighting—without sacrificing the crisp visual hierarchy needed when a user is staring at a 500-row purchase order or processing a rush-hour checkout line.
 
 Here is a refined framework for a **"Warm Parchment"** theme, built specifically to balance data density with bookstore aesthetics.
 

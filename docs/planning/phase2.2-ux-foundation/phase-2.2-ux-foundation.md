@@ -493,3 +493,7 @@ Phase 2.2 is complete when:
 ShelfSense has a readable, consistent administrative interface and a reusable HTML/CSS UX foundation. Users can navigate merchandise and configuration records, understand their state and relationships, complete forms with useful guidance, and recover from validation errors without interpreting the underlying database schema.
 
 Phase 3 can then introduce inventory balances, adjustments, units, and ledger history using established presentation patterns rather than adding another layer of barebones CRUD views.
+
+## Later design-system evolution
+
+Visual tokens may be superseded by the cross-phase [UX design system](../ux-design-system/README.md) (Warm Parchment; [ADR-022](../../adr/ADR-022-warm-parchment-visual-tokens.md) Proposed) without discarding Phase 2.2 architecture: Propshaft/component classes, shared partials and helpers, accessibility rules, money UX, admin/operations/Register runtime boundaries, and no business logic in presentation code.

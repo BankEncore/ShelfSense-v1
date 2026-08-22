@@ -15,3 +15,5 @@ Status: **application slices 7.1–7.7 complete** on integration branch `phase-7
 Phase 7 ships the bookstore-operable path: configure suppliers → create stock or quantity-one customer requests → locate/reserve or special-order Standard merchandise → send POs → receive → withhold reserved stock → complete pickup on the existing Register → close POs → correct posted receipts without rewriting facts.
 
 Drafts under `docs/drafts/orders-and-receiving/` are superseded stubs. Implement against this packet and the inventory posting contract’s Phase 7 section.
+
+Presentation convergence (Warm Parchment, button semantics, shared primitives) is tracked in the cross-phase [UX design system](../ux-design-system/README.md)—not as a Phase 7 domain slice. Phase 7 ops chrome minimum and shell boundaries in this packet remain authoritative for purchasing workspaces.

@@ -154,6 +154,7 @@ Authoritative Phase 2.2 documents:
 
 * [phase-2.2-ux-foundation.md](phase2.2-ux-foundation/phase-2.2-ux-foundation.md) — scope and acceptance criteria  
 * [UX conventions](../ux-conventions.md) — reusable admin presentation patterns  
+* [UX design system](../ux-design-system/README.md) — Proposed Warm Parchment / action semantics (cross-phase; not Phase 7)
 
 Phase 2.2 establishes an HTML/CSS-first administrative UX foundation:
 

@@ -77,6 +77,19 @@ Defined on `:root` in `application.css`:
 
 Keep keyboard focus visible. Do not communicate meaning by color alone (pair badges with text labels).
 
+## Design system evolution
+
+Phase 2.2 palette tokens above remain **implemented** until the UX design-system foundation ships.
+
+**Proposed** cross-phase direction:
+
+- [UX design system](planning/ux-design-system/README.md) — Warm Parchment visual system, adoption program (UDS-0–UDS-3), migration matrix
+- [Warm Parchment](planning/ux-design-system/warm-parchment.md) — proposed token and density rules (WCAG AA baseline)
+- [Button and action semantics](planning/ux-design-system/button-action-semantics.md) — wording, intent, style, size, review dialogs (independent of hex values)
+- [ADR-022](adr/ADR-022-warm-parchment-visual-tokens.md) — Proposed palette supersession
+
+When UDS-1 is implemented, update this Color tokens section to the accepted Warm Parchment vocabulary and retain architecture below (shells, partials, money UX, Hotwire boundaries).
+
 ## Hotwire
 
 Admin screens remain Propshaft CSS + ERB (Phase 2.2). The admin layout loads `application.js` (no Turbo/Stimulus) and sets `data-turbo="false"` so admin forms stay full-page POSTs. `application.js` may import small vanilla helpers for Admin-only enable/disable behavior, such as Store receipt-message textareas. Phase 5 Slice 2 uses Importmap + Turbo + Stimulus for the cashier Register workspace only (`pos.js` via the POS layout; [register-workspace.md](planning/phase4-6-point-of-sale/phase5-cash-register/register-workspace.md)). Do not add Hotwire to admin chrome as a side effect of POS work.
@@ -88,3 +101,5 @@ Reuse this shell, partials, helpers, and money/status conventions for inventory 
 ## Consequential Phase 7 actions
 
 Sending purchase orders, cancelling or re-sourcing quantity, cancelling customer requests, and correcting posted receipts use native modal review dialogs rather than browser confirmation prompts. The server-rendered dialog content summarizes the affected records and domain consequences; the submitted form continues to invoke the existing command/service and idempotency boundary. Each review uses a consequence-specific background, receives initial focus, relies on native modal focus containment, supports Escape, restores focus to its visible trigger, and provides an explicit visible cancel button. Final action labels state the exact business effect rather than using generic “Confirm” wording.
+
+Trigger vs final-action visual treatment and label rules: [button-action-semantics.md](planning/ux-design-system/button-action-semantics.md).

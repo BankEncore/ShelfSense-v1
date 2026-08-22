@@ -176,7 +176,7 @@ The Phase 2.2 deliverable is:
 
 > An authorized administrator can navigate a consistent administrative shell, manage products with searchable/filterable indexes and dollar-oriented price fields, and use the same presentation patterns on Stores and Merchandise Classes.
 
-Authoritative plan: [phase-2.2-ux-foundation.md](docs/planning/phase2.2-ux-foundation/phase-2.2-ux-foundation.md). Conventions: [UX conventions](docs/ux-conventions.md).
+Authoritative plan: [phase-2.2-ux-foundation.md](docs/planning/phase2.2-ux-foundation/phase-2.2-ux-foundation.md). Conventions: [UX conventions](docs/ux-conventions.md). Proposed cross-phase visual evolution: [UX design system](docs/planning/ux-design-system/README.md) (Warm Parchment; not a Phase 7 slice).
 
 ### Phase 3: Inventory foundation
 
@@ -265,6 +265,7 @@ Start with the [documentation index](docs/README.md). Key references include:
 - [Phase 1 plan](docs/planning/phase1-operational-foundation/phase1-plan.md), [schema](docs/planning/phase1-operational-foundation/phase1-schema.md), and [authorization contract](docs/planning/phase1-operational-foundation/phase1-authorization.md)
 - [Phase 2 plan](docs/planning/phase2-financial-classification-and-merchandise-foundation/phase2-plan.md), [schema](docs/planning/phase2-financial-classification-and-merchandise-foundation/phase-2-database-schema.md), and [authorization contract](docs/planning/phase2-financial-classification-and-merchandise-foundation/phase2-authorization.md)
 - [Phase 2.2 UX foundation](docs/planning/phase2.2-ux-foundation/phase-2.2-ux-foundation.md) and [UX conventions](docs/ux-conventions.md)
+- [UX design system](docs/planning/ux-design-system/README.md) (Proposed Warm Parchment / action semantics) and [ADR-022](docs/adr/ADR-022-warm-parchment-visual-tokens.md)
 - [Phase 4 POS plan](docs/planning/phase4-6-point-of-sale/phase4-point-of-sale/phase4-plan.md), [Phase 5 cash register plan](docs/planning/phase4-6-point-of-sale/phase5-cash-register/phase5-plan.md), [Phase 6 POS MVP plan](docs/planning/phase4-6-point-of-sale/phase6-pos-mvp/phase6-plan.md), [Phase 6.1 classification and identifiers](docs/planning/phase6.1-merchandise-classification-and-identifiers/README.md), and [Phase 7 orders and receiving](docs/planning/phase7-orders-and-receiving/README.md)
 - [Development guide](docs/development.md)
 - [Testing and CI](docs/testing.md)
