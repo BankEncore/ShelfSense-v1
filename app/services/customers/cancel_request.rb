@@ -42,7 +42,7 @@ module Customers
         active_orders = active_orders_for(peek)
         unsent_orders = active_orders.select(&:unsent?)
         if @cancel_draft_order == true
-          cancel_draft_orders!(active_orders) if active_orders.any?
+          cancel_draft_orders!(unsent_orders) if unsent_orders.any?
         elsif unsent_orders.any?
           if @cancel_draft_order.nil?
             raise Customers::Error, DRAFT_ORDER_DECISION_REQUIRED
@@ -104,7 +104,7 @@ module Customers
             cancellation_reason: request.cancellation_reason,
             allocation_released: allocation.present?,
             cancel_draft_order: @cancel_draft_order,
-            draft_orders_cancelled: @cancel_draft_order == true && active_orders.any?
+            draft_orders_cancelled: @cancel_draft_order == true && unsent_orders.any?
           }
         )
 

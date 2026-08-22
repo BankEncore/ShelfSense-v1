@@ -239,8 +239,14 @@ class Customers::CancelRequestConcurrencyTest < ActiveSupport::TestCase
       assert_not request.cancelled?, "request should remain active when draft-order cancel loses to send"
       assert PurchaseOrderLine.find_by(order_id: request.orders.first.id).present?
     else
-      assert request.cancelled?, "expected cancel to finish before send when no sent-PO conflict was raised"
-      assert_not_equal "sent", po.status
+      assert request.cancelled?, "expected cancel to finish when no sent-PO conflict was raised"
+      order = request.orders.first
+      if po.sent?
+        assert_nil order.reload.cancelled_at
+        assert PurchaseOrderLine.find_by(order_id: order.id).present?
+      else
+        assert_not_equal "sent", po.status
+      end
     end
   end
 

@@ -275,8 +275,8 @@ class Purchasing::OrdersAndDraftPoTest < ActiveSupport::TestCase
     assert order.purchase_order_line.present?
   end
 
-  test "cancel request rejects cancel_draft_order when purchase order was already sent" do
-    oos = pos_sellable_variant(actor: @actor, tax_class: @tax, name: "Sent PO Block")
+  test "cancel request with cancel_draft_order true leaves sent order intact when no unsent order remains" do
+    oos = pos_sellable_variant(actor: @actor, tax_class: @tax, name: "Sent PO Only")
     SupplierVariantSource.create!(
       supplier: @supplier,
       product_variant: oos,
@@ -299,19 +299,84 @@ class Purchasing::OrdersAndDraftPoTest < ActiveSupport::TestCase
       transmission_method: "email"
     )
 
-    error = assert_raises(Customers::Error) do
-      Customers::CancelRequest.call(
-        customer_request: request,
-        actor: @actor,
-        reason: "too late",
-        cancel_draft_order: true
-      )
-    end
-    assert_equal Customers::CancelRequest::SENT_PO_CONFLICT, error.message
-    assert_equal "ordered", request.reload.status
+    Customers::CancelRequest.call(
+      customer_request: request,
+      actor: @actor,
+      reason: "customer changed mind",
+      cancel_draft_order: true
+    )
+
+    assert_equal "cancelled", request.reload.status
     assert_nil order.reload.cancelled_at
     assert po.reload.sent?
     assert PurchaseOrderLine.find_by(order_id: order.id).present?
+  end
+
+  test "cancel request cancels unsent replacement after re-source while preserving sent predecessor" do
+    other_supplier = Supplier.create!(name: "Alt Supplier", code: "alt_#{SecureRandom.hex(2)}")
+    oos = pos_sellable_variant(actor: @actor, tax_class: @tax, name: "Re-source Cancel")
+    SupplierVariantSource.create!(
+      supplier: @supplier,
+      product_variant: oos,
+      pricing_method: "direct_unit_cost",
+      expected_unit_cost_cents: 500,
+      organization_preferred: true
+    )
+    SupplierVariantSource.create!(
+      supplier: other_supplier,
+      product_variant: oos,
+      pricing_method: "direct_unit_cost",
+      expected_unit_cost_cents: 520
+    )
+    request = Customers::CreateRequest.call(
+      store: @store,
+      customer: @customer,
+      product_variant: oos,
+      actor: @actor
+    )
+    original_order = request.orders.first
+    original_po = original_order.purchase_order
+    original_line = original_order.purchase_order_line
+
+    Purchasing::GeneratePurchaseOrder.call(purchase_order: original_po, actor: @actor)
+    Purchasing::SendPurchaseOrder.call(
+      purchase_order: original_po.reload,
+      actor: @actor,
+      transmission_method: "email"
+    )
+
+    result = Purchasing::CancelPurchaseOrderQuantity.call(
+      purchase_order_line: original_line,
+      actor: @actor,
+      quantity: 1,
+      source: "buyer",
+      reason: "change supplier",
+      re_source: true,
+      replacement_supplier: other_supplier
+    )
+    replacement = result[:replacement_order]
+    cancellation = original_line.cancellations.order(:created_at).last
+
+    Customers::CancelRequest.call(
+      customer_request: request,
+      actor: @actor,
+      reason: "customer changed mind",
+      cancel_draft_order: true
+    )
+
+    request.reload
+    original_order.reload
+    replacement.reload
+    original_po.reload
+    original_line.reload
+
+    assert_equal "cancelled", request.status
+    assert_equal "closed", original_po.status
+    assert_nil original_order.cancelled_at
+    assert_equal 1, original_line.cancelled_quantity
+    assert_equal cancellation.id, original_line.cancellations.order(:created_at).last.id
+    assert replacement.cancelled?
+    assert_nil PurchaseOrderLine.find_by(order_id: replacement.id)
   end
 
   test "missing expected cost without source is rejected" do
