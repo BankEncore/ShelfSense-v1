@@ -51,7 +51,7 @@ module Admin
           "Customer request ##{request.number} created."
         end
       redirect_to admin_customer_request_path(request), notice: notice
-    rescue Customers::Error, ActiveRecord::RecordNotFound => e
+    rescue Customers::Error, Money::ParseCents::Error, ActiveRecord::RecordNotFound => e
       @customer_request = CustomerRequest.new(
         store: current_store,
         customer_id: params.dig(:customer_request, :customer_id),
@@ -124,9 +124,7 @@ module Admin
     def optional_cents(value)
       return if value.blank?
 
-      Integer(value)
-    rescue ArgumentError, TypeError
-      nil
+      Money::ParseCents.call(value)
     end
   end
 end

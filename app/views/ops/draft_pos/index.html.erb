@@ -19,7 +19,7 @@
         <tr>
           <td><%= po.supplier.admin_label %></td>
           <td><%= po.purchase_order_lines.size %></td>
-          <td><%= po.expected_merchandise_total_cents %> cents</td>
+          <td><%= format_money_cents(po.expected_merchandise_total_cents) %></td>
           <td><%= link_to "Open", ops_purchase_order_path(po) %></td>
         </tr>
       <% end %>

@@ -11,7 +11,7 @@
       · <%= receipt.supplier.admin_label %>
       · <%= receipt.store.admin_label %>
       · <%= receipt.status %>
-      · merchandise <%= receipt.merchandise_total_cents %> cents
+      · merchandise <%= format_money_cents(receipt.merchandise_total_cents) %>
     </li>
   <% end %>
 </ul>

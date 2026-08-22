@@ -7,7 +7,7 @@
       <thead><tr>
         <th scope="col">PO</th><th scope="col">Item</th><th scope="col">Open</th><th scope="col">Received</th>
         <th scope="col">Matched*</th><th scope="col">Unplanned*</th><th scope="col">Over-shipment</th>
-        <th scope="col">Unit cost</th><th scope="col">Customer</th>
+        <th scope="col">Expected unit cost</th><th scope="col">Actual unit cost</th><th scope="col">Customer</th>
         <% if @receipt.draft? && effective_permissions.include?("purchase_receipts.manage") %><th scope="col">Edit</th><% end %>
       </tr></thead>
       <tbody>
@@ -21,17 +21,18 @@
             <td><%= open_quantity %></td><td><%= line.received_quantity %></td>
             <td><%= line.matched_quantity %></td><td><%= line.unplanned_quantity %></td>
             <td><% if over_shipment.positive? %><strong>Yes — <%= over_shipment %> over open quantity</strong><% else %>No<% end %></td>
-            <td><%= line.actual_unit_cost_cents %></td>
+            <td><%= format_money_cents(po_line.expected_unit_cost_cents_snapshot) %></td>
+            <td><%= format_money_cents(line.actual_unit_cost_cents) %></td>
             <td><%= po_line.order.customer_request.present? ? "Req ##{po_line.order.customer_request.number}" : "—" %></td>
             <% if @receipt.draft? && effective_permissions.include?("purchase_receipts.manage") %>
               <td><%= form_with url: ops_receiving_update_line_path(@receipt, line), method: :patch, local: true, html: { class: "ops-inline-form", data: { dirty_track: true } } do %>
                 <%= hidden_field_tag :lock_version, @receipt.lock_version %>
                 <label>Qty <input type="number" name="received_quantity" value="<%= @selected_row_id.to_s == line.id.to_s ? @submitted&.fetch("received_quantity", line.received_quantity) : line.received_quantity %>" min="1" required <%= "autofocus aria-describedby=receipt_line_#{line.id}_error" if @selected_row_id.to_s == line.id.to_s %>></label>
-                <label>Cost <input type="number" name="actual_unit_cost_cents" value="<%= @selected_row_id.to_s == line.id.to_s ? @submitted&.fetch("actual_unit_cost_cents", line.actual_unit_cost_cents) : line.actual_unit_cost_cents %>" min="0" required></label>
+                <label>Actual unit cost ($) <input type="text" inputmode="decimal" name="actual_unit_cost_cents" value="<%= @selected_row_id.to_s == line.id.to_s ? @submitted&.fetch("actual_unit_cost_cents", money_field_value(line.actual_unit_cost_cents)) : money_field_value(line.actual_unit_cost_cents) %>" required></label>
                 <label>Notes <input type="text" name="notes" value="<%= @selected_row_id.to_s == line.id.to_s ? @submitted&.fetch("notes", line.notes) : line.notes %>"></label>
                 <button type="submit" data-ops-save data-row-primary>Save</button>
                 <%= render "ops/shared/inline_row_error", action: :update_line, row_id: line.id, id: "receipt_line_#{line.id}_error" %>
-                <% if @conflict && @selected_row_id.to_s == line.id.to_s %><small>Current: qty <%= line.received_quantity %>, cost <%= line.actual_unit_cost_cents %>, notes <%= line.notes.presence || "blank" %>.</small><% end %>
+                <% if @conflict && @selected_row_id.to_s == line.id.to_s %><small>Current: qty <%= line.received_quantity %>, actual cost <%= format_money_cents(line.actual_unit_cost_cents) %>, notes <%= line.notes.presence || "blank" %>.</small><% end %>
               <% end %></td>
             <% end %>
           </tr>

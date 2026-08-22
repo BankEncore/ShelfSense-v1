@@ -2,6 +2,7 @@
 
 module Admin
   class SupplierVariantSourcesController < BaseController
+    rescue_from Money::ParseCents::Error, with: :render_money_error
     before_action -> { require_permission!("suppliers.view") }, only: %i[show]
     before_action -> { require_permission!("suppliers.manage") }, only: %i[new create edit update destroy reactivate]
     before_action :set_supplier, only: %i[new create], if: -> { params[:supplier_id].present? }
@@ -126,6 +127,13 @@ module Admin
 
     private
 
+    def render_money_error(exception)
+      @supplier_variant_source ||= SupplierVariantSource.new
+      @supplier_variant_source.errors.add(:base, exception.message)
+      prepare_form_rerender
+      render(action_name == "update" ? :edit : :new, status: :unprocessable_entity)
+    end
+
     def set_supplier
       @supplier = Supplier.find(params[:supplier_id])
     end
@@ -206,6 +214,9 @@ module Admin
       )
       %i[supplier_list_price_cents discount_basis_points expected_unit_cost_cents].each do |key|
         permitted[key] = nil if permitted[key].blank?
+      end
+      %i[supplier_list_price_cents expected_unit_cost_cents].each do |key|
+        permitted[key] = Money::ParseCents.call(permitted[key]) if permitted[key].present?
       end
       permitted[:organization_preferred] = ActiveModel::Type::Boolean.new.cast(permitted[:organization_preferred])
       permitted

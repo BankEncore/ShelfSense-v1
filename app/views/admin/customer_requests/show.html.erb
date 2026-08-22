@@ -6,6 +6,7 @@
   <dt>Customer</dt><dd><%= link_to @customer_request.customer.admin_label, admin_customer_path(@customer_request.customer) %></dd>
   <dt>Variant</dt><dd><%= @customer_request.product_variant.sku %> (<%= @customer_request.product_variant.variant_type %>)</dd>
   <dt>Status</dt><dd><%= @customer_request.status %></dd>
+  <dt>Estimated customer price</dt><dd><%= @customer_request.estimated_price_cents.nil? ? "—" : format_money_cents(@customer_request.estimated_price_cents) %></dd>
   <dt>Notes</dt><dd><%= @customer_request.notes.presence || "—" %></dd>
   <% if @customer_request.cancelled? %>
     <dt>Cancellation</dt>

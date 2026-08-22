@@ -93,7 +93,7 @@ export default class extends Controller {
     this.pickerTarget.hidden = true
     this.lineIdTarget.value = match.id
     this.quantityTarget.value = match.open_quantity
-    this.costTarget.value = match.expected_unit_cost_cents
+    this.costTarget.value = match.expected_unit_cost
     this.quantityTarget.disabled = false
     this.costTarget.disabled = false
     this.confirmTarget.disabled = false
@@ -116,7 +116,7 @@ export default class extends Controller {
 
   description(match) {
     const request = match.customer_request ? ` · customer request #${match.customer_request}` : " · stock order"
-    return `PO #${match.po_number} · ${match.product} · SKU ${match.sku}${request} · ordered ${match.order_date} · open ${match.open_quantity} · expected ${match.expected_unit_cost_cents}¢`
+    return `PO #${match.po_number} · ${match.product} · SKU ${match.sku}${request} · ordered ${match.order_date} · open ${match.open_quantity} · expected ${match.expected_unit_cost_formatted}`
   }
 
   showMessage(message) {

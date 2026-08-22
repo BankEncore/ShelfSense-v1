@@ -66,15 +66,15 @@ module Ops
         received_at: parse_time(params[:received_at]),
         supplier_document_number: params[:supplier_document_number],
         supplier_document_date: params[:supplier_document_date].presence,
-        freight_cents: params[:freight_cents].presence || 0,
-        handling_cents: params[:handling_cents].presence || 0,
-        supplier_tax_cents: params[:supplier_tax_cents].presence || 0,
-        miscellaneous_charges_cents: params[:miscellaneous_charges_cents].presence || 0,
+        freight_cents: optional_charge_cents(params[:freight_cents]),
+        handling_cents: optional_charge_cents(params[:handling_cents]),
+        supplier_tax_cents: optional_charge_cents(params[:supplier_tax_cents]),
+        miscellaneous_charges_cents: optional_charge_cents(params[:miscellaneous_charges_cents]),
         charge_notes: params[:charge_notes],
         notes: params[:notes]
       )
       redirect_to ops_receiving_path(receipt), notice: "Draft receipt created."
-    rescue Purchasing::Error, ActiveRecord::RecordInvalid, ActiveRecord::RecordNotFound => e
+    rescue Purchasing::Error, Money::ParseCents::Error, ActiveRecord::RecordInvalid, ActiveRecord::RecordNotFound => e
       @submitted = params.to_unsafe_h.slice("supplier_id", "received_at", "supplier_document_number")
       @error_action = :create
       @error_field = :supplier_id
@@ -92,14 +92,16 @@ module Ops
         received_at: parse_time(params[:received_at]) || :__omit__,
         supplier_document_number: params.key?(:supplier_document_number) ? params[:supplier_document_number] : :__omit__,
         supplier_document_date: params.key?(:supplier_document_date) ? params[:supplier_document_date] : :__omit__,
-        freight_cents: params.key?(:freight_cents) ? params[:freight_cents] : :__omit__,
-        handling_cents: params.key?(:handling_cents) ? params[:handling_cents] : :__omit__,
-        supplier_tax_cents: params.key?(:supplier_tax_cents) ? params[:supplier_tax_cents] : :__omit__,
-        miscellaneous_charges_cents: params.key?(:miscellaneous_charges_cents) ? params[:miscellaneous_charges_cents] : :__omit__,
+        freight_cents: parsed_if_present(:freight_cents),
+        handling_cents: parsed_if_present(:handling_cents),
+        supplier_tax_cents: parsed_if_present(:supplier_tax_cents),
+        miscellaneous_charges_cents: parsed_if_present(:miscellaneous_charges_cents),
         charge_notes: params.key?(:charge_notes) ? params[:charge_notes] : :__omit__,
         notes: params.key?(:notes) ? params[:notes] : :__omit__
       )
       redirect_to ops_receiving_path(@receipt), notice: "Receipt updated."
+    rescue Money::ParseCents::Error => e
+      render_mutation_failure(:update, e, field: e.field)
     rescue Purchasing::Error, ActiveRecord::RecordInvalid => e
       render_mutation_failure(:update, e, field: :received_at)
     rescue ActiveRecord::StaleObjectError => e
@@ -117,7 +119,7 @@ module Ops
         purchase_order_line: po_line,
         actor: current_user,
         received_quantity: params.require(:received_quantity),
-        actual_unit_cost_cents: params.require(:actual_unit_cost_cents),
+        actual_unit_cost_cents: required_money_cents(params.require(:actual_unit_cost_cents), :actual_unit_cost_cents),
         notes: params[:notes],
         expected_lock_version: params[:lock_version]
       )
@@ -129,6 +131,8 @@ module Ops
           render :add_line
         end
       end
+    rescue Money::ParseCents::Error => e
+      render_mutation_failure(:add_line, e, field: :actual_unit_cost_cents, row_id: params[:purchase_order_line_id])
     rescue Purchasing::Error, ActiveRecord::RecordInvalid => e
       render_mutation_failure(:add_line, e, field: :received_quantity, row_id: params[:purchase_order_line_id])
     rescue ActiveRecord::StaleObjectError => e
@@ -142,11 +146,13 @@ module Ops
         purchase_order_line: line.purchase_order_line,
         actor: current_user,
         received_quantity: params.require(:received_quantity),
-        actual_unit_cost_cents: params.require(:actual_unit_cost_cents),
+        actual_unit_cost_cents: required_money_cents(params.require(:actual_unit_cost_cents), :actual_unit_cost_cents),
         notes: params.key?(:notes) ? params[:notes] : line.notes,
         expected_lock_version: params[:lock_version]
       )
       redirect_to ops_receiving_path(@receipt), notice: "Line updated."
+    rescue Money::ParseCents::Error => e
+      render_mutation_failure(:update_line, e, field: :actual_unit_cost_cents, row_id: params[:line_id])
     rescue Purchasing::Error, ActiveRecord::RecordInvalid => e
       render_mutation_failure(:update_line, e, field: :received_quantity, row_id: params[:line_id])
     rescue ActiveRecord::StaleObjectError => e
@@ -215,22 +221,55 @@ module Ops
         purchase_receipt_line: line,
         actor: current_user,
         reason: params.require(:reason),
-        corrected_unit_cost_cents: params[:corrected_unit_cost_cents],
+        corrected_unit_cost_cents: required_money_cents(params[:corrected_unit_cost_cents], :corrected_unit_cost_cents),
         value_delta_cents: params[:value_delta_cents],
         idempotency_key: params[:idempotency_key].presence || SecureRandom.uuid_v7
       )
       redirect_to ops_receiving_path(@receipt), notice: "Cost correction posted."
+    rescue Money::ParseCents::Error => e
+      render_mutation_failure(:correct_cost, e, field: :corrected_unit_cost_cents, row_id: params[:line_id])
     rescue Purchasing::Error, ActiveRecord::RecordInvalid => e
       redirect_to ops_receiving_path(@receipt), alert: e.message
     end
 
     private
 
+    MoneyFieldError = Class.new(Money::ParseCents::Error) do
+      attr_reader :field
+
+      def initialize(message, field)
+        @field = field
+        super(message)
+      end
+    end
+
+    def parsed_if_present(field)
+      return :__omit__ unless params.key?(field)
+
+      optional_charge_cents(params[field], field)
+    end
+
+    def optional_charge_cents(value, field = nil)
+      Money::ParseCents.call(value) || 0
+    rescue Money::ParseCents::Error => e
+      raise MoneyFieldError.new(e.message, field) if field
+
+      raise
+    end
+
+    def required_money_cents(value, field)
+      Money::ParseCents.call(value).tap { |cents| raise MoneyFieldError.new("is required", field) if cents.nil? }
+    rescue Money::ParseCents::Error => e
+      raise e if e.is_a?(MoneyFieldError)
+
+      raise MoneyFieldError.new(e.message, field)
+    end
+
     def render_mutation_failure(action, exception, field:, row_id: nil, stale: false)
       @submitted = params.to_unsafe_h.slice(
         "received_at", "supplier_document_number", "supplier_document_date", "freight_cents", "handling_cents",
         "supplier_tax_cents", "miscellaneous_charges_cents", "charge_notes", "notes", "purchase_order_line_id",
-        "received_quantity", "actual_unit_cost_cents"
+        "received_quantity", "actual_unit_cost_cents", "corrected_unit_cost_cents", "reason"
       )
       @error_action = action
       @error_field = field
@@ -314,7 +353,8 @@ module Ops
         customer_request: request&.number,
         order_date: line.purchase_order.sent_at&.to_date || line.purchase_order.created_at.to_date,
         open_quantity: line.open_quantity,
-        expected_unit_cost_cents: line.expected_unit_cost_cents_snapshot
+        expected_unit_cost: helpers.money_field_value(line.expected_unit_cost_cents_snapshot),
+        expected_unit_cost_formatted: helpers.format_money_cents(line.expected_unit_cost_cents_snapshot)
       }
     end
 

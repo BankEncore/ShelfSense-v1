@@ -38,7 +38,7 @@
           Ordered <%= line.ordered_quantity %>
           · open <%= line.open_quantity %>
           · cancelled <%= line.cancelled_quantity %>
-          · expected cost <%= line.expected_unit_cost_cents_snapshot %> cents
+          · expected unit cost <%= format_money_cents(line.expected_unit_cost_cents_snapshot) %>
           <% if order.customer_request %>
             · request #<%= order.customer_request.number %> (<%= order.customer_request.status %>)
           <% end %>
@@ -113,8 +113,8 @@
               </select>
             </label>
             <label>
-              Expected cost (cents, if no source)
-              <input type="number" name="expected_unit_cost_cents" min="0">
+              Expected unit cost ($, if no source)
+              <input type="text" inputmode="decimal" name="expected_unit_cost_cents">
             </label>
             <button type="submit">Cancel quantity</button>
           <% end %>

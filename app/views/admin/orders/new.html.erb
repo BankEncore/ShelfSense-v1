@@ -40,11 +40,11 @@
       <%= form.label :requested_quantity, "Quantity" %>
       <%= form.number_field :requested_quantity, value: @order.requested_quantity || 1, min: 1, required: true %>
     </p>
-    <p>
-      <%= form.label :expected_unit_cost_cents, "Expected unit cost (cents)" %>
-      <%= form.number_field :expected_unit_cost_cents, min: 0, value: @preferred_expected_cost_cents %>
-      <span class="muted">Required when no preferred source supplies cost.</span>
-    </p>
+    <%= render "shared/currency_field",
+          name: "order[expected_unit_cost_cents]", id: "order_expected_unit_cost_cents",
+          label: "Expected unit cost ($)",
+          value: params.dig(:order, :expected_unit_cost_cents).presence || money_field_value(@preferred_expected_cost_cents),
+          help: "Required when no preferred source supplies cost." %>
     <p>
       <%= form.label :notes %>
       <%= form.text_area :notes, value: @order.notes %>

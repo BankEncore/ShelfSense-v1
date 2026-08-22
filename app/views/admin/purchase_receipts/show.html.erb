@@ -4,8 +4,8 @@
   <%= @receipt.supplier.admin_label %>
   · <%= @receipt.store.admin_label %>
   · <%= @receipt.status %>
-  · merchandise <%= @receipt.merchandise_total_cents %> cents
-  · ancillary <%= @receipt.ancillary_total_cents %> cents
+  · merchandise <%= format_money_cents(@receipt.merchandise_total_cents) %>
+  · ancillary <%= format_money_cents(@receipt.ancillary_total_cents) %>
 </p>
 <p>
   <%= link_to "All receipts", admin_purchase_receipts_path %>
@@ -41,7 +41,7 @@
         <td><%= line.received_quantity %></td>
         <td><%= line.reversed_quantity %></td>
         <td><%= line.net_matched_quantity %></td>
-        <td><%= line.actual_unit_cost_cents %></td>
+        <td><%= format_money_cents(line.actual_unit_cost_cents) %></td>
         <td>
           <% if line.corrections.any? %>
             <ul>
@@ -49,7 +49,7 @@
                 <li>
                   <%= correction.correction_type %>
                   <% if correction.quantity.present? %>· qty <%= correction.quantity %><% end %>
-                  <% if correction.value_delta_cents.present? %>· Δ<%= correction.value_delta_cents %>¢<% end %>
+                  <% if correction.value_delta_cents.present? %>· value change <%= format_money_cents(correction.value_delta_cents) %><% end %>
                   · <%= correction.reason %>
                 </li>
               <% end %>
@@ -84,8 +84,9 @@
                   <input type="text" name="reason" required>
                 </label>
                 <label>
-                  Corrected unit cost (cents)
-                  <input type="number" name="corrected_unit_cost_cents" min="0" required>
+                  Corrected unit cost ($)
+                  <input type="text" inputmode="decimal" name="corrected_unit_cost_cents" value="<%= @selected_line_id == line.id ? @submitted_cost : nil %>" required aria-invalid="<%= @selected_line_id == line.id %>">
+                  <% if @selected_line_id == line.id %><span class="field-error"><%= @money_error %></span><% end %>
                 </label>
                 <button type="submit">Correct cost</button>
               <% end %>

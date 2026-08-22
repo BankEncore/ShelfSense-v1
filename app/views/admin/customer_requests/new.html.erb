@@ -47,15 +47,14 @@
         <%= form.collection_select :supplier_id, @suppliers, :id, :admin_label,
               { selected: @preferred_source&.supplier_id, include_blank: "Preferred source (if any)" } %>
       </p>
-      <p>
-        <%= form.label :expected_unit_cost_cents, "Expected unit cost (cents, OOS Standard)" %>
-        <%= form.number_field :expected_unit_cost_cents, min: 0, value: @preferred_source&.derived_expected_unit_cost_cents %>
-      </p>
+      <%= render "shared/currency_field",
+            name: "customer_request[expected_unit_cost_cents]", id: "customer_request_expected_unit_cost_cents",
+            label: "Expected unit cost ($, OOS Standard)",
+            value: params.dig(:customer_request, :expected_unit_cost_cents).presence || money_field_value(@preferred_source&.derived_expected_unit_cost_cents) %>
     <% end %>
-    <p>
-      <%= form.label :estimated_price_cents, "Estimated price (cents)" %>
-      <%= form.number_field :estimated_price_cents, min: 0 %>
-    </p>
+    <%= render "shared/currency_field",
+          name: "customer_request[estimated_price_cents]", id: "customer_request_estimated_price_cents",
+          label: "Estimated customer price ($)", value: params.dig(:customer_request, :estimated_price_cents) %>
     <p>
       <%= form.label :notes %>
       <%= form.text_area :notes %>

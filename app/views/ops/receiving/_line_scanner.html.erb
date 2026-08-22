@@ -24,8 +24,8 @@
         <input type="number" name="received_quantity" value="<%= @error_action == :add_line ? @submitted&.fetch("received_quantity", nil) : nil %>" min="1" required <%= "disabled" unless @error_action == :add_line %> <%= "autofocus aria-describedby=receipt_add_error" if @error_action == :add_line %> data-receiving-lookup-target="quantity">
       </label>
       <label>
-        Actual unit cost (cents)
-        <input type="number" name="actual_unit_cost_cents" value="<%= @error_action == :add_line ? @submitted&.fetch("actual_unit_cost_cents", nil) : nil %>" min="0" required <%= "disabled" unless @error_action == :add_line %> data-receiving-lookup-target="cost">
+        Actual unit cost ($)
+        <input type="text" inputmode="decimal" name="actual_unit_cost_cents" value="<%= @error_action == :add_line ? @submitted&.fetch("actual_unit_cost_cents", nil) : nil %>" required <%= "disabled" unless @error_action == :add_line %> aria-invalid="<%= @error_field == :actual_unit_cost_cents %>" data-receiving-lookup-target="cost">
       </label>
       <label>Notes <input type="text" name="notes" value="<%= @error_action == :add_line ? @submitted&.fetch("notes", nil) : nil %>"></label>
       <button type="submit" <%= "disabled" unless @error_action == :add_line %> data-receiving-lookup-target="confirm">Confirm and add line</button>

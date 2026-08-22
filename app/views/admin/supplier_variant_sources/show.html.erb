@@ -8,11 +8,11 @@
 <p>
   Pricing: <%= @supplier_variant_source.pricing_method.humanize %>
   <% if @supplier_variant_source.pricing_method == "direct_unit_cost" %>
-    · expected <%= @supplier_variant_source.expected_unit_cost_cents %>¢
+    · expected unit cost <%= format_money_cents(@supplier_variant_source.expected_unit_cost_cents) %>
   <% else %>
-    · list <%= @supplier_variant_source.supplier_list_price_cents %>¢
+    · supplier list price <%= format_money_cents(@supplier_variant_source.supplier_list_price_cents) %>
     · discount <%= @supplier_variant_source.discount_basis_points %> bps
-    · derived <%= @supplier_variant_source.derived_expected_unit_cost_cents %>¢
+    · derived expected unit cost <%= format_money_cents(@supplier_variant_source.derived_expected_unit_cost_cents) %>
   <% end %>
 </p>
 <% if @supplier_variant_source.organization_preferred? %><p>Organization preferred source for this variant.</p><% end %>
