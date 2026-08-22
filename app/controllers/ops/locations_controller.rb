@@ -6,13 +6,11 @@ module Ops
     before_action :set_customer_request, only: %i[confirm not_located]
 
     def show
-      @pending_requests = CustomerRequest.pending_location
-        .for_store(current_store)
-        .includes(:customer, :product_variant)
-        .order(:number)
+      load_location_queue
     end
 
     def confirm
+      require_physical_confirmation! if @customer_request.product_variant.standard?
       unit = resolve_unit_param
       Customers::ConfirmLocation.call(
         customer_request: @customer_request,
@@ -53,6 +51,28 @@ module Ops
 
     private
 
+    def load_location_queue
+      @pending_requests = CustomerRequest.pending_location
+        .for_store(current_store)
+        .includes(:customer, product_variant: { product: :merchandise_category })
+        .order(:created_at, :id)
+      @availability_by_request = @pending_requests.index_with do |customer_request|
+        variant = customer_request.product_variant
+        if variant.standard?
+          Inventory::Availability.available(current_store, variant)
+        else
+          Inventory::Availability.unreserved_on_hand_units(current_store, variant).count
+        end
+      end
+      @units_by_request = @pending_requests.index_with do |customer_request|
+        next [] if customer_request.product_variant.standard?
+
+        Inventory::Availability.unreserved_on_hand_units(current_store, customer_request.product_variant)
+          .order(:unit_identifier).to_a
+      end
+      @suppliers = Supplier.active.admin_ordered.to_a
+    end
+
     def render_mutation_failure(action, exception, field:, stale: false)
       @submitted = params.to_unsafe_h.slice("inventory_unit_id", "unit_identifier", "notes", "supplier_id", "expected_unit_cost_cents")
       @error_action = action
@@ -61,7 +81,7 @@ module Ops
       @conflict = stale
       @mutation_errors = [ stale ? "This request was changed by someone else." : exception.message ]
       @customer_request.reload
-      @pending_requests = CustomerRequest.pending_location.for_store(current_store).includes(:customer, :product_variant).order(:number)
+      load_location_queue
       render :show, status: :unprocessable_entity
     end
 
@@ -81,6 +101,12 @@ module Ops
       end
     rescue Identifiers::NormalizationError, ActiveRecord::RecordNotFound => e
       raise Customers::Error, e.message
+    end
+
+    def require_physical_confirmation!
+      return if ActiveModel::Type::Boolean.new.cast(params[:physical_copy_confirmed])
+
+      raise Customers::Error, "Confirm that you physically located a copy before reserving it."
     end
 
     def optional_cents(value)

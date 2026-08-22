@@ -85,8 +85,10 @@ class PurchasingOpsMutationFailuresTest < ActionDispatch::IntegrationTest
 
     assert_response :unprocessable_entity
     assert_select "tr.is-selected[aria-selected='true']"
-    assert_select "tr.is-selected input[name='notes'][value='retain location note']"
-    assert_select "tr.is-selected input[name='expected_unit_cost_cents'][value='00123'][autofocus]"
-    assert_select "tr.is-selected .ops-row-error"
+    assert_select ".location-action-panel:not([hidden])[data-request-id='#{customer_request.id}']" do
+      assert_select "input[name='notes'][value='retain location note']"
+      assert_select "input[name='expected_unit_cost_cents'][value='00123']"
+      assert_select ".ops-row-error"
+    end
   end
 end
