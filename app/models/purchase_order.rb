@@ -57,4 +57,3 @@ class PurchaseOrder < ApplicationRecord
     purchase_order_lines.all? { |line| line.open_quantity.zero? }
   end
 end
-

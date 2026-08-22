@@ -79,7 +79,7 @@ module Admin
         when "acknowledge_line" then "purchase_orders.send"
         else "orders.view"
         end
-      return unless authorize!(permission, store: @purchase_order.store)
+      nil unless authorize!(permission, store: @purchase_order.store)
     end
 
     def set_line

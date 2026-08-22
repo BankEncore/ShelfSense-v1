@@ -88,7 +88,7 @@ module Admin
     def set_customer_request
       @customer_request = CustomerRequest.find(params[:id])
       permission = action_name == "cancel" ? "customer_requests.manage" : "customers.view"
-      return unless authorize!(permission, store: @customer_request.store)
+      nil unless authorize!(permission, store: @customer_request.store)
     end
 
     def require_store_for_create!

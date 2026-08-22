@@ -76,7 +76,7 @@ module Admin
         when "reverse", "reverse_line", "correct_cost" then "purchase_receipts.correct"
         else "purchase_receipts.view"
         end
-      return unless authorize!(permission, store: @receipt.store)
+      nil unless authorize!(permission, store: @receipt.store)
     end
 
     def set_line

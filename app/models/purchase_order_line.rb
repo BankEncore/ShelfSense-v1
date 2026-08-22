@@ -67,4 +67,3 @@ class PurchaseOrderLine < ApplicationRecord
     end
   end
 end
-

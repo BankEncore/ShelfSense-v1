@@ -58,7 +58,7 @@ module Admin
 
     def set_order
       @order = Order.find(params[:id])
-      return unless authorize!("orders.view", store: @order.store)
+      nil unless authorize!("orders.view", store: @order.store)
     end
 
     def require_store_for_create!
