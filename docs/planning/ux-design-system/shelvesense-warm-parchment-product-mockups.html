@@ -1,0 +1,482 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ShelfSense · Warm Parchment Product Mockups</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --canvas: #fbf9f5;
+      --surface: #fff;
+      --surface-subtle: #f3efe9;
+      --surface-drawer: #eee7dd;
+      --text: #2c2523;
+      --muted: #625b57;
+      --faint: #8a817c;
+      --border: #e1d8cd;
+      --border-strong: #bdb1a5;
+      --espresso: #231f1d;
+      --espresso-2: #352f2c;
+      --brand: #9f3f20;
+      --brand-hover: #7f3219;
+      --brand-soft: #f7e8e1;
+      --success-bg: #eaf0eb;
+      --success: #2d4731;
+      --warning-bg: #faf1dc;
+      --warning: #6e4d00;
+      --danger-bg: #f9e9e7;
+      --danger: #8e261b;
+      --info-bg: #eaf1f5;
+      --info: #1d435e;
+      --focus: #b34b27;
+      --radius-sm: .35rem;
+      --radius: .55rem;
+      --radius-lg: .85rem;
+      --shadow-dialog: 0 1.25rem 4rem rgb(35 31 29 / .28);
+      --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --font-serif: Georgia, "Times New Roman", serif;
+      --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+
+    * { box-sizing: border-box; }
+    html { background: var(--canvas); }
+    body { margin: 0; color: var(--text); background: var(--canvas); font: 14px/1.5 var(--font-sans); }
+    a { color: var(--brand); text-underline-offset: 2px; }
+    button, input, select, textarea { font: inherit; }
+    button, a { -webkit-tap-highlight-color: transparent; }
+    :focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+    .shell { min-height: 100vh; display: grid; grid-template-columns: 244px minmax(0, 1fr); }
+    .sidebar { position: sticky; top: 0; height: 100vh; overflow: auto; background: var(--espresso); color: #f7f3ef; padding: 22px 16px; }
+    .brand { display: flex; gap: 11px; align-items: center; padding: 0 8px 22px; border-bottom: 1px solid rgb(255 255 255 / .14); }
+    .brand-mark { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 9px; background: var(--brand); font-family: var(--font-serif); font-size: 22px; font-weight: 700; }
+    .brand strong { display: block; font: 600 19px/1.1 var(--font-serif); }
+    .brand small { color: #cfc5be; }
+    .side-label { margin: 20px 10px 7px; color: #aa9f98; font-size: 11px; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; }
+    .side-nav { display: grid; gap: 3px; }
+    .side-nav a { color: #eee8e3; text-decoration: none; border-radius: 7px; padding: 8px 10px; }
+    .side-nav a:hover { background: rgb(255 255 255 / .08); }
+    .side-nav a.active { color: #fff; background: rgb(159 63 32 / .35); box-shadow: inset 3px 0 var(--brand); }
+    .store-card { margin-top: 24px; padding: 12px; border: 1px solid rgb(255 255 255 / .16); border-radius: var(--radius); background: rgb(255 255 255 / .05); }
+    .store-card span { display: block; color: #bfb3ab; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; }
+    .store-card strong { display: block; margin-top: 3px; }
+
+    .workspace { min-width: 0; }
+    .topbar { min-height: 62px; display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 10px 28px; color: #fff; background: var(--espresso-2); border-bottom: 1px solid #4a423e; }
+    .global-search { width: min(540px, 52vw); position: relative; }
+    .global-search input { width: 100%; height: 40px; padding: 0 92px 0 38px; color: #fff; background: rgb(255 255 255 / .1); border: 1px solid rgb(255 255 255 / .2); border-radius: 8px; }
+    .global-search input::placeholder { color: #d5cdc8; }
+    .global-search .glass { position: absolute; left: 13px; top: 9px; color: #d5cdc8; }
+    .key { position: absolute; right: 9px; top: 8px; padding: 2px 7px; border: 1px solid rgb(255 255 255 / .22); border-radius: 4px; color: #ded6d0; font-size: 11px; }
+    .account { display: flex; align-items: center; gap: 10px; white-space: nowrap; }
+    .avatar { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: #6d5e57; font-weight: 700; }
+
+    .demo-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 9px 28px; background: #fff7df; border-bottom: 1px solid #ead9a8; }
+    .demo-bar strong { margin-right: 8px; color: #5f4707; }
+    .demo-link { border: 0; padding: 5px 10px; border-radius: 999px; background: transparent; color: #6d530a; cursor: pointer; }
+    .demo-link:hover, .demo-link.active { background: #ead9a8; color: #3f3005; }
+
+    main { width: min(100% - 56px, 1260px); margin: 0 auto; padding: 22px 0 56px; }
+    .view[hidden] { display: none; }
+    .breadcrumbs { display: flex; flex-wrap: wrap; gap: 7px; align-items: center; margin-bottom: 17px; color: var(--muted); font-size: 12px; }
+    .breadcrumbs a { color: var(--muted); }
+    .crumb-sep { color: #a49a93; }
+    .page-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; margin-bottom: 20px; }
+    .eyebrow { color: var(--brand); font-size: 11px; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; }
+    h1 { margin: 3px 0 4px; font: 600 clamp(26px, 3vw, 35px)/1.16 var(--font-serif); letter-spacing: -.015em; }
+    h2 { margin: 0; font: 600 20px/1.25 var(--font-serif); }
+    h3 { margin: 0; font-size: 14px; }
+    .subtitle { margin: 0; color: var(--muted); }
+    .identifier { font-family: var(--font-mono); font-size: .92em; }
+    .header-actions, .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+    .header-actions { justify-content: flex-end; }
+
+    .btn { min-height: 42px; display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 8px 15px; border: 1px solid transparent; border-radius: 7px; font-weight: 700; line-height: 1.15; text-decoration: none; cursor: pointer; }
+    .btn--small { min-height: 34px; padding: 5px 10px; font-size: 12px; }
+    .btn--solid.btn--brand { color: #fff; background: var(--brand); border-color: var(--brand); }
+    .btn--solid.btn--brand:hover { background: var(--brand-hover); border-color: var(--brand-hover); }
+    .btn--solid.btn--danger { color: #fff; background: var(--danger); border-color: var(--danger); }
+    .btn--outline { background: var(--surface); }
+    .btn--outline.btn--neutral { color: var(--text); border-color: var(--border-strong); }
+    .btn--outline.btn--warning { color: var(--warning); border-color: #a8750a; background: #fffdf7; }
+    .btn--outline.btn--danger { color: var(--danger); border-color: #bc554a; background: #fffafa; }
+    .btn--ghost { color: var(--muted); background: transparent; border-color: transparent; }
+    .btn--ghost:hover { color: var(--text); background: var(--surface-subtle); }
+    .btn:disabled { color: #7d756f; background: #e9e4de; border-color: #ded7d0; cursor: not-allowed; }
+    .text-link { min-height: 34px; display: inline-flex; align-items: center; padding: 4px 2px; border: 0; background: none; color: var(--brand); font-weight: 700; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+
+    .status { display: inline-flex; align-items: center; gap: 6px; min-height: 24px; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 800; letter-spacing: .02em; white-space: nowrap; }
+    .status::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+    .status--active { color: var(--success); background: var(--success-bg); }
+    .status--draft { color: var(--info); background: var(--info-bg); }
+    .status--warning { color: var(--warning); background: var(--warning-bg); }
+    .status--danger { color: var(--danger); background: var(--danger-bg); }
+
+    .surface { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); }
+    .section { margin-top: 18px; }
+    .section-head { min-height: 54px; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 13px 17px; border-bottom: 1px solid var(--border); }
+    .section-head p { margin: 2px 0 0; color: var(--muted); font-size: 12px; }
+    .section-body { padding: 18px; }
+    .summary-grid { display: grid; grid-template-columns: 1.2fr .8fr .8fr .8fr; gap: 1px; overflow: hidden; background: var(--border); }
+    .summary-cell { min-height: 94px; padding: 16px; background: var(--surface); }
+    .summary-cell .label { display: block; color: var(--muted); font-size: 11px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+    .summary-cell .value { display: block; margin-top: 7px; font-size: 19px; font-weight: 750; font-variant-numeric: tabular-nums; }
+    .summary-cell .note { display: block; margin-top: 2px; color: var(--muted); font-size: 12px; }
+    .two-col { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(270px, .55fr); gap: 18px; align-items: start; }
+    .detail-grid { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 10px 22px; margin: 0; }
+    .detail-grid dt { color: var(--muted); font-weight: 650; }
+    .detail-grid dd { margin: 0; }
+    .description { margin: 20px 0 0; padding-top: 17px; border-top: 1px solid var(--border); }
+    .description h3 { margin-bottom: 6px; font-family: var(--font-serif); font-size: 17px; }
+    .description p { margin: 0; color: #443c39; }
+    .callout { padding: 14px; border-radius: var(--radius); border-left: 4px solid var(--info); background: var(--info-bg); }
+    .callout strong { display: block; margin-bottom: 3px; }
+    .callout p { margin: 0; color: #36536a; }
+
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 11px 13px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: middle; white-space: nowrap; }
+    th { color: var(--muted); background: var(--surface-subtle); font-size: 11px; letter-spacing: .045em; text-transform: uppercase; }
+    tbody tr:last-child td { border-bottom: 0; }
+    tbody tr:hover td { background: #fcfaf7; }
+    td.numeric, th.numeric { text-align: right; font-variant-numeric: tabular-nums; }
+    .primary-cell { font-weight: 750; }
+    .cell-note { display: block; color: var(--muted); font-size: 11px; font-weight: 400; }
+    .row-actions { display: flex; gap: 9px; align-items: center; }
+
+    .activity { list-style: none; padding: 0; margin: 0; }
+    .activity li { position: relative; padding: 0 0 16px 25px; color: var(--muted); }
+    .activity li:last-child { padding-bottom: 0; }
+    .activity li::before { content: ""; position: absolute; left: 3px; top: 6px; width: 8px; height: 8px; border-radius: 50%; background: var(--brand); box-shadow: 0 0 0 4px var(--brand-soft); }
+    .activity li::after { content: ""; position: absolute; left: 6px; top: 17px; bottom: 0; width: 1px; background: var(--border); }
+    .activity li:last-child::after { display: none; }
+    .activity strong { display: block; color: var(--text); }
+    .activity time { font-size: 11px; }
+
+    details.technical { margin-top: 18px; border: 1px solid var(--border); border-radius: var(--radius); background: #f8f4ef; }
+    details.technical summary { padding: 12px 15px; cursor: pointer; color: var(--muted); font-weight: 700; }
+    details.technical .detail-grid { padding: 0 15px 15px; font-family: var(--font-mono); font-size: 12px; }
+
+    .filters { display: grid; grid-template-columns: minmax(250px, 1fr) 180px 220px auto auto; gap: 12px; align-items: end; padding: 15px; }
+    .field { display: grid; gap: 5px; }
+    .field label, .field-label { color: #413a37; font-weight: 750; font-size: 12px; }
+    .field input, .field select, .field textarea { width: 100%; min-height: 42px; padding: 9px 11px; color: var(--text); background: #fff; border: 1px solid var(--border-strong); border-radius: 6px; }
+    .field textarea { min-height: 96px; resize: vertical; }
+    .help { color: var(--muted); font-size: 11px; }
+    .field-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+    .form-card { overflow: hidden; }
+    .form-section { padding: 18px; border-bottom: 1px solid var(--border); }
+    .form-section:last-of-type { border-bottom: 0; }
+    .form-section-head { margin-bottom: 15px; }
+    .form-section-head h2 { font-size: 18px; }
+    .form-section-head p { margin: 4px 0 0; max-width: 820px; color: var(--muted); font-size: 12px; }
+    .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+    .span-2 { grid-column: 1 / -1; }
+    .readonly { min-height: 42px; display: flex; align-items: center; padding: 9px 11px; background: var(--surface-subtle); border: 1px solid var(--border); border-radius: 6px; }
+    .form-footer { position: sticky; bottom: 0; display: flex; justify-content: flex-end; gap: 8px; padding: 13px 18px; background: rgb(255 255 255 / .94); border-top: 1px solid var(--border); backdrop-filter: blur(8px); }
+
+    .pagination { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 14px; }
+    .component-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+    .component-card { padding: 18px; }
+    .component-card h2 { margin-bottom: 5px; font-size: 18px; }
+    .component-card > p { margin: 0 0 16px; color: var(--muted); font-size: 12px; }
+    .spec-row { padding: 13px 0; border-top: 1px solid var(--border); }
+    .spec-row:first-of-type { border-top: 0; }
+    .spec-row .label { display: block; margin-bottom: 7px; color: var(--muted); font-size: 11px; font-weight: 800; text-transform: uppercase; }
+
+    dialog { width: min(520px, calc(100vw - 32px)); padding: 0; color: var(--text); background: var(--surface); border: 2px solid #b85a4e; border-radius: var(--radius-lg); box-shadow: var(--shadow-dialog); }
+    dialog::backdrop { background: rgb(35 31 29 / .66); }
+    .dialog-head { padding: 18px 20px 14px; background: var(--danger-bg); border-bottom: 1px solid #e7bbb5; }
+    .dialog-head h2 { color: var(--danger); }
+    .dialog-body { padding: 18px 20px; }
+    .dialog-body p { margin-top: 0; }
+    .dialog-consequence { padding: 12px 14px; color: #63312b; background: #fff4f2; border-left: 4px solid var(--danger); }
+    .dialog-actions { display: flex; justify-content: flex-end; gap: 8px; padding: 14px 20px; border-top: 1px solid var(--border); }
+
+    @media (max-width: 980px) {
+      .shell { grid-template-columns: 72px minmax(0, 1fr); }
+      .sidebar { padding-inline: 10px; }
+      .brand { justify-content: center; padding-inline: 0; }
+      .brand-copy, .side-label, .side-nav span, .store-card { display: none; }
+      .side-nav a { display: grid; place-items: center; min-height: 42px; font-weight: 800; }
+      .summary-grid { grid-template-columns: repeat(2, 1fr); }
+      .two-col, .component-grid { grid-template-columns: 1fr; }
+      .filters { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 700px) {
+      .shell { display: block; }
+      .sidebar { display: none; }
+      .topbar { padding-inline: 15px; }
+      .global-search { width: 100%; }
+      .account { display: none; }
+      .demo-bar { padding-inline: 15px; }
+      main { width: min(100% - 30px, 1260px); }
+      .page-header { display: block; }
+      .header-actions { justify-content: flex-start; margin-top: 15px; }
+      .summary-grid, .form-grid, .field-row { grid-template-columns: 1fr; }
+      .span-2 { grid-column: auto; }
+      .detail-grid { grid-template-columns: 1fr; gap: 2px; }
+      .detail-grid dd { margin-bottom: 10px; }
+      .filters { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">S</div>
+        <div class="brand-copy"><strong>ShelfSense</strong><small>Bookstore operations</small></div>
+      </div>
+      <div class="side-label">Workspace</div>
+      <nav class="side-nav" aria-label="Primary">
+        <a href="#products" data-view-link="products"><b>⌂</b> <span>Home</span></a>
+        <a href="#products" data-view-link="products" class="active"><b>▦</b> <span>Products</span></a>
+        <a href="#details" data-view-link="details"><b>◇</b> <span>Inventory</span></a>
+        <a href="#details" data-view-link="details"><b>◎</b> <span>Orders</span></a>
+        <a href="#details" data-view-link="details"><b>▤</b> <span>Purchase orders</span></a>
+        <a href="#components" data-view-link="components"><b>◫</b> <span>Suppliers</span></a>
+        <a href="#components" data-view-link="components"><b>○</b> <span>Customers</span></a>
+        <a href="#components" data-view-link="components"><b>⚙</b> <span>Configuration</span></a>
+      </nav>
+      <div class="store-card"><span>Current store</span><strong>Downtown · DT</strong><small>Business date Aug 22</small></div>
+    </aside>
+
+    <div class="workspace">
+      <header class="topbar">
+        <label class="global-search"><span class="glass">⌕</span><input aria-label="Global search mockup" placeholder="Search title, identifier, order…"><span class="key">Ctrl K</span></label>
+        <div class="account"><div class="avatar">TS</div><div><strong>Admin User</strong><br><small>Downtown</small></div></div>
+      </header>
+
+      <nav class="demo-bar" aria-label="Mockup screens">
+        <strong>Mockup views</strong>
+        <button class="demo-link" data-view="products">Product index</button>
+        <button class="demo-link active" data-view="details">Product details</button>
+        <button class="demo-link" data-view="edit">Edit product</button>
+        <button class="demo-link" data-view="components">Shared partials</button>
+      </nav>
+
+      <main>
+        <section class="view" id="view-products" hidden>
+          <nav class="breadcrumbs" aria-label="Breadcrumb"><a href="#products">Home</a><span class="crumb-sep">›</span><span aria-current="page">Products</span></nav>
+          <header class="page-header">
+            <div><div class="eyebrow">Merchandise</div><h1>Products</h1><p class="subtitle">Catalog products and their sellable variants</p></div>
+            <div class="header-actions"><button class="btn btn--solid btn--brand" data-view="edit">New Product</button></div>
+          </header>
+
+          <section class="surface filters" aria-label="Product filters">
+            <label class="field"><span class="field-label">Search</span><input value="" placeholder="Name or identifier"></label>
+            <label class="field"><span class="field-label">Status</span><select><option>Any status</option><option>Active</option><option>Draft</option></select></label>
+            <label class="field"><span class="field-label">Category</span><select><option>Any category</option><option>Books › Fiction</option><option>Books › Nonfiction</option></select></label>
+            <button class="btn btn--solid btn--brand">Apply</button>
+            <button class="btn btn--ghost btn--neutral">Clear</button>
+          </section>
+
+          <section class="surface section">
+            <div class="section-head"><div><h2>Catalog</h2><p>184 products · current store inventory shown</p></div><button class="btn btn--outline btn--neutral btn--small">Export</button></div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Product</th><th>Primary identifier</th><th>Category</th><th class="numeric">Variants</th><th class="numeric">List price</th><th>Status</th><th class="numeric">On hand</th></tr></thead>
+                <tbody>
+                  <tr><td class="primary-cell"><a href="#details" data-view-link="details">The Left Hand of Darkness</a><span class="cell-note">Ursula K. Le Guin</span></td><td class="identifier">2220000001846</td><td>Books › Fiction › Science Fiction</td><td class="numeric">3</td><td class="numeric">$18.99</td><td><span class="status status--active">Active</span></td><td class="numeric">14</td></tr>
+                  <tr><td class="primary-cell"><a href="#details" data-view-link="details">Braiding Sweetgrass</a><span class="cell-note">Robin Wall Kimmerer</span></td><td class="identifier">2220000002195</td><td>Books › Nature</td><td class="numeric">2</td><td class="numeric">$20.00</td><td><span class="status status--active">Active</span></td><td class="numeric">7</td></tr>
+                  <tr><td class="primary-cell"><a href="#details" data-view-link="details">Ceramic Reading Mug</a><span class="cell-note">ShelfSense Books</span></td><td class="identifier">2220000002270</td><td>General Merchandise › Gifts</td><td class="numeric">1</td><td class="numeric">$16.00</td><td><span class="status status--draft">Draft</span></td><td class="numeric">0</td></tr>
+                  <tr><td class="primary-cell"><a href="#details" data-view-link="details">A Psalm for the Wild-Built</a><span class="cell-note">Becky Chambers</span></td><td class="identifier">2220000001716</td><td>Books › Fiction › Science Fiction</td><td class="numeric">2</td><td class="numeric">$21.99</td><td><span class="status status--active">Active</span></td><td class="numeric">5</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+          <div class="pagination"><span class="subtitle">Showing 1–50 of 184</span><div class="actions"><button class="btn btn--ghost" disabled>Previous</button><button class="btn btn--outline btn--neutral btn--small">Next</button></div></div>
+        </section>
+
+        <section class="view" id="view-details">
+          <nav class="breadcrumbs" aria-label="Breadcrumb"><a href="#products" data-view-link="products">Home</a><span class="crumb-sep">›</span><a href="#products" data-view-link="products">Products</a><span class="crumb-sep">›</span><span aria-current="page">The Left Hand of Darkness</span></nav>
+          <header class="page-header">
+            <div><div class="eyebrow">Product</div><h1>The Left Hand of Darkness</h1><p class="subtitle">Primary identifier <span class="identifier">2220000001846</span></p></div>
+            <div class="header-actions">
+              <span class="status status--active">Active</span>
+              <button class="btn btn--outline btn--neutral" data-view="edit">Edit</button>
+              <button class="btn btn--outline btn--warning" data-open-dialog="discontinueDialog">Discontinue</button>
+              <button class="btn btn--outline btn--neutral">Create Request</button>
+              <button class="btn btn--solid btn--brand">Order Stock</button>
+            </div>
+          </header>
+
+          <section class="surface summary-grid" aria-label="Product summary">
+            <div class="summary-cell"><span class="label">Primary identifier</span><span class="value identifier">2220000001846</span><span class="note">ShelfSense assigned</span></div>
+            <div class="summary-cell"><span class="label">List price</span><span class="value">$18.99</span><span class="note">Product reference</span></div>
+            <div class="summary-cell"><span class="label">Variants</span><span class="value">3</span><span class="note">2 active · 1 draft</span></div>
+            <div class="summary-cell"><span class="label">On hand</span><span class="value">14</span><span class="note">Downtown store</span></div>
+          </section>
+
+          <div class="two-col section">
+            <section class="surface">
+              <div class="section-head"><div><h2>Product details</h2><p>Identity, classification, and publication metadata</p></div></div>
+              <div class="section-body">
+                <dl class="detail-grid">
+                  <dt>Industry identifier</dt><dd><span class="identifier">9780441478125</span></dd>
+                  <dt>Lookup code</dt><dd>LEFT-HAND-DARKNESS</dd>
+                  <dt>Category</dt><dd><a href="#">Books › Fiction › Science Fiction</a></dd>
+                  <dt>Subtitle</dt><dd>A Novel</dd>
+                  <dt>Brand / publisher</dt><dd>Ace Books</dd>
+                  <dt>Release date</dt><dd>March 15, 1987</dd>
+                  <dt>Variant options</dt><dd>Format · Condition</dd>
+                </dl>
+                <div class="description"><h3>Description</h3><p>A groundbreaking work of science fiction set on the planet Gethen, where an envoy must bridge profound cultural differences to bring a new world into an interstellar alliance.</p></div>
+              </div>
+            </section>
+
+            <aside class="surface">
+              <div class="section-head"><div><h2>Recent activity</h2><p>Latest product events</p></div></div>
+              <div class="section-body">
+                <ol class="activity">
+                  <li><strong>Product updated</strong><time>Today, 11:42 AM · Admin User</time></li>
+                  <li><strong>Variant price changed</strong><time>Aug 19, 3:18 PM · Morgan Lee</time></li>
+                  <li><strong>Paperback variant activated</strong><time>Aug 12, 9:05 AM · Admin User</time></li>
+                </ol>
+                <p style="margin:16px 0 0"><a href="#">View audit events</a></p>
+              </div>
+            </aside>
+          </div>
+
+          <section class="surface section">
+            <div class="section-head"><div><h2>Variants</h2><p>Sellable forms and current-store availability</p></div><button class="btn btn--solid btn--brand btn--small">New Variant</button></div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Variant</th><th>SKU</th><th>Type</th><th>Status</th><th>Class</th><th>Department</th><th>Tax</th><th class="numeric">Price</th><th class="numeric">On hand</th><th>Actions</th></tr></thead>
+                <tbody>
+                  <tr><td class="primary-cell"><a href="#">Paperback</a><span class="cell-note">Standard · New</span></td><td class="identifier">2210000003184</td><td>Standard</td><td><span class="status status--active">Active</span></td><td>New Books</td><td>Books</td><td>Books taxable</td><td class="numeric">$18.99</td><td class="numeric"><a href="#">11</a></td><td><div class="row-actions"><a href="#">Order</a><a href="#">Request</a></div></td></tr>
+                  <tr><td class="primary-cell"><a href="#">Hardcover</a><span class="cell-note">Standard · New</span></td><td class="identifier">2210000003191</td><td>Standard</td><td><span class="status status--active">Active</span></td><td>New Books</td><td>Books</td><td>Books taxable</td><td class="numeric">$27.00</td><td class="numeric"><a href="#">3</a></td><td><div class="row-actions"><a href="#">Order</a><a href="#">Request</a></div></td></tr>
+                  <tr><td class="primary-cell"><a href="#">Used Paperback</a><span class="cell-note">Used · Good</span></td><td class="identifier">2210000004013</td><td>Used</td><td><span class="status status--draft">Draft</span></td><td>Used Books</td><td>Used Books</td><td>Books taxable</td><td class="numeric">$9.50</td><td class="numeric">0</td><td>—</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="surface section">
+            <div class="section-head"><div><h2>Operational context</h2><p>Current store: Downtown</p></div></div>
+            <div class="section-body">
+              <div class="callout"><strong>Inventory lives on variants</strong><p>Product on-hand is shown as a useful summary. Reservations, availability, valuation, ordering, and individually tracked units remain variant-level facts.</p></div>
+            </div>
+          </section>
+
+          <details class="technical"><summary>Technical details</summary><dl class="detail-grid"><dt>ID</dt><dd>0198f821-f001-7d01-bb4b-2fe7235e9b18</dd><dt>Created</dt><dd>2026-08-04 14:22:18 EDT</dd><dt>Updated</dt><dd>2026-08-22 11:42:03 EDT</dd><dt>Lock version</dt><dd>4</dd></dl></details>
+        </section>
+
+        <section class="view" id="view-edit" hidden>
+          <nav class="breadcrumbs" aria-label="Breadcrumb"><a href="#products" data-view-link="products">Home</a><span class="crumb-sep">›</span><a href="#products" data-view-link="products">Products</a><span class="crumb-sep">›</span><a href="#details" data-view-link="details">The Left Hand of Darkness</a><span class="crumb-sep">›</span><span aria-current="page">Edit</span></nav>
+          <header class="page-header"><div><div class="eyebrow">Product</div><h1>Edit Product</h1><p class="subtitle">The Left Hand of Darkness</p></div></header>
+
+          <form class="surface form-card" onsubmit="event.preventDefault(); document.getElementById('savedToast').hidden=false">
+            <section class="form-section">
+              <div class="form-section-head"><h2>Identity</h2><p>ShelfSense assigns every product an immutable generated 222 primary identifier. Record the manufacturer GTIN and optional lookup code here.</p></div>
+              <div class="form-grid">
+                <div class="field span-2"><span class="field-label">Primary identifier</span><div class="readonly"><span class="identifier">2220000001846</span>&nbsp; <span class="help">(immutable)</span></div></div>
+                <label class="field"><span class="field-label">Industry identifier (GTIN / ISBN / UPC)</span><input value="9780441478125"><span class="help">Normalized and validated on save. Clear to retire it.</span></label>
+                <label class="field"><span class="field-label">Lookup code</span><input value="LEFT-HAND-DARKNESS"><span class="help">Stored uppercase; may be shared by multiple products.</span></label>
+                <label class="field span-2"><span class="field-label">Name</span><input required value="The Left Hand of Darkness"></label>
+                <label class="field span-2"><span class="field-label">Subtitle</span><input value="A Novel"></label>
+                <label class="field span-2"><span class="field-label">Description</span><textarea>A groundbreaking work of science fiction set on the planet Gethen, where an envoy must bridge profound cultural differences.</textarea></label>
+                <label class="field"><span class="field-label">Brand / publisher</span><input value="Ace Books"></label>
+                <label class="field"><span class="field-label">Model</span><input value=""></label>
+                <label class="field"><span class="field-label">Release date</span><input type="date" value="1987-03-15"></label>
+                <div></div>
+                <label class="field"><span class="field-label">Variant option name 1</span><input value="Format"></label>
+                <label class="field"><span class="field-label">Variant option name 2</span><input value="Condition"></label>
+              </div>
+            </section>
+            <section class="form-section">
+              <div class="form-section-head"><h2>Classification</h2><p>The category supplies the default merchandise class for newly created variants. Changing it does not rewrite existing variants.</p></div>
+              <label class="field"><span class="field-label">Merchandise category</span><select><option selected>Books › Fiction › Science Fiction</option><option>Books › Fiction › Fantasy</option></select></label>
+            </section>
+            <section class="form-section">
+              <div class="form-section-head"><h2>Pricing</h2><p>Product-level reference price. Changing it does not rewrite existing variant prices.</p></div>
+              <label class="field" style="max-width:260px"><span class="field-label">List price</span><input inputmode="decimal" value="$18.99"><span class="help">Enter a currency amount such as 12.50.</span></label>
+            </section>
+            <section class="form-section">
+              <div class="form-section-head"><h2>Lifecycle</h2></div>
+              <label class="field" style="max-width:260px"><span class="field-label">Status</span><select><option selected>Active</option><option>Draft</option></select><span class="help">Use Discontinue on the product page to end future use.</span></label>
+            </section>
+            <div id="savedToast" hidden class="callout" style="margin:14px 18px"><strong>Mockup only</strong><p>The form demonstrates action hierarchy; no data was saved.</p></div>
+            <footer class="form-footer"><button type="button" class="btn btn--ghost btn--neutral" data-view="details">Cancel</button><button class="btn btn--solid btn--brand">Save Changes</button></footer>
+          </form>
+        </section>
+
+        <section class="view" id="view-components" hidden>
+          <nav class="breadcrumbs" aria-label="Breadcrumb"><a href="#products" data-view-link="products">Home</a><span class="crumb-sep">›</span><span aria-current="page">UX reference</span></nav>
+          <header class="page-header"><div><div class="eyebrow">Warm Parchment</div><h1>Shared Partials</h1><p class="subtitle">Presentation states proposed for reusable ShelfSense components</p></div></header>
+
+          <div class="component-grid">
+            <section class="surface component-card">
+              <h2>Actions</h2><p>Style communicates emphasis and severity independently of wording.</p>
+              <div class="spec-row"><span class="label">Routine decision</span><div class="actions"><button class="btn btn--ghost">Cancel</button><button class="btn btn--solid btn--brand">Save Changes</button></div></div>
+              <div class="spec-row"><span class="label">Record actions</span><div class="actions"><button class="btn btn--outline btn--neutral">Edit</button><button class="btn btn--outline btn--warning">Discontinue</button><button class="btn btn--outline btn--danger">Delete Draft</button></div></div>
+              <div class="spec-row"><span class="label">Dense row controls</span><div class="actions"><button class="btn btn--outline btn--neutral btn--small">Receive</button><button class="btn btn--ghost btn--small">View</button><button class="text-link">View Supplier</button></div></div>
+            </section>
+
+            <section class="surface component-card">
+              <h2>Status badges</h2><p>Text and dot shape reinforce color; schemes remain domain-specific.</p>
+              <div class="spec-row"><span class="label">Lifecycle</span><div class="actions"><span class="status status--active">Active</span><span class="status status--draft">Draft</span><span class="status status--danger">Discontinued</span></div></div>
+              <div class="spec-row"><span class="label">Operations</span><div class="actions"><span class="status status--warning">Pending</span><span class="status status--active">Available</span><span class="status status--danger">Cancelled</span></div></div>
+            </section>
+
+            <section class="surface component-card">
+              <h2>Definition list</h2><p>Grouped human-readable facts replace raw vertical attribute dumps.</p>
+              <dl class="detail-grid"><dt>Primary identifier</dt><dd class="identifier">2220000001846</dd><dt>Category</dt><dd><a href="#">Books › Fiction</a></dd><dt>List price</dt><dd>$18.99</dd><dt>Optional value</dt><dd>—</dd></dl>
+            </section>
+
+            <section class="surface component-card">
+              <h2>Empty state</h2><p>Explain what is absent, what that means, and the useful next step.</p>
+              <div style="padding:20px;text-align:center;border:1px dashed var(--border-strong);border-radius:var(--radius);background:var(--surface-subtle)"><h3 style="font-family:var(--font-serif);font-size:18px">No variants yet</h3><p class="subtitle" style="margin:5px 0 14px">Add a Standard or Used variant to make this product sellable.</p><button class="btn btn--solid btn--brand btn--small">New Variant</button></div>
+            </section>
+
+            <section class="surface component-card">
+              <h2>Disclosure</h2><p>Technical details remain available without dominating routine tasks.</p>
+              <details class="technical" style="margin-top:0"><summary>Technical details</summary><dl class="detail-grid"><dt>ID</dt><dd>0198f821-f001-7d01</dd><dt>Lock version</dt><dd>4</dd></dl></details>
+            </section>
+
+            <section class="surface component-card">
+              <h2>Consequential review</h2><p>Entry triggers stay restrained; the final commitment escalates.</p>
+              <div class="actions"><button class="btn btn--outline btn--warning" data-open-dialog="discontinueDialog">Open Review</button><button class="btn btn--outline btn--danger" data-open-dialog="deleteDialog">Delete Draft…</button></div>
+            </section>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <dialog id="discontinueDialog" aria-labelledby="discontinueTitle">
+    <div class="dialog-head"><div class="eyebrow">Lifecycle change</div><h2 id="discontinueTitle">Discontinue this product?</h2></div>
+    <div class="dialog-body"><p><strong>The Left Hand of Darkness</strong> will no longer be available for new sellability workflows.</p><div class="dialog-consequence">Existing transactions and historical records remain unchanged. Review active variants before continuing.</div></div>
+    <div class="dialog-actions"><button class="btn btn--ghost" data-close-dialog>Keep Active</button><button class="btn btn--solid btn--danger" data-close-dialog>Discontinue</button></div>
+  </dialog>
+
+  <dialog id="deleteDialog" aria-labelledby="deleteTitle">
+    <div class="dialog-head"><div class="eyebrow">Draft removal</div><h2 id="deleteTitle">Delete this draft product?</h2></div>
+    <div class="dialog-body"><p>This removes an uncommitted draft. The action is available only when the product remains eligible for draft deletion.</p><div class="dialog-consequence">This cannot be undone from the interface.</div></div>
+    <div class="dialog-actions"><button class="btn btn--ghost" data-close-dialog>Keep Draft</button><button class="btn btn--solid btn--danger" data-close-dialog>Delete Draft</button></div>
+  </dialog>
+
+  <script>
+    const views = ["products", "details", "edit", "components"];
+    function showView(name, updateHash = true) {
+      if (!views.includes(name)) name = "details";
+      document.querySelectorAll(".view").forEach(v => v.hidden = v.id !== `view-${name}`);
+      document.querySelectorAll(".demo-link").forEach(b => b.classList.toggle("active", b.dataset.view === name));
+      document.querySelectorAll("[data-view-link]").forEach(a => a.classList.toggle("active", a.dataset.viewLink === name && name === "products"));
+      if (updateHash) history.replaceState(null, "", `#${name}`);
+      window.scrollTo({ top: 0, behavior: "instant" });
+    }
+    document.addEventListener("click", event => {
+      const viewControl = event.target.closest("[data-view], [data-view-link]");
+      if (viewControl) { event.preventDefault(); showView(viewControl.dataset.view || viewControl.dataset.viewLink); }
+      const opener = event.target.closest("[data-open-dialog]");
+      if (opener) document.getElementById(opener.dataset.openDialog).showModal();
+      if (event.target.closest("[data-close-dialog]")) event.target.closest("dialog").close();
+    });
+    window.addEventListener("hashchange", () => showView(location.hash.slice(1), false));
+    showView(location.hash.slice(1) || "details", false);
+  </script>
+</body>
+</html>
