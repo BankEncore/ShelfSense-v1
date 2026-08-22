@@ -18,6 +18,30 @@ module PosHelper
     end
   end
 
+  # Register basket title only (screen). Print and data-description keep pos_line_description.
+  def pos_basket_line_title(line)
+    snapshot = line.merchandise_snapshot
+    title =
+      if snapshot.is_a?(Hash) && snapshot["description"].present?
+        snapshot["description"]
+      else
+        line.product_variant&.product&.name.presence || "Description unavailable"
+      end
+    prefix = line.pickup_line? ? "PICKUP · " : ""
+    "#{prefix}#{title}"
+  end
+
+  # Secondary basket metadata from snapshot (preferred) or working-line fields.
+  # Returns hashes: { text:, mono: } for identifier-like values.
+  def pos_basket_line_metadata(line)
+    snapshot = line.merchandise_snapshot
+    if snapshot.is_a?(Hash) && snapshot["description"].present?
+      pos_snapshot_basket_metadata(snapshot)
+    else
+      pos_live_basket_metadata(line)
+    end
+  end
+
   def format_store_timestamp(time, store)
     return if time.blank?
 
@@ -223,6 +247,34 @@ module PosHelper
       parts << snapshot["sku"]
     end
     parts.join("  ")
+  end
+
+  def pos_snapshot_basket_metadata(snapshot)
+    parts = []
+    condition = snapshot["condition_code"].presence || snapshot["condition_name"].presence
+    parts << { text: condition, mono: false } if condition.present?
+    if snapshot["unit_identifier"].present?
+      parts << { text: snapshot["unit_identifier"], mono: true }
+    elsif snapshot["sku"].present?
+      parts << { text: snapshot["sku"], mono: true }
+    end
+    parts
+  end
+
+  def pos_live_basket_metadata(line)
+    variant = line.product_variant
+    return [] if variant.nil?
+
+    parts = []
+    if line.unit_line?
+      code = variant.merchandise_condition&.code
+      parts << { text: code, mono: false } if code.present?
+      unit_id = line.inventory_unit&.unit_identifier
+      parts << { text: unit_id, mono: true } if unit_id.present?
+    elsif variant.sku.present?
+      parts << { text: variant.sku, mono: true }
+    end
+    parts
   end
 
   def pos_live_line_description(line)

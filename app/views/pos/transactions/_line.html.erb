@@ -7,6 +7,19 @@
     <span class="numeric"><%= format_signed_money_cents(line.return? ? -line.line_total_cents : line.line_total_cents) %></span>
   </div>
 
+  <% if line.unlinked_return? && !line.post_void_generated? %>
+    <p class="pos-history__line-summary muted">Unlinked return</p>
+  <% elsif line.sale? && summary %>
+    <p class="pos-history__line-summary muted">
+      Sold <%= summary.sold_quantity %>
+      · Returned <%= summary.completed_returned_quantity %>
+      · Remaining <%= summary.remaining_quantity %>
+      <% if line.unit_line? && line.merchandise_snapshot.is_a?(Hash) && line.merchandise_snapshot["unit_identifier"].present? %>
+        · Unit <%= line.merchandise_snapshot["unit_identifier"] %>
+      <% end %>
+    </p>
+  <% end %>
+
   <details class="pos-history__line-details">
     <summary>Line details</summary>
     <dl class="pos-history__line-facts">

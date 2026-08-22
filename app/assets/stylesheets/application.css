@@ -1016,8 +1016,9 @@ input[type="submit"]:disabled,
 .pos-banner {
   margin: var(--space-2) 0 0;
   padding: var(--space-2) var(--space-3);
-  background: color-mix(in srgb, var(--color-warning) 20%, var(--color-surface));
-  border: 1px solid var(--color-warning);
+  background: var(--color-warning-fill);
+  border: 1px solid var(--color-warning-border);
+  color: var(--color-warning-fg);
 }
 
 .pos-main {
@@ -1040,7 +1041,8 @@ input[type="submit"]:disabled,
 .pos-lines td {
   text-align: left;
   padding: var(--space-2) var(--space-3);
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border-subtle);
+  vertical-align: top;
 }
 
 .pos-lines .numeric {
@@ -1048,15 +1050,39 @@ input[type="submit"]:disabled,
   font-variant-numeric: tabular-nums;
 }
 
-.pos-lines tr.is-selected {
-  background: color-mix(in srgb, var(--color-action) 12%, var(--color-surface));
+.pos-line__title {
   font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.pos-line__meta,
+.pos-line__provenance {
+  margin-top: 0.15rem;
+  font-size: 0.9rem;
+  font-weight: 400;
+  color: var(--color-text-secondary);
+}
+
+.pos-line__id {
+  font-family: var(--font-receipt);
+  font-size: 0.9em;
+  letter-spacing: 0.02em;
+}
+
+.pos-lines tr.is-selected {
+  background: var(--color-table-row-selected);
+  box-shadow: inset 3px 0 0 var(--color-brand-default);
+}
+
+.pos-lines tr.is-selected .pos-line__title {
+  font-weight: 700;
 }
 
 .pos-totals {
-  border-left: 1px solid var(--color-border);
+  border-left: 1px solid var(--color-border-subtle);
   padding: var(--space-4);
-  background: var(--color-surface);
+  background: var(--color-bg-surface-elevated);
+  color: var(--color-text-primary);
 }
 
 .pos-totals__due,
@@ -1064,19 +1090,29 @@ input[type="submit"]:disabled,
   font-size: 1.75rem;
   font-weight: 700;
   margin-top: var(--space-4);
+  color: var(--color-text-primary);
+}
+
+.pos-totals__change {
+  color: var(--color-success-fg);
+}
+
+.pos-totals__due {
+  color: var(--color-brand-default);
 }
 
 .pos-feedback {
   min-height: 3.5rem;
   padding: var(--space-3) var(--space-5);
-  border-top: 1px solid var(--color-border);
-  color: var(--color-danger);
+  border-top: 1px solid var(--color-border-subtle);
+  color: var(--color-danger-fg);
+  background: var(--color-bg-surface);
 }
 
 .pos-command {
   padding: var(--space-3) var(--space-5);
-  background: var(--color-surface);
-  border-top: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
+  border-top: 1px solid var(--color-border-subtle);
 }
 
 .pos-command__mode {
@@ -1094,8 +1130,27 @@ input[type="submit"]:disabled,
 .pos-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-2);
+  align-items: center;
+  gap: var(--space-3);
   padding: var(--space-3) var(--space-5) var(--space-5);
+}
+
+.pos-actions__group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding-inline-end: var(--space-3);
+  border-inline-end: 1px solid var(--color-border-subtle);
+}
+
+.pos-actions__group:last-child,
+.pos-actions__group--escape {
+  border-inline-end: none;
+  padding-inline-end: 0;
+}
+
+.pos-actions__group--escape {
+  margin-inline-start: auto;
 }
 
 .pos-hidden {
@@ -1125,7 +1180,7 @@ input[type="submit"]:disabled,
   border: 2px solid var(--color-dialog-elevated-boundary);
   border-radius: var(--radius);
   padding: var(--space-5);
-  box-shadow: 0 1rem 2.5rem rgb(0 0 0 / 0.25);
+  box-shadow: 0 1rem 2.5rem rgb(23 19 17 / 0.28);
 }
 
 .pos-overlay__panel > :first-child {
@@ -1167,6 +1222,7 @@ input[type="submit"]:disabled,
   padding: var(--space-2) var(--space-3);
   border: 1px solid var(--color-border-subtle);
   margin-bottom: var(--space-2);
+  background: var(--color-bg-surface);
 }
 
 .pos-picker li:focus-visible {
@@ -1188,12 +1244,18 @@ input[type="submit"]:disabled,
 
 .pos-line-flags {
   display: block;
+  margin-top: 0.15rem;
   font-size: 0.8rem;
-  color: var(--color-muted, #555);
+  font-weight: 600;
+  color: var(--color-warning-fg);
 }
 
 .pos-lines tr.is-controlled td {
-  font-weight: 600;
+  background: color-mix(in srgb, var(--color-warning-fill) 55%, transparent);
+}
+
+.pos-lines tr.is-selected.is-controlled td {
+  background: color-mix(in srgb, var(--color-table-row-selected) 70%, var(--color-warning-fill));
 }
 
 .pos-enter,
