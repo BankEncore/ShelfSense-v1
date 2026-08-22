@@ -20,7 +20,8 @@
 <% if @receipt.draft? && effective_permissions.include?("purchase_receipts.manage") %>
   <section class="ops-actions">
     <h2>Receipt header</h2>
-    <%= form_with url: ops_receiving_update_path(@receipt), method: :patch, local: true do %>
+    <%= form_with url: ops_receiving_update_path(@receipt), method: :patch, local: true, html: { data: { dirty_track: true } } do %>
+      <%= hidden_field_tag :lock_version, @receipt.lock_version %>
       <label>
         Received at
         <input type="datetime-local" name="received_at" value="<%= @receipt.received_at&.strftime("%Y-%m-%dT%H:%M") %>">
@@ -57,12 +58,12 @@
         Notes
         <input type="text" name="notes" value="<%= @receipt.notes %>">
       </label>
-      <button type="submit">Save header</button>
+      <button type="submit" data-ops-save>Save header</button>
     <% end %>
     <p class="ops-hint">Ancillary charges are recorded but never enter inventory valuation.</p>
   </section>
 
-  <section class="ops-scan">
+  <section class="ops-scan" data-controller="focus-restore">
     <h2>Add open PO line</h2>
     <% if @open_po_lines.empty? %>
       <p>No open sent PO lines for this supplier/store.</p>
@@ -71,7 +72,7 @@
         <%= hidden_field_tag :lock_version, @receipt.lock_version %>
         <label>
           PO line
-          <select name="purchase_order_line_id" required>
+          <select name="purchase_order_line_id" required data-focus-restore-target="lookup">
             <option value="">Select…</option>
             <% @open_po_lines.each do |po_line| %>
               <option value="<%= po_line.id %>">
@@ -105,7 +106,7 @@
   <% if @lines.empty? %>
     <p>No lines yet.</p>
   <% else %>
-    <table class="ops-queue">
+    <table class="ops-queue" data-controller="row-selection" data-action="keydown->row-selection#keydown">
       <thead>
         <tr>
           <th scope="col">PO</th>
@@ -123,7 +124,7 @@
       <tbody>
         <% @lines.each do |line| %>
           <% po_line = line.purchase_order_line %>
-          <tr>
+          <tr tabindex="-1" aria-selected="false" data-row-selection-target="row">
             <td>#<%= po_line.purchase_order.number %></td>
             <td>
               <%= line.product_variant.product.name %>
@@ -142,7 +143,7 @@
             </td>
             <% if @receipt.draft? && effective_permissions.include?("purchase_receipts.manage") %>
               <td>
-                <%= form_with url: ops_receiving_update_line_path(@receipt, line), method: :patch, local: true, html: { class: "ops-inline-form" } do %>
+                <%= form_with url: ops_receiving_update_line_path(@receipt, line), method: :patch, local: true, html: { class: "ops-inline-form", data: { dirty_track: true } } do %>
                   <%= hidden_field_tag :lock_version, @receipt.lock_version %>
                   <label>
                     Qty
@@ -152,7 +153,7 @@
                     Cost
                     <input type="number" name="actual_unit_cost_cents" value="<%= line.actual_unit_cost_cents %>" min="0" required>
                   </label>
-                  <button type="submit">Save</button>
+                  <button type="submit" data-ops-save data-row-primary>Save</button>
                 <% end %>
               </td>
             <% end %>
@@ -167,7 +168,7 @@
 <% if @receipt.draft? && effective_permissions.include?("purchase_receipts.post") && @lines.any? %>
   <section class="ops-actions">
     <h2>Post</h2>
-    <p><%= link_to "Review and post", ops_receiving_review_path(@receipt) %></p>
+    <p><%= link_to "Review and post", ops_receiving_review_path(@receipt), data: { ops_primary: true } %></p>
   </section>
 <% end %>
 

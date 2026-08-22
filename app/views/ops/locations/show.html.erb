@@ -5,7 +5,7 @@
 <% if @pending_requests.empty? %>
   <p>No pending location requests.</p>
 <% else %>
-  <table class="ops-queue">
+  <table class="ops-queue" data-controller="focus-restore row-selection" data-action="keydown->row-selection#keydown">
     <thead>
       <tr>
         <th scope="col">#</th>
@@ -18,7 +18,7 @@
     <tbody>
       <% @pending_requests.each do |request| %>
         <% variant = request.product_variant %>
-        <tr>
+        <tr tabindex="-1" aria-selected="false" data-row-selection-target="row">
           <td><%= request.number %></td>
           <td><%= request.customer.display_name %></td>
           <td>
@@ -42,10 +42,10 @@
                 </label>
                 <label>
                   or scan
-                  <input type="text" name="unit_identifier" autocomplete="off" inputmode="numeric">
+                  <input type="text" name="unit_identifier" autocomplete="off" inputmode="numeric"<%= " data-focus-restore-target=lookup" if request == @pending_requests.first %>>
                 </label>
               <% end %>
-              <button type="submit"<%= " autofocus" if request == @pending_requests.first %>>Located</button>
+              <button type="submit" data-row-primary<%= " data-focus-restore-target=lookup" if request == @pending_requests.first && variant.standard? %>>Located</button>
             <% end %>
             <%= form_with url: ops_location_not_located_path(request), method: :post, local: true, html: { class: "ops-inline-form" } do %>
               <%= hidden_field_tag :lock_version, request.lock_version %>

@@ -117,6 +117,80 @@ summary:focus-visible {
   flex: 1;
 }
 
+.ops-header,
+.ops-content {
+  width: min(100% - 2rem, var(--content-max));
+  margin-inline: auto;
+}
+
+.ops-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-block: var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.ops-content {
+  padding-block: var(--space-4);
+}
+
+.ops-shortcuts {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding: var(--space-2);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.ops-shortcuts__buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.ops-shortcuts__help {
+  margin-top: var(--space-2);
+  padding: var(--space-3);
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+}
+
+.ops-shortcuts__help h2 {
+  margin-top: 0;
+}
+
+.ops-shortcuts__help dl div {
+  display: flex;
+  gap: var(--space-3);
+  margin-block: var(--space-2);
+}
+
+.ops-shortcuts__help dt {
+  min-width: 10rem;
+}
+
+.ops-shortcuts__help dd {
+  margin: 0;
+}
+
+.ops-queue tr.is-selected > * {
+  background: color-mix(in srgb, var(--color-action) 12%, var(--color-surface));
+}
+
+.ops-queue tr:focus-visible {
+  outline: 3px solid var(--color-action);
+  outline-offset: -3px;
+}
+
+form[data-dirty="true"] {
+  border-inline-start: 3px solid var(--color-warning);
+  padding-inline-start: var(--space-2);
+}
+
 .surface {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
