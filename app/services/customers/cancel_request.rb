@@ -4,6 +4,8 @@ module Customers
   class CancelRequest
     DRAFT_ORDER_DECISION_REQUIRED =
       "This request has an unsent special order. Pass cancel_draft_order: true or false."
+    SENT_PO_CONFLICT =
+      "cannot cancel draft order because purchase order was already sent"
 
     def self.call(**attrs)
       new(**attrs).call
@@ -32,54 +34,48 @@ module Customers
         raise Customers::Error, "actor is required" if @actor.blank?
         raise Customers::Error, "cancellation reason is required" if @reason.blank?
 
-        # Soft-read for draft-order decisions and reservation targets. Do not hold
-        # customer_request across inventory acquisition.
+        # Soft-read for draft-order decisions. Do not hold customer_request across inventory acquisition.
         peek = CustomerRequest.find(@request.id)
         raise Customers::Error, "request is already cancelled" if peek.cancelled?
         raise Customers::Error, "completed requests cannot be cancelled" if peek.completed?
 
-        unsent_orders = unsent_orders_for(peek)
-        if unsent_orders.any?
+        active_orders = active_orders_for(peek)
+        unsent_orders = active_orders.select(&:unsent?)
+        if @cancel_draft_order == true
+          cancel_draft_orders!(active_orders) if active_orders.any?
+        elsif unsent_orders.any?
           if @cancel_draft_order.nil?
             raise Customers::Error, DRAFT_ORDER_DECISION_REQUIRED
           end
-          # Draft Order/PO locks before inventory kernel.
-          cancel_unsent_orders!(unsent_orders) if @cancel_draft_order
+          # cancel_draft_order: false leaves unsent draft orders on the PO.
         end
 
-        allocation_peek = peek.customer_request_allocations.reserved.first
-        allocation = nil
+        store = peek.store
+        variant = peek.product_variant
+        # Always serialize on inventory before request so concurrent locate/receipt cannot
+        # attach a reserved allocation to a request that is about to be cancelled.
+        Inventory::Balances.lock_or_create!(store: store, product_variant: variant)
 
-        if allocation_peek
-          # Lock order: InventoryBalance → InventoryUnit (Used) → customer_request → allocation
-          store = peek.store
-          variant = peek.product_variant
-          Inventory::Balances.lock_or_create!(store: store, product_variant: variant)
-          if allocation_peek.used_unit?
-            InventoryUnit.lock.find(allocation_peek.inventory_unit_id)
-          end
+        request = CustomerRequest.lock.find(@request.id)
+        assert_lock_version!(request)
+        raise Customers::Error, "request is already cancelled" if request.cancelled?
+        raise Customers::Error, "completed requests cannot be cancelled" if request.completed?
 
-          request = CustomerRequest.lock.find(@request.id)
-          assert_lock_version!(request)
-          raise Customers::Error, "request is already cancelled" if request.cancelled?
-          raise Customers::Error, "completed requests cannot be cancelled" if request.completed?
+        allocation = CustomerRequestAllocation.lock.find_by(
+          customer_request_id: request.id,
+          status: "reserved"
+        )
+        if allocation&.used_unit?
+          InventoryUnit.lock.find(allocation.inventory_unit_id)
+        end
 
-          allocation = CustomerRequestAllocation.lock.find(allocation_peek.id)
-          unless allocation.reserved? && allocation.customer_request_id == request.id
-            allocation = nil
-          else
-            allocation.update!(
-              status: "released",
-              released_at: Time.current,
-              released_by: @actor,
-              release_reason: @reason
-            )
-          end
-        else
-          request = CustomerRequest.lock.find(@request.id)
-          assert_lock_version!(request)
-          raise Customers::Error, "request is already cancelled" if request.cancelled?
-          raise Customers::Error, "completed requests cannot be cancelled" if request.completed?
+        if allocation&.reserved?
+          allocation.update!(
+            status: "released",
+            released_at: Time.current,
+            released_by: @actor,
+            release_reason: @reason
+          )
         end
 
         attrs = {
@@ -108,7 +104,7 @@ module Customers
             cancellation_reason: request.cancellation_reason,
             allocation_released: allocation.present?,
             cancel_draft_order: @cancel_draft_order,
-            unsent_orders_cancelled: unsent_orders.any? && @cancel_draft_order
+            draft_orders_cancelled: @cancel_draft_order == true && active_orders.any?
           }
         )
 
@@ -125,44 +121,58 @@ module Customers
       raise ActiveRecord::StaleObjectError.new(request, "update")
     end
 
-    def unsent_orders_for(request)
+    def active_orders_for(request)
       Order.active
         .where(customer_request_id: request.id)
         .includes(purchase_order_line: :purchase_order)
-        .select { |order| order.unsent? }
+        .to_a
     end
 
-    def cancel_unsent_orders!(orders)
+    def cancel_draft_orders!(orders)
       orders.each do |order|
-        locked = Order.lock.find(order.id)
-        next if locked.cancelled?
-
-        line = locked.purchase_order_line
-        po = line&.purchase_order
-        po&.lock!
-
-        locked.update!(
-          cancelled_at: Time.current,
-          cancelled_by: @actor,
-          cancellation_reason: @reason
-        )
-
+        line = order.purchase_order_line
         if line
+          po = PurchaseOrder.lock.find(line.purchase_order_id)
+          if po.sent_at.present? || !po.draft?
+            raise Customers::Error, SENT_PO_CONFLICT
+          end
+
+          locked_order = Order.lock.find(order.id)
+          next if locked_order.cancelled?
+
+          line = PurchaseOrderLine.lock.find(line.id)
+          raise Customers::Error, "order line changed concurrently" unless line.order_id == locked_order.id
+
+          locked_order.update!(
+            cancelled_at: Time.current,
+            cancelled_by: @actor,
+            cancellation_reason: @reason
+          )
+
           line.destroy!
-          Purchasing::DraftPoPlacement.destroy_if_empty_draft!(po) if po
+          Purchasing::DraftPoPlacement.destroy_if_empty_draft!(po)
+        else
+          locked_order = Order.lock.find(order.id)
+          next if locked_order.cancelled?
+
+          locked_order.update!(
+            cancelled_at: Time.current,
+            cancelled_by: @actor,
+            cancellation_reason: @reason
+          )
         end
 
         Audit::Recorder.record!(
           action: "orders.cancel_draft",
           outcome: "succeeded",
           actor_user: @actor,
-          store: locked.store,
-          subject: locked,
+          store: locked_order.store,
+          subject: locked_order,
           correlation_id: @correlation_id,
           after_values: {
-            number: locked.number,
-            cancellation_reason: locked.cancellation_reason,
-            customer_request_id: locked.customer_request_id
+            number: locked_order.number,
+            cancellation_reason: locked_order.cancellation_reason,
+            customer_request_id: locked_order.customer_request_id
           }
         )
       end

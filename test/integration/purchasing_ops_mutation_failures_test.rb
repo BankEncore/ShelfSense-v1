@@ -79,7 +79,7 @@ class PurchasingOpsMutationFailuresTest < ActionDispatch::IntegrationTest
       lock_version: customer_request.lock_version,
       convert_to_special_order: "1",
       supplier_id: SecureRandom.uuid_v7,
-      expected_unit_cost_cents: "00123",
+      expected_unit_cost_cents: "1.23",
       notes: "retain location note"
     }
 
@@ -87,7 +87,7 @@ class PurchasingOpsMutationFailuresTest < ActionDispatch::IntegrationTest
     assert_select "tr.is-selected[aria-selected='true']"
     assert_select ".location-action-panel:not([hidden])[data-request-id='#{customer_request.id}']" do
       assert_select "input[name='notes'][value='retain location note']"
-      assert_select "input[name='expected_unit_cost_cents'][value='00123']"
+      assert_select "input[name='expected_unit_cost_cents'][value='1.23']"
       assert_select ".ops-row-error"
     end
   end

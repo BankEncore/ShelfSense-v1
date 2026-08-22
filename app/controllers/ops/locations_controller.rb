@@ -44,6 +44,8 @@ module Ops
         "Request ##{@customer_request.number} cancelled (not located)."
       end
       redirect_to ops_location_path, notice: notice
+    rescue Money::ParseCents::Error => e
+      render_mutation_failure(convert ? :special_order : :not_located, e, field: :expected_unit_cost_cents)
     rescue Customers::Error, ActiveRecord::RecordInvalid, ActiveRecord::RecordNotFound => e
       render_mutation_failure(convert ? :special_order : :not_located, e, field: convert ? :expected_unit_cost_cents : :notes)
     rescue ActiveRecord::StaleObjectError => e
@@ -135,9 +137,7 @@ module Ops
     def optional_cents(value)
       return if value.blank?
 
-      Integer(value)
-    rescue ArgumentError, TypeError
-      nil
+      Money::ParseCents.call(value)
     end
   end
 end

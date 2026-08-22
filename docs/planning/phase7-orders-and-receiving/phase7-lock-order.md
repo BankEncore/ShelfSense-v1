@@ -25,8 +25,7 @@ Authority: [phase7-spec.md](phase7-spec.md) §7.14 / §15, [inventory-posting-co
 | Customer pickup | existing POS aggregate → `InventoryBalance` → `InventoryUnit` when Used → allocation / request |
 | Negative adjustment | `InventoryBalance` → `InventoryUnit` when Used |
 | Post special-order receipt | purchasing receipt aggregate (receipt → POs → PO lines → orders) → `InventoryBalance` → request / allocation |
-| Cancel request (releasing reservation) | draft Order/PO locks when cancelling unsent orders, then `InventoryBalance` → `InventoryUnit` when Used → `customer_request` → allocation |
-| Cancel request (no reservation) | draft Order/PO locks when needed, then `customer_request` |
+| Cancel request | `PurchaseOrder` before `Order`/`PurchaseOrderLine` when cancelling draft orders (`cancel_draft_order: true`), then `InventoryBalance` → `InventoryUnit` when a reserved Used allocation exists → `customer_request` → allocation when reserved |
 | Reverse receipt | correction / receipt → `InventoryBalance` → request / allocation |
 | Depleting post-void | match existing `Inventory::PostPostVoid` order + availability check under balance lock |
 
@@ -34,7 +33,7 @@ Authority: [phase7-spec.md](phase7-spec.md) §7.14 / §15, [inventory-posting-co
 
 ### Cancel request
 
-When releasing a reserved allocation, cancel follows the same inventory-before-request kernel as Confirm and Reverse so concurrent reverse-vs-cancel cannot AB-BA deadlock. Soft-read the request to decide draft-order and reservation paths; do not hold `customer_request` while acquiring `InventoryBalance`.
+When releasing a reserved allocation, cancel follows the same inventory-before-request kernel as Confirm and Reverse so concurrent reverse-vs-cancel cannot AB-BA deadlock. **Always** acquire `InventoryBalance` before locking `customer_request`, even when the soft read shows no reserved allocation, so concurrent locate or special-order receipt cannot attach a reservation to a request that is about to be cancelled. Soft-read the request only to decide draft-order paths; do not hold `customer_request` while acquiring `InventoryBalance`. Re-query and lock the current reserved allocation after the request lock rather than relying on the soft read. When `cancel_draft_order: true`, lock `PurchaseOrder` before `Order` and `PurchaseOrderLine` so concurrent send cannot deadlock; revalidate `po.draft?` and `sent_at` after the PO lock and return `SENT_PO_CONFLICT` if the PO was sent.
 
 ### Competing locate vs ordinary sale
 
