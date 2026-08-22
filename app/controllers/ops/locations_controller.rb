@@ -59,7 +59,7 @@ module Ops
       @error_field = field
       @selected_row_id = @customer_request.id
       @conflict = stale
-      @mutation_errors = [stale ? "This request was changed by someone else." : exception.message]
+      @mutation_errors = [ stale ? "This request was changed by someone else." : exception.message ]
       @customer_request.reload
       @pending_requests = CustomerRequest.pending_location.for_store(current_store).includes(:customer, :product_variant).order(:number)
       render :show, status: :unprocessable_entity

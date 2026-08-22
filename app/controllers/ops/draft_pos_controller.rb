@@ -112,7 +112,7 @@ module Ops
       @error_field = field
       @selected_row_id = row_id
       @conflict = stale
-      @mutation_errors = [stale ? "This purchase order was changed by someone else." : exception.message]
+      @mutation_errors = [ stale ? "This purchase order was changed by someone else." : exception.message ]
       @purchase_order.reload
       @lines = @purchase_order.purchase_order_lines.includes(order: :customer_request, product_variant: :product).order(:created_at)
       render :show, status: :unprocessable_entity

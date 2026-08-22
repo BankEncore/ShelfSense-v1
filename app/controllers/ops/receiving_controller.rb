@@ -78,7 +78,7 @@ module Ops
       @submitted = params.to_unsafe_h.slice("supplier_id", "received_at", "supplier_document_number")
       @error_action = :create
       @error_field = :supplier_id
-      @mutation_errors = [e.message]
+      @mutation_errors = [ e.message ]
       @draft_receipts = PurchaseReceipt.draft.for_store(current_store).includes(:supplier, :purchase_receipt_lines).order(created_at: :desc)
       @suppliers = Supplier.active.admin_ordered
       render :index, status: :unprocessable_entity
@@ -275,7 +275,7 @@ module Ops
       @error_field = field
       @selected_row_id = row_id
       @conflict = stale
-      @mutation_errors = [stale ? "This receipt was changed by someone else." : exception.message]
+      @mutation_errors = [ stale ? "This receipt was changed by someone else." : exception.message ]
       load_receipt_lines
       respond_to do |format|
         format.html { render :show, status: :unprocessable_entity }
@@ -286,7 +286,7 @@ module Ops
     def render_review_failure(exception, stale: false)
       @error_action = :post
       @conflict = stale
-      @mutation_errors = [stale ? "This receipt was changed by someone else." : exception.message]
+      @mutation_errors = [ stale ? "This receipt was changed by someone else." : exception.message ]
       load_receipt_lines
       @preview_lines = @lines.map { |line| preview_line(line) }
       render :review, status: :unprocessable_entity
