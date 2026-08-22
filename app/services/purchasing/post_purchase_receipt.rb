@@ -40,7 +40,8 @@ module Purchasing
       end
 
       PurchaseReceipt.transaction do
-        # Lock order: receipt → POs → PO lines → orders → requests → balances (via PostReceipt) → allocations
+        # Lock order: receipt → POs → PO lines → orders → balances (via PostReceipt)
+        # → request / allocation (special-order allocate after balance)
         receipt = PurchaseReceipt.lock.find(@receipt.id)
         assert_lock_version!(receipt)
         raise Purchasing::Error, "only draft receipts can be posted" unless receipt.draft?
@@ -61,9 +62,6 @@ module Purchasing
 
         orders = po_lines.map(&:order).uniq.sort_by(&:id)
         orders.each { |order| Order.lock.find(order.id) }
-
-        requests = orders.filter_map(&:customer_request).uniq.sort_by(&:id)
-        requests.each { |request| CustomerRequest.lock.find(request.id) }
 
         business_date = BusinessDate.for_store(receipt.store, at: receipt.received_at)
         posted_at = Time.current

@@ -9,9 +9,9 @@ module Inventory
   # - exact inverse would drive on-hand or value below zero, or
   # - reservation availability would be violated after releasing this line's active allocation.
   #
-  # When unsafe, callers must not force an approximate reverse. Use an authorized
-  # compensating inventory adjustment (purchase_receipts.compensate) with an explicit
-  # cross-reference correction instead — see Purchasing::ReversePurchaseReceiptLine.
+  # When unsafe, callers must not force an approximate reverse via PostAdjustment.
+  # Use authorized compensation (purchase_receipts.compensate) instead —
+  # see Purchasing::ReversePurchaseReceiptLine and Inventory::CompensateReceiptLine.
   class ReverseReceiptLine
     class Error < StandardError; end
     class UnsafeReversalError < Error
@@ -53,9 +53,23 @@ module Inventory
       raise Error, "only posted receipt lines can be reversed" unless receipt.posted?
 
       quantity = @correction.quantity.to_i
-      prior_reversed = line.corrections.quantity_reversals.where.not(id: @correction.id).sum(:quantity)
-      remaining_before = line.received_quantity - prior_reversed
+      consumed_elsewhere = line.corrections
+        .where(correction_type: %w[quantity_reversal compensating_adjustment_reference])
+        .where.not(id: @correction.id)
+        .sum(:quantity)
+      remaining_before = line.received_quantity - consumed_elsewhere
       raise Error, "reversal quantity exceeds remaining received quantity" if quantity > remaining_before
+
+      prior_value_deltas = line.corrections.where.not(id: @correction.id).sum(:value_delta_cents).to_i
+      effective_before = line.merchandise_value_cents + prior_value_deltas
+      value_to_remove =
+        if quantity == remaining_before
+          effective_before
+        else
+          (effective_before.to_d * quantity / remaining_before).round(0, BigDecimal::ROUND_HALF_UP).to_i
+        end
+      value_delta_cents = -value_to_remove
+      @correction.update!(value_delta_cents: value_delta_cents)
 
       original_ledger = InventoryLedgerEntry.find_by!(
         source_type: "PurchaseReceiptLine",
@@ -68,10 +82,12 @@ module Inventory
         effect_sequence: 0
       )
 
-      # Exact inverse of the original unit cost for the reversed quantity (not current average).
       quantity_delta = -quantity
-      value_delta_cents = -(quantity * line.actual_unit_cost_cents)
+      variant = line.product_variant
+      store = receipt.store
 
+      # Lock order: InventoryBalance before allocation / request
+      balance = Balances.lock_or_create!(store: store, product_variant: variant)
       allocation = CustomerRequestAllocation.lock.find_by(purchase_receipt_line_id: line.id)
       if allocation&.fulfilled?
         raise UnsafeReversalError.new(
@@ -81,10 +97,6 @@ module Inventory
           reason_code: :fulfilled_allocation
         )
       end
-
-      variant = line.product_variant
-      store = receipt.store
-      balance = Balances.lock_or_create!(store: store, product_variant: variant)
 
       resulting_qty = balance.on_hand_quantity + quantity_delta
       resulting_value = balance.inventory_value_cents + value_delta_cents
@@ -124,7 +136,7 @@ module Inventory
         release_allocation!(active_allocation, request)
       end
 
-      full_reverse = quantity == line.received_quantity && prior_reversed.zero?
+      full_reverse = quantity == line.received_quantity && consumed_elsewhere.zero?
       ledger = InventoryLedgerEntry.create!(
         store: store,
         product_variant: variant,
@@ -156,7 +168,8 @@ module Inventory
         calculation_metadata: {
           reversal_of_valuation_id: original_valuation.id,
           purchase_receipt_line_id: line.id,
-          quantity: quantity
+          quantity: quantity,
+          value_delta_cents: value_delta_cents
         },
         business_date: @business_date,
         occurred_at: @occurred_at,

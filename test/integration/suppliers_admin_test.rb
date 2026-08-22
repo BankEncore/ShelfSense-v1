@@ -110,6 +110,37 @@ class SuppliersAdminTest < ActionDispatch::IntegrationTest
     assert_not source.reload.active?
   end
 
+  test "cannot deactivate supplier with draft purchase orders" do
+    sign_in_as("admin")
+    store = @bootstrap[:store]
+    actor = @bootstrap[:administrator]
+    post store_selection_path, params: { store_id: store.id }
+
+    tax = tax_class(code: "sd_#{SecureRandom.hex(2)}")
+    variant = pos_sellable_variant(actor: actor, tax_class: tax, name: "Deact Block")
+    supplier = Supplier.create!(name: "Deact Block", code: "deact_#{SecureRandom.hex(2)}")
+    SupplierVariantSource.create!(
+      supplier: supplier,
+      product_variant: variant,
+      pricing_method: "direct_unit_cost",
+      expected_unit_cost_cents: 200,
+      organization_preferred: true
+    )
+    Purchasing::CreateStockOrder.call(
+      store: store,
+      product_variant: variant,
+      actor: actor,
+      quantity: 1,
+      supplier: supplier
+    )
+
+    delete admin_supplier_path(supplier)
+    assert_redirected_to admin_supplier_path(supplier)
+    assert supplier.reload.active?
+    follow_redirect!
+    assert_match(/cannot deactivate/i, response.body)
+  end
+
   private
 
   def sign_in_as(username)

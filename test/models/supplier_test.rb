@@ -22,4 +22,65 @@ class SupplierTest < ActiveSupport::TestCase
     assert_not nameless.valid?
     assert_includes nameless.errors[:name], "can't be blank"
   end
+
+  test "cannot deactivate while draft purchase orders exist" do
+    bootstrap = bootstrap!
+    store = bootstrap[:store]
+    actor = bootstrap[:administrator]
+    tax = tax_class(code: "sup_#{SecureRandom.hex(2)}")
+    variant = pos_sellable_variant(actor: actor, tax_class: tax, name: "Supplier Block")
+    supplier = Supplier.create!(name: "Draft Block", code: "db_#{SecureRandom.hex(2)}")
+    SupplierVariantSource.create!(
+      supplier: supplier,
+      product_variant: variant,
+      pricing_method: "direct_unit_cost",
+      expected_unit_cost_cents: 300,
+      organization_preferred: true
+    )
+    Purchasing::CreateStockOrder.call(
+      store: store,
+      product_variant: variant,
+      actor: actor,
+      quantity: 1,
+      supplier: supplier
+    )
+
+    supplier.active = false
+    assert_not supplier.valid?
+    assert_match(/draft purchase order/i, supplier.errors.full_messages.to_sentence)
+    assert supplier.reload.active?
+  end
+
+  test "can deactivate when only sent purchase orders remain" do
+    bootstrap = bootstrap!
+    store = bootstrap[:store]
+    actor = bootstrap[:administrator]
+    tax = tax_class(code: "sup2_#{SecureRandom.hex(2)}")
+    variant = pos_sellable_variant(actor: actor, tax_class: tax, name: "Supplier Sent")
+    supplier = Supplier.create!(name: "Sent Only", code: "so_#{SecureRandom.hex(2)}")
+    SupplierVariantSource.create!(
+      supplier: supplier,
+      product_variant: variant,
+      pricing_method: "direct_unit_cost",
+      expected_unit_cost_cents: 300,
+      organization_preferred: true
+    )
+    order = Purchasing::CreateStockOrder.call(
+      store: store,
+      product_variant: variant,
+      actor: actor,
+      quantity: 1,
+      supplier: supplier
+    )
+    po = order.purchase_order
+    Purchasing::GeneratePurchaseOrder.call(purchase_order: po, actor: actor)
+    Purchasing::SendPurchaseOrder.call(
+      purchase_order: po.reload,
+      actor: actor,
+      transmission_method: "email"
+    )
+
+    assert supplier.update(active: false)
+    assert_not supplier.reload.active?
+  end
 end

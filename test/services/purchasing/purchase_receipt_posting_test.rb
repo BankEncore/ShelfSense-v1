@@ -299,6 +299,47 @@ class Purchasing::PurchaseReceiptPostingTest < ActiveSupport::TestCase
     assert_match(/supplier/i, error.message)
   end
 
+  test "update draft receipt audits ancillary charge changes" do
+    receipt = Purchasing::CreateDraftPurchaseReceipt.call(
+      store: @store,
+      supplier: @supplier,
+      actor: @actor,
+      freight_cents: 0
+    )
+
+    updated = Purchasing::UpdateDraftPurchaseReceipt.call(
+      purchase_receipt: receipt,
+      actor: @actor,
+      freight_cents: 250,
+      notes: "dock fee",
+      expected_lock_version: receipt.lock_version
+    )
+
+    assert_equal 250, updated.freight_cents
+    assert_equal "dock fee", updated.notes
+    event = AuditEvent.where(action: "purchase_receipts.update_draft", subject_id: receipt.id).order(:created_at).last
+    assert event
+    assert_equal "succeeded", event.outcome
+    assert_equal 0, event.before_values["freight_cents"]
+    assert_equal 250, event.after_values["freight_cents"]
+
+    posted = Purchasing::CreateDraftPurchaseReceipt.call(
+      store: @store,
+      supplier: @supplier,
+      actor: @actor
+    )
+    # Mark as posted via update_columns to avoid full PO setup for rejection path
+    posted.update_columns(status: "posted", number: 99, posted_at: Time.current, updated_at: Time.current)
+    error = assert_raises(Purchasing::Error) do
+      Purchasing::UpdateDraftPurchaseReceipt.call(
+        purchase_receipt: posted,
+        actor: @actor,
+        freight_cents: 1
+      )
+    end
+    assert_match(/draft/i, error.message)
+  end
+
   private
 
   def seed_balance!(on_hand:, value_cents:)

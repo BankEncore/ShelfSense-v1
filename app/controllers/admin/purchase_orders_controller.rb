@@ -73,6 +73,13 @@ module Admin
 
     def set_purchase_order
       @purchase_order = PurchaseOrder.find(params[:id])
+      permission =
+        case action_name
+        when "cancel_line" then "purchase_orders.cancel"
+        when "acknowledge_line" then "purchase_orders.send"
+        else "orders.view"
+        end
+      return unless authorize!(permission, store: @purchase_order.store)
     end
 
     def set_line

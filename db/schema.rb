@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_22_070000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_22_100000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -919,8 +919,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_22_070000) do
     t.index ["inventory_source_type", "inventory_source_id"], name: "index_prl_corrections_on_inventory_source"
     t.index ["purchase_receipt_line_id"], name: "idx_on_purchase_receipt_line_id_c4b7a21d2e"
     t.index ["recorded_by_id"], name: "index_purchase_receipt_line_corrections_on_recorded_by_id"
-    t.check_constraint "correction_type::text = 'cost_correction'::text AND value_delta_cents IS NOT NULL AND value_delta_cents <> 0 OR correction_type::text <> 'cost_correction'::text", name: "prl_corrections_cost_value_present"
-    t.check_constraint "correction_type::text = 'quantity_reversal'::text AND quantity > 0 OR correction_type::text <> 'quantity_reversal'::text AND quantity IS NULL", name: "prl_corrections_quantity_matches_type"
+    t.check_constraint "correction_type::text = 'cost_correction'::text AND value_delta_cents IS NOT NULL AND value_delta_cents <> 0 OR correction_type::text = 'compensating_adjustment_reference'::text AND value_delta_cents IS NOT NULL OR correction_type::text = 'quantity_reversal'::text", name: "prl_corrections_cost_value_present"
+    t.check_constraint "correction_type::text = 'quantity_reversal'::text AND quantity > 0 OR correction_type::text = 'compensating_adjustment_reference'::text AND quantity > 0 OR correction_type::text = 'cost_correction'::text AND quantity IS NULL", name: "prl_corrections_quantity_matches_type"
     t.check_constraint "correction_type::text = ANY (ARRAY['quantity_reversal'::character varying, 'cost_correction'::character varying, 'compensating_adjustment_reference'::character varying]::text[])", name: "prl_corrections_type_valid"
   end
 

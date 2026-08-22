@@ -22,22 +22,55 @@ class PurchaseReceiptLine < ApplicationRecord
   end
 
   def reversed_quantity
-    if corrections.loaded?
-      corrections.select(&:quantity_reversal?).sum { |c| c.quantity.to_i }
-    else
-      corrections.quantity_reversals.sum(:quantity)
-    end
+    sum_correction_quantity(select_quantity_reversals)
+  end
+
+  def compensated_quantity
+    sum_correction_quantity(select_compensating_corrections)
   end
 
   def remaining_reversible_quantity
-    received_quantity - reversed_quantity
+    received_quantity - reversed_quantity - compensated_quantity
   end
 
-  # Reversals consume matched quantity first, then unplanned.
+  def cost_correction_value_cents
+    sum_value_deltas(select_cost_corrections)
+  end
+
+  # Economic extended value still attributed to this line (original + all correction deltas).
+  def effective_merchandise_value_cents
+    merchandise_value_cents + all_correction_value_deltas_cents
+  end
+
+  def effective_unit_cost_cents
+    remaining = remaining_reversible_quantity
+    return nil if remaining.zero?
+
+    (effective_merchandise_value_cents.to_d / remaining).round(0, BigDecimal::ROUND_HALF_UP).to_i
+  end
+
+  # Value to remove for quantity Q of the current remaining reversible pool.
+  def reversal_value_cents_for(quantity, remaining_before: nil)
+    qty = quantity.to_i
+    remaining = remaining_before.nil? ? remaining_reversible_quantity : remaining_before.to_i
+    raise ArgumentError, "quantity must be positive" unless qty.positive?
+    raise ArgumentError, "quantity exceeds remaining reversible" if qty > remaining
+    return 0 if remaining.zero?
+
+    if qty == remaining
+      effective_merchandise_value_cents_excluding_pending
+    else
+      (
+        effective_merchandise_value_cents_excluding_pending.to_d * qty / remaining
+      ).round(0, BigDecimal::ROUND_HALF_UP).to_i
+    end
+  end
+
+  # Reversals and compensations consume matched quantity first, then unplanned.
   def reversed_matched_quantity
     remaining_matched = matched_quantity
-    ordered_quantity_reversals.each do |correction|
-      take = [ correction.quantity, remaining_matched ].min
+    ordered_quantity_consuming_corrections.each do |correction|
+      take = [ correction.quantity.to_i, remaining_matched ].min
       remaining_matched -= take
     end
     matched_quantity - remaining_matched
@@ -53,11 +86,62 @@ class PurchaseReceiptLine < ApplicationRecord
 
   private
 
-  def ordered_quantity_reversals
+  def effective_merchandise_value_cents_excluding_pending
+    # Callers that already inserted the in-flight correction should pass remaining_before
+    # and rely on value_deltas excluding that correction via reload/association state.
+    effective_merchandise_value_cents
+  end
+
+  def all_correction_value_deltas_cents
     if corrections.loaded?
-      corrections.select(&:quantity_reversal?).sort_by { |c| [ c.recorded_at, c.id ] }
+      corrections.sum { |c| c.value_delta_cents.to_i }
     else
-      corrections.quantity_reversals.order(:recorded_at, :id).to_a
+      corrections.sum(:value_delta_cents).to_i
+    end
+  end
+
+  def select_quantity_reversals
+    if corrections.loaded?
+      corrections.select(&:quantity_reversal?)
+    else
+      corrections.quantity_reversals.to_a
+    end
+  end
+
+  def select_compensating_corrections
+    if corrections.loaded?
+      corrections.select(&:compensating_adjustment_reference?)
+    else
+      corrections.compensating_references.to_a
+    end
+  end
+
+  def select_cost_corrections
+    if corrections.loaded?
+      corrections.select(&:cost_correction?)
+    else
+      corrections.cost_corrections.to_a
+    end
+  end
+
+  def sum_correction_quantity(list)
+    list.sum { |c| c.quantity.to_i }
+  end
+
+  def sum_value_deltas(list)
+    list.sum { |c| c.value_delta_cents.to_i }
+  end
+
+  def ordered_quantity_consuming_corrections
+    if corrections.loaded?
+      corrections
+        .select { |c| c.quantity_reversal? || c.compensating_adjustment_reference? }
+        .sort_by { |c| [ c.recorded_at, c.id ] }
+    else
+      corrections
+        .where(correction_type: %w[quantity_reversal compensating_adjustment_reference])
+        .order(:recorded_at, :id)
+        .to_a
     end
   end
 

@@ -51,8 +51,16 @@ module Admin
     end
 
     def destroy
-      mutate_and_audit!(@supplier, action: "suppliers.deactivate") { @supplier.update!(active: false) }
+      mutate_and_audit!(
+        @supplier,
+        action: "suppliers.deactivate",
+        before_values: { active: true },
+        after_values: { active: false }
+      ) { @supplier.update!(active: false) }
       redirect_to admin_suppliers_path, notice: "Supplier deactivated."
+    rescue ActiveRecord::RecordInvalid => e
+      redirect_to admin_supplier_path(@supplier),
+                  alert: e.record.errors.full_messages.to_sentence.presence || e.message
     end
 
     def reactivate

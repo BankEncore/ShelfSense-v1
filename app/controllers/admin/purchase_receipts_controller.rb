@@ -71,6 +71,12 @@ module Admin
 
     def set_receipt
       @receipt = PurchaseReceipt.find(params[:id])
+      permission =
+        case action_name
+        when "reverse", "reverse_line", "correct_cost" then "purchase_receipts.correct"
+        else "purchase_receipts.view"
+        end
+      return unless authorize!(permission, store: @receipt.store)
     end
 
     def set_line

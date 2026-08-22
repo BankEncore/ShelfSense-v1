@@ -254,6 +254,116 @@ class Purchasing::ReceiptCorrectionsTest < ActiveSupport::TestCase
     assert_match(/compensate/i, error.message)
   end
 
+  test "authorized compensate after sale consumes reversible quantity without depleting" do
+    seed_balance!(on_hand: 0, value_cents: 0)
+    po_line = sent_stock_line(quantity: 1)
+    receipt = draft_receipt_with_line(po_line, received_quantity: 1, actual_unit_cost_cents: 500)
+    Purchasing::PostPurchaseReceipt.call(
+      purchase_receipt: receipt,
+      actor: @actor,
+      idempotency_key: SecureRandom.uuid_v7
+    )
+    line = receipt.purchase_receipt_lines.first
+    InventoryBalance.find_by!(store: @store, product_variant: @variant).update!(
+      on_hand_quantity: 0,
+      inventory_value_cents: 0
+    )
+
+    correction = Purchasing::ReversePurchaseReceiptLine.call(
+      purchase_receipt_line: line,
+      actor: @actor,
+      reason: "sold before reverse",
+      authorize_compensate: true,
+      idempotency_key: SecureRandom.uuid_v7
+    )
+
+    assert correction.compensating_adjustment_reference?
+    assert_equal 1, correction.quantity
+    assert_equal(-500, correction.value_delta_cents)
+    assert_equal 0, line.reload.remaining_reversible_quantity
+    assert_equal 1, po_line.reload.open_quantity
+    balance = InventoryBalance.find_by!(store: @store, product_variant: @variant)
+    assert_equal 0, balance.on_hand_quantity
+    assert_equal 0, balance.inventory_value_cents
+
+    error = assert_raises(Purchasing::Error) do
+      Purchasing::ReversePurchaseReceiptLine.call(
+        purchase_receipt_line: line,
+        actor: @actor,
+        reason: "again",
+        authorize_compensate: true,
+        idempotency_key: SecureRandom.uuid_v7
+      )
+    end
+    assert_match(/nothing left|exceeds remaining|only posted|fully reversed/i, error.message)
+  end
+
+  test "sequential cost corrections use effective cost not original posted cost" do
+    seed_balance!(on_hand: 0, value_cents: 0)
+    po_line = sent_stock_line(quantity: 2)
+    receipt = draft_receipt_with_line(po_line, received_quantity: 2, actual_unit_cost_cents: 500)
+    Purchasing::PostPurchaseReceipt.call(
+      purchase_receipt: receipt,
+      actor: @actor,
+      idempotency_key: SecureRandom.uuid_v7
+    )
+    line = receipt.purchase_receipt_lines.first
+
+    Purchasing::CorrectPurchaseReceiptLineCost.call(
+      purchase_receipt_line: line,
+      actor: @actor,
+      reason: "invoice 600",
+      corrected_unit_cost_cents: 600,
+      idempotency_key: SecureRandom.uuid_v7
+    )
+    Purchasing::CorrectPurchaseReceiptLineCost.call(
+      purchase_receipt_line: line.reload,
+      actor: @actor,
+      reason: "invoice 550",
+      corrected_unit_cost_cents: 550,
+      idempotency_key: SecureRandom.uuid_v7
+    )
+
+    balance = InventoryBalance.find_by!(store: @store, product_variant: @variant)
+    assert_equal 2, balance.on_hand_quantity
+    assert_equal 1_100, balance.inventory_value_cents
+    assert_equal 1_100, line.reload.effective_merchandise_value_cents
+    assert_equal 550, line.effective_unit_cost_cents
+  end
+
+  test "partial reverse after cost correction removes effective value for reversed units" do
+    seed_balance!(on_hand: 0, value_cents: 0)
+    po_line = sent_stock_line(quantity: 2)
+    receipt = draft_receipt_with_line(po_line, received_quantity: 2, actual_unit_cost_cents: 500)
+    Purchasing::PostPurchaseReceipt.call(
+      purchase_receipt: receipt,
+      actor: @actor,
+      idempotency_key: SecureRandom.uuid_v7
+    )
+    line = receipt.purchase_receipt_lines.first
+    Purchasing::CorrectPurchaseReceiptLineCost.call(
+      purchase_receipt_line: line,
+      actor: @actor,
+      reason: "invoice 600",
+      corrected_unit_cost_cents: 600,
+      idempotency_key: SecureRandom.uuid_v7
+    )
+
+    Purchasing::ReversePurchaseReceiptLine.call(
+      purchase_receipt_line: line.reload,
+      actor: @actor,
+      reason: "return one",
+      quantity: 1,
+      idempotency_key: SecureRandom.uuid_v7
+    )
+
+    balance = InventoryBalance.find_by!(store: @store, product_variant: @variant)
+    assert_equal 1, balance.on_hand_quantity
+    assert_equal 600, balance.inventory_value_cents
+    assert_equal 1, line.reload.remaining_reversible_quantity
+    assert_equal 600, line.effective_merchandise_value_cents
+  end
+
   private
 
   def seed_balance!(on_hand:, value_cents:)

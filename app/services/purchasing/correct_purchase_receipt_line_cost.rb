@@ -140,8 +140,9 @@ module Purchasing
       corrected = @corrected_unit_cost_cents.to_i
       raise Purchasing::Error, "corrected unit cost must be nonnegative" if corrected.negative?
 
-      delta = (corrected - line.actual_unit_cost_cents) * remaining_qty
-      raise Purchasing::Error, "corrected unit cost equals posted cost" if delta.zero?
+      target_extended = corrected * remaining_qty
+      delta = target_extended - line.effective_merchandise_value_cents
+      raise Purchasing::Error, "corrected unit cost equals current effective cost" if delta.zero?
 
       delta
     end

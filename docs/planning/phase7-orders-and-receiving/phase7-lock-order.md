@@ -23,7 +23,7 @@ Authority: [phase7-spec.md](phase7-spec.md) §7.14 / §15, [inventory-posting-co
 | Ordinary sale | existing POS aggregate locks → `InventoryBalance` → `InventoryUnit` when Used |
 | Customer pickup | existing POS aggregate → `InventoryBalance` → `InventoryUnit` when Used → allocation / request |
 | Negative adjustment | `InventoryBalance` → `InventoryUnit` when Used |
-| Post special-order receipt | purchasing receipt aggregate → `InventoryBalance` → request / allocation |
+| Post special-order receipt | purchasing receipt aggregate (receipt → POs → PO lines → orders) → `InventoryBalance` → request / allocation |
 | Cancel request | `customer_request` → allocation → `InventoryBalance` when releasing a Standard reservation (and `InventoryUnit` when releasing Used) |
 | Reverse receipt | correction / receipt → `InventoryBalance` → request / allocation |
 | Depleting post-void | match existing `Inventory::PostPostVoid` order + availability check under balance lock |

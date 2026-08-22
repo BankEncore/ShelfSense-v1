@@ -50,22 +50,26 @@ module Ops
     end
 
     def update
-      raise Purchasing::Error, "only draft receipts can be edited" unless @receipt.draft?
-
-      @receipt.update!(
-        received_at: parse_time(params[:received_at]) || @receipt.received_at,
-        supplier_document_number: params[:supplier_document_number],
-        supplier_document_date: params[:supplier_document_date].presence,
-        freight_cents: integer_param(params[:freight_cents], @receipt.freight_cents),
-        handling_cents: integer_param(params[:handling_cents], @receipt.handling_cents),
-        supplier_tax_cents: integer_param(params[:supplier_tax_cents], @receipt.supplier_tax_cents),
-        miscellaneous_charges_cents: integer_param(params[:miscellaneous_charges_cents], @receipt.miscellaneous_charges_cents),
-        charge_notes: params[:charge_notes],
-        notes: params[:notes]
+      Purchasing::UpdateDraftPurchaseReceipt.call(
+        purchase_receipt: @receipt,
+        actor: current_user,
+        expected_lock_version: params[:lock_version],
+        received_at: parse_time(params[:received_at]) || :__omit__,
+        supplier_document_number: params.key?(:supplier_document_number) ? params[:supplier_document_number] : :__omit__,
+        supplier_document_date: params.key?(:supplier_document_date) ? params[:supplier_document_date] : :__omit__,
+        freight_cents: params.key?(:freight_cents) ? params[:freight_cents] : :__omit__,
+        handling_cents: params.key?(:handling_cents) ? params[:handling_cents] : :__omit__,
+        supplier_tax_cents: params.key?(:supplier_tax_cents) ? params[:supplier_tax_cents] : :__omit__,
+        miscellaneous_charges_cents: params.key?(:miscellaneous_charges_cents) ? params[:miscellaneous_charges_cents] : :__omit__,
+        charge_notes: params.key?(:charge_notes) ? params[:charge_notes] : :__omit__,
+        notes: params.key?(:notes) ? params[:notes] : :__omit__
       )
       redirect_to ops_receiving_path(@receipt), notice: "Receipt updated."
     rescue Purchasing::Error, ActiveRecord::RecordInvalid => e
       redirect_to ops_receiving_path(@receipt), alert: e.message
+    rescue ActiveRecord::StaleObjectError
+      redirect_to ops_receiving_path(@receipt),
+                  alert: "This receipt was changed by someone else. Reload and try again."
     end
 
     def add_line
@@ -239,14 +243,6 @@ module Ops
       Time.zone.parse(value.to_s)
     rescue ArgumentError, TypeError
       nil
-    end
-
-    def integer_param(value, default)
-      return default if value.blank?
-
-      Integer(value)
-    rescue ArgumentError, TypeError
-      default
     end
   end
 end

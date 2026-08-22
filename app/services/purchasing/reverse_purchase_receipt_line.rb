@@ -5,9 +5,10 @@ module Purchasing
   #
   # Compensating path: when exact reversal is unsafe (sold stock, residual value,
   # competing reservations), pass authorize_compensate: true with an actor who has
-  # purchase_receipts.compensate. That posts Inventory::PostAdjustment and records a
-  # compensating_adjustment_reference correction. Fulfilled customer pickup is never
-  # undone — even with compensate — and remains a hard failure.
+  # purchase_receipts.compensate. That records a compensating_adjustment_reference
+  # (consuming reversible quantity) and may post valuation-only inventory relief when
+  # on-hand is already zero with residual value. It does not deplete via PostAdjustment.
+  # Fulfilled customer pickup is never undone — even with compensate — and remains a hard failure.
   class ReversePurchaseReceiptLine
     def self.call(**attrs)
       new(**attrs).call
@@ -55,7 +56,7 @@ module Purchasing
       end
 
       PurchaseReceiptLine.transaction do
-        # Lock order: receipt → balance (via inventory) → request / allocation
+        # Lock order: receipt/line → PO → balance (via inventory) → request / allocation
         line = PurchaseReceiptLine.lock.find(@line.id)
         receipt = PurchaseReceipt.lock.find(line.purchase_receipt_id)
         raise Purchasing::Error, "only posted receipt lines can be reversed" unless receipt.posted?
@@ -95,10 +96,12 @@ module Purchasing
             raise Purchasing::Error, e.message
           end
           return compensate!(
-            line: line,
+            line: line.reload,
             receipt: receipt,
+            po: po,
             quantity: quantity,
             occurred_at: occurred_at,
+            business_date: business_date,
             unsafe_message: e.message,
             op: op
           )
@@ -110,7 +113,6 @@ module Purchasing
           actor: @actor,
           correlation_id: @correlation_id
         )
-        # Re-open closed PO when matched qty is restored
         reopen_po_if_needed!(po)
 
         Audit::Recorder.record!(
@@ -159,39 +161,45 @@ module Purchasing
 
     private
 
-    def compensate!(line:, receipt:, quantity:, occurred_at:, unsafe_message:, op:)
+    def compensate!(line:, receipt:, po:, quantity:, occurred_at:, business_date:, unsafe_message:, op:)
       unless @authorize_compensate
         raise Purchasing::Error,
-              "#{unsafe_message}. To post a compensating inventory adjustment, " \
+              "#{unsafe_message}. To authorize compensation without exact inventory reversal, " \
               "retry with authorize_compensate and purchase_receipts.compensate."
       end
 
-      reason = AdjustmentReason.find_by!(code: "data_correction")
-      unit_cost = line.actual_unit_cost_cents
-      adjustment = Inventory::PostAdjustment.call(
-        store: receipt.store,
-        product_variant: line.product_variant,
-        adjustment_reason: reason,
-        quantity_delta: -quantity,
-        actor: @actor,
-        source_id: line.id,
-        idempotency_key: SecureRandom.uuid_v7,
-        notes: "Compensating receipt line #{line.id}: #{@reason}",
-        acquisition_unit_cost_cents: nil,
-        correlation_id: @correlation_id
-      )
+      remaining_before = line.remaining_reversible_quantity
+      if quantity > remaining_before
+        raise Purchasing::Error, "compensation quantity exceeds remaining received quantity"
+      end
+
+      value_delta = -line.reversal_value_cents_for(quantity, remaining_before: remaining_before)
 
       correction = PurchaseReceiptLineCorrection.create!(
         purchase_receipt_line: line,
         correction_type: "compensating_adjustment_reference",
-        quantity: nil,
-        value_delta_cents: -(quantity * unit_cost),
+        quantity: quantity,
+        value_delta_cents: value_delta,
         reason: @reason,
         recorded_by: @actor,
-        recorded_at: occurred_at,
-        inventory_source_type: "InventoryAdjustment",
-        inventory_source_id: adjustment.id
+        recorded_at: occurred_at
       )
+
+      Inventory::CompensateReceiptLine.call(
+        correction: correction,
+        occurred_at: occurred_at,
+        business_date: business_date,
+        actor: @actor,
+        correlation_id: @correlation_id
+      )
+
+      maybe_mark_receipt_reversed!(receipt)
+      ClosePurchaseOrderIfComplete.call!(
+        purchase_order: po.reload,
+        actor: @actor,
+        correlation_id: @correlation_id
+      )
+      reopen_po_if_needed!(po)
 
       Audit::Recorder.record!(
         action: "purchase_receipts.compensate",
@@ -202,8 +210,8 @@ module Purchasing
         correlation_id: @correlation_id,
         after_values: {
           purchase_receipt_line_id: line.id,
-          inventory_adjustment_id: adjustment.id,
-          quantity_delta: -quantity
+          quantity: quantity,
+          value_delta_cents: value_delta
         },
         metadata: { unsafe_message: unsafe_message }
       )
@@ -216,7 +224,8 @@ module Purchasing
         payload: {
           purchase_receipt_line_id: line.id,
           correction_id: correction.id,
-          inventory_adjustment_id: adjustment.id
+          quantity: quantity,
+          value_delta_cents: value_delta
         }
       )
 

@@ -13,12 +13,14 @@ class PurchaseReceiptLineCorrection < ApplicationRecord
 
   validates :correction_type, presence: true, inclusion: { in: CORRECTION_TYPES }
   validates :reason, :recorded_at, presence: true
-  validates :quantity, numericality: { only_integer: true, greater_than: 0 }, if: :quantity_reversal?
-  validates :quantity, absence: true, unless: :quantity_reversal?
+  validates :quantity, numericality: { only_integer: true, greater_than: 0 }, if: :requires_quantity?
+  validates :quantity, absence: true, if: :cost_correction?
   validates :value_delta_cents, presence: true, numericality: { other_than: 0 }, if: :cost_correction?
+  validates :value_delta_cents, presence: true, if: :compensating_adjustment_reference?
 
   scope :quantity_reversals, -> { where(correction_type: "quantity_reversal") }
   scope :cost_corrections, -> { where(correction_type: "cost_correction") }
+  scope :compensating_references, -> { where(correction_type: "compensating_adjustment_reference") }
 
   def quantity_reversal?
     correction_type == "quantity_reversal"
@@ -30,5 +32,9 @@ class PurchaseReceiptLineCorrection < ApplicationRecord
 
   def compensating_adjustment_reference?
     correction_type == "compensating_adjustment_reference"
+  end
+
+  def requires_quantity?
+    quantity_reversal? || compensating_adjustment_reference?
   end
 end

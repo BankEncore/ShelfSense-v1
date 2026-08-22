@@ -192,7 +192,10 @@ Universal hard-stop remains for ordinary lines (`exclude_allocation_id` nil).
 | Service | Purpose | Required source | Status |
 |---|---|---|---|
 | `Inventory::PostReceipt` | Add purchase-received quantity and merchandise value using moving weighted average | `PurchaseReceiptLine` | Implemented in Slice 7.5 |
-| `Inventory::ReverseReceiptLine` | Exact inverse of eligible posted receipt-line physical and valuation effects | `PurchaseReceiptLineCorrection` | Implemented in Slice 7.7 |
-| `Inventory::CorrectReceiptLineCost` | Valuation-only delta for a cost error with correct quantity | `PurchaseReceiptLineCorrection` | Implemented in Slice 7.7 |
+| `Inventory::ReverseReceiptLine` | Exact inverse of eligible posted receipt-line physical and valuation effects, including proportional prior cost-correction value | `PurchaseReceiptLineCorrection` (`quantity_reversal`) | Implemented in Slice 7.7 |
+| `Inventory::CorrectReceiptLineCost` | Valuation-only delta from effective extended value (not always original posted unit cost) | `PurchaseReceiptLineCorrection` (`cost_correction`) | Implemented in Slice 7.7 |
+| `Inventory::CompensateReceiptLine` | Authorized compensation when exact reverse is unsafe: valuation-only relief at zero on-hand; does **not** deplete via `PostAdjustment` | `PurchaseReceiptLineCorrection` (`compensating_adjustment_reference`) | Implemented |
+
+Cost corrections resolve `value_delta_cents` as `target_extended − effective_merchandise_value_cents` for remaining reversible quantity. Exact reverse of quantity Q removes the proportional share of that effective extended value. Compensation consumes reversible quantity on the purchasing correction and must not call depleting `Inventory::PostAdjustment`.
 
 Mark each service Implemented in this contract only when its implementing Phase 7 slice merges. Controllers, callbacks, imports, and purchasing workflows must not update `inventory_balances` or ledger rows directly.
