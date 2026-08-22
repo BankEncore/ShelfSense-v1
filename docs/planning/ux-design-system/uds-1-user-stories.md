@@ -49,13 +49,13 @@ As an implementer, I need flashes, badges, forms, tables, empty states, technica
 
 **Acceptance**
 
-- [ ] Allowlisted shared partials/primitives use Warm Parchment tokens (no new domain behavior).
-- [ ] Review-dialog opaque surfaces, borders, severity fills, and scrim use tokens from the warm-parchment migration map.
-- [ ] Dialog Stimulus focus restoration and existing dialog contracts are unchanged.
-- [ ] Focus-visible uses `--color-focus-ring`.
-- [ ] Density classes are contextual by screen type only (no user preference).
-- [ ] Fonts: Source Sans 3 packaged or Plus Jakarta self-hosted (no CDN); receipt Inconsolata unchanged.
-- [ ] `application` / `ops` layouts: token/chrome only; flat nav unchanged.
+- [x] Allowlisted shared partials/primitives use Warm Parchment tokens (no new domain behavior).
+- [x] Review-dialog opaque surfaces, borders, severity fills, and scrim use tokens from the warm-parchment migration map.
+- [x] Dialog Stimulus focus restoration and existing dialog contracts are unchanged.
+- [x] Focus-visible uses `--color-focus-ring`.
+- [x] Density classes are contextual by screen type only (no user preference).
+- [x] Fonts: Source Sans 3 packaged or Plus Jakarta self-hosted (no CDN); receipt Inconsolata unchanged.
+- [x] `application` / `ops` layouts: token/chrome only; flat nav unchanged.
 
 ---
 

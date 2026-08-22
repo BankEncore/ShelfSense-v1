@@ -1,6 +1,6 @@
 # UDS-1 — Tokens and shared visual primitives
 
-Status: **In progress** — UDS-1a and UDS-1b landed; UDS-1c–1d not started
+Status: **In progress** — UDS-1a–1c landed; UDS-1d not started
 
 Slice id remains **UDS-1**. This is **not** a Phase 7 domain slice and does not use Phase N.M numbering. Authority for visual tokens, actions, rollout gates, and deferrals remains the [UX design system packet](README.md).
 
@@ -70,10 +70,12 @@ Prefer one PR (or tightly sequenced PRs) per sub-slice. UDS-1a must land tokens/
 
 ### UDS-1c — Shared primitives and dialogs
 
+**Status: done** (shared primitives tokenized; review/POS dialog scrim and opaque surfaces; focus ring; density classes; Source Sans 3 packaged locally).
+
 - Restyle allowlisted shared partials and primitives: flashes, status badges, forms/fields/errors, data tables, empty states, technical details, pagination/filters, definition lists/sections, focus-visible using `--color-focus-ring`.
 - Tokenize native review-dialog surfaces, borders, severity fills, and overlay/scrim per the hard-coded CSS migration map in [warm-parchment.md](warm-parchment.md). Preserve Stimulus focus restoration and dialog contracts.
 - Add standard/compact density classes by screen type where density is already implied.
-- **Fonts:** decide keep/extend Source Sans 3 (package locally if kept) or self-host Plus Jakarta Sans; leave `--font-receipt` / Inconsolata unchanged; no CDN.
+- **Fonts:** Source Sans 3 packaged locally (latin 400/700); leave `--font-receipt` / Inconsolata unchanged; no CDN.
 - `application` / `ops` layouts: token and chrome only; keep **flat** permission-gated navigation.
 
 ### UDS-1d — Docs and matrix exit

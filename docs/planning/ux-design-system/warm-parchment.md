@@ -129,7 +129,7 @@ Each row reports: foreground on quiet fill / quiet-hover fill; border on quiet f
 
 ## Existing hard-coded CSS migration map
 
-UDS-1 must replace these literals in `app/assets/stylesheets/application.css`. Token definitions and Phase 2.2 aliases landed in UDS-1a; selector-level hard-coded migrations remain for UDS-1c.
+UDS-1 replaced hard-coded cool-slate / translucent dialog literals in `application.css` (UDS-1c). Retain this table as the migration record.
 
 | Existing selector/value | Warm Parchment token mapping | Note |
 |---|---|---|
@@ -148,7 +148,7 @@ UDS-1 must replace these literals in `app/assets/stylesheets/application.css`. T
 
 | Role | Guidance |
 |---|---|
-| Primary sans | Data grids, forms, navigation, tabular UI. Prefer a packaged webfont or system UI stack. Candidates: Plus Jakarta Sans (self-hosted) or keep/extend Source Sans 3. |
+| Primary sans | Data grids, forms, navigation, tabular UI. **Implemented (UDS-1c):** locally packaged Source Sans 3 (latin 400/700) with system fallbacks. |
 | Serif (optional) | Brand wordmark and top-level page titles only—not table cells. |
 | Mono | ISBN-13, transaction references, barcodes. Prefer packaged mono or existing receipt mono (`Inconsolata` / `--font-receipt`). |
 
