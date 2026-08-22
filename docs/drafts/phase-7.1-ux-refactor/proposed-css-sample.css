@@ -1,0 +1,63 @@
+:root {
+    /* ==========================================================================
+       1. Canvas & Surface Colors
+       ========================================================================== */
+    --color-bg-canvas: #FBF9F5;          /* Warm Linen - Main app background */
+    --color-bg-surface: #FFFFFF;         /* Crisp Parchment - Cards, inputs, table rows */
+    --color-bg-surface-elevated: #F4F0EA;/* Layered containers, modal headers */
+    --color-bg-subtle: #EFECE6;           /* Table headers, section dividers */
+  
+    /* ==========================================================================
+       2. Text & Content Colors
+       ========================================================================== */
+    --color-text-primary: #2C2523;       /* Dark Espresso - 12.5:1 contrast against canvas */
+    --color-text-secondary: #6E6763;     /* Muted Taupe - ISBNs, timestamps, subheaders */
+    --color-text-tertiary: #A29B96;      /* Placeholders, disabled states */
+    --color-text-inverse: #FFFFFF;       /* Text on terracotta buttons */
+  
+    /* ==========================================================================
+       3. Borders & Dividers (Hairline Grid System)
+       ========================================================================== */
+    --color-border-subtle: #E6DFD5;       /* Table gridlines, card borders */
+    --color-border-strong: #C8BFB5;       /* Form field borders, active panel dividers */
+  
+    /* ==========================================================================
+       4. Brand Accents
+       ========================================================================== */
+    --color-brand-primary: #C85A32;      /* Terracotta - Primary actions, active states */
+    --color-brand-hover: #A84320;        /* Deep Rust - Hover state for primary actions */
+    --color-brand-soft: #F9ECE7;         /* Light Terracotta tint - Active navigation items */
+  
+    /* ==========================================================================
+       5. Table Interaction States
+       ========================================================================== */
+    --color-table-row-hover: #F0EAE1;    /* Mouse hover background for data rows */
+    --color-table-row-selected: #EBE3D5; /* Selected row background */
+  
+    /* ==========================================================================
+       6. Semantic / Status Flags (Desaturated Warm Tones)
+       ========================================================================== */
+    /* In Stock / Success */
+    --color-status-success-bg: #EAF0EB;
+    --color-status-success-text: #2D4731;
+  
+    /* Low Stock / Pending / Warning */
+    --color-status-warning-bg: #FAF3E5;
+    --color-status-warning-text: #6E4D00;
+  
+    /* Out of Stock / Alert / Danger */
+    --color-status-danger-bg: #F9EBEA;
+    --color-status-danger-text: #7A2018;
+  
+    /* On Order / Draft / Info */
+    --color-status-info-bg: #EBF1F5;
+    --color-status-info-text: #1D435E;
+  
+    /* ==========================================================================
+       7. Typography & Spacing
+       ========================================================================== */
+    --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace; /* Used for ISBNs & Barcodes */
+    --font-serif: 'Lora', serif;              /* Optional: For section headings / brand header */
+  }
+  

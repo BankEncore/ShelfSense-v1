@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Receipt Details - Warm Parchment POS</title>
+  <link href="https://fonts.googleapis.com/css2?family=Lora:wght@500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-canvas: #FBF9F5;
+      --bg-surface: #FFFFFF;
+      --bg-subtle: #F4F0EA;
+      --bg-drawer: #F0EAE1;
+      --text-primary: #2C2523;
+      --text-secondary: #6E6763;
+      --border-subtle: #E6DFD5;
+      --brand-primary: #C85A32;
+      --status-sage-bg: #EAF0EB;
+      --status-sage-text: #2D4731;
+      --status-rust-bg: #F9EBEA;
+      --status-rust-text: #7A2018;
+      --status-brass-bg: #FAF3E5;
+      --status-brass-text: #6E4D00;
+    }
+
+    body {
+      background-color: var(--bg-canvas);
+      color: var(--text-primary);
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      margin: 0;
+      padding: 24px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    /* Top Action Bar */
+    .header-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 20px;
+    }
+
+    .header-title h1 {
+      font-family: 'Lora', serif;
+      font-size: 1.6rem;
+      margin: 0 0 4px 0;
+    }
+
+    .header-meta {
+      color: var(--text-secondary);
+      font-size: 0.85rem;
+    }
+
+    .action-group {
+      display: flex;
+      gap: 10px;
+    }
+
+    .btn {
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid var(--border-subtle);
+      background: var(--bg-surface);
+      color: var(--text-primary);
+    }
+
+    .btn-primary {
+      background-color: var(--brand-primary);
+      color: #FFFFFF;
+      border: none;
+    }
+
+    /* Top Summary Card */
+    .summary-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 24px;
+      display: grid;
+      grid-template-columns: 1fr 1fr 1.2fr;
+      gap: 24px;
+      position: relative;
+    }
+
+    .summary-card::before {
+      content: '';
+      position: absolute;
+      top: 16px;
+      right: 16px;
+    }
+
+    .badge-change {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      background: var(--status-brass-bg);
+      color: var(--status-brass-text);
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+
+    .summary-col h3 {
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--text-secondary);
+      margin: 0 0 12px 0;
+      border-bottom: 1px solid var(--border-subtle);
+      padding-bottom: 6px;
+    }
+
+    .summary-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.875rem;
+      margin-bottom: 6px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .summary-row.total {
+      font-weight: 700;
+      border-top: 1px dashed var(--border-subtle);
+      padding-top: 6px;
+      margin-top: 8px;
+    }
+
+    .net-collected {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    /* Data Table */
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .data-table th {
+      background: var(--bg-subtle);
+      text-align: left;
+      padding: 10px 14px;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .data-table td {
+      padding: 12px 14px;
+      font-size: 0.875rem;
+      border-bottom: 1px solid var(--border-subtle);
+      vertical-align: top;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .badge-status {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+
+    .badge-sale { background: var(--status-sage-bg); color: var(--status-sage-text); }
+    .badge-return { background: var(--status-rust-bg); color: var(--status-rust-text); }
+
+    .item-title { font-weight: 600; display: block; }
+    .item-sku { font-size: 0.78rem; color: var(--text-secondary); font-family: monospace; }
+    .text-discount { color: var(--status-sage-text); font-size: 0.8rem; }
+    .text-orig { color: var(--text-secondary); font-size: 0.8rem; text-decoration: line-through; }
+
+    /* Audit Sub-Drawer */
+    .audit-drawer td {
+      background-color: var(--bg-drawer);
+      padding: 8px 14px 8px 36px;
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .audit-drawer span {
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <!-- Top Action Bar -->
+  <div class="header-bar">
+    <div class="header-title">
+      <h1>Receipt S001-R01-T0000019</h1>
+      <div class="header-meta">2026-08-22 12:50 &bull; Register 01 &bull; Cashier: Admin User</div>
+    </div>
+    <div class="action-group">
+      <button class="btn">Reprint Receipt</button>
+      <button class="btn">Return Items</button>
+      <button class="btn btn-primary">Post-Void</button>
+    </div>
+  </div>
+
+  <!-- 3-Column Top Summary Card -->
+  <div class="summary-card">
+    <div class="badge-change">Change Due: $4.80</div>
+    
+    <div class="summary-col">
+      <h3>Sales Breakdown</h3>
+      <div class="summary-row"><span>Sales Subtotal</span><span>$62.00</span></div>
+      <div class="summary-row"><span>Sales Discount</span><span style="color: var(--status-sage-text);">-$5.40</span></div>
+      <div class="summary-row"><span>Sales Tax</span><span>$3.40</span></div>
+      <div class="summary-row total"><span>Sales Total</span><span>$60.00</span></div>
+    </div>
+
+    <div class="summary-col">
+      <h3>Returns Breakdown</h3>
+      <div class="summary-row"><span>Return Subtotal</span><span style="color: var(--status-rust-text);">-$23.40</span></div>
+      <div class="summary-row"><span>Tax Reversal</span><span style="color: var(--status-rust-text);">-$1.40</span></div>
+      <div class="summary-row total"><span>Returns Total</span><span style="color: var(--status-rust-text);">-$24.80</span></div>
+    </div>
+
+    <div class="summary-col">
+      <h3>Net & Payment Tenders</h3>
+      <div class="summary-row" style="margin-bottom: 10px;">
+        <span>Net Collected</span>
+        <span class="net-collected">$35.20</span>
+      </div>
+      <div class="summary-row"><span>External Card (*123456)</span><span>$10.00</span></div>
+      <div class="summary-row"><span>External Card (*1234)</span><span>$10.00</span></div>
+      <div class="summary-row"><span>Cash (Tendered $20.00)</span><span>$15.20</span></div>
+    </div>
+  </div>
+
+  <!-- Itemized Data Grid -->
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th style="width: 50px;">Line</th>
+        <th style="width: 80px;">Type</th>
+        <th>Item & SKU Details</th>
+        <th style="width: 50px; text-align: center;">Qty</th>
+        <th style="text-align: right;">Price / Adj</th>
+        <th style="text-align: right;">Tax Code</th>
+        <th style="text-align: right;">Net Total</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- Row 1 -->
+      <tr>
+        <td>1</td>
+        <td><span class="badge-status badge-sale">SALE</span></td>
+        <td>
+          <span class="item-title">Test Book</span>
+          <span class="item-sku">SKU: 2210000000186 &bull; Books</span>
+        </td>
+        <td style="text-align: center;">1</td>
+        <td style="text-align: right;">$16.00</td>
+        <td style="text-align: right;">A ($0.96)</td>
+        <td style="text-align: right; font-weight: 600;">$16.00</td>
+      </tr>
+
+      <!-- Row 2 -->
+      <tr>
+        <td>2</td>
+        <td><span class="badge-status badge-sale">SALE</span></td>
+        <td>
+          <span class="item-title">Cher: The Memoir (Part 1)</span>
+          <span class="item-sku">SKU: 2210000000087 &bull; Books</span>
+        </td>
+        <td style="text-align: center;">1</td>
+        <td style="text-align: right;">
+          $36.00<br>
+          <span class="text-discount">-$5.40 (15%)</span>
+        </td>
+        <td style="text-align: right;">A ($1.84)</td>
+        <td style="text-align: right; font-weight: 600;">$30.60</td>
+      </tr>
+      <tr class="audit-drawer">
+        <td colspan="7">
+          &#8627; <span>Line Discount Audit:</span> Performed by Admin User &bull; Reason: Customer service &bull; Policy: Direct &bull; Tax Rate: 6.000%
+        </td>
+      </tr>
+
+      <!-- Row 3 -->
+      <tr>
+        <td>3</td>
+        <td><span class="badge-status badge-return">RETURN</span></td>
+        <td>
+          <span class="item-title">Cher: The Memoir (Part 1) <small style="color: var(--text-secondary);">[Like New]</small></span>
+          <span class="item-sku">SKU: 2210000000117 &bull; Books</span>
+        </td>
+        <td style="text-align: center; font-weight: 700; color: var(--status-rust-text);">-1</td>
+        <td style="text-align: right; color: var(--status-rust-text);">-$23.40</td>
+        <td style="text-align: right;">A (-$1.40)</td>
+        <td style="text-align: right; font-weight: 600; color: var(--status-rust-text);">-$23.40</td>
+      </tr>
+      <tr class="audit-drawer">
+        <td colspan="7">
+          &#8627; <span>Return Audit:</span> Reason: Changed Mind &bull; Linked Original Receipt: <a href="#" style="color: var(--brand-primary);">S001-R01-T0000007</a> (Line 1)
+        </td>
+      </tr>
+
+      <!-- Row 4 -->
+      <tr>
+        <td>4</td>
+        <td><span class="badge-status badge-sale">SALE</span></td>
+        <td>
+          <span class="item-title">Cappuccino</span>
+          <span class="item-sku">SKU: 2210000000162 &bull; Prepared Beverages</span>
+        </td>
+        <td style="text-align: center;">2</td>
+        <td style="text-align: right;">
+          $5.00<br>
+          <span class="text-orig">$5.50</span>
+        </td>
+        <td style="text-align: right;">B ($0.60)</td>
+        <td style="text-align: right; font-weight: 600;">$10.00</td>
+      </tr>
+      <tr class="audit-drawer">
+        <td colspan="7">
+          &#8627; <span>Price Override Audit:</span> Performed by Admin User &bull; Reason: Customer service &bull; Tax Class: Food/Bev (6.000%)
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+</body>
+</html>
