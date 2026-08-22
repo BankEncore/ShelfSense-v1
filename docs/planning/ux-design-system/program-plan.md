@@ -23,13 +23,13 @@ flowchart LR
 
 Documentation and inventory only:
 
-- Inventory shells, partials, button classes, table patterns, forms, dialogs, and one-off markup.
+- Inventory shells, partials, button classes, table patterns, forms, dialogs, and one-off markup in [migration-matrix.md](migration-matrix.md).
 - Classify inconsistencies as: theme-only; missing shared primitive; misuse of an existing primitive; interaction redesign; domain presentation problem.
 - Keep this packet and [ux-conventions.md](../../ux-conventions.md) aligned on status (Proposed vs Implemented).
 - Label every mockup: inspirational, proposed, accepted, or implemented.
 - Record conflicts with Phase 2.2 palette and resolve via [ADR-022](../../adr/ADR-022-warm-parchment-visual-tokens.md).
 
-**Deliverable:** accepted planning authority; inventory notes sufficient to start UDS-1.
+**Deliverable:** accepted planning authority; path-level inventory in [migration-matrix.md](migration-matrix.md) sufficient to start UDS-1.
 
 ### UDS-1 — Tokens and shared visual primitives
 

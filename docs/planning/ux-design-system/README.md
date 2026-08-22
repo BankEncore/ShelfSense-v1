@@ -30,7 +30,7 @@ Do not fold POS into a shared ops shell. Do not replace admin show pages with dr
 | [button-action-semantics.md](button-action-semantics.md) | Labels, intents, styles, sizes, review dialogs | Proposed |
 | [surface-contracts.md](surface-contracts.md) | Basket, transaction history, printed receipt | Proposed |
 | [deferred-patterns.md](deferred-patterns.md) | Drawers, global search, density prefs, etc. | Proposed (explicitly deferred) |
-| [migration-matrix.md](migration-matrix.md) | Area status: legacy / partial / conforming | Working tracker |
+| [migration-matrix.md](migration-matrix.md) | Area status: legacy / partial / conforming / locked; UDS-0 path-level inventory | Working tracker |
 
 Daily admin conventions remain in [ux-conventions.md](../../ux-conventions.md) until foundation implementation updates that file’s palette and points here for action semantics.
 
