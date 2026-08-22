@@ -94,6 +94,25 @@ class PurchasingOpsWorkspaceTest < ApplicationSystemTestCase
     assert_nil @purchase_order.purchase_order_lines.first.order.reload.notes
   end
 
+  test "receiving scan selects defaults, updates through Turbo, and restores scanner focus" do
+    Purchasing::GeneratePurchaseOrder.call(purchase_order: @purchase_order, actor: @actor)
+    Purchasing::SendPurchaseOrder.call(purchase_order: @purchase_order.reload, actor: @actor, transmission_method: "email")
+    receipt = Purchasing::CreateDraftPurchaseReceipt.call(store: @store, supplier: @supplier, actor: @actor)
+
+    visit ops_receiving_path(receipt)
+    lookup = find("input[name='receiving_lookup']")
+    assert_equal "receiving_lookup", page.evaluate_script("document.activeElement && document.activeElement.name")
+    lookup.fill_in with: @variant.sku
+    lookup.send_keys :enter
+    assert_field "received_quantity", with: "1"
+    assert_field "actual_unit_cost_cents", with: "725"
+    click_on "Confirm and add line"
+
+    assert_text "Line added. Scanner ready."
+    assert_selector "#receiving_line_grid", text: "Keyboard Purchasing Book"
+    assert_equal "receiving_lookup", page.evaluate_script("document.activeElement && document.activeElement.name")
+  end
+
   private
 
   def sign_in_admin

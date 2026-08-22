@@ -1,0 +1,33 @@
+<section id="receiving_line_scanner" class="ops-scan" data-controller="receiving-lookup focus-restore" data-receiving-lookup-url-value="<%= ops_receiving_line_lookup_path(@receipt) %>" data-action="turbo:submit-end->focus-restore#focus">
+  <h2>Scan or search open PO lines</h2>
+  <label>
+    Product identifier, name, lookup code, or customer request #
+    <input type="search" name="receiving_lookup" autocomplete="off" autofocus
+           data-focus-restore-target="lookup" data-receiving-lookup-target="query"
+           data-action="keydown.enter->receiving-lookup#search input->receiving-lookup#clearMessage">
+  </label>
+  <button type="button" data-action="receiving-lookup#search">Search</button>
+  <p class="ops-hint">Results are limited to open Standard purchase-order lines for <%= @receipt.supplier.admin_label %> at <%= current_store.admin_label %>.</p>
+  <p role="status" aria-live="polite" data-receiving-lookup-target="message"><%= @scan_notice %></p>
+
+  <div data-receiving-lookup-target="picker" hidden></div>
+
+  <div data-receiving-lookup-target="editor">
+    <h3>Current line</h3>
+    <p data-receiving-lookup-target="selection">Scan or search to select an eligible PO line.</p>
+    <%= form_with url: ops_receiving_add_line_path(@receipt), method: :post,
+          data: { receiving_lookup_target: "form" } do %>
+      <%= hidden_field_tag :lock_version, @receipt.lock_version %>
+      <input type="hidden" name="purchase_order_line_id" data-receiving-lookup-target="lineId">
+      <label>
+        Qty received
+        <input type="number" name="received_quantity" min="1" required disabled data-receiving-lookup-target="quantity">
+      </label>
+      <label>
+        Actual unit cost (cents)
+        <input type="number" name="actual_unit_cost_cents" min="0" required disabled data-receiving-lookup-target="cost">
+      </label>
+      <button type="submit" disabled data-receiving-lookup-target="confirm">Confirm and add line</button>
+    <% end %>
+  </div>
+</section>
