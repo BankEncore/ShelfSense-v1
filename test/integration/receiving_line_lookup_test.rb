@@ -37,7 +37,7 @@ class ReceivingLineLookupTest < ActionDispatch::IntegrationTest
     get ops_receiving_line_lookup_path(receipt), params: { query: @variant.sku }, as: :json
     body = response.parsed_body
     assert_equal "multiple", body["outcome"]
-    assert_equal [first.purchase_order.number, second.purchase_order.number].sort, body["matches"].pluck("po_number").sort
+    assert_equal [ first.purchase_order.number, second.purchase_order.number ].sort, body["matches"].pluck("po_number").sort
     assert body["matches"].all? { |match| match.key?("order_date") && match.key?("product") }
 
     get ops_receiving_line_lookup_path(receipt), params: { query: "DOES-NOT-EXIST" }, as: :json
