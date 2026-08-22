@@ -1,8 +1,8 @@
 # UDS-1 user stories
 
-Status: **Proposed** (issue-ready backlog for [uds-1-plan.md](uds-1-plan.md))
+Status: **Implemented** (UDS-1a–1d; Chromium/manual baseline recording remains a merge-PR checklist item)
 
-Thin stories mapped to delivery sub-slices. Acceptance bullets are suitable for GitHub issues. Do not start coding until [ADR-022](../../adr/ADR-022-warm-parchment-visual-tokens.md) is Accepted and the [start gates](uds-1-plan.md#prerequisites-start-gates) are met.
+Thin stories mapped to delivery sub-slices. Acceptance bullets are suitable for GitHub issues. Coding gates for ADR-022 and start prerequisites are satisfied.
 
 ---
 
@@ -67,10 +67,10 @@ As a reviewer, I need conventions and migration evidence updated so Phase 2.2 pa
 
 **Acceptance**
 
-- [ ] [ux-conventions.md](../../ux-conventions.md) palette section points to Warm Parchment and this packet.
-- [ ] Migration-matrix rows for tokens/shared primitives are **partial** or **conforming** only with evidence columns filled.
-- [ ] ADR-022 marked **Implemented** when UDS-1 merges.
-- [ ] Packet README notes Phase 2.2 palette superseded for screen chrome.
+- [x] [ux-conventions.md](../../ux-conventions.md) palette section points to Warm Parchment and this packet.
+- [x] Migration-matrix rows for tokens/shared primitives are **partial** or **conforming** only with evidence columns filled.
+- [x] ADR-022 marked **Implemented** when UDS-1 merges.
+- [x] Packet README notes Phase 2.2 palette superseded for screen chrome.
 
 ---
 

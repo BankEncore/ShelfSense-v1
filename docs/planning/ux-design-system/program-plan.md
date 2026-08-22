@@ -99,7 +99,7 @@ Administrative navigation remains a proposal at this point. Before assigning it 
 
 ### UDS-1 — Tokens and shared visual primitives
 
-**Implementation plan:** [uds-1-plan.md](uds-1-plan.md) (sub-slices UDS-1a–1d; backlog [uds-1-user-stories.md](uds-1-user-stories.md)). Slice id stays **UDS-1**—not a Phase 7 domain number. Start gate: [ADR-022](../../adr/ADR-022-warm-parchment-visual-tokens.md) must be **Accepted** before token supersession merges to `main`.
+**Implementation plan:** [uds-1-plan.md](uds-1-plan.md) (UDS-1a–1d **complete**). Slice id stays **UDS-1**—not a Phase 7 domain number. [ADR-022](../../adr/ADR-022-warm-parchment-visual-tokens.md) is **Implemented**.
 
 High-leverage, low-behavior changes:
 
@@ -114,7 +114,7 @@ High-leverage, low-behavior changes:
 - Standard and compact **density classes by screen type**—not a persisted user toggle.
 - Navigation may enter this slice as a shared semantic/responsive primitive only after the [navigation prototype gate](navigation-proposal.md#required-prototype-gate) passes; no Hotwire, permanent sidebar, or global search. Grouped admin nav remains **out of UDS-1** until that gate passes (see implementation plan).
 
-**Deliverable:** many screens improve without rewriting each template; conventions palette section updated when tokens ship.
+**Deliverable:** many screens improve without rewriting each template; conventions palette section updated when tokens ship. **Met in UDS-1** (tokens, helper, shared primitives, docs exit). Broad helper adoption and reference-screen conforming status remain UDS-2.
 
 ### UDS-2 — Representative screen convergence
 

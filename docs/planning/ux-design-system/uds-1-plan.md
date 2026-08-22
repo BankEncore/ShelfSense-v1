@@ -1,6 +1,6 @@
 # UDS-1 — Tokens and shared visual primitives
 
-Status: **In progress** — UDS-1a–1c landed; UDS-1d not started
+Status: **Complete** (UDS-1a–1d landed; ADR-022 Implemented)
 
 Slice id remains **UDS-1**. This is **not** a Phase 7 domain slice and does not use Phase N.M numbering. Authority for visual tokens, actions, rollout gates, and deferrals remains the [UX design system packet](README.md).
 
@@ -79,6 +79,8 @@ Prefer one PR (or tightly sequenced PRs) per sub-slice. UDS-1a must land tokens/
 - `application` / `ops` layouts: token and chrome only; keep **flat** permission-gated navigation.
 
 ### UDS-1d — Docs and matrix exit
+
+**Status: done** (`ux-conventions.md` Warm Parchment; ADR-022 Implemented; packet README notes Phase 2.2 palette superseded; shared primitive matrix rows partial with UDS-1 evidence).
 
 - Update [ux-conventions.md](../../ux-conventions.md) palette section to Warm Parchment and point to this packet for tokens and action semantics.
 - Update [migration-matrix.md](migration-matrix.md) rows for tokens and shared primitives to **partial** or **conforming** only when [objective migration states](program-plan.md#objective-migration-states) and evidence columns are satisfied; inherited colors alone are never conforming.

@@ -1,8 +1,8 @@
 # Warm Parchment visual system
 
-Status: **Accepted for implementation** (contrast-complete; UDS-1a tokens live in `application.css`)
+Status: **Implemented** (contrast-complete; UDS-1 live in `application.css`)
 
-Authority for visual tokens and density. Action wording/style/size: [button-action-semantics.md](button-action-semantics.md). Shell boundaries: [README.md](README.md). Palette supersession: [ADR-022](../../adr/ADR-022-warm-parchment-visual-tokens.md) (Accepted).
+Authority for visual tokens and density. Action wording/style/size: [button-action-semantics.md](button-action-semantics.md). Shell boundaries: [README.md](README.md). Palette supersession: [ADR-022](../../adr/ADR-022-warm-parchment-visual-tokens.md) (Implemented).
 
 Inspirational mockups: [`docs/drafts/phase-7.1-ux-refactor/`](../../drafts/phase-7.1-ux-refactor/) (not binding). Contrast-complete palette demo: [warm-parchment-palette-mockup.html](warm-parchment-palette-mockup.html).
 

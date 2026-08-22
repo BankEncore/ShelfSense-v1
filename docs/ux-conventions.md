@@ -1,6 +1,6 @@
 # Administrative UX conventions
 
-Status: Implemented (Phase 2.2).
+Status: Implemented (Phase 2.2 architecture; **Warm Parchment palette via UDS-1**).
 
 Concise conventions for ShelfSense server-rendered admin screens. Prefer these patterns over inventing parallel markup or CSS.
 
@@ -62,33 +62,36 @@ Map colors only from the scheme table. Never infer meaning from arbitrary string
 
 ## Color tokens
 
-Defined on `:root` in `application.css`:
+Screen chrome uses the **Warm Parchment** vocabulary on `:root` in `application.css` ([ADR-022](adr/ADR-022-warm-parchment-visual-tokens.md) Implemented). Authoritative token tables, contrast ledger, and density rules: [warm-parchment.md](planning/ux-design-system/warm-parchment.md).
+
+Foundation tokens (abbreviated):
 
 | Token | Role |
 |---|---|
-| `--color-background` | Page background (`#F8FAFC`) |
-| `--color-surface` | Surfaces (`#FFFFFF`) |
-| `--color-text` / `--color-text-muted` | Body and secondary text |
-| `--color-action` | Primary actions (`#0D6E6E`) |
-| `--color-accent` | Accent emphasis (`#7A2E5A`) |
-| `--color-warning` | Warnings (`#E09214`) |
-| `--color-border` | Borders (`#E2E8F0`) |
-| `--color-danger` | Destructive actions (`#B91C1C`) |
+| `--color-bg-canvas` | Page canvas (`#FBF9F5`) |
+| `--color-bg-surface` | Cards, inputs, table bodies (`#FFFFFF`) |
+| `--color-text-primary` / `--color-text-secondary` | Body and secondary text |
+| `--color-brand-default` | Primary commit / link (`#A84320`) |
+| `--color-border-subtle` / `--color-border-strong` | Decorative vs control borders |
+| `--color-focus-ring` | Keyboard focus (`#7C3218`) |
 
-Keep keyboard focus visible. Do not communicate meaning by color alone (pair badges with text labels).
+Semantic families (`neutral`, `warning`, `danger`, `info`, `success`) each expose foreground, border, fill, and solid states—see the packet. Temporary Phase 2.2 aliases (`--color-background`, `--color-action`, etc.) remain only while call sites migrate; do not invent new uses of the legacy names.
+
+Action presentation (style / intent / size): use `ActionButtonHelper` per [button-action-semantics.md](planning/ux-design-system/button-action-semantics.md). Keep keyboard focus visible. Do not communicate meaning by color alone (pair badges with text labels).
 
 ## Design system evolution
 
-Phase 2.2 palette tokens above remain **implemented** until the UX design-system foundation ships.
+Phase 2.2 **architecture** (shells, shared partials, money UX, Hotwire boundaries) remains. The Phase 2.2 **teal/plum palette is superseded** for screen chrome by Warm Parchment (UDS-1). Printed receipt/report contracts stay locked separately.
 
-**Proposed** cross-phase direction:
+Authority:
 
-- [UX design system](planning/ux-design-system/README.md) — Warm Parchment visual system, adoption program (UDS-0–UDS-3), migration matrix
-- [Warm Parchment](planning/ux-design-system/warm-parchment.md) — proposed token and density rules (WCAG AA baseline)
-- [Button and action semantics](planning/ux-design-system/button-action-semantics.md) — wording, intent, style, size, review dialogs (independent of hex values)
-- [ADR-022](adr/ADR-022-warm-parchment-visual-tokens.md) — Proposed palette supersession
+- [UX design system](planning/ux-design-system/README.md) — Warm Parchment, adoption program (UDS-0–UDS-3), migration matrix
+- [Warm Parchment](planning/ux-design-system/warm-parchment.md) — tokens, typography, density (WCAG AA baseline)
+- [Button and action semantics](planning/ux-design-system/button-action-semantics.md) — wording, intent, style, size, review dialogs
+- [UDS-1 implementation plan](planning/ux-design-system/uds-1-plan.md) — foundation delivery (complete through UDS-1d)
+- [ADR-022](adr/ADR-022-warm-parchment-visual-tokens.md) — Implemented palette supersession
 
-When UDS-1 is implemented, update this Color tokens section to the accepted Warm Parchment vocabulary and retain architecture below (shells, partials, money UX, Hotwire boundaries).
+UDS-2 migrates representative screens onto `ActionButtonHelper` and full action semantics; UDS-3 refines Register visuals without changing bindings.
 
 ## Hotwire
 

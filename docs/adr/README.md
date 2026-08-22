@@ -33,7 +33,7 @@ These ADRs capture the architecture decisions reached during the ShelfSense offl
 | [ADR-019](ADR-019-pos-sales-tax-model.md) | U.S. retail sales-tax model for POS | Accepted |
 | [ADR-020](ADR-020-pos-operation-envelope-and-core-facts.md) | Canonical POS operation envelope and normalized Core facts | Accepted |
 | [ADR-021](ADR-021-register-and-terminal-identity.md) | Register and Terminal identities | Accepted |
-| [ADR-022](ADR-022-warm-parchment-visual-tokens.md) | Warm Parchment visual tokens (supersede Phase 2.2 palette) | Accepted |
+| [ADR-022](ADR-022-warm-parchment-visual-tokens.md) | Warm Parchment visual tokens (supersede Phase 2.2 palette) | Implemented |
 
 ## Governing principle
 
