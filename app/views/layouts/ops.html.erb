@@ -1,11 +1,12 @@
 <!DOCTYPE html>
-<html lang="en" data-turbo="false">
+<html lang="en">
   <head>
     <title><%= content_for?(:title) ? "#{content_for(:title)} · ShelfSense" : "Ops · ShelfSense" %></title>
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <%= csrf_meta_tags %>
     <%= csp_meta_tag %>
     <%= stylesheet_link_tag "application" %>
+    <%= javascript_importmap_tags "purchasing_ops" %>
   </head>
   <body class="ops-body">
     <header class="ops-header">
@@ -31,7 +32,30 @@
       </nav>
     </header>
     <%= render "shared/flash" %>
-    <main class="ops-content">
+    <main class="ops-content"
+          data-controller="ops-shortcuts dirty-form escape-cancel"
+          data-action="keydown@window->ops-shortcuts#keydown keydown@window->escape-cancel#keydown input->dirty-form#change change->dirty-form#change submit->dirty-form#submit ops:dirty-cancel->dirty-form#cancel turbo:before-visit@document->dirty-form#beforeVisit beforeunload@window->dirty-form#beforeUnload">
+      <aside class="ops-shortcuts" aria-label="Purchasing operations keyboard shortcuts">
+        <div class="ops-shortcuts__buttons">
+          <button type="button" class="btn btn--ghost" data-action="ops-shortcuts#focusLookup">Focus lookup <kbd>/</kbd></button>
+          <button type="button" class="btn btn--ghost" data-action="ops-shortcuts#save">Save <kbd>Ctrl/⌘ S</kbd></button>
+          <button type="button" class="btn btn--ghost" data-action="ops-shortcuts#primary">Primary action <kbd>Ctrl/⌘ Enter</kbd></button>
+          <button type="button" class="btn btn--ghost" data-action="escape-cancel#cancel">Cancel current selection/edit <kbd>Esc</kbd></button>
+          <button type="button" class="btn btn--ghost" aria-expanded="false" aria-controls="ops-shortcut-help" data-ops-shortcuts-target="helpButton" data-action="ops-shortcuts#toggleHelp">Shortcut help</button>
+        </div>
+        <div id="ops-shortcut-help" class="ops-shortcuts__help" data-ops-shortcuts-target="help" hidden>
+          <h2>Keyboard shortcuts</h2>
+          <dl>
+            <div><dt><kbd>/</kbd></dt><dd>Focus lookup or scan input</dd></div>
+            <div><dt><kbd>↑</kbd> <kbd>↓</kbd></dt><dd>Select a row</dd></div>
+            <div><dt><kbd>Enter</kbd></dt><dd>Activate the selected row or submit the current scan</dd></div>
+            <div><dt><kbd>Esc</kbd></dt><dd>Close help or cancel the current selection/edit without saving</dd></div>
+            <div><dt><kbd>Ctrl/⌘ S</kbd></dt><dd>Save the current edit</dd></div>
+            <div><dt><kbd>Ctrl/⌘ Enter</kbd></dt><dd>Run the labeled primary action</dd></div>
+          </dl>
+          <button type="button" data-action="ops-shortcuts#toggleHelp">Close shortcut help</button>
+        </div>
+      </aside>
       <%= yield %>
     </main>
   </body>
