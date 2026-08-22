@@ -2,6 +2,8 @@
 
 module Admin
   class ProductsController < BaseController
+    include PurchasingHelper
+
     before_action -> { require_permission!("products.view") }, only: %i[index show]
     before_action -> { require_permission!("products.create") }, only: %i[new create]
     before_action -> { require_permission!("products.update") }, only: %i[edit update]
@@ -30,6 +32,7 @@ module Admin
       @recent_audit_events = recent_product_audit_events
       @show_inventory = inventory_display_enabled?
       @balances_by_variant_id = load_variant_balances(@product_variants.map(&:id)) if @show_inventory
+      load_product_purchasing_actions
     end
 
     def new
@@ -256,6 +259,23 @@ module Admin
       return {} if variant_ids.empty?
 
       InventoryBalance.where(store_id: current_store.id, product_variant_id: variant_ids).index_by(&:product_variant_id)
+    end
+
+    def load_product_purchasing_actions
+      @stock_orderable_variants = []
+      @requestable_variants = []
+      return if current_store.blank?
+
+      if effective_permissions.include?("orders.manage")
+        @stock_orderable_variants = @product_variants.select { |v| stock_orderable_variant?(v) }
+      end
+      if effective_permissions.include?("customer_requests.manage")
+        @requestable_variants = @product_variants.select { |v|
+          customer_requestable_variant?(v, store: current_store)
+        }
+      end
+      @single_stock_orderable = @stock_orderable_variants.one? ? @stock_orderable_variants.first : nil
+      @single_requestable = @requestable_variants.one? ? @requestable_variants.first : nil
     end
   end
 end

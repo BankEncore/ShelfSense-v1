@@ -1,0 +1,49 @@
+<% content_for :title, @supplier.admin_label %>
+<h1><%= @supplier.admin_label %></h1>
+<p>
+  Code: <%= @supplier.code %> ·
+  <%= @supplier.active? ? "active" : "inactive" %>
+</p>
+<% if @supplier.account_number.present? %><p>Account: <%= @supplier.account_number %></p><% end %>
+<% if @supplier.contact_name.present? || @supplier.email.present? || @supplier.phone.present? %>
+  <p>
+    Contact:
+    <%= [ @supplier.contact_name, @supplier.email, @supplier.phone ].compact_blank.join(" · ") %>
+  </p>
+<% end %>
+<% address_parts = [
+  @supplier.street_address_1, @supplier.street_address_2, @supplier.city,
+  @supplier.region_code, @supplier.postal_code, @supplier.country_code
+].compact_blank %>
+<% if address_parts.any? %><p><%= address_parts.join(", ") %></p><% end %>
+<% if @supplier.ordering_notes.present? %><p><%= simple_format @supplier.ordering_notes %></p><% end %>
+
+<p>
+  <%= link_to "Edit", edit_admin_supplier_path(@supplier) if effective_permissions.include?("suppliers.manage") %>
+  <% if effective_permissions.include?("suppliers.manage") && @supplier.active? %>
+    <%= button_to "Deactivate", admin_supplier_path(@supplier), method: :delete, form: { data: { turbo_confirm: "Deactivate this supplier?" } } %>
+  <% elsif effective_permissions.include?("suppliers.manage") && !@supplier.active? %>
+    <%= button_to "Reactivate", reactivate_admin_supplier_path(@supplier), method: :post, params: { lock_version: @supplier.lock_version } %>
+  <% end %>
+</p>
+
+<h2>Variant sources</h2>
+<% if effective_permissions.include?("suppliers.manage") %>
+  <p><%= link_to "Add source", new_admin_supplier_supplier_variant_source_path(@supplier) %></p>
+<% end %>
+<% if @supplier_variant_sources.any? %>
+  <ul>
+    <% @supplier_variant_sources.each do |source| %>
+      <li>
+        <%= link_to source.admin_label, admin_supplier_variant_source_path(source) %>
+        — <%= source.pricing_method.humanize %>
+        <% if source.organization_preferred? %> · org preferred<% end %>
+        <%= "inactive" unless source.active? %>
+      </li>
+    <% end %>
+  </ul>
+<% else %>
+  <p>No supplier sources yet. Sources are optional for ordering.</p>
+<% end %>
+
+<p><%= link_to "Back to suppliers", admin_suppliers_path %></p>

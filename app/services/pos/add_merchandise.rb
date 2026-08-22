@@ -85,6 +85,7 @@ module Pos
       price_cents = unit.effective_regular_price_cents
       raise Pos::Error, "regular price is required" if price_cents.nil?
       raise Pos::Error, "unit is already on a working transaction" if working_unit_line?(unit)
+      assert_soft_availability!(transaction.store, variant, quantity: 1, inventory_unit: unit)
 
       build_line!(
         transaction,
@@ -112,6 +113,7 @@ module Pos
       unless open_price
         line = compatible_line(transaction, variant)
         if line
+          assert_soft_availability!(transaction.store, variant, quantity: @quantity)
           line.quantity += @quantity
           line.recalc_extended!
           Pos::Support.apply_provisional_tax!(line)
@@ -120,6 +122,7 @@ module Pos
         end
       end
 
+      assert_soft_availability!(transaction.store, variant, quantity: @quantity)
       build_line!(
         transaction,
         variant: variant,
@@ -193,6 +196,7 @@ module Pos
       effective_tax_id = variant.effective_tax_class&.id
       transaction.pos_transaction_lines.find do |line|
         line.inventory_unit_id.nil? &&
+          line.customer_request_allocation_id.nil? &&
           line.product_variant_id == variant.id &&
           line.direction == "sale" &&
           line.pricing_method_snapshot != "open_price" &&
@@ -206,6 +210,28 @@ module Pos
 
     def next_line_number(transaction)
       (transaction.pos_transaction_lines.maximum(:line_number) || 0) + 1
+    end
+
+    # Soft check only; Inventory::PostSale is authoritative under lock.
+    # Defer ordinary on-hand shortfalls to posting time so existing cart flows
+    # keep working; only soft-stop when reserved stock is what blocks the sale.
+    def assert_soft_availability!(store, variant, quantity:, inventory_unit: nil)
+      tracking = variant.derived_inventory_tracking
+      if inventory_unit.present?
+        if Inventory::Availability.unit_allocated?(inventory_unit)
+          raise Pos::Error, "unit is reserved for a customer request"
+        end
+        return
+      end
+      return unless tracking == "quantity"
+
+      balance = InventoryBalance.find_by(store: store, product_variant: variant)
+      on_hand = balance&.on_hand_quantity.to_i
+      available = Inventory::Availability.available(store, variant, balance: balance)
+      return if available >= quantity
+      return if on_hand < quantity
+
+      raise Pos::Error, "insufficient available quantity; reserved stock cannot be sold"
     end
   end
 end

@@ -1,0 +1,166 @@
+<% content_for :title, "#{@purchase_order.admin_label} · #{@purchase_order.supplier.admin_label}" %>
+<header class="ops-doc-header">
+  <div>
+    <h1><%= @purchase_order.admin_label %></h1>
+    <p>
+      <%= @purchase_order.supplier.admin_label %>
+      · <%= current_store.admin_label %>
+      · <%= @purchase_order.status %>
+      <% if @purchase_order.generated? %>· generated rev <%= @purchase_order.document_revision %><% end %>
+      · <%= @lines.size %> lines
+      · <%= format_money_cents(@purchase_order.expected_merchandise_total_cents) %> expected
+    </p>
+  </div>
+  <p>
+    <%= link_to "All drafts", ops_draft_pos_path %>
+    · <%= link_to "Purchase orders", admin_purchase_orders_path %>
+    · <%= link_to "Exit to Purchasing", admin_orders_path %>
+  </p>
+</header>
+
+<%= render "ops/shared/error_summary", errors: @mutation_errors, conflict: @conflict,
+      title: @error_action.in?([:generate, :send_po]) ? "Cannot #{@error_action == :send_po ? 'send' : 'generate'} purchase order" : "Purchase order was not changed" %>
+
+<% if effective_permissions.include?("purchase_orders.send") %>
+  <section class="ops-actions">
+    <h2>Generate / send</h2>
+    <% unless @purchase_order.generated? %>
+      <%= form_with url: ops_purchase_order_generate_path(@purchase_order), method: :post, local: true do %>
+        <%= hidden_field_tag :lock_version, @purchase_order.lock_version %>
+        <button type="submit" data-ops-primary <%= "autofocus aria-describedby=po_generate_error" if @error_action == :generate %>>Generate PO number</button>
+        <%= render "ops/shared/inline_row_error", action: :generate, id: "po_generate_error" %>
+      <% end %>
+    <% else %>
+      <p>Generated #<%= @purchase_order.number %> (revision <%= @purchase_order.document_revision %>).</p>
+      <%= form_with url: ops_purchase_order_return_to_draft_path(@purchase_order), method: :post, local: true do %>
+        <%= hidden_field_tag :lock_version, @purchase_order.lock_version %>
+        <button type="submit" <%= "autofocus aria-describedby=po_return_error" if @error_action == :return_to_draft %>>Return to draft</button>
+        <%= render "ops/shared/inline_row_error", action: :return_to_draft, id: "po_return_error" %>
+      <% end %>
+      <div data-controller="review-dialog" <%= 'data-review-dialog-open-value="true"' if @error_action == :send_po %>>
+        <button type="button" data-review-dialog-target="trigger" data-action="review-dialog#open">Review send</button>
+        <dialog class="review-dialog review-dialog--warning" data-review-dialog-target="dialog" data-action="close->review-dialog#restoreFocus">
+          <div class="review-dialog__body">
+            <h3>Review sending <%= @purchase_order.admin_label %></h3>
+            <dl class="review-dialog__facts">
+              <dt>Supplier</dt><dd><%= @purchase_order.supplier.admin_label %></dd>
+              <dt>Destination</dt><dd><%= current_store.admin_label %></dd>
+              <dt>Line count</dt><dd><%= @lines.size %></dd>
+              <dt>Expected total</dt><dd><%= format_money_cents(@purchase_order.expected_merchandise_total_cents) %></dd>
+            </dl>
+            <p class="review-dialog__consequences"><strong>After send:</strong> supplier-facing PO and line snapshots become immutable. Corrections require cancellation or re-sourcing rather than editing the snapshots.</p>
+            <%= form_with url: ops_purchase_order_send_path(@purchase_order), method: :post, local: true do %>
+              <%= hidden_field_tag :lock_version, @purchase_order.lock_version %>
+              <label>Transmission method
+                <select name="transmission_method" required data-review-dialog-target="initialFocus" <%= "aria-describedby=po_action_error" if @error_action == :send_po %>>
+                  <option value="">Select…</option>
+                  <% PurchaseOrder::TRANSMISSION_METHODS.each do |method| %>
+                    <option value="<%= method %>" <%= "selected" if @submitted&.fetch("transmission_method", nil) == method %>><%= method %></option>
+                  <% end %>
+                </select>
+              </label>
+              <%= render "ops/shared/inline_row_error", action: :send_po, id: "po_action_error" %>
+              <div class="review-dialog__actions">
+                <button type="submit">Send PO and freeze snapshots</button>
+                <button type="button" data-action="review-dialog#close">Keep PO generated</button>
+              </div>
+            <% end %>
+          </div>
+        </dialog>
+      </div>
+    <% end %>
+  </section>
+<% end %>
+
+<% if effective_permissions.include?("orders.manage") && !@purchase_order.generated? %>
+  <section class="ops-scan" data-controller="focus-restore">
+    <h2>Add stock line</h2>
+    <%= form_with url: ops_purchase_order_add_line_path(@purchase_order), method: :post, local: true do %>
+      <%= hidden_field_tag :lock_version, @purchase_order.lock_version %>
+      <label>
+        Scan / identifier
+        <input type="text" name="identifier" value="<%= @submitted&.fetch("identifier", nil) %>" autocomplete="off" inputmode="text" data-focus-restore-target="lookup" <%= "autofocus aria-describedby=po_add_error" if @error_action == :add_line %>>
+      </label>
+      <label>
+        or variant ID
+        <input type="text" name="product_variant_id" value="<%= @submitted&.fetch("product_variant_id", nil) %>" autocomplete="off">
+      </label>
+      <label>
+        Qty
+        <input type="number" name="quantity" value="<%= @submitted&.fetch("quantity", nil) || 1 %>" min="1" required>
+      </label>
+      <label>
+        Expected unit cost ($)
+        <input type="text" inputmode="decimal" name="expected_unit_cost_cents" value="<%= @submitted&.fetch("expected_unit_cost_cents", nil) %>" aria-invalid="<%= @error_field == :expected_unit_cost_cents %>">
+      </label>
+      <button type="submit">Add</button>
+      <%= render "ops/shared/inline_row_error", action: :add_line, id: "po_add_error" %>
+    <% end %>
+    <p class="ops-hint">Creates a stock order and dedicated PO line. Used merchandise is rejected.</p>
+  </section>
+<% end %>
+
+<section>
+  <h2>Lines</h2>
+  <% if @lines.empty? %>
+    <p>No lines yet.</p>
+  <% else %>
+    <table class="ops-queue" data-controller="row-selection" data-action="keydown->row-selection#keydown">
+      <thead>
+        <tr>
+          <th scope="col">Order</th>
+          <th scope="col">Item</th>
+          <th scope="col">Qty</th>
+          <th scope="col">Expected cost</th>
+          <th scope="col">Customer</th>
+          <th scope="col">Notes</th>
+          <% if effective_permissions.include?("orders.manage") && !@purchase_order.generated? %><th scope="col">Edit</th><% end %>
+        </tr>
+      </thead>
+      <tbody>
+        <% @lines.each do |line| %>
+          <% order = line.order %>
+          <tr tabindex="-1" aria-selected="<%= (@selected_row_id.to_s == line.id.to_s).to_s %>" class="<%= "is-selected" if @selected_row_id.to_s == line.id.to_s %>" data-row-selection-target="row">
+            <td><%= link_to "##{order.number}", admin_order_path(order) %></td>
+            <td>
+              <%= line.product_variant.product.name %>
+              <code><%= line.product_variant.sku %></code>
+            </td>
+            <td><%= line.ordered_quantity %></td>
+            <td><%= format_money_cents(line.expected_unit_cost_cents_snapshot) %></td>
+            <td>
+              <% if order.customer_request %>
+                Req #<%= order.customer_request.number %>
+              <% else %>
+                —
+              <% end %>
+            </td>
+            <td><%= line.notes_snapshot.presence || "—" %></td>
+            <% if effective_permissions.include?("orders.manage") && !@purchase_order.generated? && !order.cancelled? %>
+              <td>
+                <%= form_with url: ops_purchase_order_update_line_path(@purchase_order, line), method: :patch, local: true, html: { class: "ops-inline-form", data: { dirty_track: true } } do %>
+                  <%= hidden_field_tag :lock_version, order.lock_version %>
+                  <label>
+                    Qty
+                    <input type="number" name="quantity" value="<%= @selected_row_id.to_s == line.id.to_s ? @submitted&.fetch("quantity", line.ordered_quantity) : line.ordered_quantity %>" min="1" <%= "readonly" if order.customer_order? %> <%= "autofocus aria-describedby=po_line_#{line.id}_error" if @selected_row_id.to_s == line.id.to_s %>>
+                  </label>
+                  <label>
+                    Cost
+                    <input type="text" inputmode="decimal" name="expected_unit_cost_cents" value="<%= @selected_row_id.to_s == line.id.to_s ? @submitted&.fetch("expected_unit_cost_cents", money_field_value(line.expected_unit_cost_cents_snapshot)) : money_field_value(line.expected_unit_cost_cents_snapshot) %>" aria-invalid="<%= @error_field == :expected_unit_cost_cents && @selected_row_id.to_s == line.id.to_s %>">
+                  </label>
+                  <label>
+                    Notes
+                    <input type="text" name="notes" value="<%= @selected_row_id.to_s == line.id.to_s ? @submitted&.fetch("notes", order.notes) : order.notes %>">
+                  </label>
+                  <button type="submit" data-ops-save data-row-primary>Save</button>
+                  <%= render "ops/shared/inline_row_error", action: :update_line, row_id: line.id, id: "po_line_#{line.id}_error" %>
+                  <% if @conflict && @selected_row_id.to_s == line.id.to_s %><small>Current: qty <%= line.ordered_quantity %>, expected cost <%= format_money_cents(line.expected_unit_cost_cents_snapshot) %>, notes <%= line.order.notes.presence || "blank" %>.</small><% end %>
+                <% end %>
+              </td>
+            <% end %>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  <% end %>
+</section>

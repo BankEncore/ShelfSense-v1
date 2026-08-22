@@ -1,0 +1,67 @@
+<% content_for :title, "Receiving" %>
+<header class="ops-doc-header">
+  <div>
+    <h1>Receiving</h1>
+    <p>Draft purchase receipts for <%= current_store.admin_label %>.</p>
+  </div>
+  <p>
+    <%= link_to "Draft POs", ops_draft_pos_path %>
+    · <%= link_to "Exit to Purchasing", admin_orders_path %>
+  </p>
+</header>
+<%= render "ops/shared/error_summary", errors: @mutation_errors, conflict: false, title: "Draft receipt could not be created" %>
+
+<% if effective_permissions.include?("purchase_receipts.manage") %>
+  <section class="ops-actions">
+    <h2>New draft receipt</h2>
+    <%= form_with url: ops_receiving_create_path, method: :post, local: true do %>
+      <label>
+        Supplier
+        <select name="supplier_id" required <%= "autofocus aria-describedby=receipt_create_error" if @error_action == :create %>>
+          <option value="">Select…</option>
+          <% @suppliers.each do |supplier| %>
+            <option value="<%= supplier.id %>" <%= "selected" if @submitted&.fetch("supplier_id", nil) == supplier.id %>><%= supplier.admin_label %></option>
+          <% end %>
+        </select>
+      </label>
+      <label>
+        Received at
+        <input type="datetime-local" name="received_at" value="<%= @submitted&.fetch("received_at", nil) %>">
+      </label>
+      <label>
+        Supplier document #
+        <input type="text" name="supplier_document_number" value="<%= @submitted&.fetch("supplier_document_number", nil) %>" autocomplete="off">
+      </label>
+      <button type="submit">Create draft</button>
+      <%= render "ops/shared/inline_row_error", action: :create, id: "receipt_create_error" %>
+    <% end %>
+  </section>
+<% end %>
+
+<section>
+  <h2>Open drafts</h2>
+  <% if @draft_receipts.empty? %>
+    <p>No draft receipts.</p>
+  <% else %>
+    <table class="ops-queue">
+      <thead>
+        <tr>
+          <th scope="col">Supplier</th>
+          <th scope="col">Lines</th>
+          <th scope="col">Received at</th>
+          <th scope="col"></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @draft_receipts.each do |receipt| %>
+          <tr>
+            <td><%= receipt.supplier.admin_label %></td>
+            <td><%= receipt.purchase_receipt_lines.size %></td>
+            <td><%= l(receipt.received_at, format: :long) %></td>
+            <td><%= link_to "Open", ops_receiving_path(receipt) %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  <% end %>
+</section>

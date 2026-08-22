@@ -83,6 +83,7 @@ module Inventory
         balance = lock_or_create_balance!
         effects = compute_effects(balance)
         apply_negative_stock_policy!(effects)
+        assert_availability!(balance: balance, effects: effects)
 
         unit = nil
         if tracking == "individual"
@@ -388,6 +389,21 @@ module Inventory
       return if effects[:resulting_on_hand] >= 0 && effects[:resulting_value_cents] >= 0
 
       raise Error, "posting would reduce on-hand or value below zero"
+    end
+
+    def assert_availability!(balance:, effects:)
+      return if @quantity_delta.positive?
+
+      unit = effects[:unit]
+      Availability.assert_depletion_allowed!(
+        store: @store,
+        variant: @product_variant,
+        quantity_delta: @quantity_delta,
+        inventory_unit: unit,
+        balance: balance
+      )
+    rescue Availability::Error => e
+      raise Error, e.message
     end
 
     def create_unit!(_effects)

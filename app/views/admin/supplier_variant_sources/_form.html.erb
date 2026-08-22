@@ -1,0 +1,65 @@
+<%= form_with model: supplier_variant_source_form_model(supplier_variant_source), scope: :supplier_variant_source do |form| %>
+  <% if supplier_variant_source.errors.any? %>
+    <ul><% supplier_variant_source.errors.full_messages.each do |m| %><li><%= m %></li><% end %></ul>
+  <% end %>
+  <%= form.hidden_field :lock_version %>
+  <% if @return_to.present? %>
+    <%= hidden_field_tag :return_to, @return_to %>
+  <% end %>
+
+  <% if supplier_variant_source.persisted? %>
+    <p>
+      Supplier: <%= link_to supplier_variant_source.supplier.admin_label, admin_supplier_path(supplier_variant_source.supplier) %> ·
+      Variant: <%= link_to supplier_variant_source.product_variant.sku, admin_product_variant_path(supplier_variant_source.product_variant) %>
+      (immutable)
+    </p>
+  <% elsif @product_variant %>
+    <p>
+      Variant: <%= link_to "#{@product_variant.sku} — #{@product_variant.product.name}", admin_product_variant_path(@product_variant) %>
+    </p>
+    <p>
+      <%= form.label :supplier_id, "Supplier" %>
+      <%= form.collection_select :supplier_id, @suppliers, :id, :admin_label,
+            { selected: supplier_variant_source.supplier_id, include_blank: "Select supplier" },
+            { required: true } %>
+    </p>
+  <% else %>
+    <p>
+      <%= form.label :product_variant_id, "Product variant" %>
+      <%= form.select :product_variant_id,
+            @standard_variants.map { |v| ["#{v.sku} — #{v.product.name}", v.id] },
+            { selected: supplier_variant_source.product_variant_id, include_blank: "Select a Standard inventory variant" },
+            { required: true } %>
+    </p>
+  <% end %>
+
+  <p><%= form.label :supplier_item_number %><%= form.text_field :supplier_item_number %></p>
+  <p>
+    <%= form.label :pricing_method %>
+    <%= form.select :pricing_method, [
+      ["Direct unit cost", "direct_unit_cost"],
+      ["Discount from list", "discount_from_list"]
+    ] %>
+  </p>
+  <%= render "shared/currency_field",
+        name: "supplier_variant_source[supplier_list_price_cents]", id: "supplier_variant_source_supplier_list_price_cents",
+        label: "Supplier list price ($)",
+        value: params.dig(:supplier_variant_source, :supplier_list_price_cents).presence || money_field_value(supplier_variant_source.supplier_list_price_cents) %>
+  <p><%= form.label :discount_basis_points, "Discount (basis points)" %><%= form.number_field :discount_basis_points %></p>
+  <%= render "shared/currency_field",
+        name: "supplier_variant_source[expected_unit_cost_cents]", id: "supplier_variant_source_expected_unit_cost_cents",
+        label: "Expected unit cost ($)",
+        value: params.dig(:supplier_variant_source, :expected_unit_cost_cents).presence || money_field_value(supplier_variant_source.expected_unit_cost_cents) %>
+  <p><%= form.check_box :organization_preferred %><%= form.label :organization_preferred, "Organization preferred" %></p>
+  <p><%= form.submit class: "btn" %></p>
+<% end %>
+
+<% back_path =
+     if @return_to == "variant" && (supplier_variant_source.product_variant || @product_variant)
+       admin_product_variant_path(supplier_variant_source.product_variant || @product_variant)
+     elsif supplier_variant_source.supplier || @supplier
+       admin_supplier_path(supplier_variant_source.supplier || @supplier)
+     else
+       admin_suppliers_path
+     end %>
+<p><%= link_to "Back", back_path %></p>

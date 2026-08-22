@@ -1,0 +1,8 @@
+<% content_for :title, "New supplier source" %>
+<% if @product_variant %>
+  <h1>Add supplier source</h1>
+  <p class="muted"><%= @product_variant.product.name %> · SKU <%= @product_variant.sku %></p>
+<% else %>
+  <h1>New source for <%= @supplier.admin_label %></h1>
+<% end %>
+<%= render "form", supplier_variant_source: @supplier_variant_source %>

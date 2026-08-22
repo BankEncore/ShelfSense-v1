@@ -1,0 +1,14 @@
+<div id="ops_mutation_errors">
+<% if local_assigns[:errors].present? %>
+  <div class="form-errors ops-error-summary" role="alert" tabindex="-1" data-ops-error-summary>
+    <h2><%= local_assigns.fetch(:title, "Please correct the following") %></h2>
+    <ul>
+      <% Array(errors).each do |error| %><li><%= error %></li><% end %>
+    </ul>
+    <% if local_assigns[:conflict] %>
+      <p><strong>Current values are shown alongside your submitted values.</strong></p>
+      <p><%= link_to "Reload current values", request.path %>, then review your retained entries and retry.</p>
+    <% end %>
+  </div>
+<% end %>
+</div>

@@ -2,7 +2,7 @@
 
 ShelfSense is an inventory, purchasing, customer-service, and point-of-sale system for independent bookstores. It is designed for one organization operating one or more stores, with a central organization server and store Registers. A future standalone Terminal (ADR-021) may continue ordinary checkout during temporary connectivity loss.
 
-Phases 0–6 and Phase 6.1 are implemented. Phase 6 is the operational POS MVP: slices 6.0–6.8 are implemented (through cashier workflow, customer print, and closeout). Phase 6.1 is the merchandise classification and product-identity cutover on `main`.
+Phases 0–6 and Phase 6.1 are implemented. Phase 6 is the operational POS MVP: slices 6.0–6.8 are implemented (through cashier workflow, customer print, and closeout). Phase 6.1 is the merchandise classification and product-identity cutover on `main`. Phase 7 (orders, customer requests, and receiving) has application slices 7.1–7.7 complete on integration branch `phase-7-orders-and-receiving` and is **not** implemented on `main` (pending manual test gate, review, and final merge).
 
 ## Goals
 
@@ -222,6 +222,14 @@ Phase 6.1 cut over classification and product identity before later domains cons
 
 Authoritative packet: [Phase 6.1](docs/planning/phase6.1-merchandise-classification-and-identifiers/README.md).
 
+### Phase 7: Orders, customer requests, and receiving
+
+Status: application slices 7.1–7.7 complete on integration branch `phase-7-orders-and-receiving`. **Not implemented** on `main` — pending [manual test gate](docs/planning/phase7-orders-and-receiving/phase7-manual-test-gate.md), review, and final integration → `main` merge.
+
+Phase 7 adds suppliers, quantity-one customer requests with locate/reserve, stock and special orders, purchase orders, receiving, reservation hard-stops, Register pickup, and posted-receipt corrections. Application slices merge to the integration branch; Phase 7 is marked implemented only after the final integration → `main` merge.
+
+Authoritative packet: [Phase 7](docs/planning/phase7-orders-and-receiving/README.md).
+
 ## Phase 1 authorization model
 
 Permissions are additive and supplied by roles:
@@ -257,7 +265,7 @@ Start with the [documentation index](docs/README.md). Key references include:
 - [Phase 1 plan](docs/planning/phase1-operational-foundation/phase1-plan.md), [schema](docs/planning/phase1-operational-foundation/phase1-schema.md), and [authorization contract](docs/planning/phase1-operational-foundation/phase1-authorization.md)
 - [Phase 2 plan](docs/planning/phase2-financial-classification-and-merchandise-foundation/phase2-plan.md), [schema](docs/planning/phase2-financial-classification-and-merchandise-foundation/phase-2-database-schema.md), and [authorization contract](docs/planning/phase2-financial-classification-and-merchandise-foundation/phase2-authorization.md)
 - [Phase 2.2 UX foundation](docs/planning/phase2.2-ux-foundation/phase-2.2-ux-foundation.md) and [UX conventions](docs/ux-conventions.md)
-- [Phase 4 POS plan](docs/planning/phase4-6-point-of-sale/phase4-point-of-sale/phase4-plan.md), [Phase 5 cash register plan](docs/planning/phase4-6-point-of-sale/phase5-cash-register/phase5-plan.md), [Phase 6 POS MVP plan](docs/planning/phase4-6-point-of-sale/phase6-pos-mvp/phase6-plan.md), and [Phase 6.1 classification and identifiers](docs/planning/phase6.1-merchandise-classification-and-identifiers/README.md)
+- [Phase 4 POS plan](docs/planning/phase4-6-point-of-sale/phase4-point-of-sale/phase4-plan.md), [Phase 5 cash register plan](docs/planning/phase4-6-point-of-sale/phase5-cash-register/phase5-plan.md), [Phase 6 POS MVP plan](docs/planning/phase4-6-point-of-sale/phase6-pos-mvp/phase6-plan.md), [Phase 6.1 classification and identifiers](docs/planning/phase6.1-merchandise-classification-and-identifiers/README.md), and [Phase 7 orders and receiving](docs/planning/phase7-orders-and-receiving/README.md)
 - [Development guide](docs/development.md)
 - [Testing and CI](docs/testing.md)
 - [GitHub work management](docs/github-workflow.md)

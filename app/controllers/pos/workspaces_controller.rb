@@ -50,6 +50,49 @@ module Pos
       end
     end
 
+    def pickup_search
+      unless Authorization::PermissionEvaluator.allowed?(
+        user: current_user,
+        permission_key: "customer_requests.pickup",
+        store: current_store
+      )
+        render json: { error: "not authorized" }, status: :forbidden
+        return
+      end
+
+      rows = Pos::SearchAvailableCustomerRequests.call(store: current_store, query: params[:q])
+      render json: {
+        results: rows.map do |row|
+          {
+            customer_request_id: row.customer_request.id,
+            allocation_id: row.allocation.id,
+            request_number: row.request_number,
+            customer_name: row.customer_name,
+            customer_phone: row.customer_phone,
+            merchandise_label: row.merchandise_label,
+            allocation_type: row.allocation_type,
+            unit_identifier: row.unit_identifier,
+            label: "Req ##{row.request_number} · #{row.customer_name} · #{row.merchandise_label}"
+          }
+        end
+      }
+    end
+
+    def pickup
+      rescue_workspace(error_mode: "sale_entry") do
+        request = CustomerRequest.for_store(current_store).find(params.require(:customer_request_id))
+        @selected_line = Pos::AddPickupMerchandise.call(
+          transaction: @transaction,
+          actor: current_user,
+          expected_lock_version: expected_lock_version,
+          customer_request: request
+        )
+        @transaction.reload
+        @ui_mode = "sale_entry"
+        respond_workspace
+      end
+    end
+
     def resolve
       result = Pos::ResolveMerchandiseForSale.call(
         store: current_store,
@@ -418,6 +461,11 @@ module Pos
         "tax_class_override" => Pos::ControlledActionPolicy.result(user: current_user, store: current_store, action_type: "tax_class_override").to_s,
         "unlinked_return" => Pos::ControlledActionPolicy.result(user: current_user, store: current_store, action_type: "unlinked_return").to_s
       }
+      @pickup_allowed = Authorization::PermissionEvaluator.allowed?(
+        user: current_user,
+        permission_key: "customer_requests.pickup",
+        store: current_store
+      )
       @feedback ||= nil
       @command_value ||= nil
       if Pos::Support.exact_settlement?(@transaction)
@@ -722,7 +770,7 @@ module Pos
         price_label: open_price ? "Open price" : nil,
         tracking: tracking,
         open_price: open_price,
-        available: tracking == "non_inventory" ? nil : (InventoryBalance.find_by(store: current_store, product_variant: variant)&.on_hand_quantity || 0)
+        available: tracking == "non_inventory" ? nil : Inventory::Availability.available(current_store, variant)
       }
     end
 

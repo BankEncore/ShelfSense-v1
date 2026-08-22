@@ -25,6 +25,12 @@
     <% actions << link_to("Adjust inventory", new_admin_inventory_adjustment_path(store_id: current_store.id, product_variant_id: @product_variant.id), class: "btn btn--secondary") %>
   <% end %>
 <% end %>
+<% if @can_order_stock %>
+  <% actions << link_to("Order stock", order_stock_path_for(@product_variant), class: "btn") %>
+<% end %>
+<% if @can_create_customer_request %>
+  <% actions << link_to("Create customer request", create_customer_request_path_for(@product_variant), class: "btn btn--secondary") %>
+<% end %>
 
 <%= render "shared/page_header",
       title: @product_variant.name.presence || "Variant",
@@ -62,6 +68,134 @@
         ["Industry identifier", @product_variant.industry_identifier]
       ] %>
 </section>
+
+<% if current_store.present? && (@product_variant.standard? || @product_variant.used?) && @product_variant.status == "active" %>
+  <section class="section surface">
+    <h2>Store operations</h2>
+    <% if @product_variant.standard? %>
+      <%= render "shared/definition_list", rows: [
+            ["On hand", @inventory_balance&.on_hand_quantity || 0],
+            ["Reserved", @reserved_quantity || 0],
+            ["Available", @available_quantity || 0],
+            ["Open stock orders", @open_stock_order_quantity || 0],
+            ["Open customer special orders", @open_customer_order_quantity || 0],
+            ["Preferred supplier", @preferred_source&.supplier&.admin_label || "—"],
+            ["Preferred expected cost", (
+              cost = @preferred_source&.derived_expected_unit_cost_cents
+              cost ? format_money_cents(cost) : "—"
+            )]
+          ] %>
+    <% else %>
+      <%= render "shared/definition_list", rows: [
+            ["On hand units", @on_hand_units&.size || 0],
+            ["Unreserved units (requestable)", (
+              current_store ? Inventory::Availability.unreserved_on_hand_units(current_store, @product_variant).count : 0
+            )]
+          ] %>
+    <% end %>
+    <% unless current_store.present? %>
+      <p class="muted">Select a store to order stock or create customer requests.</p>
+    <% end %>
+  </section>
+<% elsif current_store.blank? && (@can_order_stock || effective_permissions.include?("orders.manage") || effective_permissions.include?("customer_requests.manage")) %>
+  <section class="section surface">
+    <p class="muted">Select a store to order stock or create customer requests for this variant.</p>
+  </section>
+<% end %>
+
+<% if @supplier_variant_sources %>
+  <section class="section surface">
+    <h2>Supplier sources</h2>
+    <p class="muted">
+      Organization preferred is the default for all stores. A store preference overrides it for the selected store.
+    </p>
+    <% if @can_manage_supplier_sources %>
+      <div class="actions">
+        <%= link_to "Add supplier source",
+              new_admin_product_variant_supplier_variant_source_path(@product_variant),
+              class: "btn" %>
+      </div>
+    <% end %>
+
+    <% if @supplier_variant_sources.empty? %>
+      <%= render "shared/empty_state",
+            title: "No supplier sources",
+            body: "Add a supplier source to set preferred cost and default ordering supplier for this variant." %>
+    <% else %>
+      <% source_rows = @supplier_variant_sources.map { |source|
+           cost = source.derived_expected_unit_cost_cents
+           badges = []
+           badges << "org preferred" if source.organization_preferred? && source.active?
+           if current_store && @store_source_preference&.supplier_variant_source_id == source.id
+             badges << "store preferred"
+           end
+           badges << "inactive" unless source.active?
+           actions = []
+           actions << link_to("View", admin_supplier_variant_source_path(source, return_to: "variant"))
+           if @can_manage_supplier_sources
+             actions << link_to("Edit", edit_admin_supplier_variant_source_path(source, return_to: "variant"))
+             if source.active?
+               actions << button_to(
+                 "Remove",
+                 admin_supplier_variant_source_path(source, return_to: "variant"),
+                 method: :delete,
+                 form: { data: { turbo_confirm: "Deactivate this supplier source?" } },
+                 class: "btn btn--danger btn--inline"
+               )
+               if current_store
+                 if @store_source_preference&.supplier_variant_source_id == source.id
+                   actions << button_to(
+                     "Clear store preferred",
+                     admin_store_supplier_source_preference_path(@store_source_preference, return_to: "variant"),
+                     method: :delete,
+                     form: { data: { turbo_confirm: "Clear this store preference?" } },
+                     class: "btn btn--secondary btn--inline"
+                   )
+                 else
+                   actions << button_to(
+                     "Set store preferred",
+                     admin_supplier_variant_source_store_supplier_source_preferences_path(source, return_to: "variant"),
+                     method: :post,
+                     params: { store_supplier_source_preference: { store_id: current_store.id } },
+                     class: "btn btn--secondary btn--inline"
+                   )
+                 end
+               end
+             else
+               actions << button_to(
+                 "Reactivate",
+                 reactivate_admin_supplier_variant_source_path(source, return_to: "variant"),
+                 method: :post,
+                 params: { lock_version: source.lock_version },
+                 class: "btn btn--inline"
+               )
+             end
+           end
+           [
+             link_to(source.supplier.admin_label, admin_supplier_path(source.supplier)),
+             source.supplier_item_number.presence || "—",
+             source.pricing_method.humanize,
+             cost ? format_money_cents(cost) : "—",
+             badges.empty? ? "—" : badges.join(" · "),
+             safe_join(actions, " ")
+           ]
+         } %>
+      <%= render "shared/data_table",
+            headers: [
+              "Supplier",
+              "Supplier item #",
+              "Pricing",
+              { text: "Expected cost", class: "numeric" },
+              "Preference",
+              "Actions"
+            ],
+            rows: source_rows %>
+      <% if current_store.blank? && @can_manage_supplier_sources %>
+        <p class="muted">Select a store to set or clear a store-level preferred source.</p>
+      <% end %>
+    <% end %>
+  </section>
+<% end %>
 
 <% if @show_inventory %>
   <% tracking = @product_variant.derived_inventory_tracking %>

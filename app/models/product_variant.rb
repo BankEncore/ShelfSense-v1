@@ -12,6 +12,8 @@ class ProductVariant < ApplicationRecord
   belongs_to :merchandise_condition, optional: true
   belongs_to :merchandise_class, optional: true
   belongs_to :tax_class_override, class_name: "TaxClass", optional: true
+  has_many :supplier_variant_sources, dependent: :restrict_with_exception
+  has_many :store_supplier_source_preferences, dependent: :restrict_with_exception
 
   validates :sku, :status, :variant_type, presence: true
   validates :sku, uniqueness: true, format: { with: /\A\d{13}\z/ }

@@ -1,0 +1,20 @@
+<% content_for :title, "Purchase receipts" %>
+<h1>Purchase receipts</h1>
+<p>Posted receipts. Drafts are managed in the receiving workspace.</p>
+<% if effective_permissions.include?("purchase_receipts.manage") && current_store.present? %>
+  <p><%= link_to "Receiving ops", ops_receiving_index_path %></p>
+<% end %>
+<ul>
+  <% @purchase_receipts.each do |receipt| %>
+    <li>
+      <%= link_to receipt.admin_label, admin_purchase_receipt_path(receipt) %>
+      · <%= receipt.supplier.admin_label %>
+      · <%= receipt.store.admin_label %>
+      · <%= receipt.status %>
+      · merchandise <%= format_money_cents(receipt.merchandise_total_cents) %>
+    </li>
+  <% end %>
+</ul>
+<% if @purchase_receipts.empty? %>
+  <p>No posted purchase receipts.</p>
+<% end %>

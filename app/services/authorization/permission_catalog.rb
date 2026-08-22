@@ -97,7 +97,33 @@ module Authorization
       { key: "pos.post_void.approve", group_key: "pos", name: "Approve post-void", scope_type: "either" }
     ].freeze
 
-    PERMISSIONS = (PHASE1_PERMISSIONS + PHASE2_PERMISSIONS + PHASE3_PERMISSIONS + PHASE4_PERMISSIONS).freeze
+    # Supplier configuration may be maintained with an either-scoped assignment so
+    # store managers can set store source preferences for their authorized store.
+    # Customer request locate/manage are either-scoped so associates can operate
+    # at their assigned store.
+    PHASE7_PERMISSIONS = [
+      { key: "suppliers.view", group_key: "suppliers", name: "View suppliers and sources", scope_type: "either" },
+      { key: "suppliers.manage", group_key: "suppliers", name: "Manage suppliers and sources", scope_type: "either" },
+      { key: "customers.view", group_key: "customers", name: "View customers and requests", scope_type: "either" },
+      { key: "customers.manage", group_key: "customers", name: "Manage customer identity", scope_type: "either" },
+      { key: "customer_requests.manage", group_key: "customer_requests", name: "Create, edit, and cancel customer requests", scope_type: "either" },
+      { key: "customer_requests.locate", group_key: "customer_requests", name: "Locate and resolve pending customer requests", scope_type: "either" },
+      { key: "customer_requests.pickup", group_key: "customer_requests", name: "Select and fulfill an available customer allocation through POS", scope_type: "either" },
+      { key: "orders.view", group_key: "orders", name: "View orders and purchase orders", scope_type: "either" },
+      { key: "orders.manage", group_key: "orders", name: "Create and edit draft orders and purchase-order lines", scope_type: "either" },
+      { key: "purchase_orders.send", group_key: "purchase_orders", name: "Generate and send purchase orders", scope_type: "either" },
+      { key: "purchase_orders.cancel", group_key: "purchase_orders", name: "Cancel purchase-order quantity and re-source", scope_type: "either" },
+      { key: "purchase_receipts.view", group_key: "purchase_receipts", name: "View purchase receipts", scope_type: "either" },
+      { key: "purchase_receipts.manage", group_key: "purchase_receipts", name: "Create and edit draft purchase receipts", scope_type: "either" },
+      { key: "purchase_receipts.post", group_key: "purchase_receipts", name: "Post purchase receipts and inventory effects", scope_type: "either" },
+      { key: "purchase_receipts.backdate", group_key: "purchase_receipts", name: "Supply a permitted past received time", scope_type: "either" },
+      { key: "purchase_receipts.correct", group_key: "purchase_receipts", name: "Reverse eligible receipt lines and post cost-only corrections", scope_type: "either" },
+      { key: "purchase_receipts.compensate", group_key: "purchase_receipts", name: "Authorize compensating adjustments when exact receipt reversal is unsafe", scope_type: "either" }
+    ].freeze
+
+    PERMISSIONS = (
+      PHASE1_PERMISSIONS + PHASE2_PERMISSIONS + PHASE3_PERMISSIONS + PHASE4_PERMISSIONS + PHASE7_PERMISSIONS
+    ).freeze
 
     STORE_MANAGER_PHASE2_VIEWS = %w[
       gl_accounts.view
@@ -136,6 +162,26 @@ module Authorization
       pos.post_void.approve
     ].freeze
 
+    STORE_MANAGER_PHASE7 = %w[
+      suppliers.view
+      suppliers.manage
+      customers.view
+      customers.manage
+      customer_requests.manage
+      customer_requests.locate
+      customer_requests.pickup
+      orders.view
+      orders.manage
+      purchase_orders.send
+      purchase_orders.cancel
+      purchase_receipts.view
+      purchase_receipts.manage
+      purchase_receipts.post
+      purchase_receipts.backdate
+      purchase_receipts.correct
+      purchase_receipts.compensate
+    ].freeze
+
     ROLES = [
       {
         key: "system_administrator",
@@ -155,7 +201,7 @@ module Authorization
           registers.manage
           registers.deactivate
           audit_events.view
-        ] + STORE_MANAGER_PHASE2_VIEWS + STORE_MANAGER_PHASE3 + STORE_MANAGER_PHASE4
+        ] + STORE_MANAGER_PHASE2_VIEWS + STORE_MANAGER_PHASE3 + STORE_MANAGER_PHASE4 + STORE_MANAGER_PHASE7
       },
       {
         key: "associate",
@@ -167,6 +213,19 @@ module Authorization
           products.view
           product_variants.view
           inventory.view
+          suppliers.view
+          customers.view
+          customers.manage
+          customer_requests.manage
+          customer_requests.locate
+          customer_requests.pickup
+          orders.view
+          orders.manage
+          purchase_orders.send
+          purchase_orders.cancel
+          purchase_receipts.view
+          purchase_receipts.manage
+          purchase_receipts.post
           pos.transact
           pos.price_override.perform
           pos.line_discount.perform

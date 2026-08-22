@@ -1,0 +1,197 @@
+<% content_for :title, "#{@receipt.admin_label} · #{@receipt.supplier.admin_label}" %>
+<header class="ops-doc-header">
+  <div>
+    <h1><%= @receipt.admin_label %></h1>
+    <p>
+      <%= @receipt.supplier.admin_label %>
+      · <%= current_store.admin_label %>
+      · <%= @receipt.status %>
+      · <%= @lines.size %> lines
+      · merchandise <%= format_money_cents(@receipt.merchandise_total_cents) %>
+      · ancillary <%= format_money_cents(@receipt.ancillary_total_cents) %>
+    </p>
+  </div>
+  <p>
+    <%= link_to "All drafts", ops_receiving_index_path %>
+    · <%= link_to "Exit to Purchasing", admin_orders_path %>
+  </p>
+</header>
+<%= render "ops/shared/error_summary", errors: @mutation_errors, conflict: @conflict, title: "Receipt was not changed" %>
+
+<% if @receipt.draft? && effective_permissions.include?("purchase_receipts.manage") %>
+  <section class="ops-actions">
+    <h2>Receipt header</h2>
+    <%= form_with url: ops_receiving_update_path(@receipt), method: :patch, local: true, html: { data: { dirty_track: true } } do %>
+      <%= hidden_field_tag :lock_version, @receipt.lock_version %>
+      <label>
+        Received at
+        <input type="datetime-local" name="received_at" value="<%= @error_action == :update ? @submitted&.fetch("received_at", nil) : @receipt.received_at&.strftime("%Y-%m-%dT%H:%M") %>" <%= "autofocus aria-describedby=receipt_header_error" if @error_action == :update %>>
+      </label>
+      <label>
+        Supplier document #
+        <input type="text" name="supplier_document_number" value="<%= @error_action == :update ? @submitted&.fetch("supplier_document_number", nil) : @receipt.supplier_document_number %>">
+      </label>
+      <label>
+        Supplier document date
+        <input type="date" name="supplier_document_date" value="<%= @error_action == :update ? @submitted&.fetch("supplier_document_date", nil) : @receipt.supplier_document_date %>">
+      </label>
+      <label>
+        Freight ($)
+        <input type="text" inputmode="decimal" name="freight_cents" value="<%= @error_action == :update ? @submitted&.fetch("freight_cents", nil) : money_field_value(@receipt.freight_cents) %>" aria-invalid="<%= @error_field == :freight_cents %>">
+      </label>
+      <label>
+        Handling ($)
+        <input type="text" inputmode="decimal" name="handling_cents" value="<%= @error_action == :update ? @submitted&.fetch("handling_cents", nil) : money_field_value(@receipt.handling_cents) %>" aria-invalid="<%= @error_field == :handling_cents %>">
+      </label>
+      <label>
+        Supplier tax ($)
+        <input type="text" inputmode="decimal" name="supplier_tax_cents" value="<%= @error_action == :update ? @submitted&.fetch("supplier_tax_cents", nil) : money_field_value(@receipt.supplier_tax_cents) %>" aria-invalid="<%= @error_field == :supplier_tax_cents %>">
+      </label>
+      <label>
+        Miscellaneous charges ($)
+        <input type="text" inputmode="decimal" name="miscellaneous_charges_cents" value="<%= @error_action == :update ? @submitted&.fetch("miscellaneous_charges_cents", nil) : money_field_value(@receipt.miscellaneous_charges_cents) %>" aria-invalid="<%= @error_field == :miscellaneous_charges_cents %>">
+      </label>
+      <label>
+        Charge notes
+        <input type="text" name="charge_notes" value="<%= @error_action == :update ? @submitted&.fetch("charge_notes", nil) : @receipt.charge_notes %>">
+      </label>
+      <label>
+        Notes
+        <input type="text" name="notes" value="<%= @error_action == :update ? @submitted&.fetch("notes", nil) : @receipt.notes %>">
+      </label>
+      <button type="submit" data-ops-save>Save header</button>
+      <%= render "ops/shared/inline_row_error", action: :update, id: "receipt_header_error" %>
+      <% if @conflict && @error_action == :update %><small>Current saved notes: <%= @receipt.notes.presence || "blank" %>; freight: <%= format_money_cents(@receipt.freight_cents) %>.</small><% end %>
+    <% end %>
+    <p class="ops-hint">Ancillary charges are recorded but never enter inventory valuation.</p>
+  </section>
+
+  <%= render "line_scanner" %>
+<% end %>
+
+<%= render "line_grid" %>
+
+<% if @receipt.draft? && effective_permissions.include?("purchase_receipts.post") && @lines.any? %>
+  <section class="ops-actions">
+    <h2>Post</h2>
+    <p><%= link_to "Review and post", ops_receiving_review_path(@receipt), data: { ops_primary: true } %></p>
+  </section>
+<% end %>
+
+<% if @receipt.posted? %>
+  <section>
+    <h2>Corrections</h2>
+    <p>
+      Posted facts are immutable.
+      Reverse eligible lines or post cost-only corrections.
+      If exact reversal is unsafe (for example sold stock), authorize a compensating adjustment with
+      <code>purchase_receipts.compensate</code> — do not force an approximate receipt reverse.
+      Completed customer pickup cannot be undone.
+    </p>
+    <% if @can_correct %>
+      <table class="ops-queue">
+        <thead>
+          <tr>
+            <th scope="col">Item</th>
+            <th scope="col">Remaining</th>
+            <th scope="col">Unit cost</th>
+            <th scope="col">Reverse</th>
+            <th scope="col">Cost correct</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @lines.each do |line| %>
+            <tr>
+              <td>
+                <%= line.product_variant.product.name %>
+                <code><%= line.product_variant.sku %></code>
+              </td>
+              <td><%= line.remaining_reversible_quantity %> / <%= line.received_quantity %></td>
+              <td><%= format_money_cents(line.actual_unit_cost_cents) %></td>
+              <td>
+                <% if line.remaining_reversible_quantity.positive? %>
+                  <div data-controller="review-dialog">
+                    <button type="button" data-review-dialog-target="trigger" data-action="review-dialog#open">Review line reversal</button>
+                    <dialog class="review-dialog review-dialog--danger" data-review-dialog-target="dialog" data-action="close->review-dialog#restoreFocus">
+                      <div class="review-dialog__body">
+                        <h3>Review receipt-line reversal</h3>
+                        <dl class="review-dialog__facts">
+                          <dt>Item</dt><dd><%= line.product_variant.product.name %></dd>
+                          <dt>Inventory</dt><dd>Reduce physical on-hand by the quantity entered below.</dd>
+                          <dt>Valuation</dt><dd>Reverse the exact linked receipt value when safe.</dd>
+                          <dt>Customer allocation</dt><dd><%= line.customer_request_allocation&.reserved? ? "The active receipt allocation will be released/reconciled." : "No active receipt allocation will be released." %></dd>
+                          <dt>Downstream sale</dt><dd>A completed pickup or sale blocks exact reversal; compensation requires separate authorization.</dd>
+                        </dl>
+                        <%= form_with url: ops_receiving_reverse_line_path(@receipt, line), method: :post, local: true do %>
+                          <label>Reason <input type="text" name="reason" required data-review-dialog-target="initialFocus"></label>
+                          <label>Quantity <input type="number" name="quantity" min="1" max="<%= line.remaining_reversible_quantity %>" value="<%= line.remaining_reversible_quantity %>" required></label>
+                          <% if @can_compensate %><label><input type="checkbox" name="authorize_compensate" value="1"> Authorize compensation if exact reversal is unsafe</label><% end %>
+                          <div class="review-dialog__actions"><button type="submit">Reverse receipt line quantity and value</button><button type="button" data-action="review-dialog#close">Keep receipt line</button></div>
+                        <% end %>
+                      </div>
+                    </dialog>
+                  </div>
+                <% else %>
+                  —
+                <% end %>
+              </td>
+              <td>
+                <% if line.remaining_reversible_quantity.positive? %>
+                  <div data-controller="review-dialog">
+                    <button type="button" data-review-dialog-target="trigger" data-action="review-dialog#open">Review cost correction</button>
+                    <dialog class="review-dialog review-dialog--information" data-review-dialog-target="dialog" data-action="close->review-dialog#restoreFocus">
+                      <div class="review-dialog__body">
+                        <h3>Review cost-only correction</h3>
+                        <p class="review-dialog__consequences"><strong>Physical quantity will not change.</strong> This posts only a valuation delta; the posted receipt remains immutable.</p>
+                        <dl class="review-dialog__facts"><dt>Item</dt><dd><%= line.product_variant.product.name %></dd><dt>Current unit cost</dt><dd><%= format_money_cents(line.actual_unit_cost_cents) %></dd><dt>Inventory effect</dt><dd>No on-hand or customer-allocation change.</dd></dl>
+                        <%= form_with url: ops_receiving_correct_cost_path(@receipt, line), method: :post, local: true do %>
+                          <label>Reason <input type="text" name="reason" required data-review-dialog-target="initialFocus"></label>
+                          <label>Corrected unit cost ($) <input type="text" inputmode="decimal" name="corrected_unit_cost_cents" value="<%= @selected_row_id.to_s == line.id.to_s ? @submitted&.fetch("corrected_unit_cost_cents", nil) : nil %>" required aria-invalid="<%= @error_field == :corrected_unit_cost_cents && @selected_row_id.to_s == line.id.to_s %>"></label>
+                          <div class="review-dialog__actions"><button type="submit">Post cost-only valuation correction</button><button type="button" data-action="review-dialog#close">Keep current cost</button></div>
+                        <% end %>
+                      </div>
+                    </dialog>
+                  </div>
+                <% else %>
+                  —
+                <% end %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+
+      <% if @lines.any? { |l| l.remaining_reversible_quantity.positive? } %>
+        <h3>Reverse whole receipt</h3>
+        <div data-controller="review-dialog">
+          <button type="button" data-review-dialog-target="trigger" data-action="review-dialog#open">Review whole-receipt reversal</button>
+          <dialog class="review-dialog review-dialog--danger" data-review-dialog-target="dialog" data-action="close->review-dialog#restoreFocus">
+            <div class="review-dialog__body">
+              <h3>Review whole-receipt reversal</h3>
+              <dl class="review-dialog__facts"><dt>Inventory</dt><dd>Reverse all remaining eligible physical quantities atomically.</dd><dt>Valuation</dt><dd>Reverse their exact linked receipt values.</dd><dt>Customer allocations</dt><dd>Active receipt allocations are released/reconciled.</dd><dt>Downstream sales</dt><dd>Any unsafe line, including completed pickup/sale consequences, blocks the entire reversal.</dd></dl>
+              <%= form_with url: ops_receiving_reverse_path(@receipt), method: :post, local: true do %>
+                <label>Reason <input type="text" name="reason" required data-review-dialog-target="initialFocus"></label>
+                <div class="review-dialog__actions"><button type="submit">Reverse entire eligible receipt atomically</button><button type="button" data-action="review-dialog#close">Keep posted receipt</button></div>
+              <% end %>
+            </div>
+          </dialog>
+        </div>
+      <% end %>
+    <% end %>
+
+    <% corrections = @lines.flat_map(&:corrections).sort_by(&:recorded_at) %>
+    <% if corrections.any? %>
+      <h3>Correction history</h3>
+      <ul>
+        <% corrections.each do |correction| %>
+          <li>
+            <%= correction.correction_type %>
+            <% if correction.quantity.present? %>· qty <%= correction.quantity %><% end %>
+            <% if correction.value_delta_cents.present? %>· value change <%= format_money_cents(correction.value_delta_cents) %><% end %>
+            · <%= correction.reason %>
+          </li>
+        <% end %>
+      </ul>
+    <% end %>
+  </section>
+<% end %>

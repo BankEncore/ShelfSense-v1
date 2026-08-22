@@ -312,6 +312,7 @@ module Pos
             actor: @actor,
             correlation_id: correlation_id
           )
+          fulfill_pickup_allocation!(line, correlation_id) if line.pickup_line?
         elsif line.return?
           Inventory::PostReturn.call(
             line: line,
@@ -324,6 +325,17 @@ module Pos
           raise Pos::Error, "unknown line direction"
         end
       end
+    end
+
+    def fulfill_pickup_allocation!(line, correlation_id)
+      Customers::FulfillPickup.call(
+        allocation: line.customer_request_allocation,
+        pos_transaction_line: line,
+        actor: @actor,
+        correlation_id: correlation_id
+      )
+    rescue Customers::Error => e
+      raise Pos::Error, e.message
     end
 
     def persist_completed_operation!(operation, transaction, facts, completion_time)

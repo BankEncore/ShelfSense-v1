@@ -1,0 +1,57 @@
+<% content_for :title, "Customer requests" %>
+<%= render "shared/page_header", title: "Customer requests", subtitle: "Active customer work and request history",
+      actions: (link_to("New request", new_admin_customer_request_path, class: "btn") if effective_permissions.include?("customer_requests.manage") && current_store.present?) %>
+
+<%= form_with url: admin_customer_requests_path, method: :get, local: true, class: "filters" do %>
+  <div class="form-field form-field--grow">
+    <%= label_tag :q, "Search" %>
+    <%= search_field_tag :q, @index.q, placeholder: "Request number, customer, contact, title, or identifier" %>
+  </div>
+  <div class="form-field">
+    <%= label_tag :store_id, "Store" %>
+    <%= select_tag :store_id, options_for_select([["All authorized stores", ""]] + @stores.map { |store| [store.name, store.id] }, @index.store_id) %>
+  </div>
+  <div class="form-field">
+    <%= label_tag :status, "Status" %>
+    <%= select_tag :status, options_for_select([["Any status", ""]] + CustomerRequest::STATUSES.map { |status| [status.humanize, status] }, @index.status) %>
+  </div>
+  <div class="form-field"><%= submit_tag "Apply", class: "btn" %></div>
+  <% if @index.filtered %><div class="form-field"><%= link_to "Clear filters", admin_customer_requests_path, class: "btn btn--ghost" %></div><% end %>
+<% end %>
+
+<% if current_store.present? && effective_permissions.include?("customer_requests.locate") %>
+  <p><%= link_to "Open location queue", ops_location_path, class: "btn btn--ghost" %></p>
+<% end %>
+
+<% if @customer_requests.empty? && !@index.filtered %>
+  <%= render "shared/empty_state", title: "No customer requests yet", body: "Create a request to begin customer location or special-order work.",
+        action: (link_to("New request", new_admin_customer_request_path, class: "btn") if effective_permissions.include?("customer_requests.manage") && current_store.present?) %>
+<% elsif @customer_requests.empty? %>
+  <%= render "shared/empty_state", title: "No matching customer requests", body: "Try a different search or clear the store and status filters.",
+        action: link_to("Clear filters", admin_customer_requests_path, class: "btn btn--ghost") %>
+<% else %>
+  <% rows = @customer_requests.map { |request|
+       next_action = case request.status
+       when "pending_location"
+         effective_permissions.include?("customer_requests.locate") && request.store == current_store ? link_to("Locate merchandise", ops_location_path, class: "btn btn--ghost") : link_to("View request", admin_customer_request_path(request))
+       when "available"
+         link_to("View pickup details", admin_customer_request_path(request))
+       when "special_order_pending", "ordered"
+         link_to("Review order", admin_customer_request_path(request))
+       else
+         link_to("View history", admin_customer_request_path(request))
+       end
+       contact = [request.customer.phone.presence, request.customer.email.presence].compact.join(" · ").presence || missing_value("No contact")
+       [link_to("##{request.number}", admin_customer_request_path(request)), request.store.name,
+        safe_join([request.customer.display_name, tag.br, content_tag(:span, contact, class: "muted")]),
+        safe_join([request.product_variant.product.name, tag.br, content_tag(:span, request.product_variant.sku, class: "muted")]),
+        status_badge(request.status, scheme: :customer_request), next_action]
+     } %>
+  <%= render "shared/data_table", headers: ["Request", "Store", "Customer", "Merchandise", "Status", "Next action"], rows: rows %>
+  <nav class="pagination" aria-label="Customer request pages">
+    <span class="muted">Page <%= @index.page %> of <%= @index.total_pages %> · <%= @index.total_count %> total</span>
+    <% query = { q: @index.q, status: @index.status, store_id: @index.store_id }.compact %>
+    <% if @index.page > 1 %><%= link_to "Previous", admin_customer_requests_path(query.merge(page: @index.page - 1)), class: "btn btn--ghost" %><% end %>
+    <% if @index.page < @index.total_pages %><%= link_to "Next", admin_customer_requests_path(query.merge(page: @index.page + 1)), class: "btn btn--ghost" %><% end %>
+  </nav>
+<% end %>

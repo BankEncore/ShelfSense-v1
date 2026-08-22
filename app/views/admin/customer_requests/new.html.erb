@@ -1,0 +1,136 @@
+<% content_for :title, "New customer request" %>
+<%= render "shared/breadcrumbs", crumbs: [
+  { name: "Home", path: root_path },
+  { name: "Customer requests", path: admin_customer_requests_path },
+  { name: "New request" }
+] %>
+
+<%= render "shared/page_header",
+      title: "New customer request",
+      subtitle: "Find a customer and exact merchandise variant. In-stock Standard or Used enters the location queue; out-of-stock Standard becomes a special order." %>
+
+<% request_state = {
+     customer_id: @customer_request.customer_id,
+     product_variant_id: @customer_request.product_variant_id,
+     supplier_id: params.dig(:customer_request, :supplier_id),
+     expected_unit_cost_cents: params.dig(:customer_request, :expected_unit_cost_cents),
+     estimated_price_cents: params.dig(:customer_request, :estimated_price_cents),
+     notes: params.dig(:customer_request, :notes)
+   }.compact %>
+
+<section class="section surface" aria-labelledby="customer-lookup-heading">
+  <h2 id="customer-lookup-heading">1. Customer</h2>
+  <% if @customer_request.customer %>
+    <p>
+      <strong><%= @customer_request.customer.display_name %></strong><br>
+      <span class="muted">
+        <%= @customer_request.customer.phone.presence || "No phone" %> ·
+        <%= @customer_request.customer.email.presence || "No email" %> ·
+        ID <%= @customer_request.customer.id %>
+      </span>
+    </p>
+  <% end %>
+  <%= form_with url: customer_lookup_admin_customer_requests_path, method: :get, local: true, class: "filters" do %>
+    <% request_state.each do |key, value| %>
+      <%= hidden_field_tag "customer_request[#{key}]", value %>
+    <% end %>
+    <div class="form-field form-field--grow">
+      <%= label_tag :customer_q, "Find customer by name, phone, email, or customer ID" %>
+      <%= search_field_tag :customer_q, @customer_query, required: true, autocomplete: "off" %>
+    </div>
+    <div class="form-field"><%= submit_tag "Find customer", class: "btn btn--ghost" %></div>
+  <% end %>
+
+  <% if defined?(@customer_results) %>
+    <% if @customer_results.empty? %>
+      <p role="status">No active customers matched. Try another name, contact detail, or identifier.</p>
+    <% else %>
+      <% rows = @customer_results.map { |customer| [
+           customer.display_name,
+           customer.phone.presence || missing_value("No phone"),
+           customer.email.presence || missing_value("No email"),
+           customer.id,
+           link_to("Select", new_admin_customer_request_path(customer_request: request_state.merge(customer_id: customer.id)), class: "btn btn--ghost", aria: { label: "Select #{customer.display_name}, #{customer.email.presence || customer.phone.presence || customer.id}" })
+         ] } %>
+      <%= render "shared/data_table", headers: ["Name", "Phone", "Email", "Customer ID", "Action"], rows: rows %>
+    <% end %>
+  <% end %>
+
+  <% if effective_permissions.include?("customers.manage") %>
+    <% return_path = new_admin_customer_request_path(customer_request: request_state) %>
+    <p><%= link_to "Create customer", new_admin_customer_path(return_to: return_path), class: "btn btn--ghost" %>
+      <span class="muted">Your merchandise selection and entered request details will be kept.</span></p>
+  <% end %>
+</section>
+
+<section class="section surface" aria-labelledby="merchandise-lookup-heading">
+  <h2 id="merchandise-lookup-heading">2. Merchandise</h2>
+  <% if @product_variant %>
+    <%= render "shared/definition_list", rows: [
+          ["Title", link_to(@product_variant.product.name, admin_product_path(@product_variant.product))],
+          ["Variant", link_to(@product_variant.name.presence || @product_variant.sku, admin_product_variant_path(@product_variant))],
+          ["SKU", @product_variant.sku],
+          ["Identity", @product_variant.variant_type.humanize],
+          ["Apparent available", (@available_quantity.nil? ? "—" : @available_quantity)]
+        ] %>
+  <% else %>
+    <%= form_with url: merchandise_lookup_admin_customer_requests_path, method: :get, local: true, class: "filters" do %>
+      <% request_state.each do |key, value| %>
+        <%= hidden_field_tag "customer_request[#{key}]", value %>
+      <% end %>
+      <div class="form-field form-field--grow">
+        <%= label_tag :merchandise_q, "Find merchandise by ISBN, UPC, identifier, SKU, or title" %>
+        <%= search_field_tag :merchandise_q, @merchandise_query, required: true, autocomplete: "off" %>
+      </div>
+      <div class="form-field"><%= submit_tag "Find merchandise", class: "btn btn--ghost" %></div>
+    <% end %>
+  <% end %>
+
+  <% if defined?(@merchandise_results) %>
+    <% if @merchandise_results.empty? %>
+      <p role="status">No active merchandise matched. Try another title or identifier.</p>
+    <% else %>
+      <% rows = @merchandise_results.map { |variant|
+           available = @availability_by_variant_id.fetch(variant.id)
+           selectable = variant.standard? || available.positive?
+           action = if selectable
+             link_to("Select", new_admin_customer_request_path(customer_request: request_state.merge(product_variant_id: variant.id)), class: "btn btn--ghost", aria: { label: "Select #{variant.product.name}, #{variant.variant_type.humanize}, SKU #{variant.sku}" })
+           else
+             content_tag(:span, "Unavailable", class: "muted")
+           end
+           [variant.product.name, variant.name.presence || "Default", variant.sku,
+            content_tag(:span, variant.variant_type.humanize, class: "status-badge"), available, action]
+         } %>
+      <%= render "shared/data_table", headers: ["Title", "Variant", "SKU", "Identity", { text: "Available", class: "numeric" }, "Action"], rows: rows %>
+      <p class="muted">Out-of-stock Standard merchandise remains selectable for special ordering. Out-of-stock Used merchandise cannot be requested.</p>
+    <% end %>
+  <% end %>
+</section>
+
+<section class="section surface" aria-labelledby="request-details-heading">
+  <h2 id="request-details-heading">3. Request details</h2>
+  <%= form_with url: admin_customer_requests_path, scope: :customer_request do |form| %>
+    <%= form.hidden_field :customer_id, value: @customer_request.customer_id %>
+    <%= form.hidden_field :product_variant_id, value: @customer_request.product_variant_id %>
+    <% if @product_variant.nil? || @product_variant.standard? %>
+      <p>
+        <%= form.label :supplier_id, "Supplier (out-of-stock Standard)" %>
+        <%= form.collection_select :supplier_id, @suppliers, :id, :admin_label,
+              { selected: params.dig(:customer_request, :supplier_id).presence || @preferred_source&.supplier_id, include_blank: "Preferred source (if any)" } %>
+      </p>
+      <%= render "shared/currency_field",
+            name: "customer_request[expected_unit_cost_cents]", id: "customer_request_expected_unit_cost_cents",
+            label: "Expected unit cost ($, out-of-stock Standard)",
+            value: params.dig(:customer_request, :expected_unit_cost_cents).presence || money_field_value(@preferred_source&.derived_expected_unit_cost_cents) %>
+    <% end %>
+    <%= render "shared/currency_field",
+          name: "customer_request[estimated_price_cents]", id: "customer_request_estimated_price_cents",
+          label: "Estimated customer price ($)", value: params.dig(:customer_request, :estimated_price_cents) %>
+    <p><%= form.label :notes %><%= form.text_area :notes, value: params.dig(:customer_request, :notes) || @customer_request.notes %></p>
+    <% ready = @customer_request.customer_id.present? && @customer_request.product_variant_id.present? %>
+    <p><%= form.submit "Create request", class: "btn", disabled: !ready %></p>
+    <% unless ready %><p class="muted" role="status">Select both a customer and merchandise before creating the request.</p><% end %>
+  <% end %>
+</section>
+
+<p><%= link_to "Back", (@product_variant ? admin_product_variant_path(@product_variant) : admin_customer_requests_path) %></p>

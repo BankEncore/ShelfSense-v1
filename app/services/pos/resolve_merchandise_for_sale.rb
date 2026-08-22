@@ -121,17 +121,19 @@ module Pos
       if busy_unit_ids.include?(unit.id)
         return unavailable("unit is already on a working transaction")
       end
+      if Inventory::Availability.unit_allocated?(unit)
+        return unavailable("unit is reserved for a customer request")
+      end
 
       Result.new(outcome: :addable_unit, unit: unit, variant: variant)
     end
 
     def available_units(variant)
-      InventoryUnit.on_hand
-                   .where(store: @store, product_variant: variant)
-                   .where.not(id: busy_unit_ids)
-                   .includes(product_variant: :merchandise_condition)
-                   .order(:unit_identifier)
-                   .to_a
+      Inventory::Availability.unreserved_on_hand_units(@store, variant)
+                            .where.not(id: busy_unit_ids)
+                            .includes(product_variant: :merchandise_condition)
+                            .order(:unit_identifier)
+                            .to_a
     end
 
     def busy_unit_ids

@@ -1,0 +1,199 @@
+<% content_for :title, @customer_request.admin_label %>
+
+<% promise_label = {
+     "pending_location" => "Needs locating",
+     "special_order_pending" => "Ordered",
+     "ordered" => "Ordered",
+     "available" => "Available for pickup",
+     "completed" => "Completed",
+     "cancelled" => "Cancelled"
+   }.fetch(@customer_request.status) %>
+<% contact = [@customer_request.customer.phone.presence, @customer_request.customer.email.presence].compact.join(" · ").presence %>
+<% merchandise = safe_join([
+     @customer_request.product_variant.product.name,
+     tag.br,
+     content_tag(:span, "#{@customer_request.product_variant.variant_type.humanize} · SKU #{@customer_request.product_variant.sku}", class: "muted")
+   ]) %>
+
+<%= render "shared/page_header", title: @customer_request.admin_label,
+      subtitle: "Customer fulfillment at #{@customer_request.store.admin_label}",
+      actions: link_to("Back to requests", admin_customer_requests_path, class: "btn btn--ghost") %>
+
+<section class="section surface request-summary" aria-labelledby="current-state-heading">
+  <div class="request-summary__heading">
+    <div>
+      <p class="muted">Current promise</p>
+      <h2 id="current-state-heading"><%= promise_label %></h2>
+    </div>
+    <%= status_badge(@customer_request.status, scheme: :customer_request) %>
+  </div>
+
+  <%= render "shared/definition_list", rows: [
+    ["Customer", link_to(@customer_request.customer.admin_label, admin_customer_path(@customer_request.customer))],
+    ["Contact method", contact || missing_value("No phone or email")],
+    ["Merchandise", merchandise],
+    ["Store", @customer_request.store.admin_label],
+    ["Request number", "##{@customer_request.number}"],
+    ["Status", @customer_request.status.humanize],
+    ["Estimated customer price", @customer_request.estimated_price_cents.nil? ? missing_value : format_money_cents(@customer_request.estimated_price_cents)],
+    ["Request notes", @customer_request.notes.presence || missing_value]
+  ] %>
+
+  <div class="request-next-action">
+    <h3>Next step</h3>
+    <% if @customer_request.pending_location? %>
+      <% if effective_permissions.include?("customer_requests.locate") && current_store&.id == @customer_request.store_id %>
+        <%= link_to "Open location queue", ops_location_path, class: "btn" %>
+      <% else %>
+        <p>Merchandise must be physically located by an authorized team member at this store.</p>
+      <% end %>
+    <% elsif @customer_request.available? %>
+      <p><strong>Bring this request to the Register for customer pickup.</strong> The cashier must select the request allocation; do not add the merchandise as an ordinary sale.</p>
+    <% elsif @customer_request.completed? %>
+      <% transaction = @allocations.filter_map { |allocation| allocation.fulfilled_pos_transaction_line&.pos_transaction }.first %>
+      <% if transaction && effective_permissions.include?("pos.transact") && current_store&.id == transaction.store_id %>
+        <%= link_to "Open pickup receipt #{transaction.transaction_reference}", pos_transaction_path(transaction), class: "btn" %>
+      <% else %>
+        <p>No action needed. Pickup was completed at the Register.</p>
+      <% end %>
+    <% elsif @customer_request.cancelled? %>
+      <p>No action needed. This request is cancelled.</p>
+    <% else %>
+      <% current_order = @related_orders.reject(&:cancelled?).last || @related_orders.last %>
+      <% purchase_order = current_order&.purchase_order %>
+      <% if purchase_order&.draft? && effective_permissions.include?("orders.manage") && current_store&.id == @customer_request.store_id %>
+        <%= link_to "Open draft PO", ops_purchase_order_path(purchase_order), class: "btn" %>
+      <% elsif purchase_order && effective_permissions.include?("orders.view") %>
+        <%= link_to "Open #{purchase_order.admin_label}", admin_purchase_order_path(purchase_order), class: "btn" %>
+      <% elsif current_order && effective_permissions.include?("orders.view") %>
+        <%= link_to "Open #{current_order.admin_label}", admin_order_path(current_order), class: "btn" %>
+      <% else %>
+        <p>An authorized buyer is responsible for the supplier order.</p>
+      <% end %>
+    <% end %>
+  </div>
+</section>
+
+<% events = [] %>
+<% events << { at: @customer_request.created_at, title: "Request created", badge: "Created", body: "Routed to #{promise_label == "Needs locating" ? "the location queue" : "supplier ordering"}." } %>
+<% if @customer_request.location_failed_at %>
+  <% events << { at: @customer_request.location_failed_at, title: "Not located", badge: "Not located", body: @customer_request.location_failure_notes.presence || "No location notes recorded." } %>
+<% elsif @allocations.any? { |allocation| allocation.purchase_receipt_line.nil? } %>
+  <% allocation = @allocations.find { |candidate| candidate.purchase_receipt_line.nil? } %>
+  <% events << { at: allocation.created_at, title: "Located in store", badge: "Located", body: "Physical merchandise was confirmed and reserved." } %>
+<% end %>
+<% @related_orders.each do |order| %>
+  <% lineage = order.replaces_order ? " Re-sourced from #{order.replaces_order.admin_label}." : " Original supplier order." %>
+  <% order_label = effective_permissions.include?("orders.view") ? link_to(order.admin_label, admin_order_path(order)) : order.admin_label %>
+  <% events << { at: order.created_at, title: order.replaces_order ? "Replacement order created" : "Supplier order created", badge: order.cancelled? ? "Cancelled" : "Order", body: safe_join([order_label, " with #{order.supplier.admin_label}.#{lineage}"]) } %>
+  <% if order.purchase_order_line %>
+    <% po = order.purchase_order %>
+    <% if po&.generated_at %>
+      <% po_label = effective_permissions.include?("orders.view") ? link_to(po.admin_label, admin_purchase_order_path(po)) : po.admin_label %>
+      <% events << { at: po.generated_at, title: "Purchase order generated", badge: po.status.humanize, body: po_label } %>
+    <% end %>
+    <% if po&.sent_at %>
+      <% events << { at: po.sent_at, title: "Purchase order sent", badge: "Sent", body: "#{po.admin_label} sent#{po.transmission_method.present? ? " by #{po.transmission_method.humanize.downcase}" : ""}." } %>
+    <% end %>
+    <% state = order.purchase_order_line.line_state %>
+    <% if state && (state.confirmed_quantity.present? || state.backordered_quantity.positive? || state.supplier_reference.present? || state.expected_on.present? || state.notes.present?) %>
+      <% acknowledgment = [state.confirmed_quantity.present? ? "#{state.confirmed_quantity} confirmed" : nil, state.backordered_quantity.positive? ? "#{state.backordered_quantity} backordered" : nil, state.expected_on ? "expected #{format_date(state.expected_on)}" : nil, state.supplier_reference.presence, state.notes.presence].compact.join(" · ") %>
+      <% events << { at: state.updated_at, title: "Supplier acknowledgment", badge: "Acknowledged", body: acknowledgment } %>
+    <% end %>
+    <% order.purchase_order_line.cancellations.each do |cancellation| %>
+      <% events << { at: cancellation.occurred_at, title: "Order quantity cancelled", badge: "#{cancellation.source.humanize} cancellation", body: cancellation.reason } %>
+    <% end %>
+    <% order.purchase_order_line.purchase_receipt_lines.each do |line| %>
+      <% receipt = line.purchase_receipt %>
+      <% next unless receipt.posted? %>
+      <% made_available = @allocations.any? { |allocation| allocation.purchase_receipt_line_id == line.id } %>
+      <% receipt_label = effective_permissions.include?("purchase_receipts.view") ? link_to(receipt.admin_label, admin_purchase_receipt_path(receipt)) : receipt.admin_label %>
+      <% events << { at: receipt.posted_at, title: "Receipt posted", badge: "Received", body: safe_join([receipt_label, " · line received #{line.received_quantity} at #{format_money_cents(line.actual_unit_cost_cents)} each#{made_available ? " · made this request available" : ""}"]) } %>
+    <% end %>
+  <% end %>
+  <% if order.cancelled_at %>
+    <% events << { at: order.cancelled_at, title: "Order cancelled", badge: "Cancelled", body: order.cancellation_reason.presence || "No reason recorded." } %>
+  <% end %>
+<% end %>
+<% @allocations.each do |allocation| %>
+  <% allocation_description = if allocation.standard_quantity?
+       "Standard quantity (1)"
+     else
+       "Exact Used unit #{allocation.inventory_unit&.unit_identifier || "identifier unavailable"}"
+     end %>
+  <% events << { at: allocation.created_at, title: allocation.reserved? ? "Allocation reserved" : "Allocation created", badge: allocation.status.humanize, body: allocation_description } unless allocation.purchase_receipt_line.nil? && events.any? { |event| event[:at] == allocation.created_at && event[:title] == "Located in store" } %>
+  <% if allocation.released? %>
+    <% events << { at: allocation.released_at, title: "Allocation released", badge: "Released", body: "#{allocation_description} · #{allocation.release_reason}" } %>
+  <% elsif allocation.fulfilled? %>
+    <% line = allocation.fulfilled_pos_transaction_line %>
+    <% transaction = line&.pos_transaction %>
+    <% receipt_link = transaction && effective_permissions.include?("pos.transact") && current_store&.id == transaction.store_id ? link_to(transaction.transaction_reference, pos_transaction_path(transaction)) : transaction&.transaction_reference %>
+    <% events << { at: transaction&.completed_at || @customer_request.completed_at || allocation.updated_at, title: "Pickup completed", badge: "Completed", body: safe_join(["Fulfilled through POS receipt ", receipt_link || "not available", " · ", format_money_cents(line&.line_total_cents)]) } %>
+  <% end %>
+<% end %>
+<% if @customer_request.cancelled? %>
+  <% events << { at: @customer_request.cancelled_at, title: "Request cancelled", badge: "Cancelled", body: @customer_request.cancellation_reason } %>
+<% end %>
+
+<section class="section" aria-labelledby="timeline-heading">
+  <h2 id="timeline-heading">Fulfillment timeline</h2>
+  <ol class="fulfillment-timeline">
+    <% events.compact.sort_by { |event| [event[:at] || Time.at(0), event[:title]] }.each do |event| %>
+      <li class="fulfillment-timeline__event">
+        <div class="fulfillment-timeline__marker" aria-hidden="true"></div>
+        <div class="fulfillment-timeline__content surface">
+          <div class="fulfillment-timeline__heading">
+            <h3><%= event[:title] %></h3>
+            <span class="status-badge"><%= event[:badge] %></span>
+          </div>
+          <p class="muted"><%= format_timestamp(event[:at]) %></p>
+          <p><%= event[:body] %></p>
+        </div>
+      </li>
+    <% end %>
+  </ol>
+</section>
+
+<% if !@customer_request.cancelled? && !@customer_request.completed? && effective_permissions.include?("customer_requests.manage") %>
+  <section class="section surface" aria-labelledby="cancel-request-heading">
+    <h2 id="cancel-request-heading">Cancel request</h2>
+    <div data-controller="review-dialog">
+      <button type="button" class="btn btn--danger" data-review-dialog-target="trigger" data-action="review-dialog#open">Review cancellation</button>
+      <dialog class="review-dialog review-dialog--danger" data-review-dialog-target="dialog" data-action="close->review-dialog#restoreFocus">
+        <div class="review-dialog__body">
+          <h3>Review cancelling request #<%= @customer_request.number %></h3>
+          <dl class="review-dialog__facts">
+            <dt>Customer</dt><dd><%= @customer_request.customer.admin_label %></dd>
+            <dt>Merchandise</dt><dd><%= @customer_request.product_variant.product.name %></dd>
+            <dt>Allocation release</dt><dd><%= @active_allocation ? "The active allocation will be released for other sales." : "No active allocation will be released." %></dd>
+            <dt>Related unsent order</dt><dd><%= @unsent_special_orders.any? ? "An explicit keep-or-cancel decision is required below." : "No unsent related order requires a decision." %></dd>
+          </dl>
+          <p class="review-dialog__consequences">Sent supplier quantity is not cancelled. Any later receipt for this cancelled request becomes ordinary stock.</p>
+          <%= form_with url: cancel_admin_customer_request_path(@customer_request), method: :post do %>
+            <%= hidden_field_tag :lock_version, @customer_request.lock_version %>
+            <p><%= label_tag :cancellation_reason, "Cancellation reason" %><%= text_field_tag :cancellation_reason, nil, required: true, data: { review_dialog_target: "initialFocus" } %></p>
+            <% if @unsent_special_orders.any? %>
+              <fieldset>
+                <legend>Explicit unsent-order decision</legend>
+                <label><%= radio_button_tag :cancel_draft_order, true, false, required: true %> Cancel the unsent draft order</label>
+                <label><%= radio_button_tag :cancel_draft_order, false, false, required: true %> Keep the unsent draft order on the PO</label>
+              </fieldset>
+            <% end %>
+            <div class="review-dialog__actions">
+              <%= submit_tag "Cancel request and release allocation", class: "btn btn--danger" %>
+              <button type="button" data-action="review-dialog#close">Keep request active</button>
+            </div>
+          <% end %>
+        </div>
+      </dialog>
+    </div>
+  </section>
+<% end %>
+
+<%= render "shared/technical_details", rows: [
+  ["Request ID", @customer_request.id],
+  ["Customer ID", @customer_request.customer_id],
+  ["Product variant ID", @customer_request.product_variant_id],
+  ["Lock version", @customer_request.lock_version],
+  ["Last updated", format_timestamp(@customer_request.updated_at)]
+] %>

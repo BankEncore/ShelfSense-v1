@@ -1,0 +1,44 @@
+<section id="receiving_line_grid">
+  <h2>Lines</h2>
+  <% if @lines.empty? %>
+    <p>No lines yet.</p>
+  <% else %>
+    <table class="ops-queue" data-controller="row-selection" data-action="keydown->row-selection#keydown">
+      <thead><tr>
+        <th scope="col">PO</th><th scope="col">Item</th><th scope="col">Open</th><th scope="col">Received</th>
+        <th scope="col">Matched*</th><th scope="col">Unplanned*</th><th scope="col">Over-shipment</th>
+        <th scope="col">Expected unit cost</th><th scope="col">Actual unit cost</th><th scope="col">Customer</th>
+        <% if @receipt.draft? && effective_permissions.include?("purchase_receipts.manage") %><th scope="col">Edit</th><% end %>
+      </tr></thead>
+      <tbody>
+        <% @lines.each do |line| %>
+          <% po_line = line.purchase_order_line %>
+          <% open_quantity = po_line.open_quantity %>
+          <% over_shipment = [line.received_quantity - open_quantity, 0].max %>
+          <tr tabindex="-1" aria-selected="<%= (@selected_row_id.to_s == line.id.to_s).to_s %>" class="<%= "is-selected" if @selected_row_id.to_s == line.id.to_s %>" data-row-selection-target="row">
+            <td>#<%= po_line.purchase_order.number %></td>
+            <td><%= line.product_variant.product.name %> <code><%= line.product_variant.sku %></code></td>
+            <td><%= open_quantity %></td><td><%= line.received_quantity %></td>
+            <td><%= line.matched_quantity %></td><td><%= line.unplanned_quantity %></td>
+            <td><% if over_shipment.positive? %><strong>Yes — <%= over_shipment %> over open quantity</strong><% else %>No<% end %></td>
+            <td><%= format_money_cents(po_line.expected_unit_cost_cents_snapshot) %></td>
+            <td><%= format_money_cents(line.actual_unit_cost_cents) %></td>
+            <td><%= po_line.order.customer_request.present? ? "Req ##{po_line.order.customer_request.number}" : "—" %></td>
+            <% if @receipt.draft? && effective_permissions.include?("purchase_receipts.manage") %>
+              <td><%= form_with url: ops_receiving_update_line_path(@receipt, line), method: :patch, local: true, html: { class: "ops-inline-form", data: { dirty_track: true } } do %>
+                <%= hidden_field_tag :lock_version, @receipt.lock_version %>
+                <label>Qty <input type="number" name="received_quantity" value="<%= @selected_row_id.to_s == line.id.to_s ? @submitted&.fetch("received_quantity", line.received_quantity) : line.received_quantity %>" min="1" required <%= "autofocus aria-describedby=receipt_line_#{line.id}_error" if @selected_row_id.to_s == line.id.to_s %>></label>
+                <label>Actual unit cost ($) <input type="text" inputmode="decimal" name="actual_unit_cost_cents" value="<%= @selected_row_id.to_s == line.id.to_s ? @submitted&.fetch("actual_unit_cost_cents", money_field_value(line.actual_unit_cost_cents)) : money_field_value(line.actual_unit_cost_cents) %>" required></label>
+                <label>Notes <input type="text" name="notes" value="<%= @selected_row_id.to_s == line.id.to_s ? @submitted&.fetch("notes", line.notes) : line.notes %>"></label>
+                <button type="submit" data-ops-save data-row-primary>Save</button>
+                <%= render "ops/shared/inline_row_error", action: :update_line, row_id: line.id, id: "receipt_line_#{line.id}_error" %>
+                <% if @conflict && @selected_row_id.to_s == line.id.to_s %><small>Current: qty <%= line.received_quantity %>, actual cost <%= format_money_cents(line.actual_unit_cost_cents) %>, notes <%= line.notes.presence || "blank" %>.</small><% end %>
+              <% end %></td>
+            <% end %>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+    <p class="ops-hint">* Matched/unplanned are provisional on drafts and frozen at post. Quantity may exceed the open quantity; the excess is an over-shipment and becomes unplanned stock.</p>
+  <% end %>
+</section>

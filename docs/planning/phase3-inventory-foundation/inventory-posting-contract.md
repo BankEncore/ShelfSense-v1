@@ -157,3 +157,45 @@ One transaction writes: posted adjustment, physical ledger entry, valuation ledg
 ## Tracking
 
 Uses `ProductVariant#derived_inventory_tracking`. `PostAdjustment` rejects `non_inventory` / nil. `PostSale`, `PostReturn`, and `PostPostVoid` accept `quantity` and `individual` and reject `non_inventory` / nil. Does not add a persisted tracking column. Unit lifecycle remains `on_hand | removed`; POS sales are distinguished by ledger `entry_type = sale` and `source_type = PosTransactionLine`; POS returns use `entry_type = return`; post-void uses `entry_type = reversal` with `reversal_of_id`.
+
+## Phase 7 — Reservations and purchasing posting
+
+Authority: [phase7-spec.md](../phase7-orders-and-receiving/phase7-spec.md) §7.14 / §11, [phase7-lock-order.md](../phase7-orders-and-receiving/phase7-lock-order.md).
+
+### Reservation hard-stop (universal) — Implemented in Slice 7.2
+
+When customer-request allocations exist, every stock-depleting posting path—including already-implemented `Inventory::PostAdjustment`, `Inventory::PostSale`, depleting `Inventory::PostPostVoid`, and depleting `Inventory::ReverseAdjustment`—must validate resulting availability under lock via `Inventory::Availability.assert_depletion_allowed!` and reject:
+
+- Standard resulting `available < 0`; or
+- removal of an allocated Used `InventoryUnit`
+
+unless the same atomic command releases, reverses, or transfers that allocation.
+
+Ordinary POS has no pickup exception until Phase 7 Slice 7.6. Slice 7.6 adds allocation-linked pickup only (ordinary capacity = `available`; pickup capacity = `available` + quantity allocated to that line). Lock order is published in [phase7-lock-order.md](../phase7-orders-and-receiving/phase7-lock-order.md).
+
+Register merchandise-add applies a soft availability check; posting time remains authoritative.
+
+### Allocation-linked pickup exception — Implemented in Slice 7.6
+
+`Inventory::PostSale` accepts `pos_transaction_lines.customer_request_allocation_id`. When present:
+
+- lock order is `InventoryBalance` → `InventoryUnit` (Used) → allocation;
+- `Availability.assert_depletion_allowed!(exclude_allocation_id:)` treats that allocation's quantity as sellable for the line;
+- Used pickup requires the line's `inventory_unit_id` to equal the allocation's unit;
+- after a successful `PostSale`, `Pos::CompleteTransaction` fulfills the allocation and completes the request;
+- cancel or failed completion does not fulfill.
+
+Universal hard-stop remains for ordinary lines (`exclude_allocation_id` nil).
+
+### Planned purchasing services
+
+| Service | Purpose | Required source | Status |
+|---|---|---|---|
+| `Inventory::PostReceipt` | Add purchase-received quantity and merchandise value using moving weighted average | `PurchaseReceiptLine` | Implemented in Slice 7.5 |
+| `Inventory::ReverseReceiptLine` | Exact inverse of eligible posted receipt-line physical and valuation effects, including proportional prior cost-correction value | `PurchaseReceiptLineCorrection` (`quantity_reversal`) | Implemented in Slice 7.7 |
+| `Inventory::CorrectReceiptLineCost` | Valuation-only delta from effective extended value (not always original posted unit cost) | `PurchaseReceiptLineCorrection` (`cost_correction`) | Implemented in Slice 7.7 |
+| `Inventory::CompensateReceiptLine` | Authorized compensation when exact reverse is unsafe: valuation-only relief at zero on-hand; does **not** deplete via `PostAdjustment` | `PurchaseReceiptLineCorrection` (`compensating_adjustment_reference`) | Implemented |
+
+Cost corrections resolve `value_delta_cents` as `target_extended − effective_merchandise_value_cents` for remaining reversible quantity. Exact reverse of quantity Q removes the proportional share of that effective extended value. Compensation consumes reversible quantity on the purchasing correction and must not call depleting `Inventory::PostAdjustment`.
+
+Mark each service Implemented in this contract only when its implementing Phase 7 slice merges. Controllers, callbacks, imports, and purchasing workflows must not update `inventory_balances` or ledger rows directly.

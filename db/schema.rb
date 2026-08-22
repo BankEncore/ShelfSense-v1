@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_21_020000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_22_100000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -69,6 +69,72 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_21_020000) do
     t.index ["store_id", "occurred_at"], name: "index_audit_events_on_store_id_and_occurred_at"
     t.index ["subject_type", "subject_id"], name: "index_audit_events_on_subject_type_and_subject_id"
     t.check_constraint "outcome::text = ANY (ARRAY['succeeded'::character varying::text, 'failed'::character varying::text, 'denied'::character varying::text])", name: "audit_events_outcome_valid"
+  end
+
+  create_table "customer_request_allocations", id: :uuid, default: nil, force: :cascade do |t|
+    t.string "allocation_type", null: false
+    t.timestamptz "created_at", null: false
+    t.uuid "customer_request_id", null: false
+    t.uuid "fulfilled_pos_transaction_line_id"
+    t.uuid "inventory_unit_id"
+    t.integer "lock_version", default: 0, null: false
+    t.uuid "purchase_receipt_line_id"
+    t.integer "quantity", default: 1, null: false
+    t.text "release_reason"
+    t.timestamptz "released_at"
+    t.uuid "released_by_id"
+    t.string "status", null: false
+    t.timestamptz "updated_at", null: false
+    t.index ["customer_request_id"], name: "index_customer_request_allocations_on_customer_request_id"
+    t.index ["customer_request_id"], name: "index_customer_request_allocations_one_reserved_per_request", unique: true, where: "((status)::text = 'reserved'::text)"
+    t.index ["inventory_unit_id"], name: "index_customer_request_allocations_on_inventory_unit_id"
+    t.index ["inventory_unit_id"], name: "index_customer_request_allocations_one_reserved_per_unit", unique: true, where: "(((allocation_type)::text = 'used_unit'::text) AND ((status)::text = 'reserved'::text))"
+    t.index ["purchase_receipt_line_id"], name: "index_customer_request_allocations_on_purchase_receipt_line_id"
+    t.check_constraint "allocation_type::text = 'used_unit'::text AND inventory_unit_id IS NOT NULL OR allocation_type::text = 'standard_quantity'::text AND inventory_unit_id IS NULL", name: "customer_request_allocations_unit_matches_type"
+    t.check_constraint "allocation_type::text = ANY (ARRAY['standard_quantity'::character varying, 'used_unit'::character varying]::text[])", name: "customer_request_allocations_type_valid"
+    t.check_constraint "quantity = 1", name: "customer_request_allocations_quantity_one"
+    t.check_constraint "status::text = ANY (ARRAY['reserved'::character varying, 'fulfilled'::character varying, 'released'::character varying]::text[])", name: "customer_request_allocations_status_valid"
+  end
+
+  create_table "customer_requests", id: :uuid, default: nil, force: :cascade do |t|
+    t.text "cancellation_reason"
+    t.timestamptz "cancelled_at"
+    t.uuid "cancelled_by_id"
+    t.timestamptz "completed_at"
+    t.timestamptz "created_at", null: false
+    t.uuid "customer_id", null: false
+    t.integer "estimated_price_cents"
+    t.timestamptz "location_failed_at"
+    t.uuid "location_failed_by_id"
+    t.text "location_failure_notes"
+    t.integer "lock_version", default: 0, null: false
+    t.text "notes"
+    t.integer "number", null: false
+    t.uuid "product_variant_id", null: false
+    t.integer "requested_quantity", default: 1, null: false
+    t.string "status", null: false
+    t.uuid "store_id", null: false
+    t.timestamptz "updated_at", null: false
+    t.index ["customer_id"], name: "index_customer_requests_on_customer_id"
+    t.index ["product_variant_id"], name: "index_customer_requests_on_product_variant_id"
+    t.index ["store_id", "number"], name: "index_customer_requests_on_store_id_and_number", unique: true
+    t.index ["store_id", "status"], name: "index_customer_requests_on_store_id_and_status"
+    t.check_constraint "requested_quantity = 1", name: "customer_requests_quantity_one"
+    t.check_constraint "status::text = ANY (ARRAY['pending_location'::character varying, 'special_order_pending'::character varying, 'ordered'::character varying, 'available'::character varying, 'completed'::character varying, 'cancelled'::character varying]::text[])", name: "customer_requests_status_valid"
+  end
+
+  create_table "customers", id: :uuid, default: nil, force: :cascade do |t|
+    t.boolean "active", default: true, null: false
+    t.timestamptz "created_at", null: false
+    t.string "display_name", null: false
+    t.string "email"
+    t.integer "lock_version", default: 0, null: false
+    t.text "notes"
+    t.string "phone"
+    t.timestamptz "updated_at", null: false
+    t.index ["display_name"], name: "index_customers_on_display_name"
+    t.index ["email"], name: "index_customers_on_email"
+    t.index ["phone"], name: "index_customers_on_phone"
   end
 
   create_table "departments", id: :uuid, default: nil, force: :cascade do |t|
@@ -222,7 +288,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_21_020000) do
     t.index ["source_type", "source_id", "effect_sequence"], name: "index_inventory_ledger_entries_on_source_effect", unique: true
     t.index ["store_id", "product_variant_id", "occurred_at"], name: "idx_on_store_id_product_variant_id_occurred_at_f610a1cd86"
     t.check_constraint "effect_sequence >= 0", name: "inventory_ledger_entries_effect_sequence_nonnegative"
-    t.check_constraint "quantity_delta <> 0", name: "inventory_ledger_entries_quantity_nonzero"
+    t.check_constraint "quantity_delta <> 0 OR entry_type::text = 'cost_correction'::text", name: "inventory_ledger_entries_quantity_nonzero_or_cost_correction"
   end
 
   create_table "inventory_units", id: :uuid, default: nil, force: :cascade do |t|
@@ -333,6 +399,29 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_21_020000) do
     t.index ["code"], name: "index_merchandise_conditions_on_code", unique: true
     t.check_constraint "code::text ~ '^[a-z0-9]+(_[a-z0-9]+)*$'::text", name: "merchandise_conditions_code_format"
     t.check_constraint "price_adjustment_bps >= 0", name: "merchandise_conditions_price_adjustment_nonnegative"
+  end
+
+  create_table "orders", id: :uuid, default: nil, force: :cascade do |t|
+    t.text "cancellation_reason"
+    t.timestamptz "cancelled_at"
+    t.uuid "cancelled_by_id"
+    t.timestamptz "created_at", null: false
+    t.uuid "customer_request_id"
+    t.integer "lock_version", default: 0, null: false
+    t.text "notes"
+    t.integer "number", null: false
+    t.uuid "product_variant_id", null: false
+    t.uuid "replaces_order_id"
+    t.integer "requested_quantity", null: false
+    t.uuid "store_id", null: false
+    t.uuid "supplier_id", null: false
+    t.timestamptz "updated_at", null: false
+    t.index ["customer_request_id"], name: "index_orders_on_customer_request_id"
+    t.index ["product_variant_id"], name: "index_orders_on_product_variant_id"
+    t.index ["replaces_order_id"], name: "index_orders_on_replaces_order_id"
+    t.index ["store_id", "number"], name: "index_orders_on_store_id_and_number", unique: true
+    t.index ["supplier_id"], name: "index_orders_on_supplier_id"
+    t.check_constraint "requested_quantity > 0", name: "orders_requested_quantity_positive"
   end
 
   create_table "outbox_messages", id: :uuid, default: nil, force: :cascade do |t|
@@ -575,6 +664,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_21_020000) do
 
   create_table "pos_transaction_lines", id: :uuid, default: nil, force: :cascade do |t|
     t.timestamptz "created_at", null: false
+    t.uuid "customer_request_allocation_id"
     t.string "default_tax_class_code_snapshot"
     t.uuid "default_tax_class_id"
     t.string "default_tax_class_name_snapshot"
@@ -603,6 +693,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_21_020000) do
     t.uuid "tax_class_id", null: false
     t.string "tax_class_name_snapshot"
     t.timestamptz "updated_at", null: false
+    t.index ["customer_request_allocation_id"], name: "index_pos_transaction_lines_on_customer_request_allocation_id"
     t.index ["default_tax_class_id"], name: "index_pos_transaction_lines_on_default_tax_class_id"
     t.index ["inventory_unit_id"], name: "index_pos_transaction_lines_on_inventory_unit_id"
     t.index ["original_transaction_line_id"], name: "index_pos_transaction_lines_on_original_transaction_line_id"
@@ -742,6 +833,145 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_21_020000) do
     t.check_constraint "status::text = ANY (ARRAY['draft'::character varying::text, 'active'::character varying::text, 'discontinued'::character varying::text])", name: "products_status_valid"
   end
 
+  create_table "purchase_order_line_cancellations", id: :uuid, default: nil, force: :cascade do |t|
+    t.timestamptz "created_at", null: false
+    t.timestamptz "occurred_at", null: false
+    t.uuid "purchase_order_line_id", null: false
+    t.integer "quantity", null: false
+    t.text "reason", null: false
+    t.uuid "recorded_by_id", null: false
+    t.string "source", null: false
+    t.timestamptz "updated_at", null: false
+    t.index ["purchase_order_line_id"], name: "idx_on_purchase_order_line_id_5f60c1a484"
+    t.index ["recorded_by_id"], name: "index_purchase_order_line_cancellations_on_recorded_by_id"
+    t.check_constraint "quantity > 0", name: "purchase_order_line_cancellations_quantity_positive"
+    t.check_constraint "source::text = ANY (ARRAY['buyer'::character varying, 'supplier'::character varying]::text[])", name: "purchase_order_line_cancellations_source_valid"
+  end
+
+  create_table "purchase_order_line_states", primary_key: "purchase_order_line_id", id: :uuid, default: nil, force: :cascade do |t|
+    t.integer "backordered_quantity", default: 0, null: false
+    t.integer "confirmed_quantity"
+    t.timestamptz "created_at", null: false
+    t.date "expected_on"
+    t.integer "lock_version", default: 0, null: false
+    t.text "notes"
+    t.string "supplier_reference"
+    t.timestamptz "updated_at", null: false
+    t.check_constraint "backordered_quantity >= 0", name: "purchase_order_line_states_backordered_quantity_nonnegative"
+    t.check_constraint "confirmed_quantity IS NULL OR confirmed_quantity >= 0", name: "purchase_order_line_states_confirmed_quantity_nonnegative"
+  end
+
+  create_table "purchase_order_lines", id: :uuid, default: nil, force: :cascade do |t|
+    t.timestamptz "created_at", null: false
+    t.integer "discount_basis_points_snapshot"
+    t.integer "expected_unit_cost_cents_snapshot", null: false
+    t.text "notes_snapshot"
+    t.uuid "order_id", null: false
+    t.integer "ordered_quantity", null: false
+    t.string "pricing_method_snapshot"
+    t.uuid "product_variant_id", null: false
+    t.uuid "purchase_order_id", null: false
+    t.string "supplier_item_number_snapshot"
+    t.integer "supplier_list_price_cents_snapshot"
+    t.timestamptz "updated_at", null: false
+    t.index ["order_id"], name: "index_purchase_order_lines_on_order_id", unique: true
+    t.index ["product_variant_id"], name: "index_purchase_order_lines_on_product_variant_id"
+    t.index ["purchase_order_id"], name: "index_purchase_order_lines_on_purchase_order_id"
+    t.check_constraint "expected_unit_cost_cents_snapshot >= 0", name: "purchase_order_lines_expected_cost_nonnegative"
+    t.check_constraint "ordered_quantity > 0", name: "purchase_order_lines_ordered_quantity_positive"
+  end
+
+  create_table "purchase_orders", id: :uuid, default: nil, force: :cascade do |t|
+    t.timestamptz "closed_at"
+    t.timestamptz "created_at", null: false
+    t.integer "document_revision", default: 0, null: false
+    t.timestamptz "generated_at"
+    t.uuid "generated_by_id"
+    t.integer "lock_version", default: 0, null: false
+    t.text "notes"
+    t.integer "number"
+    t.timestamptz "sent_at"
+    t.uuid "sent_by_id"
+    t.string "status", null: false
+    t.uuid "store_id", null: false
+    t.uuid "supplier_id", null: false
+    t.string "transmission_method"
+    t.timestamptz "updated_at", null: false
+    t.index ["store_id", "number"], name: "index_purchase_orders_on_store_and_number", unique: true, where: "(number IS NOT NULL)"
+    t.index ["store_id", "status"], name: "index_purchase_orders_on_store_id_and_status"
+    t.index ["store_id", "supplier_id"], name: "index_purchase_orders_one_open_draft_per_store_supplier", unique: true, where: "((status)::text = 'draft'::text)"
+    t.index ["supplier_id"], name: "index_purchase_orders_on_supplier_id"
+    t.check_constraint "status::text = ANY (ARRAY['draft'::character varying, 'sent'::character varying, 'closed'::character varying, 'cancelled'::character varying]::text[])", name: "purchase_orders_status_valid"
+  end
+
+  create_table "purchase_receipt_line_corrections", id: :uuid, default: nil, force: :cascade do |t|
+    t.string "correction_type", null: false
+    t.timestamptz "created_at", null: false
+    t.uuid "inventory_source_id"
+    t.string "inventory_source_type"
+    t.uuid "purchase_receipt_line_id", null: false
+    t.integer "quantity"
+    t.text "reason", null: false
+    t.timestamptz "recorded_at", null: false
+    t.uuid "recorded_by_id", null: false
+    t.timestamptz "updated_at", null: false
+    t.bigint "value_delta_cents"
+    t.index ["inventory_source_type", "inventory_source_id"], name: "index_prl_corrections_on_inventory_source"
+    t.index ["purchase_receipt_line_id"], name: "idx_on_purchase_receipt_line_id_c4b7a21d2e"
+    t.index ["recorded_by_id"], name: "index_purchase_receipt_line_corrections_on_recorded_by_id"
+    t.check_constraint "correction_type::text = 'cost_correction'::text AND value_delta_cents IS NOT NULL AND value_delta_cents <> 0 OR correction_type::text = 'compensating_adjustment_reference'::text AND value_delta_cents IS NOT NULL OR correction_type::text = 'quantity_reversal'::text", name: "prl_corrections_cost_value_present"
+    t.check_constraint "correction_type::text = 'quantity_reversal'::text AND quantity > 0 OR correction_type::text = 'compensating_adjustment_reference'::text AND quantity > 0 OR correction_type::text = 'cost_correction'::text AND quantity IS NULL", name: "prl_corrections_quantity_matches_type"
+    t.check_constraint "correction_type::text = ANY (ARRAY['quantity_reversal'::character varying, 'cost_correction'::character varying, 'compensating_adjustment_reference'::character varying]::text[])", name: "prl_corrections_type_valid"
+  end
+
+  create_table "purchase_receipt_lines", id: :uuid, default: nil, force: :cascade do |t|
+    t.integer "actual_unit_cost_cents", null: false
+    t.timestamptz "created_at", null: false
+    t.integer "matched_quantity", default: 0, null: false
+    t.text "notes"
+    t.uuid "product_variant_id", null: false
+    t.uuid "purchase_order_line_id", null: false
+    t.uuid "purchase_receipt_id", null: false
+    t.integer "received_quantity", null: false
+    t.integer "unplanned_quantity", default: 0, null: false
+    t.timestamptz "updated_at", null: false
+    t.index ["product_variant_id"], name: "index_purchase_receipt_lines_on_product_variant_id"
+    t.index ["purchase_order_line_id"], name: "index_purchase_receipt_lines_on_purchase_order_line_id"
+    t.index ["purchase_receipt_id", "purchase_order_line_id"], name: "index_purchase_receipt_lines_on_receipt_and_po_line", unique: true
+    t.index ["purchase_receipt_id"], name: "index_purchase_receipt_lines_on_purchase_receipt_id"
+    t.check_constraint "(matched_quantity + unplanned_quantity) = received_quantity", name: "purchase_receipt_lines_quantities_add_up"
+    t.check_constraint "actual_unit_cost_cents >= 0", name: "purchase_receipt_lines_actual_cost_nonnegative"
+    t.check_constraint "matched_quantity >= 0 AND unplanned_quantity >= 0", name: "purchase_receipt_lines_matched_unplanned_nonnegative"
+    t.check_constraint "received_quantity > 0", name: "purchase_receipt_lines_received_quantity_positive"
+  end
+
+  create_table "purchase_receipts", id: :uuid, default: nil, force: :cascade do |t|
+    t.text "charge_notes"
+    t.timestamptz "created_at", null: false
+    t.integer "freight_cents", default: 0, null: false
+    t.integer "handling_cents", default: 0, null: false
+    t.integer "lock_version", default: 0, null: false
+    t.integer "miscellaneous_charges_cents", default: 0, null: false
+    t.text "notes"
+    t.integer "number"
+    t.timestamptz "posted_at"
+    t.uuid "posted_by_id"
+    t.timestamptz "received_at", null: false
+    t.string "status", null: false
+    t.uuid "store_id", null: false
+    t.date "supplier_document_date"
+    t.string "supplier_document_number"
+    t.uuid "supplier_id", null: false
+    t.integer "supplier_tax_cents", default: 0, null: false
+    t.timestamptz "updated_at", null: false
+    t.index ["store_id", "number"], name: "index_purchase_receipts_on_store_and_number", unique: true, where: "(number IS NOT NULL)"
+    t.index ["store_id", "status"], name: "index_purchase_receipts_on_store_id_and_status"
+    t.index ["supplier_id"], name: "index_purchase_receipts_on_supplier_id"
+    t.check_constraint "freight_cents >= 0 AND handling_cents >= 0", name: "purchase_receipts_freight_handling_nonnegative"
+    t.check_constraint "status::text = ANY (ARRAY['draft'::character varying, 'posted'::character varying, 'reversed'::character varying]::text[])", name: "purchase_receipts_status_valid"
+    t.check_constraint "supplier_tax_cents >= 0 AND miscellaneous_charges_cents >= 0", name: "purchase_receipts_tax_misc_nonnegative"
+  end
+
   create_table "registers", id: :uuid, default: nil, force: :cascade do |t|
     t.boolean "active", default: true, null: false
     t.timestamptz "created_at", null: false
@@ -800,6 +1030,28 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_21_020000) do
     t.check_constraint "assignment_scope::text = ANY (ARRAY['global'::character varying::text, 'store'::character varying::text, 'either'::character varying::text])", name: "roles_assignment_scope_valid"
   end
 
+  create_table "store_document_sequences", id: :uuid, default: nil, force: :cascade do |t|
+    t.timestamptz "created_at", null: false
+    t.string "document_kind", null: false
+    t.integer "next_value", default: 1, null: false
+    t.uuid "store_id", null: false
+    t.timestamptz "updated_at", null: false
+    t.index ["store_id", "document_kind"], name: "index_store_document_sequences_on_store_and_kind", unique: true
+    t.check_constraint "document_kind::text = ANY (ARRAY['customer_request'::character varying, 'order'::character varying, 'purchase_order'::character varying, 'purchase_receipt'::character varying]::text[])", name: "store_document_sequences_kind_valid"
+    t.check_constraint "next_value > 0", name: "store_document_sequences_next_value_positive"
+  end
+
+  create_table "store_supplier_source_preferences", id: :uuid, default: nil, force: :cascade do |t|
+    t.timestamptz "created_at", null: false
+    t.integer "lock_version", default: 0, null: false
+    t.uuid "product_variant_id", null: false
+    t.uuid "store_id", null: false
+    t.uuid "supplier_variant_source_id", null: false
+    t.timestamptz "updated_at", null: false
+    t.index ["store_id", "product_variant_id"], name: "index_store_supplier_source_prefs_on_store_and_variant", unique: true
+    t.index ["supplier_variant_source_id"], name: "idx_on_supplier_variant_source_id_4043195088"
+  end
+
   create_table "store_tax_rules", id: :uuid, default: nil, force: :cascade do |t|
     t.boolean "applies"
     t.timestamptz "created_at", null: false
@@ -856,6 +1108,47 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_21_020000) do
     t.check_constraint "receipt_header_mode::text <> 'custom'::text OR receipt_header IS NOT NULL AND length(btrim(receipt_header)) > 0", name: "stores_receipt_header_custom_text"
     t.check_constraint "receipt_header_mode::text = ANY (ARRAY['inherit'::character varying::text, 'custom'::character varying::text, 'none'::character varying::text])", name: "stores_receipt_header_mode_valid"
     t.check_constraint "store_number > 0", name: "stores_store_number_positive"
+  end
+
+  create_table "supplier_variant_sources", id: :uuid, default: nil, force: :cascade do |t|
+    t.boolean "active", default: true, null: false
+    t.timestamptz "created_at", null: false
+    t.integer "discount_basis_points"
+    t.integer "expected_unit_cost_cents"
+    t.integer "lock_version", default: 0, null: false
+    t.boolean "organization_preferred", default: false, null: false
+    t.string "pricing_method", null: false
+    t.uuid "product_variant_id", null: false
+    t.uuid "supplier_id", null: false
+    t.string "supplier_item_number"
+    t.integer "supplier_list_price_cents"
+    t.timestamptz "updated_at", null: false
+    t.index ["product_variant_id"], name: "index_supplier_variant_sources_on_product_variant_id"
+    t.index ["product_variant_id"], name: "index_supplier_variant_sources_one_org_preferred_active", unique: true, where: "((organization_preferred = true) AND (active = true))"
+    t.index ["supplier_id", "supplier_item_number"], name: "index_supplier_variant_sources_on_supplier_and_item_number", unique: true, where: "(supplier_item_number IS NOT NULL)"
+    t.index ["supplier_id"], name: "index_supplier_variant_sources_on_supplier_id"
+    t.check_constraint "pricing_method::text = ANY (ARRAY['discount_from_list'::character varying, 'direct_unit_cost'::character varying]::text[])", name: "supplier_variant_sources_pricing_method_valid"
+  end
+
+  create_table "suppliers", id: :uuid, default: nil, force: :cascade do |t|
+    t.string "account_number"
+    t.boolean "active", default: true, null: false
+    t.string "city"
+    t.string "code", null: false
+    t.string "contact_name"
+    t.string "country_code", limit: 2
+    t.timestamptz "created_at", null: false
+    t.string "email"
+    t.integer "lock_version", default: 0, null: false
+    t.string "name", null: false
+    t.text "ordering_notes"
+    t.string "phone"
+    t.string "postal_code"
+    t.string "region_code"
+    t.string "street_address_1"
+    t.string "street_address_2"
+    t.timestamptz "updated_at", null: false
+    t.index ["code"], name: "index_suppliers_on_code", unique: true
   end
 
   create_table "system_settings", id: :uuid, default: nil, force: :cascade do |t|
@@ -954,6 +1247,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_21_020000) do
   add_foreign_key "audit_events", "stores"
   add_foreign_key "audit_events", "user_sessions"
   add_foreign_key "audit_events", "users", column: "actor_user_id"
+  add_foreign_key "customer_request_allocations", "customer_requests", on_delete: :restrict
+  add_foreign_key "customer_request_allocations", "inventory_units", on_delete: :restrict
+  add_foreign_key "customer_request_allocations", "pos_transaction_lines", column: "fulfilled_pos_transaction_line_id", on_delete: :restrict
+  add_foreign_key "customer_request_allocations", "purchase_receipt_lines", on_delete: :restrict
+  add_foreign_key "customer_request_allocations", "users", column: "released_by_id", on_delete: :restrict
+  add_foreign_key "customer_requests", "customers", on_delete: :restrict
+  add_foreign_key "customer_requests", "product_variants", on_delete: :restrict
+  add_foreign_key "customer_requests", "stores", on_delete: :restrict
+  add_foreign_key "customer_requests", "users", column: "cancelled_by_id", on_delete: :restrict
+  add_foreign_key "customer_requests", "users", column: "location_failed_by_id", on_delete: :restrict
   add_foreign_key "departments", "gl_accounts", column: "cost_of_goods_sold_gl_account_id"
   add_foreign_key "departments", "gl_accounts", column: "freight_in_gl_account_id"
   add_foreign_key "departments", "gl_accounts", column: "inventory_adjustment_gain_gl_account_id"
@@ -991,6 +1294,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_21_020000) do
   add_foreign_key "merchandise_categories", "merchandise_classes", column: "default_used_merchandise_class_id"
   add_foreign_key "merchandise_classes", "departments"
   add_foreign_key "merchandise_classes", "tax_classes", column: "default_tax_class_id"
+  add_foreign_key "orders", "customer_requests", on_delete: :restrict
+  add_foreign_key "orders", "orders", column: "replaces_order_id", on_delete: :restrict
+  add_foreign_key "orders", "product_variants", on_delete: :restrict
+  add_foreign_key "orders", "stores", on_delete: :restrict
+  add_foreign_key "orders", "suppliers", on_delete: :restrict
+  add_foreign_key "orders", "users", column: "cancelled_by_id", on_delete: :restrict
   add_foreign_key "pos_controlled_actions", "pos_transaction_lines"
   add_foreign_key "pos_controlled_actions", "pos_transactions"
   add_foreign_key "pos_controlled_actions", "users", column: "approved_by_user_id"
@@ -1010,6 +1319,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_21_020000) do
   add_foreign_key "pos_tenders", "pos_tenders", column: "post_void_source_tender_id", on_delete: :restrict
   add_foreign_key "pos_tenders", "pos_transactions"
   add_foreign_key "pos_tenders", "tender_types", on_delete: :restrict
+  add_foreign_key "pos_transaction_lines", "customer_request_allocations", on_delete: :restrict
   add_foreign_key "pos_transaction_lines", "inventory_units", on_delete: :restrict
   add_foreign_key "pos_transaction_lines", "pos_transaction_lines", column: "original_transaction_line_id", on_delete: :restrict
   add_foreign_key "pos_transaction_lines", "pos_transaction_lines", column: "post_void_source_line_id", on_delete: :restrict
@@ -1028,6 +1338,24 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_21_020000) do
   add_foreign_key "product_variants", "products"
   add_foreign_key "product_variants", "tax_classes", column: "tax_class_override_id"
   add_foreign_key "products", "merchandise_categories"
+  add_foreign_key "purchase_order_line_cancellations", "purchase_order_lines", on_delete: :restrict
+  add_foreign_key "purchase_order_line_cancellations", "users", column: "recorded_by_id", on_delete: :restrict
+  add_foreign_key "purchase_order_line_states", "purchase_order_lines", on_delete: :restrict
+  add_foreign_key "purchase_order_lines", "orders", on_delete: :restrict
+  add_foreign_key "purchase_order_lines", "product_variants", on_delete: :restrict
+  add_foreign_key "purchase_order_lines", "purchase_orders", on_delete: :restrict
+  add_foreign_key "purchase_orders", "stores", on_delete: :restrict
+  add_foreign_key "purchase_orders", "suppliers", on_delete: :restrict
+  add_foreign_key "purchase_orders", "users", column: "generated_by_id", on_delete: :restrict
+  add_foreign_key "purchase_orders", "users", column: "sent_by_id", on_delete: :restrict
+  add_foreign_key "purchase_receipt_line_corrections", "purchase_receipt_lines", on_delete: :restrict
+  add_foreign_key "purchase_receipt_line_corrections", "users", column: "recorded_by_id", on_delete: :restrict
+  add_foreign_key "purchase_receipt_lines", "product_variants", on_delete: :restrict
+  add_foreign_key "purchase_receipt_lines", "purchase_order_lines", on_delete: :restrict
+  add_foreign_key "purchase_receipt_lines", "purchase_receipts", on_delete: :restrict
+  add_foreign_key "purchase_receipts", "stores", on_delete: :restrict
+  add_foreign_key "purchase_receipts", "suppliers", on_delete: :restrict
+  add_foreign_key "purchase_receipts", "users", column: "posted_by_id", on_delete: :restrict
   add_foreign_key "registers", "stores"
   add_foreign_key "registers", "users", column: "deactivated_by_id"
   add_foreign_key "role_assignments", "roles"
@@ -1039,10 +1367,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_21_020000) do
   add_foreign_key "role_permissions", "roles"
   add_foreign_key "role_permissions", "users", column: "granted_by_id"
   add_foreign_key "roles", "users", column: "deactivated_by_id"
+  add_foreign_key "store_document_sequences", "stores", on_delete: :restrict
+  add_foreign_key "store_supplier_source_preferences", "product_variants", on_delete: :restrict
+  add_foreign_key "store_supplier_source_preferences", "stores", on_delete: :restrict
+  add_foreign_key "store_supplier_source_preferences", "supplier_variant_sources", on_delete: :restrict
   add_foreign_key "store_tax_rules", "store_taxes"
   add_foreign_key "store_tax_rules", "tax_classes"
   add_foreign_key "store_taxes", "stores"
   add_foreign_key "stores", "users", column: "deactivated_by_id"
+  add_foreign_key "supplier_variant_sources", "product_variants", on_delete: :restrict
+  add_foreign_key "supplier_variant_sources", "suppliers", on_delete: :restrict
   add_foreign_key "user_sessions", "users"
   add_foreign_key "user_sessions", "users", column: "revoked_by_id"
   add_foreign_key "users", "users", column: "deactivated_by_id"

@@ -95,6 +95,20 @@ module Inventory
         raise Error, CONFLICT
       end
 
+      if quantity_delta.negative?
+        begin
+          Availability.assert_depletion_allowed!(
+            store: store,
+            variant: variant,
+            quantity_delta: quantity_delta,
+            inventory_unit: inventory_unit,
+            balance: balance
+          )
+        rescue Availability::Error
+          raise Error, CONFLICT
+        end
+      end
+
       if inventory_unit
         if source_ledger.quantity_delta.negative?
           inventory_unit.update!(

@@ -1,0 +1,62 @@
+<% content_for :title, @supplier_variant_source.admin_label %>
+<h1><%= @supplier_variant_source.admin_label %></h1>
+<p>
+  Supplier: <%= link_to @supplier.admin_label, admin_supplier_path(@supplier) %> ·
+  Variant: <%= link_to @supplier_variant_source.product_variant.sku, admin_product_variant_path(@supplier_variant_source.product_variant) %> ·
+  <%= @supplier_variant_source.active? ? "active" : "inactive" %>
+</p>
+<p>
+  Pricing: <%= @supplier_variant_source.pricing_method.humanize %>
+  <% if @supplier_variant_source.pricing_method == "direct_unit_cost" %>
+    · expected unit cost <%= format_money_cents(@supplier_variant_source.expected_unit_cost_cents) %>
+  <% else %>
+    · supplier list price <%= format_money_cents(@supplier_variant_source.supplier_list_price_cents) %>
+    · discount <%= @supplier_variant_source.discount_basis_points %> bps
+    · derived expected unit cost <%= format_money_cents(@supplier_variant_source.derived_expected_unit_cost_cents) %>
+  <% end %>
+</p>
+<% if @supplier_variant_source.organization_preferred? %><p>Organization preferred source for this variant.</p><% end %>
+
+<p>
+  <%= link_to "Edit", edit_admin_supplier_variant_source_path(@supplier_variant_source, return_to: params[:return_to]) if effective_permissions.include?("suppliers.manage") %>
+  <% if effective_permissions.include?("suppliers.manage") && @supplier_variant_source.active? %>
+    <%= button_to "Deactivate", admin_supplier_variant_source_path(@supplier_variant_source, return_to: params[:return_to]), method: :delete, form: { data: { turbo_confirm: "Deactivate this source?" } } %>
+  <% elsif effective_permissions.include?("suppliers.manage") && !@supplier_variant_source.active? %>
+    <%= button_to "Reactivate", reactivate_admin_supplier_variant_source_path(@supplier_variant_source, return_to: params[:return_to]), method: :post, params: { lock_version: @supplier_variant_source.lock_version } %>
+  <% end %>
+</p>
+
+<h2>Store preferences</h2>
+<p>A store preference overrides the organization-preferred source for that store.</p>
+<% if @store_preferences.any? %>
+  <ul>
+    <% @store_preferences.each do |preference| %>
+      <li>
+        <%= preference.store.admin_label %>
+        <% if effective_permissions.include?("suppliers.manage") %>
+          <%= button_to "Clear",
+                admin_store_supplier_source_preference_path(preference, return_to: params[:return_to]),
+                method: :delete,
+                form: { data: { turbo_confirm: "Clear this store preference?" } } %>
+        <% end %>
+      </li>
+    <% end %>
+  </ul>
+<% else %>
+  <p>No store overrides for this source.</p>
+<% end %>
+
+<% if effective_permissions.include?("suppliers.manage") && @supplier_variant_source.active? %>
+  <%= form_with url: admin_supplier_variant_source_store_supplier_source_preferences_path(@supplier_variant_source, return_to: params[:return_to]), scope: :store_supplier_source_preference do |form| %>
+    <p>
+      <%= form.label :store_id, "Set as preferred for store" %>
+      <%= form.select :store_id, Store.options_for_select(@stores), include_blank: "Select store" %>
+      <%= form.submit "Save store preference" %>
+    </p>
+  <% end %>
+<% end %>
+
+<p>
+  <%= link_to "Back to variant", admin_product_variant_path(@supplier_variant_source.product_variant) %> ·
+  <%= link_to "Back to supplier", admin_supplier_path(@supplier) %>
+</p>

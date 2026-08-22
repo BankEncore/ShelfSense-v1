@@ -20,6 +20,12 @@
 <% if effective_permissions.include?("products.update") && @product.draft? %>
   <% actions << button_to("Delete draft", admin_product_path(@product), method: :delete, class: "btn btn--danger") %>
 <% end %>
+<% if @single_stock_orderable %>
+  <% actions << link_to("Order stock", order_stock_path_for(@single_stock_orderable), class: "btn") %>
+<% end %>
+<% if @single_requestable %>
+  <% actions << link_to("Create customer request", create_customer_request_path_for(@single_requestable), class: "btn btn--secondary") %>
+<% end %>
 
 <%= render "shared/page_header",
       title: @product.name,
@@ -73,6 +79,8 @@
           title: "No variants yet",
           body: "Add a standard or used variant to make this product sellable." %>
   <% else %>
+    <% can_order = effective_permissions.include?("orders.manage") && current_store.present? %>
+    <% can_request = effective_permissions.include?("customer_requests.manage") && current_store.present? %>
     <% rows = @product_variants.map { |variant|
          tracking = variant.derived_inventory_tracking
          on_hand_cell =
@@ -89,6 +97,13 @@
                qty
              end
            end
+         purchasing_actions = []
+         if can_order && stock_orderable_variant?(variant)
+           purchasing_actions << link_to("Order stock", order_stock_path_for(variant))
+         end
+         if can_request && customer_requestable_variant?(variant, store: current_store)
+           purchasing_actions << link_to("Request", create_customer_request_path_for(variant))
+         end
          row = [
            link_to(variant.name.presence || "Unnamed", admin_product_variant_path(variant)),
            variant.sku,
@@ -101,6 +116,9 @@
            format_money_cents(variant.regular_price_cents)
          ]
          row << on_hand_cell if @show_inventory
+         if can_order || can_request
+           row << (purchasing_actions.empty? ? "—" : safe_join(purchasing_actions, " · "))
+         end
          row
        } %>
     <% headers = [
@@ -108,9 +126,13 @@
          { text: "Regular price", class: "numeric" }
        ] %>
     <% headers << { text: "On hand", class: "numeric" } if @show_inventory %>
+    <% headers << "Purchasing" if can_order || can_request %>
     <%= render "shared/data_table",
           headers: headers,
           rows: rows %>
+    <% if current_store.blank? && (effective_permissions.include?("orders.manage") || effective_permissions.include?("customer_requests.manage")) %>
+      <p class="muted">Select a store to order stock or create customer requests from this product.</p>
+    <% end %>
   <% end %>
 </section>
 

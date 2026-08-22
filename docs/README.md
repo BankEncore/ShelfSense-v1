@@ -40,6 +40,7 @@ This directory contains the project’s technical authority, development guidanc
 | [Phase 6 MVP closeout](planning/phase4-6-point-of-sale/phase6-pos-mvp/mvp-closeout.md) | Slice 6.8 presentation, regression; no new commercial behavior (implemented) |
 | [Phase 6 receipt presentation](planning/phase4-6-point-of-sale/phase6-pos-mvp/receipt-presentation.md) | Customer print/reprint layout (implemented in 6.8) |
 | [Phase 6.1 classification and identifiers](planning/phase6.1-merchandise-classification-and-identifiers/README.md) | Implemented classification cutover, live tax inheritance, product industry GTIN, lookup codes, and POS/inventory targeting (disposable-data cutover on `main`) |
+| [Phase 7 orders and receiving](planning/phase7-orders-and-receiving/README.md) | Application slices 7.1–7.7 complete on integration branch `phase-7-orders-and-receiving` (not implemented on `main`); pending manual test gate, review, and merge |
 | [POS Phases 4–6 plan](planning/phase4-6-point-of-sale/spec.md) | Multi-phase POS sequencing (foundation → cash register → MVP); §6 deferred to the Phase 6 packet |
 | [UX conventions](ux-conventions.md) | Shared admin page anatomy, partials, currency boundaries, palette, and Hotwire deferral |
 | [Development guide](development.md) | Docker-only local setup, PostgreSQL configuration, application commands, and troubleshooting |

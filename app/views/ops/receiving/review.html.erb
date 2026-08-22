@@ -1,0 +1,81 @@
+<% content_for :title, "Review #{@receipt.admin_label}" %>
+<header class="ops-doc-header">
+  <div>
+    <h1>Post receipt</h1>
+    <p>
+      <%= @receipt.supplier.admin_label %>
+      · <%= current_store.admin_label %>
+      · review before inventory posts
+    </p>
+  </div>
+  <p><%= link_to "Back to draft", ops_receiving_path(@receipt) %></p>
+</header>
+<%= render "ops/shared/error_summary", errors: @mutation_errors, conflict: @conflict, title: "Receipt cannot be posted" %>
+
+<section>
+  <h2>Summary</h2>
+  <ul>
+    <li>Lines: <%= @preview_lines.size %></li>
+    <li>Received units: <%= @preview_lines.sum { |row| row[:line].received_quantity } %></li>
+    <li>Matched units: <%= @preview_lines.sum { |row| row[:matched_quantity] } %></li>
+    <li>Unplanned units: <%= @preview_lines.sum { |row| row[:unplanned_quantity] } %></li>
+    <li>Customer allocations to create: <%= @preview_lines.count { |row| row[:allocates] } %></li>
+    <li>Merchandise value: <%= format_money_cents(@receipt.merchandise_total_cents) %></li>
+    <li>
+      Freight: <%= format_money_cents(@receipt.freight_cents) %>
+      · Handling: <%= format_money_cents(@receipt.handling_cents) %>
+      · Tax: <%= format_money_cents(@receipt.supplier_tax_cents) %>
+      · Misc: <%= format_money_cents(@receipt.miscellaneous_charges_cents) %>
+    </li>
+    <li>Ancillary total (not inventoried): <%= format_money_cents(@receipt.ancillary_total_cents) %></li>
+    <li>Operational acquisition total: <%= format_money_cents(@receipt.operational_acquisition_total_cents) %></li>
+  </ul>
+</section>
+
+<section>
+  <h2>Line review</h2>
+  <table class="ops-queue">
+    <thead>
+      <tr>
+        <th scope="col">Item</th>
+        <th scope="col">Open</th>
+        <th scope="col">Received</th>
+        <th scope="col">Matched</th>
+        <th scope="col">Unplanned</th>
+        <th scope="col">Expected unit cost</th>
+        <th scope="col">Actual unit cost</th>
+        <th scope="col">Allocation</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% @preview_lines.each do |row| %>
+        <% line = row[:line] %>
+        <tr>
+          <td><%= line.product_variant.product.name %></td>
+          <td><%= row[:open_quantity] %></td>
+          <td><%= line.received_quantity %></td>
+          <td><%= row[:matched_quantity] %></td>
+          <td><%= row[:unplanned_quantity] %></td>
+          <td><%= format_money_cents(line.purchase_order_line.expected_unit_cost_cents_snapshot) %></td>
+          <td><%= format_money_cents(line.actual_unit_cost_cents) %></td>
+          <td>
+            <% if row[:allocates] %>
+              Reserve request #<%= row[:request].number %>
+            <% else %>
+              Stock
+            <% end %>
+          </td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+</section>
+
+<section class="ops-actions">
+  <%= form_with url: ops_receiving_post_path(@receipt), method: :post, local: true do %>
+    <%= hidden_field_tag :lock_version, @receipt.lock_version %>
+    <%= hidden_field_tag :idempotency_key, SecureRandom.uuid_v7 %>
+    <button type="submit" <%= "autofocus aria-describedby=receipt_post_error" if @error_action == :post %>>Post receipt</button>
+    <%= render "ops/shared/inline_row_error", action: :post, id: "receipt_post_error" %>
+  <% end %>
+</section>

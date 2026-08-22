@@ -1,0 +1,12 @@
+<% content_for :title, "Suppliers" %>
+<h1>Suppliers</h1>
+<% if effective_permissions.include?("suppliers.manage") %><p><%= link_to "New supplier", new_admin_supplier_path %></p><% end %>
+<ul>
+  <% @suppliers.each do |supplier| %>
+    <li>
+      <%= link_to supplier.admin_label, admin_supplier_path(supplier) %>
+      <code><%= supplier.code %></code>
+      <%= "inactive" unless supplier.active? %>
+    </li>
+  <% end %>
+</ul>

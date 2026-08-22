@@ -84,3 +84,7 @@ Admin screens remain Propshaft CSS + ERB (Phase 2.2). The admin layout loads `ap
 ## Phase 3 and later
 
 Reuse this shell, partials, helpers, and money/status conventions for inventory screens. Add domain-specific presentation (ledger language, denser operational tables) without inventing a second design system. Search/filter/pagination may expand beyond products when a phase explicitly requires it; keep `per_page` fixed in application code unless a later decision changes that contract.
+
+## Consequential Phase 7 actions
+
+Sending purchase orders, cancelling or re-sourcing quantity, cancelling customer requests, and correcting posted receipts use native modal review dialogs rather than browser confirmation prompts. The server-rendered dialog content summarizes the affected records and domain consequences; the submitted form continues to invoke the existing command/service and idempotency boundary. Each review uses a consequence-specific background, receives initial focus, relies on native modal focus containment, supports Escape, restores focus to its visible trigger, and provides an explicit visible cancel button. Final action labels state the exact business effect rather than using generic “Confirm” wording.
