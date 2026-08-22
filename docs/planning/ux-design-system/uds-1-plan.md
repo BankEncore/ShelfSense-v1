@@ -1,6 +1,6 @@
 # UDS-1 — Tokens and shared visual primitives
 
-Status: **Complete** (UDS-1a–1d landed; ADR-022 Implemented)
+Status: **Implemented** (UDS-1a–1d landed; ADR-022 Implemented; Chromium/indirect/a11y gates pending before matrix **conforming**)
 
 Slice id remains **UDS-1**. This is **not** a Phase 7 domain slice and does not use Phase N.M numbering. Authority for visual tokens, actions, rollout gates, and deferrals remains the [UX design system packet](README.md).
 
@@ -107,7 +107,9 @@ Prefer one PR (or tightly sequenced PRs) per sub-slice. UDS-1a must land tokens/
 | Print smoke | Customer receipt / report print preview still matches the locked print contract |
 | Rollback | Token/alias commit revertible as a unit without hunting view-local hex patches |
 
-## Acceptance (UDS-1 complete)
+## Acceptance (UDS-1 implementation; validation pending)
+
+Code and documentation for UDS-1a–1d are landed. Matrix **conforming** and foundation criterion 10 require the Chromium/indirect/a11y evidence listed in [Tests and gates](#tests-and-gates).
 
 1. Warm Parchment tokens are live in `:root` with documented legacy aliases.
 2. `ActionButtonHelper` is available with unit coverage; compatibility button selectors keep existing templates rendering.

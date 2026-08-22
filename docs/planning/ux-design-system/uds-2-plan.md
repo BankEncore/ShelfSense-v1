@@ -1,8 +1,8 @@
 # UDS-2 — Representative screen convergence
 
-Status: **Complete** (UDS-2a–2d landed; Chromium/a11y-matrix evidence still required before matrix **conforming**)
+Status: **Implemented** (UDS-2a–2d landed; Chromium/a11y-matrix evidence pending before matrix **conforming**)
 
-Slice id remains **UDS-2**. Not a Phase 7 domain number. Authority: [UX design system packet](README.md). Foundation: [UDS-1](uds-1-plan.md) (complete).
+Slice id remains **UDS-2**. Not a Phase 7 domain number. Authority: [UX design system packet](README.md). Foundation: [UDS-1](uds-1-plan.md) (implemented).
 
 Companion backlog: [uds-2-user-stories.md](uds-2-user-stories.md).
 

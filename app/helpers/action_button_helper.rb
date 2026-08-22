@@ -20,6 +20,7 @@ module ActionButtonHelper
 
     if disabled
       span_options = html_options.except(*NAVIGATION_ONLY_KEYS, *NAVIGATION_ONLY_KEYS.map(&:to_s))
+      span_options = without_executable_bindings!(span_options)
       content_tag(:span, label, span_options.merge(class: classes, "aria-disabled": true))
     else
       link_to(label, url, html_options.merge(class: classes))
@@ -107,5 +108,30 @@ module ActionButtonHelper
 
   def option_key?(options, key)
     options.key?(key) || options.key?(key.to_s)
+  end
+
+  def without_executable_bindings!(options)
+    return options unless options.is_a?(Hash)
+
+    stripped = options.deep_dup
+    stripped.delete(:action)
+    stripped.delete("action")
+    stripped.delete(:"data-action")
+    stripped.delete("data-action")
+
+    data = stripped[:data] || stripped["data"]
+    if data.is_a?(Hash)
+      data = data.except(:action, "action", :controller, "controller")
+      if data.empty?
+        stripped.delete(:data)
+        stripped.delete("data")
+      elsif stripped.key?(:data)
+        stripped[:data] = data
+      else
+        stripped["data"] = data
+      end
+    end
+
+    stripped
   end
 end

@@ -19,6 +19,27 @@ class ActionButtonHelperTest < ActionView::TestCase
     end
   end
 
+  test "action_link_to disabled strips Stimulus actions but keeps passive data attributes" do
+    html = action_link_to(
+      "Next",
+      "/next",
+      style: :outline,
+      intent: :neutral,
+      disabled: true,
+      data: {
+        action: "wizard#advance",
+        wizard_target: "nextLink"
+      },
+      "aria-describedby": "why"
+    )
+
+    assert_select_html html, "span.btn.btn--outline.btn--neutral.btn--standard[aria-disabled=true]", text: "Next"
+    assert_select_html html, "span[aria-describedby=why]"
+    assert_select_html html, "span[data-wizard-target=nextLink]"
+    assert_select_html html, "span[data-action]", count: 0
+    assert_select_html html, "a", count: 0
+  end
+
   test "action_link_to disabled renders a non-focusable span" do
     html = action_link_to(
       "Next",

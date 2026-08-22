@@ -592,12 +592,17 @@ input[type="submit"]:not([class]):active {
 /* Ghost (neutral only in allowlist; incomplete shorthand below) */
 .btn--ghost.btn--neutral {
   background: transparent;
-  color: var(--color-neutral-fg);
-  border: 2px solid var(--color-border-strong);
+  color: var(--color-text-secondary);
+  border: 2px solid transparent;
 }
 
 .btn--ghost.btn--neutral:hover {
   background: var(--color-neutral-fill-hover);
+  color: var(--color-neutral-fg);
+}
+
+.btn--ghost.btn--neutral:active {
+  background: var(--color-neutral-fill);
 }
 
 /* Link style */
@@ -649,12 +654,13 @@ input[type="submit"]:not([class]):active {
 
 .btn--ghost:not(.btn--neutral):not(.btn--brand):not(.btn--warning):not(.btn--danger) {
   background: transparent;
-  color: var(--color-neutral-fg);
-  border: 2px solid var(--color-border-strong);
+  color: var(--color-text-secondary);
+  border: 2px solid transparent;
 }
 
 .btn--ghost:not(.btn--neutral):not(.btn--brand):not(.btn--warning):not(.btn--danger):hover {
   background: var(--color-neutral-fill-hover);
+  color: var(--color-neutral-fg);
 }
 
 .btn:disabled,
@@ -667,6 +673,7 @@ input[type="submit"]:disabled,
   cursor: not-allowed;
   filter: none;
   text-decoration: none;
+  pointer-events: none;
 }
 
 .flash {
