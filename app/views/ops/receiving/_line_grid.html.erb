@@ -15,7 +15,7 @@
           <% po_line = line.purchase_order_line %>
           <% open_quantity = po_line.open_quantity %>
           <% over_shipment = [line.received_quantity - open_quantity, 0].max %>
-          <tr tabindex="-1" aria-selected="false" data-row-selection-target="row">
+          <tr tabindex="-1" aria-selected="<%= (@selected_row_id.to_s == line.id.to_s).to_s %>" class="<%= "is-selected" if @selected_row_id.to_s == line.id.to_s %>" data-row-selection-target="row">
             <td>#<%= po_line.purchase_order.number %></td>
             <td><%= line.product_variant.product.name %> <code><%= line.product_variant.sku %></code></td>
             <td><%= open_quantity %></td><td><%= line.received_quantity %></td>
@@ -26,9 +26,12 @@
             <% if @receipt.draft? && effective_permissions.include?("purchase_receipts.manage") %>
               <td><%= form_with url: ops_receiving_update_line_path(@receipt, line), method: :patch, local: true, html: { class: "ops-inline-form", data: { dirty_track: true } } do %>
                 <%= hidden_field_tag :lock_version, @receipt.lock_version %>
-                <label>Qty <input type="number" name="received_quantity" value="<%= line.received_quantity %>" min="1" required></label>
-                <label>Cost <input type="number" name="actual_unit_cost_cents" value="<%= line.actual_unit_cost_cents %>" min="0" required></label>
+                <label>Qty <input type="number" name="received_quantity" value="<%= @selected_row_id.to_s == line.id.to_s ? @submitted&.fetch("received_quantity", line.received_quantity) : line.received_quantity %>" min="1" required <%= "autofocus aria-describedby=receipt_line_#{line.id}_error" if @selected_row_id.to_s == line.id.to_s %>></label>
+                <label>Cost <input type="number" name="actual_unit_cost_cents" value="<%= @selected_row_id.to_s == line.id.to_s ? @submitted&.fetch("actual_unit_cost_cents", line.actual_unit_cost_cents) : line.actual_unit_cost_cents %>" min="0" required></label>
+                <label>Notes <input type="text" name="notes" value="<%= @selected_row_id.to_s == line.id.to_s ? @submitted&.fetch("notes", line.notes) : line.notes %>"></label>
                 <button type="submit" data-ops-save data-row-primary>Save</button>
+                <%= render "ops/shared/inline_row_error", action: :update_line, row_id: line.id, id: "receipt_line_#{line.id}_error" %>
+                <% if @conflict && @selected_row_id.to_s == line.id.to_s %><small>Current: qty <%= line.received_quantity %>, cost <%= line.actual_unit_cost_cents %>, notes <%= line.notes.presence || "blank" %>.</small><% end %>
               <% end %></td>
             <% end %>
           </tr>

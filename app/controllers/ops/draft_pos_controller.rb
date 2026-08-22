@@ -38,10 +38,9 @@ module Ops
       redirect_to ops_purchase_order_path(@purchase_order),
                   notice: "Added stock order ##{order.number}."
     rescue Purchasing::Error, ActiveRecord::RecordInvalid => e
-      redirect_to ops_purchase_order_path(@purchase_order), alert: e.message
-    rescue ActiveRecord::StaleObjectError
-      redirect_to ops_purchase_order_path(@purchase_order),
-                  alert: "This draft PO was changed by someone else. Reload and try again."
+      render_mutation_failure(:add_line, e, field: :identifier)
+    rescue ActiveRecord::StaleObjectError => e
+      render_mutation_failure(:add_line, e, field: :identifier, stale: true)
     end
 
     def update_line
@@ -56,10 +55,9 @@ module Ops
       )
       redirect_to ops_purchase_order_path(@purchase_order), notice: "Line updated."
     rescue Purchasing::Error, ActiveRecord::RecordInvalid => e
-      redirect_to ops_purchase_order_path(@purchase_order), alert: e.message
-    rescue ActiveRecord::StaleObjectError
-      redirect_to ops_purchase_order_path(@purchase_order),
-                  alert: "This order was changed by someone else. Reload and try again."
+      render_mutation_failure(:update_line, e, field: :quantity, row_id: params[:line_id])
+    rescue ActiveRecord::StaleObjectError => e
+      render_mutation_failure(:update_line, e, field: :quantity, row_id: params[:line_id], stale: true)
     end
 
     def generate
@@ -70,10 +68,9 @@ module Ops
       )
       redirect_to ops_purchase_order_path(@purchase_order), notice: "Purchase order generated."
     rescue Purchasing::Error, ActiveRecord::RecordInvalid => e
-      redirect_to ops_purchase_order_path(@purchase_order), alert: e.message
-    rescue ActiveRecord::StaleObjectError
-      redirect_to ops_purchase_order_path(@purchase_order),
-                  alert: "This draft PO was changed by someone else. Reload and try again."
+      render_mutation_failure(:generate, e)
+    rescue ActiveRecord::StaleObjectError => e
+      render_mutation_failure(:generate, e, stale: true)
     end
 
     def send_po
@@ -85,10 +82,9 @@ module Ops
       )
       redirect_to admin_purchase_order_path(@purchase_order), notice: "Purchase order sent."
     rescue Purchasing::Error, ActiveRecord::RecordInvalid => e
-      redirect_to ops_purchase_order_path(@purchase_order), alert: e.message
-    rescue ActiveRecord::StaleObjectError
-      redirect_to ops_purchase_order_path(@purchase_order),
-                  alert: "This draft PO was changed by someone else. Reload and try again."
+      render_mutation_failure(:send_po, e, field: :transmission_method)
+    rescue ActiveRecord::StaleObjectError => e
+      render_mutation_failure(:send_po, e, field: :transmission_method, stale: true)
     end
 
     def return_to_draft
@@ -99,13 +95,24 @@ module Ops
       )
       redirect_to ops_purchase_order_path(@purchase_order), notice: "Returned to draft for further edits."
     rescue Purchasing::Error, ActiveRecord::RecordInvalid => e
-      redirect_to ops_purchase_order_path(@purchase_order), alert: e.message
-    rescue ActiveRecord::StaleObjectError
-      redirect_to ops_purchase_order_path(@purchase_order),
-                  alert: "This draft PO was changed by someone else. Reload and try again."
+      render_mutation_failure(:return_to_draft, e)
+    rescue ActiveRecord::StaleObjectError => e
+      render_mutation_failure(:return_to_draft, e, stale: true)
     end
 
     private
+
+    def render_mutation_failure(action, exception, field: nil, row_id: nil, stale: false)
+      @submitted = params.to_unsafe_h.slice("identifier", "product_variant_id", "quantity", "expected_unit_cost_cents", "notes", "transmission_method")
+      @error_action = action
+      @error_field = field
+      @selected_row_id = row_id
+      @conflict = stale
+      @mutation_errors = [stale ? "This purchase order was changed by someone else." : exception.message]
+      @purchase_order.reload
+      @lines = @purchase_order.purchase_order_lines.includes(order: :customer_request, product_variant: :product).order(:created_at)
+      render :show, status: :unprocessable_entity
+    end
 
     def set_purchase_order
       @purchase_order = PurchaseOrder.for_store(current_store).find(params[:id])

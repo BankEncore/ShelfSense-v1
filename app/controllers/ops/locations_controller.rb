@@ -22,9 +22,9 @@ module Ops
       )
       redirect_to ops_location_path, notice: "Request ##{@customer_request.number} located and reserved."
     rescue Customers::Error, ActiveRecord::RecordInvalid => e
-      redirect_to ops_location_path, alert: e.message
-    rescue ActiveRecord::StaleObjectError
-      redirect_to ops_location_path, alert: "This request was changed by someone else. Reload and try again."
+      render_mutation_failure(:confirm, e, field: @customer_request.product_variant.used? ? :inventory_unit_id : :confirm)
+    rescue ActiveRecord::StaleObjectError => e
+      render_mutation_failure(:confirm, e, field: @customer_request.product_variant.used? ? :inventory_unit_id : :confirm, stale: true)
     end
 
     def not_located
@@ -46,12 +46,24 @@ module Ops
       end
       redirect_to ops_location_path, notice: notice
     rescue Customers::Error, ActiveRecord::RecordInvalid, ActiveRecord::RecordNotFound => e
-      redirect_to ops_location_path, alert: e.message
-    rescue ActiveRecord::StaleObjectError
-      redirect_to ops_location_path, alert: "This request was changed by someone else. Reload and try again."
+      render_mutation_failure(convert ? :special_order : :not_located, e, field: convert ? :expected_unit_cost_cents : :notes)
+    rescue ActiveRecord::StaleObjectError => e
+      render_mutation_failure(convert ? :special_order : :not_located, e, field: convert ? :expected_unit_cost_cents : :notes, stale: true)
     end
 
     private
+
+    def render_mutation_failure(action, exception, field:, stale: false)
+      @submitted = params.to_unsafe_h.slice("inventory_unit_id", "unit_identifier", "notes", "supplier_id", "expected_unit_cost_cents")
+      @error_action = action
+      @error_field = field
+      @selected_row_id = @customer_request.id
+      @conflict = stale
+      @mutation_errors = [stale ? "This request was changed by someone else." : exception.message]
+      @customer_request.reload
+      @pending_requests = CustomerRequest.pending_location.for_store(current_store).includes(:customer, :product_variant).order(:number)
+      render :show, status: :unprocessable_entity
+    end
 
     def set_customer_request
       @customer_request = CustomerRequest.for_store(current_store).find(params[:id])

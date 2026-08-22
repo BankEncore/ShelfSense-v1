@@ -358,3 +358,9 @@ open quantity =
 Backordered quantity remains open.
 
 When every line reaches zero open quantity, ShelfSense closes the PO automatically. Unplanned overage does not affect PO fulfillment.
+
+## Recoverable mutation failures
+
+Ops location, draft-PO, and receiving forms render recoverable validation and command failures with HTTP `422 Unprocessable Entity`; receiving line submissions may replace the error, scanner, and line-grid regions with Turbo Streams. The response retains the operator's submitted strings independently of reloaded current records, marks the affected row, places an inline error at the invalid control, and presents an aggregate summary before generate, send, review, or post actions. Focus returns to the invalid control (or to the primary scan input when there is no field error).
+
+An optimistic-lock conflict reloads and displays current aggregate values without discarding submitted strings. The operator must explicitly reload/reconcile or retry; stale input never silently overwrites current state. Every successful receiving Turbo replacement refreshes both scanner and grid forms so all `lock_version` fields for the receipt advance together.
