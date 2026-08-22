@@ -169,12 +169,13 @@ module Admin
     end
 
     def load_merchandise_availability
-      @availability_by_variant_id = @merchandise_results.index_with do |variant|
-        if variant.standard?
+      @availability_by_variant_id = @merchandise_results.to_h do |variant|
+        value = if variant.standard?
           Inventory::Availability.available(current_store, variant)
         else
           Inventory::Availability.unreserved_on_hand_units(current_store, variant).count
         end
+        [ variant.id, value ]
       end
     end
 

@@ -7,13 +7,14 @@ export default class extends Controller {
   connect() {
     this.selectedIndex = Math.max(0, this.rowTargets.findIndex((row) => row.dataset.requestId === this.selectedIdValue))
     this.select(this.selectedIndex, { focus: false })
+    this.activePanel = this.panelTargets.find((panel) => !panel.hidden) || null
     this.restoreFailureState()
   }
 
   keydown(event) {
     if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return
 
-    if (event.key === "Escape" && this.activePanel) {
+    if (event.key === "Escape" && this.visiblePanel) {
       event.preventDefault()
       this.closePanel()
       return
@@ -33,6 +34,7 @@ export default class extends Controller {
   }
 
   openPanel(event) {
+    event.preventDefault()
     const row = event.currentTarget.closest("tr")
     this.select(this.rowTargets.indexOf(row), { focus: false })
     this.openSelectedPanel()
@@ -47,21 +49,25 @@ export default class extends Controller {
     this.focusLocate(panel)
   }
 
-  closePanel() {
-    if (!this.activePanel) return
-    this.activePanel.hidden = true
+  closePanel(event) {
+    event?.preventDefault?.()
+    const panel = this.visiblePanel
+    if (!panel) return
+    panel.hidden = true
     this.activePanel = null
     this.rowTargets[this.selectedIndex]?.focus()
   }
 
-  showLocate() {
+  showLocate(event) {
+    event?.preventDefault?.()
     const panel = this.panelForSelection
     this.sectionIn(panel, "locate")?.removeAttribute("hidden")
     this.sectionIn(panel, "not-located")?.setAttribute("hidden", "")
     this.focusLocate(panel)
   }
 
-  showNotLocated() {
+  showNotLocated(event) {
+    event?.preventDefault?.()
     const panel = this.panelForSelection
     this.sectionIn(panel, "locate")?.setAttribute("hidden", "")
     const section = this.sectionIn(panel, "not-located")
@@ -94,8 +100,11 @@ export default class extends Controller {
   }
 
   restoreFailureState() {
-    const summary = this.element.previousElementSibling
-    if (!summary?.matches("[data-ops-error-summary]")) return
+    const sibling = this.element.previousElementSibling
+    const summary = sibling?.matches?.("[data-ops-error-summary]")
+      ? sibling
+      : sibling?.querySelector?.("[data-ops-error-summary]")
+    if (!summary) return
     this.openSelectedPanel()
     const error = this.panelForSelection?.querySelector(".ops-row-error")
     if (!error) return
@@ -126,6 +135,12 @@ export default class extends Controller {
   get panelForSelection() {
     const id = this.rowTargets[this.selectedIndex]?.dataset.requestId
     return this.panelTargets.find((panel) => panel.dataset.requestId === id)
+  }
+
+  get visiblePanel() {
+    return this.activePanel && !this.activePanel.hidden
+      ? this.activePanel
+      : this.panelTargets.find((panel) => !panel.hidden)
   }
 
   editable(target) {

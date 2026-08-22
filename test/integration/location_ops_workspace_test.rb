@@ -25,19 +25,33 @@ class LocationOpsWorkspaceTest < ActionDispatch::IntegrationTest
     assert_response :success
     rows = css_select(".location-queue tbody tr")
     assert_equal [ @older_request.id, @newer_request.id ], rows.map { |row| row["data-request-id"] }
-    assert_select rows.first, text: /Older Reader/
-    assert_select rows.first, text: /555-0100/
-    assert_select rows.first, text: /Find This Book/
-    assert_select rows.first, text: /Standard/
-    assert_select rows.first, text: /SKU/
-    assert_select rows.first, text: /Not categorized/
-    assert_select rows.first, text: /1/
-    assert_select ".location-action-panel:not([hidden])", count: 1 do
+    assert_select ".location-queue tbody tr:first-child", text: /Older Reader/
+    assert_select ".location-queue tbody tr:first-child", text: /555-0100/
+    assert_select ".location-queue tbody tr:first-child", text: /Find This Book/
+    assert_select ".location-queue tbody tr:first-child", text: /Standard/
+    assert_select ".location-queue tbody tr:first-child", text: /SKU/
+    assert_select ".location-queue tbody tr:first-child", text: /Not categorized/
+    assert_select ".location-queue tbody tr:first-child", text: /1/
+    # Panels stay closed until Select (?request_id=) or a mutation failure reopens one.
+    assert_select ".location-action-panel[hidden]", count: 2
+    assert_select ".location-action-panel[data-request-id='#{@older_request.id}']" do
       assert_select "input[name='physical_copy_confirmed'][required]"
       assert_select "button", text: /Reserve for Older Reader/
       assert_select "input[name='resolution'][value='special_order']"
       assert_select "[data-location-queue-target='specialOrderFields'][hidden]"
     end
+    assert_select "a[href=?]", ops_location_path(request_id: @older_request.id, mode: "locate"), text: "Select"
+  end
+
+  test "selecting a request via query opens that panel server-side" do
+    get ops_location_path(request_id: @newer_request.id, mode: "not_located")
+
+    assert_response :success
+    assert_select ".location-action-panel:not([hidden])[data-request-id='#{@newer_request.id}']" do
+      assert_select "[data-location-queue-target='notLocatedSection']:not([hidden])"
+      assert_select "[data-location-queue-target='locateSection'][hidden]"
+    end
+    assert_select ".location-action-panel[hidden][data-request-id='#{@older_request.id}']"
   end
 
   test "standard locate requires server-side physical confirmation" do

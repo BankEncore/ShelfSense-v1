@@ -7,6 +7,7 @@ module Ops
 
     def show
       load_location_queue
+      apply_queue_selection_from_params!
     end
 
     def confirm
@@ -56,21 +57,42 @@ module Ops
         .for_store(current_store)
         .includes(:customer, product_variant: { product: :merchandise_category })
         .order(:created_at, :id)
-      @availability_by_request = @pending_requests.index_with do |customer_request|
+      # Views look up by request.id; index_with alone keys by ActiveRecord objects.
+      @availability_by_request = @pending_requests.to_h do |customer_request|
         variant = customer_request.product_variant
-        if variant.standard?
+        value = if variant.standard?
           Inventory::Availability.available(current_store, variant)
         else
           Inventory::Availability.unreserved_on_hand_units(current_store, variant).count
         end
+        [ customer_request.id, value ]
       end
-      @units_by_request = @pending_requests.index_with do |customer_request|
-        next [] if customer_request.product_variant.standard?
-
-        Inventory::Availability.unreserved_on_hand_units(current_store, customer_request.product_variant)
-          .order(:unit_identifier).to_a
+      @units_by_request = @pending_requests.to_h do |customer_request|
+        units = if customer_request.product_variant.standard?
+          []
+        else
+          Inventory::Availability.unreserved_on_hand_units(current_store, customer_request.product_variant)
+            .order(:unit_identifier).to_a
+        end
+        [ customer_request.id, units ]
       end
       @suppliers = Supplier.active.admin_ordered.to_a
+    end
+
+    def apply_queue_selection_from_params!
+      requested_id = params[:request_id].presence
+      if requested_id.present? && @pending_requests.any? { |request| request.id.to_s == requested_id.to_s }
+        @selected_row_id ||= requested_id
+      end
+      @panel_mode = params[:mode].presence_in(%w[locate not_located]) || default_panel_mode
+    end
+
+    def default_panel_mode
+      case @error_action
+      when :confirm then "locate"
+      when :not_located, :special_order then "not_located"
+      else "locate"
+      end
     end
 
     def render_mutation_failure(action, exception, field:, stale: false)
@@ -82,6 +104,7 @@ module Ops
       @mutation_errors = [ stale ? "This request was changed by someone else." : exception.message ]
       @customer_request.reload
       load_location_queue
+      @panel_mode = default_panel_mode
       render :show, status: :unprocessable_entity
     end
 

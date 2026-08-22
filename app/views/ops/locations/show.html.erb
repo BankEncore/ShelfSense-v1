@@ -16,9 +16,11 @@
     <p><%= link_to "View customer requests", admin_customer_requests_path, class: "btn" %></p>
   </section>
 <% else %>
+  <% selected_id = (@selected_row_id.presence || "").to_s %>
+  <% panel_mode = @panel_mode.presence || "locate" %>
   <div class="location-workspace"
        data-controller="location-queue"
-       data-location-queue-selected-id-value="<%= @selected_row_id.presence || @pending_requests.first.id %>"
+       data-location-queue-selected-id-value="<%= selected_id.presence || @pending_requests.first.id %>"
        data-action="keydown@window->location-queue#keydown">
     <section aria-labelledby="location-queue-heading">
       <h2 id="location-queue-heading" class="visually-hidden">Requests awaiting location</h2>
@@ -38,7 +40,7 @@
             <% @pending_requests.each do |request| %>
               <% variant = request.product_variant %>
               <% product = variant.product %>
-              <% selected = (@selected_row_id.presence || @pending_requests.first.id).to_s == request.id.to_s %>
+              <% selected = selected_id.present? ? selected_id == request.id.to_s : request.id == @pending_requests.first.id %>
               <tr tabindex="<%= selected ? 0 : -1 %>"
                   aria-selected="<%= selected %>"
                   class="<%= "is-selected" if selected %>"
@@ -62,7 +64,11 @@
                 </td>
                 <td><%= product.merchandise_category&.path_label.presence || "Not categorized" %></td>
                 <td><strong><%= @availability_by_request.fetch(request.id) %></strong></td>
-                <td><button type="button" class="btn btn--ghost" data-action="location-queue#openPanel">Select</button></td>
+                <td>
+                  <%= link_to "Select", ops_location_path(request_id: request.id, mode: "locate"),
+                        class: "btn btn--ghost",
+                        data: { action: "location-queue#openPanel" } %>
+                </td>
               </tr>
             <% end %>
           </tbody>
@@ -73,10 +79,12 @@
 
     <% @pending_requests.each do |request| %>
       <% variant = request.product_variant %>
-      <% selected = (@selected_row_id.presence || @pending_requests.first.id).to_s == request.id.to_s %>
+      <% selected = selected_id == request.id.to_s %>
+      <% panel_open = selected %>
+      <% locate_mode = panel_mode != "not_located" %>
       <section class="location-action-panel surface"
                aria-labelledby="location-panel-title-<%= request.id %>"
-               <%= "hidden" unless selected %>
+               <%= "hidden" unless panel_open %>
                data-location-queue-target="panel"
                data-request-id="<%= request.id %>">
         <header class="location-action-panel__header">
@@ -85,15 +93,21 @@
             <h2 id="location-panel-title-<%= request.id %>"><%= variant.product.name %></h2>
             <p><%= request.customer.display_name %> · apparent availability <strong><%= @availability_by_request.fetch(request.id) %></strong></p>
           </div>
-          <button type="button" class="btn btn--ghost" data-action="location-queue#closePanel">Close <kbd>Esc</kbd></button>
+          <%= link_to ops_location_path, class: "btn btn--ghost", data: { action: "location-queue#closePanel" } do %>
+            Close <kbd>Esc</kbd>
+          <% end %>
         </header>
 
         <div class="location-action-panel__choices" role="group" aria-label="Location outcome">
-          <button type="button" class="btn" data-location-queue-target="initialFocus" data-action="location-queue#showLocate">Located</button>
-          <button type="button" class="btn btn--ghost" data-action="location-queue#showNotLocated">Not located</button>
+          <%= link_to "Located", ops_location_path(request_id: request.id, mode: "locate"),
+                class: "btn",
+                data: { location_queue_target: "initialFocus", action: "location-queue#showLocate" } %>
+          <%= link_to "Not located", ops_location_path(request_id: request.id, mode: "not_located"),
+                class: "btn btn--ghost",
+                data: { action: "location-queue#showNotLocated" } %>
         </div>
 
-        <div data-location-queue-target="locateSection">
+        <div data-location-queue-target="locateSection" <%= "hidden" unless panel_open && locate_mode %>>
           <%= form_with url: ops_location_confirm_path(request), method: :post, local: true, html: { class: "location-action-form" } do %>
             <%= hidden_field_tag :lock_version, request.lock_version %>
             <% if variant.standard? %>
@@ -123,7 +137,7 @@
           <% end %>
         </div>
 
-        <div hidden data-location-queue-target="notLocatedSection">
+        <div data-location-queue-target="notLocatedSection" <%= "hidden" unless panel_open && !locate_mode %>>
           <%= form_with url: ops_location_not_located_path(request), method: :post, local: true, html: { class: "location-action-form" } do %>
             <%= hidden_field_tag :lock_version, request.lock_version %>
             <label>
