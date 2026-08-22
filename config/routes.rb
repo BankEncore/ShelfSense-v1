@@ -123,6 +123,7 @@ Rails.application.routes.draw do
     get "receiving", to: "receiving#index", as: :receiving_index
     post "receiving", to: "receiving#create", as: :receiving_create
     get "receiving/:id", to: "receiving#show", as: :receiving
+    get "receiving/:id/line_lookup", to: "receiving#line_lookup", as: :receiving_line_lookup
     patch "receiving/:id", to: "receiving#update", as: :receiving_update
     post "receiving/:id/lines", to: "receiving#add_line", as: :receiving_add_line
     patch "receiving/:id/lines/:line_id", to: "receiving#update_line", as: :receiving_update_line

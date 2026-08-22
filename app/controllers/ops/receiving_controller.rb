@@ -3,10 +3,10 @@
 module Ops
   class ReceivingController < BaseController
     before_action -> { require_permission!("purchase_receipts.view") }, only: %i[index show]
-    before_action -> { require_permission!("purchase_receipts.manage") }, only: %i[create add_line update update_line]
+    before_action -> { require_permission!("purchase_receipts.manage") }, only: %i[create line_lookup add_line update update_line]
     before_action -> { require_permission!("purchase_receipts.post") }, only: %i[review post]
     before_action -> { require_permission!("purchase_receipts.correct") }, only: %i[reverse reverse_line correct_cost]
-    before_action :set_receipt, only: %i[show add_line update update_line review post reverse reverse_line correct_cost]
+    before_action :set_receipt, only: %i[show line_lookup add_line update update_line review post reverse reverse_line correct_cost]
 
     def index
       @draft_receipts = PurchaseReceipt.draft
@@ -24,9 +24,38 @@ module Ops
           product_variant: :product
         )
         .order(:created_at)
-      @open_po_lines = open_po_lines_for(@receipt) if @receipt.draft?
       @can_correct = effective_permissions.include?("purchase_receipts.correct")
       @can_compensate = effective_permissions.include?("purchase_receipts.compensate")
+    end
+
+    def line_lookup
+      unless @receipt.draft?
+        render json: { outcome: "ineligible", message: "Only draft receipts can be edited." }, status: :unprocessable_entity
+        return
+      end
+
+      query = params[:query].to_s.strip
+      if query.blank?
+        render json: { outcome: "no_match", message: "Enter or scan an identifier." }
+        return
+      end
+
+      variants, used_variant = lookup_variants(query)
+      lines = eligible_open_po_lines(@receipt, variants, query)
+
+      if lines.empty?
+        message = if used_variant
+          "Used variants are not eligible for purchase-order receiving."
+        else
+          "No eligible open Standard PO line matches this receipt's store and supplier."
+        end
+        render json: { outcome: used_variant ? "ineligible" : "no_match", message: message }
+      else
+        render json: {
+          outcome: lines.one? ? "selected" : "multiple",
+          matches: lines.map { |line| serialize_lookup_line(line) }
+        }
+      end
     end
 
     def create
@@ -87,7 +116,14 @@ module Ops
         notes: params[:notes],
         expected_lock_version: params[:lock_version]
       )
-      redirect_to ops_receiving_path(@receipt), notice: "Line added."
+      respond_to do |format|
+        format.html { redirect_to ops_receiving_path(@receipt), notice: "Line added." }
+        format.turbo_stream do
+          load_receipt_lines
+          @scan_notice = "Line added. Scanner ready."
+          render :add_line
+        end
+      end
     rescue Purchasing::Error, ActiveRecord::RecordInvalid => e
       redirect_to ops_receiving_path(@receipt), alert: e.message
     rescue ActiveRecord::StaleObjectError
@@ -188,6 +224,71 @@ module Ops
 
     private
 
+    def load_receipt_lines
+      @receipt.reload
+      @lines = @receipt.purchase_receipt_lines
+        .includes(
+          :corrections,
+          purchase_order_line: { order: :customer_request, product_variant: :product, purchase_order: [] },
+          product_variant: :product
+        )
+        .order(:created_at)
+    end
+
+    def lookup_variants(query)
+      result = Identifiers::Lookup.call(query)
+      variants = case result.status
+      when :variant, :inventory_unit then [ result.variant ].compact
+      when :product then result.variants
+      else []
+      end
+
+      if variants.empty?
+        pattern = "%#{ActiveRecord::Base.sanitize_sql_like(query)}%"
+        variants = ProductVariant.joins(:product)
+          .where("products.name ILIKE :pattern OR products.lookup_code = :code", pattern: pattern, code: Product.canonical_lookup_code(query))
+          .limit(50)
+          .to_a
+      end
+      [ variants.select(&:standard?), variants.any?(&:used?) ]
+    end
+
+    def eligible_open_po_lines(receipt, variants, query)
+      scope = PurchaseOrderLine
+        .joins(:purchase_order, :order)
+        .left_joins(order: :customer_request)
+        .includes(:cancellations, :purchase_receipt_lines, { order: :customer_request }, product_variant: :product, purchase_order: [])
+        .where(product_variant_id: variants.map(&:id))
+        .where(purchase_orders: { store_id: receipt.store_id, supplier_id: receipt.supplier_id, status: %w[sent closed] })
+
+      # A request number is also a useful receiving search term; preserve all
+      # identifier matches while adding an exact customer-request match.
+      request_number = Integer(query, exception: false)
+      if variants.empty? && request_number
+        scope = PurchaseOrderLine
+          .joins(:purchase_order, order: :customer_request)
+          .includes(:cancellations, :purchase_receipt_lines, { order: :customer_request }, product_variant: :product, purchase_order: [])
+          .where(customer_requests: { number: request_number })
+          .where(purchase_orders: { store_id: receipt.store_id, supplier_id: receipt.supplier_id, status: %w[sent closed] })
+      end
+
+      scope.order(Arel.sql("purchase_orders.number NULLS LAST"), :created_at).to_a.select { |line| line.open_quantity.positive? }
+    end
+
+    def serialize_lookup_line(line)
+      request = line.order.customer_request
+      {
+        id: line.id,
+        po_number: line.purchase_order.number,
+        product: line.product_variant.product.name,
+        sku: line.product_variant.sku,
+        customer_request: request&.number,
+        order_date: line.purchase_order.sent_at&.to_date || line.purchase_order.created_at.to_date,
+        open_quantity: line.open_quantity,
+        expected_unit_cost_cents: line.expected_unit_cost_cents_snapshot
+      }
+    end
+
     def set_receipt
       @receipt = PurchaseReceipt.for_store(current_store).find(params[:id])
     end
@@ -195,23 +296,6 @@ module Ops
     def compensate_authorized?
       ActiveModel::Type::Boolean.new.cast(params[:authorize_compensate]) &&
         effective_permissions.include?("purchase_receipts.compensate")
-    end
-
-    def open_po_lines_for(receipt)
-      PurchaseOrderLine
-        .joins(:purchase_order)
-        .includes(:order, :cancellations, :purchase_receipt_lines, product_variant: :product, purchase_order: [])
-        .where(purchase_orders: {
-          store_id: receipt.store_id,
-          supplier_id: receipt.supplier_id,
-          status: %w[sent closed]
-        })
-        .order(Arel.sql("purchase_orders.number NULLS LAST"), :created_at)
-        .to_a
-        .select do |line|
-          line.open_quantity.positive? ||
-            receipt.purchase_receipt_lines.any? { |rl| rl.purchase_order_line_id == line.id }
-        end
     end
 
     def preview_line(line)
