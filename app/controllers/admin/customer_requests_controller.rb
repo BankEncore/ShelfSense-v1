@@ -3,14 +3,31 @@
 module Admin
   class CustomerRequestsController < BaseController
     before_action -> { require_permission!("customers.view") }, only: %i[index show]
-    before_action -> { require_permission!("customer_requests.manage") }, only: %i[new create cancel]
-    before_action :require_store_for_create!, only: %i[new create]
+    before_action -> { require_permission!("customer_requests.manage") },
+                  only: %i[new create cancel customer_lookup merchandise_lookup]
+    before_action :require_store_for_create!, only: %i[new create customer_lookup merchandise_lookup]
     before_action :set_customer_request, only: %i[show cancel]
 
     def index
-      scope = CustomerRequest.includes(:customer, :product_variant, :store).admin_ordered
-      scope = scope.for_store(current_store) if current_store.present?
-      @customer_requests = scope.limit(200)
+      @stores = accessible_stores.order(:name).select do |store|
+        Authorization::PermissionEvaluator.allowed?(
+          user: current_user,
+          permission_key: "customers.view",
+          store: store
+        )
+      end
+      scope = CustomerRequest.includes(:customer, { product_variant: :product }, :store)
+                             .where(store_id: @stores.map(&:id))
+      selected_store_id = params.key?(:store_id) ? permitted_store_filter : current_store&.id
+      @index = CustomerRequests::AdminIndexQuery.call(
+        scope: scope,
+        q: params[:q],
+        status: params[:status],
+        store_id: selected_store_id,
+        store_filter_applied: params[:store_id].present?,
+        page: params[:page]
+      )
+      @customer_requests = @index.records
     end
 
     def show; end
@@ -21,10 +38,26 @@ module Admin
         @customer_request,
         params[:product_variant_id] || params.dig(:customer_request, :product_variant_id)
       )
-      if params[:customer_id].present?
-        @customer_request.customer = Customer.active.find_by(id: params[:customer_id])
+      customer_id = params[:customer_id] || params.dig(:customer_request, :customer_id)
+      if customer_id.present?
+        @customer_request.customer = Customer.active.find_by(id: customer_id)
       end
       load_request_form_options
+    end
+
+    def customer_lookup
+      prepare_lookup_request
+      @customer_query = params[:customer_q].to_s.strip
+      @customer_results = search_customers(@customer_query) if @customer_query.present?
+      render :new
+    end
+
+    def merchandise_lookup
+      prepare_lookup_request
+      @merchandise_query = params[:merchandise_q].to_s.strip
+      @merchandise_results = search_merchandise(@merchandise_query) if @merchandise_query.present?
+      load_merchandise_availability if @merchandise_results.present?
+      render :new
     end
 
     def create
@@ -85,6 +118,66 @@ module Admin
 
     private
 
+    def permitted_store_filter
+      return if params[:store_id].blank?
+
+      @stores.find { |store| store.id == params[:store_id] }&.id
+    end
+
+    def prepare_lookup_request
+      attributes = request_form_attributes
+      customer_id = attributes.delete("customer_id")
+      @customer_request = CustomerRequest.new(store: current_store, **attributes)
+      @customer_request.customer = Customer.active.find_by(id: customer_id) if customer_id.present?
+      assign_variant_from_params!(@customer_request, @customer_request.product_variant_id)
+      load_request_form_options
+    end
+
+    def request_form_attributes
+      params.fetch(:customer_request, {}).permit(:customer_id, :product_variant_id, :notes).to_h
+    end
+
+    def search_customers(query)
+      pattern = "%#{ActiveRecord::Base.sanitize_sql_like(query)}%"
+      Customer.active
+              .where(
+                "display_name ILIKE :q OR email ILIKE :q OR phone ILIKE :q OR id::text ILIKE :q",
+                q: pattern
+              )
+              .admin_ordered
+              .limit(25)
+    end
+
+    def search_merchandise(query)
+      pattern = "%#{ActiveRecord::Base.sanitize_sql_like(query)}%"
+      identifier = query.gsub(/[\s-]/, "")
+      ProductVariant.active
+                    .joins(:product)
+                    .merge(Product.active)
+                    .where(
+                      <<~SQL.squish,
+                        products.name ILIKE :pattern OR products.lookup_code ILIKE :pattern OR
+                        products.primary_identifier = :identifier OR products.industry_identifier = :identifier OR
+                        product_variants.sku = :identifier OR product_variants.industry_identifier = :identifier
+                      SQL
+                      pattern: pattern,
+                      identifier: identifier
+                    )
+                    .includes(:product)
+                    .order(Product.arel_table[:name], :variant_type, :sku)
+                    .limit(25)
+    end
+
+    def load_merchandise_availability
+      @availability_by_variant_id = @merchandise_results.index_with do |variant|
+        if variant.standard?
+          Inventory::Availability.available(current_store, variant)
+        else
+          Inventory::Availability.unreserved_on_hand_units(current_store, variant).count
+        end
+      end
+    end
+
     def set_customer_request
       @customer_request = CustomerRequest.find(params[:id])
       permission = action_name == "cancel" ? "customer_requests.manage" : "customers.view"
@@ -105,7 +198,6 @@ module Admin
     end
 
     def load_request_form_options
-      @customers = Customer.active.admin_ordered
       @suppliers = Supplier.active.admin_ordered
       return if @product_variant.blank? || current_store.blank?
 

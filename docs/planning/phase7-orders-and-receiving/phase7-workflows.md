@@ -102,6 +102,15 @@ ShelfSense assigns a store-scoped **request number** at creation and checks appa
 
 Creating a location request does not reserve inventory. Staff must physically confirm the merchandise first.
 
+The admin creation flow uses explicit, keyboard-accessible lookups rather than exposing database IDs. Customer
+lookup matches name, phone, email, or customer identifier and shows contact details before selection. Merchandise
+lookup matches title, ISBN/UPC/product identifier, lookup code, or SKU and shows the exact Standard/Used identity
+and current store availability. Creating a customer inline returns to the preserved request draft. Product and
+variant pages remain the fastest route because their quick action preselects the merchandise.
+
+The request-history view searches request, customer/contact, and merchandise identity, supports store and status
+filters, orders active work ahead of completed or cancelled history, and paginates results.
+
 ## 4. Locate in-stock merchandise
 
 The request appears in the store’s location ops workspace.
