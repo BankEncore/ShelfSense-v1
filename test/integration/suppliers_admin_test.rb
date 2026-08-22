@@ -73,7 +73,7 @@ class SuppliersAdminTest < ActionDispatch::IntegrationTest
         supplier_variant_source: {
           supplier_id: supplier.id,
           pricing_method: "direct_unit_cost",
-          expected_unit_cost_cents: 525,
+          expected_unit_cost_cents: "5.25",
           organization_preferred: true,
           supplier_item_number: "VS-1"
         }
@@ -91,7 +91,7 @@ class SuppliersAdminTest < ActionDispatch::IntegrationTest
     patch admin_supplier_variant_source_path(source, return_to: "variant"), params: {
       supplier_variant_source: {
         pricing_method: "direct_unit_cost",
-        expected_unit_cost_cents: 600,
+        expected_unit_cost_cents: "6.00",
         organization_preferred: true,
         lock_version: source.lock_version
       }

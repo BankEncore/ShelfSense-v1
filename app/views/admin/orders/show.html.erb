@@ -22,7 +22,7 @@
   <% end %>
   <% if @line %>
     <dt>Expected unit cost</dt>
-    <dd><%= @line.expected_unit_cost_cents_snapshot %> cents</dd>
+    <dd><%= format_money_cents(@line.expected_unit_cost_cents_snapshot) %></dd>
   <% end %>
   <% if @order.cancelled? %>
     <dt>Cancellation</dt>

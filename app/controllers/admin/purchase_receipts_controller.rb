@@ -58,16 +58,26 @@ module Admin
         purchase_receipt_line: @line,
         actor: current_user,
         reason: params.require(:reason),
-        corrected_unit_cost_cents: params[:corrected_unit_cost_cents],
+        corrected_unit_cost_cents: Money::ParseCents.call(params[:corrected_unit_cost_cents]),
         value_delta_cents: params[:value_delta_cents],
         idempotency_key: params[:idempotency_key].presence || SecureRandom.uuid_v7
       )
       redirect_to admin_purchase_receipt_path(@receipt), notice: "Cost correction posted."
+    rescue Money::ParseCents::Error => e
+      load_show
+      @money_error = e.message
+      @submitted_cost = params[:corrected_unit_cost_cents]
+      @selected_line_id = @line.id
+      render :show, status: :unprocessable_entity
     rescue Purchasing::Error, ActiveRecord::RecordInvalid => e
       redirect_to admin_purchase_receipt_path(@receipt), alert: e.message
     end
 
     private
+
+    def load_show
+      show
+    end
 
     def set_receipt
       @receipt = PurchaseReceipt.find(params[:id])

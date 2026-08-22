@@ -8,7 +8,7 @@
       · <%= @purchase_order.status %>
       <% if @purchase_order.generated? %>· generated rev <%= @purchase_order.document_revision %><% end %>
       · <%= @lines.size %> lines
-      · <%= @purchase_order.expected_merchandise_total_cents %> cents expected
+      · <%= format_money_cents(@purchase_order.expected_merchandise_total_cents) %> expected
     </p>
   </div>
   <p>
@@ -73,8 +73,8 @@
         <input type="number" name="quantity" value="<%= @submitted&.fetch("quantity", nil) || 1 %>" min="1" required>
       </label>
       <label>
-        Expected cost (cents)
-        <input type="number" name="expected_unit_cost_cents" value="<%= @submitted&.fetch("expected_unit_cost_cents", nil) %>" min="0">
+        Expected unit cost ($)
+        <input type="text" inputmode="decimal" name="expected_unit_cost_cents" value="<%= @submitted&.fetch("expected_unit_cost_cents", nil) %>" aria-invalid="<%= @error_field == :expected_unit_cost_cents %>">
       </label>
       <button type="submit">Add</button>
       <%= render "ops/shared/inline_row_error", action: :add_line, id: "po_add_error" %>
@@ -110,7 +110,7 @@
               <code><%= line.product_variant.sku %></code>
             </td>
             <td><%= line.ordered_quantity %></td>
-            <td><%= line.expected_unit_cost_cents_snapshot %></td>
+            <td><%= format_money_cents(line.expected_unit_cost_cents_snapshot) %></td>
             <td>
               <% if order.customer_request %>
                 Req #<%= order.customer_request.number %>
@@ -129,7 +129,7 @@
                   </label>
                   <label>
                     Cost
-                    <input type="number" name="expected_unit_cost_cents" value="<%= @selected_row_id.to_s == line.id.to_s ? @submitted&.fetch("expected_unit_cost_cents", line.expected_unit_cost_cents_snapshot) : line.expected_unit_cost_cents_snapshot %>" min="0">
+                    <input type="text" inputmode="decimal" name="expected_unit_cost_cents" value="<%= @selected_row_id.to_s == line.id.to_s ? @submitted&.fetch("expected_unit_cost_cents", money_field_value(line.expected_unit_cost_cents_snapshot)) : money_field_value(line.expected_unit_cost_cents_snapshot) %>" aria-invalid="<%= @error_field == :expected_unit_cost_cents && @selected_row_id.to_s == line.id.to_s %>">
                   </label>
                   <label>
                     Notes
@@ -137,7 +137,7 @@
                   </label>
                   <button type="submit" data-ops-save data-row-primary>Save</button>
                   <%= render "ops/shared/inline_row_error", action: :update_line, row_id: line.id, id: "po_line_#{line.id}_error" %>
-                  <% if @conflict && @selected_row_id.to_s == line.id.to_s %><small>Current: qty <%= line.ordered_quantity %>, cost <%= line.expected_unit_cost_cents_snapshot %>, notes <%= line.order.notes.presence || "blank" %>.</small><% end %>
+                  <% if @conflict && @selected_row_id.to_s == line.id.to_s %><small>Current: qty <%= line.ordered_quantity %>, expected cost <%= format_money_cents(line.expected_unit_cost_cents_snapshot) %>, notes <%= line.order.notes.presence || "blank" %>.</small><% end %>
                 <% end %>
               </td>
             <% end %>

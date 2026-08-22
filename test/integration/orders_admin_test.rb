@@ -48,6 +48,34 @@ class OrdersAdminTest < ActionDispatch::IntegrationTest
     assert_match(/Add stock line/, response.body)
   end
 
+  test "stock order parses dollar input and preserves malformed input" do
+    sign_in_as("admin")
+    post store_selection_path, params: { store_id: @store.id }
+
+    post admin_orders_path, params: {
+      order: {
+        product_variant_id: @variant.id,
+        requested_quantity: 1,
+        supplier_id: @supplier.id,
+        expected_unit_cost_cents: "$12.50"
+      }
+    }
+    assert_equal 1_250, Order.order(:created_at).last.purchase_order_line.expected_unit_cost_cents_snapshot
+
+    assert_no_difference -> { Order.count } do
+      post admin_orders_path, params: {
+        order: {
+          product_variant_id: @variant.id,
+          requested_quantity: 1,
+          supplier_id: @supplier.id,
+          expected_unit_cost_cents: "twelve dollars"
+        }
+      }
+    end
+    assert_response :unprocessable_entity
+    assert_select "input[name='order[expected_unit_cost_cents]'][value='twelve dollars']"
+  end
+
   test "product and variant pages expose order stock and request actions" do
     sign_in_as("admin")
     post store_selection_path, params: { store_id: @store.id }

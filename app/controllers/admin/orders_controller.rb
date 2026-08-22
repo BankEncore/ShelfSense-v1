@@ -40,7 +40,7 @@ module Admin
       po = order.purchase_order
       redirect_to ops_purchase_order_path(po),
                   notice: "Stock order ##{order.number} created and added to draft PO."
-    rescue Purchasing::Error, ActiveRecord::RecordNotFound, ActiveRecord::RecordInvalid => e
+    rescue Purchasing::Error, Money::ParseCents::Error, ActiveRecord::RecordNotFound, ActiveRecord::RecordInvalid => e
       @order = Order.new(
         store: current_store,
         product_variant_id: params.dig(:order, :product_variant_id),
@@ -89,9 +89,7 @@ module Admin
     def optional_cents(value)
       return if value.blank?
 
-      Integer(value)
-    rescue ArgumentError, TypeError
-      nil
+      Money::ParseCents.call(value)
     end
   end
 end

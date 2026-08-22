@@ -7,8 +7,8 @@
       · <%= current_store.admin_label %>
       · <%= @receipt.status %>
       · <%= @lines.size %> lines
-      · merchandise <%= @receipt.merchandise_total_cents %> cents
-      · ancillary <%= @receipt.ancillary_total_cents %> cents
+      · merchandise <%= format_money_cents(@receipt.merchandise_total_cents) %>
+      · ancillary <%= format_money_cents(@receipt.ancillary_total_cents) %>
     </p>
   </div>
   <p>
@@ -36,20 +36,20 @@
         <input type="date" name="supplier_document_date" value="<%= @error_action == :update ? @submitted&.fetch("supplier_document_date", nil) : @receipt.supplier_document_date %>">
       </label>
       <label>
-        Freight (cents)
-        <input type="number" name="freight_cents" min="0" value="<%= @error_action == :update ? @submitted&.fetch("freight_cents", nil) : @receipt.freight_cents %>">
+        Freight ($)
+        <input type="text" inputmode="decimal" name="freight_cents" value="<%= @error_action == :update ? @submitted&.fetch("freight_cents", nil) : money_field_value(@receipt.freight_cents) %>" aria-invalid="<%= @error_field == :freight_cents %>">
       </label>
       <label>
-        Handling (cents)
-        <input type="number" name="handling_cents" min="0" value="<%= @error_action == :update ? @submitted&.fetch("handling_cents", nil) : @receipt.handling_cents %>">
+        Handling ($)
+        <input type="text" inputmode="decimal" name="handling_cents" value="<%= @error_action == :update ? @submitted&.fetch("handling_cents", nil) : money_field_value(@receipt.handling_cents) %>" aria-invalid="<%= @error_field == :handling_cents %>">
       </label>
       <label>
-        Supplier tax (cents)
-        <input type="number" name="supplier_tax_cents" min="0" value="<%= @error_action == :update ? @submitted&.fetch("supplier_tax_cents", nil) : @receipt.supplier_tax_cents %>">
+        Supplier tax ($)
+        <input type="text" inputmode="decimal" name="supplier_tax_cents" value="<%= @error_action == :update ? @submitted&.fetch("supplier_tax_cents", nil) : money_field_value(@receipt.supplier_tax_cents) %>" aria-invalid="<%= @error_field == :supplier_tax_cents %>">
       </label>
       <label>
-        Misc charges (cents)
-        <input type="number" name="miscellaneous_charges_cents" min="0" value="<%= @error_action == :update ? @submitted&.fetch("miscellaneous_charges_cents", nil) : @receipt.miscellaneous_charges_cents %>">
+        Miscellaneous charges ($)
+        <input type="text" inputmode="decimal" name="miscellaneous_charges_cents" value="<%= @error_action == :update ? @submitted&.fetch("miscellaneous_charges_cents", nil) : money_field_value(@receipt.miscellaneous_charges_cents) %>" aria-invalid="<%= @error_field == :miscellaneous_charges_cents %>">
       </label>
       <label>
         Charge notes
@@ -61,7 +61,7 @@
       </label>
       <button type="submit" data-ops-save>Save header</button>
       <%= render "ops/shared/inline_row_error", action: :update, id: "receipt_header_error" %>
-      <% if @conflict && @error_action == :update %><small>Current saved notes: <%= @receipt.notes.presence || "blank" %>; freight: <%= @receipt.freight_cents %> cents.</small><% end %>
+      <% if @conflict && @error_action == :update %><small>Current saved notes: <%= @receipt.notes.presence || "blank" %>; freight: <%= format_money_cents(@receipt.freight_cents) %>.</small><% end %>
     <% end %>
     <p class="ops-hint">Ancillary charges are recorded but never enter inventory valuation.</p>
   </section>
@@ -107,7 +107,7 @@
                 <code><%= line.product_variant.sku %></code>
               </td>
               <td><%= line.remaining_reversible_quantity %> / <%= line.received_quantity %></td>
-              <td><%= line.actual_unit_cost_cents %></td>
+              <td><%= format_money_cents(line.actual_unit_cost_cents) %></td>
               <td>
                 <% if line.remaining_reversible_quantity.positive? %>
                   <%= form_with url: ops_receiving_reverse_line_path(@receipt, line), method: :post, local: true, html: { class: "ops-inline-form" } do %>
@@ -139,8 +139,8 @@
                       <input type="text" name="reason" required>
                     </label>
                     <label>
-                      Corrected unit cost
-                      <input type="number" name="corrected_unit_cost_cents" min="0" required>
+                      Corrected unit cost ($)
+                      <input type="text" inputmode="decimal" name="corrected_unit_cost_cents" value="<%= @selected_row_id.to_s == line.id.to_s ? @submitted&.fetch("corrected_unit_cost_cents", nil) : nil %>" required aria-invalid="<%= @error_field == :corrected_unit_cost_cents && @selected_row_id.to_s == line.id.to_s %>">
                     </label>
                     <button type="submit">Correct cost</button>
                   <% end %>
@@ -173,7 +173,7 @@
           <li>
             <%= correction.correction_type %>
             <% if correction.quantity.present? %>· qty <%= correction.quantity %><% end %>
-            <% if correction.value_delta_cents.present? %>· Δ<%= correction.value_delta_cents %>¢<% end %>
+            <% if correction.value_delta_cents.present? %>· value change <%= format_money_cents(correction.value_delta_cents) %><% end %>
             · <%= correction.reason %>
           </li>
         <% end %>

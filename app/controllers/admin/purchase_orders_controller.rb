@@ -46,7 +46,7 @@ module Admin
         notice += " Replacement order ##{result[:replacement_order].number} created."
       end
       redirect_to admin_purchase_order_path(@purchase_order), notice: notice
-    rescue Purchasing::Error, ActiveRecord::RecordInvalid, ActiveRecord::RecordNotFound => e
+    rescue Purchasing::Error, Money::ParseCents::Error, ActiveRecord::RecordInvalid, ActiveRecord::RecordNotFound => e
       redirect_to admin_purchase_order_path(@purchase_order), alert: e.message
     end
 
@@ -89,9 +89,7 @@ module Admin
     def optional_cents(value)
       return if value.blank?
 
-      Integer(value)
-    rescue ArgumentError, TypeError
-      nil
+      Money::ParseCents.call(value)
     end
   end
 end

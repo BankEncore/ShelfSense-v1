@@ -20,15 +20,15 @@
     <li>Matched units: <%= @preview_lines.sum { |row| row[:matched_quantity] } %></li>
     <li>Unplanned units: <%= @preview_lines.sum { |row| row[:unplanned_quantity] } %></li>
     <li>Customer allocations to create: <%= @preview_lines.count { |row| row[:allocates] } %></li>
-    <li>Merchandise value: <%= @receipt.merchandise_total_cents %> cents</li>
+    <li>Merchandise value: <%= format_money_cents(@receipt.merchandise_total_cents) %></li>
     <li>
-      Freight: <%= @receipt.freight_cents %>
-      · Handling: <%= @receipt.handling_cents %>
-      · Tax: <%= @receipt.supplier_tax_cents %>
-      · Misc: <%= @receipt.miscellaneous_charges_cents %>
+      Freight: <%= format_money_cents(@receipt.freight_cents) %>
+      · Handling: <%= format_money_cents(@receipt.handling_cents) %>
+      · Tax: <%= format_money_cents(@receipt.supplier_tax_cents) %>
+      · Misc: <%= format_money_cents(@receipt.miscellaneous_charges_cents) %>
     </li>
-    <li>Ancillary total (not inventoried): <%= @receipt.ancillary_total_cents %> cents</li>
-    <li>Operational acquisition total: <%= @receipt.operational_acquisition_total_cents %> cents</li>
+    <li>Ancillary total (not inventoried): <%= format_money_cents(@receipt.ancillary_total_cents) %></li>
+    <li>Operational acquisition total: <%= format_money_cents(@receipt.operational_acquisition_total_cents) %></li>
   </ul>
 </section>
 
@@ -42,7 +42,8 @@
         <th scope="col">Received</th>
         <th scope="col">Matched</th>
         <th scope="col">Unplanned</th>
-        <th scope="col">Unit cost</th>
+        <th scope="col">Expected unit cost</th>
+        <th scope="col">Actual unit cost</th>
         <th scope="col">Allocation</th>
       </tr>
     </thead>
@@ -55,7 +56,8 @@
           <td><%= line.received_quantity %></td>
           <td><%= row[:matched_quantity] %></td>
           <td><%= row[:unplanned_quantity] %></td>
-          <td><%= line.actual_unit_cost_cents %></td>
+          <td><%= format_money_cents(line.purchase_order_line.expected_unit_cost_cents_snapshot) %></td>
+          <td><%= format_money_cents(line.actual_unit_cost_cents) %></td>
           <td>
             <% if row[:allocates] %>
               Reserve request #<%= row[:request].number %>

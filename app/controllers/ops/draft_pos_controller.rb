@@ -37,6 +37,8 @@ module Ops
       )
       redirect_to ops_purchase_order_path(@purchase_order),
                   notice: "Added stock order ##{order.number}."
+    rescue Money::ParseCents::Error => e
+      render_mutation_failure(:add_line, e, field: :expected_unit_cost_cents)
     rescue Purchasing::Error, ActiveRecord::RecordInvalid => e
       render_mutation_failure(:add_line, e, field: :identifier)
     rescue ActiveRecord::StaleObjectError => e
@@ -54,6 +56,8 @@ module Ops
         expected_lock_version: params[:lock_version]
       )
       redirect_to ops_purchase_order_path(@purchase_order), notice: "Line updated."
+    rescue Money::ParseCents::Error => e
+      render_mutation_failure(:update_line, e, field: :expected_unit_cost_cents, row_id: params[:line_id])
     rescue Purchasing::Error, ActiveRecord::RecordInvalid => e
       render_mutation_failure(:update_line, e, field: :quantity, row_id: params[:line_id])
     rescue ActiveRecord::StaleObjectError => e
@@ -148,9 +152,7 @@ module Ops
     def optional_cents(value)
       return if value.blank?
 
-      Integer(value)
-    rescue ArgumentError, TypeError
-      nil
+      Money::ParseCents.call(value)
     end
   end
 end
