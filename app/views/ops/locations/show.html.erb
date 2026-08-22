@@ -1,95 +1,166 @@
 <% content_for :title, "Location queue" %>
-<h1>Location queue</h1>
-<p>Pending in-store customer requests for <%= current_store.admin_label %>. Confirm location to reserve, or mark not located.</p>
+<header class="ops-doc-header">
+  <div>
+    <h1>Location queue</h1>
+    <p>Oldest requests appear first for <%= current_store.admin_label %>. Select a request, then record what you found.</p>
+  </div>
+  <p><%= link_to "Exit to Purchasing", admin_orders_path %></p>
+</header>
+
 <%= render "ops/shared/error_summary", errors: @mutation_errors, conflict: @conflict, title: "Location action could not be completed" %>
 
 <% if @pending_requests.empty? %>
-  <p>No pending location requests.</p>
+  <section class="surface ops-empty-state">
+    <h2>Location work is caught up</h2>
+    <p>There are no customer requests waiting for a physical search at this store.</p>
+    <p><%= link_to "View customer requests", admin_customer_requests_path, class: "btn" %></p>
+  </section>
 <% else %>
-  <table class="ops-queue" data-controller="<%= @mutation_errors.present? ? 'row-selection' : 'focus-restore row-selection' %>" data-action="keydown->row-selection#keydown">
-    <thead>
-      <tr>
-        <th scope="col">#</th>
-        <th scope="col">Customer</th>
-        <th scope="col">Merchandise</th>
-        <th scope="col">Type</th>
-        <th scope="col">Actions</th>
-      </tr>
-    </thead>
-    <tbody>
-      <% @pending_requests.each do |request| %>
-        <% variant = request.product_variant %>
-        <tr tabindex="-1" aria-selected="<%= (@selected_row_id.to_s == request.id.to_s).to_s %>" class="<%= "is-selected" if @selected_row_id.to_s == request.id.to_s %>" data-row-selection-target="row">
-          <td><%= request.number %></td>
-          <td><%= request.customer.display_name %></td>
-          <td>
-            <%= variant.product.name %>
-            <code><%= variant.sku %></code>
-          </td>
-          <td><%= variant.variant_type.capitalize %></td>
-          <td>
-            <%= form_with url: ops_location_confirm_path(request), method: :post, local: true, html: { class: "ops-inline-form" } do %>
-              <%= hidden_field_tag :lock_version, request.lock_version %>
-              <% if variant.used? %>
-                <% units = Inventory::Availability.unreserved_on_hand_units(current_store, variant).order(:unit_identifier) %>
-                <label>
-                  Unit
-                  <select name="inventory_unit_id" required <%= "autofocus aria-describedby=location_confirm_#{request.id}_error" if @selected_row_id.to_s == request.id.to_s && @error_action == :confirm %>>
-                    <option value="">Select unit…</option>
-                    <% units.each do |unit| %>
-                      <option value="<%= unit.id %>" <%= "selected" if @selected_row_id.to_s == request.id.to_s && @submitted&.fetch("inventory_unit_id", nil) == unit.id %>><%= unit.unit_identifier %></option>
-                    <% end %>
-                  </select>
-                </label>
-                <label>
-                  or scan
-                  <input type="text" name="unit_identifier" value="<%= @selected_row_id.to_s == request.id.to_s ? @submitted&.fetch("unit_identifier", nil) : nil %>" autocomplete="off" inputmode="numeric"<%= " data-focus-restore-target=lookup" if request == @pending_requests.first %>>
-                </label>
-              <% end %>
-              <button type="submit" data-row-primary<%= " data-focus-restore-target=lookup" if request == @pending_requests.first && variant.standard? %>>Located</button>
-              <%= render "ops/shared/inline_row_error", action: :confirm, row_id: request.id, id: "location_confirm_#{request.id}_error" %>
+  <div class="location-workspace"
+       data-controller="location-queue"
+       data-location-queue-selected-id-value="<%= @selected_row_id.presence || @pending_requests.first.id %>"
+       data-action="keydown@window->location-queue#keydown">
+    <section aria-labelledby="location-queue-heading">
+      <h2 id="location-queue-heading" class="visually-hidden">Requests awaiting location</h2>
+      <div class="table-scroll">
+        <table class="ops-queue location-queue">
+          <thead>
+            <tr>
+              <th scope="col">Request</th>
+              <th scope="col">Customer</th>
+              <th scope="col">Merchandise</th>
+              <th scope="col">Shelving</th>
+              <th scope="col">Available</th>
+              <th scope="col"><span class="visually-hidden">Select</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @pending_requests.each do |request| %>
+              <% variant = request.product_variant %>
+              <% product = variant.product %>
+              <% selected = (@selected_row_id.presence || @pending_requests.first.id).to_s == request.id.to_s %>
+              <tr tabindex="<%= selected ? 0 : -1 %>"
+                  aria-selected="<%= selected %>"
+                  class="<%= "is-selected" if selected %>"
+                  data-location-queue-target="row"
+                  data-request-id="<%= request.id %>"
+                  data-action="click->location-queue#selectRow">
+                <td>
+                  <strong>#<%= request.number %></strong>
+                  <span class="location-queue__secondary"><%= time_ago_in_words(request.created_at) %> ago</span>
+                </td>
+                <td>
+                  <strong><%= request.customer.display_name %></strong>
+                  <span class="location-queue__secondary"><%= request.customer.phone.presence || request.customer.email.presence || "No contact on file" %></span>
+                </td>
+                <td>
+                  <strong><%= product.name %></strong>
+                  <span class="location-queue__secondary">
+                    <span class="status-badge status-badge--<%= variant.used? ? "warning" : "active" %>"><%= variant.variant_type.capitalize %></span>
+                    SKU <%= variant.sku %> · <%= variant.industry_identifier.presence || product.industry_identifier.presence || product.primary_identifier %>
+                  </span>
+                </td>
+                <td><%= product.merchandise_category&.path_label.presence || "Not categorized" %></td>
+                <td><strong><%= @availability_by_request.fetch(request.id) %></strong></td>
+                <td><button type="button" class="btn btn--ghost" data-action="location-queue#openPanel">Select</button></td>
+              </tr>
             <% end %>
-            <%= form_with url: ops_location_not_located_path(request), method: :post, local: true, html: { class: "ops-inline-form" } do %>
-              <%= hidden_field_tag :lock_version, request.lock_version %>
-              <label>
-                Notes
-                <input type="text" name="notes" value="<%= @selected_row_id.to_s == request.id.to_s && @error_action == :not_located ? @submitted&.fetch("notes", nil) : nil %>" autocomplete="off" <%= "autofocus aria-describedby=location_cancel_#{request.id}_error" if @selected_row_id.to_s == request.id.to_s && @error_action == :not_located %>>
-              </label>
-              <button type="submit">Not located — cancel</button>
-              <%= render "ops/shared/inline_row_error", action: :not_located, row_id: request.id, id: "location_cancel_#{request.id}_error" %>
-            <% end %>
+          </tbody>
+        </table>
+      </div>
+      <p class="ops-hint">Use ↑/↓ to move, Enter to open the selected request, or choose Select. Escape closes the action panel without changing the request.</p>
+    </section>
+
+    <% @pending_requests.each do |request| %>
+      <% variant = request.product_variant %>
+      <% selected = (@selected_row_id.presence || @pending_requests.first.id).to_s == request.id.to_s %>
+      <section class="location-action-panel surface"
+               aria-labelledby="location-panel-title-<%= request.id %>"
+               <%= "hidden" unless selected %>
+               data-location-queue-target="panel"
+               data-request-id="<%= request.id %>">
+        <header class="location-action-panel__header">
+          <div>
+            <p class="eyebrow">Request #<%= request.number %></p>
+            <h2 id="location-panel-title-<%= request.id %>"><%= variant.product.name %></h2>
+            <p><%= request.customer.display_name %> · apparent availability <strong><%= @availability_by_request.fetch(request.id) %></strong></p>
+          </div>
+          <button type="button" class="btn btn--ghost" data-action="location-queue#closePanel">Close <kbd>Esc</kbd></button>
+        </header>
+
+        <div class="location-action-panel__choices" role="group" aria-label="Location outcome">
+          <button type="button" class="btn" data-location-queue-target="initialFocus" data-action="location-queue#showLocate">Located</button>
+          <button type="button" class="btn btn--ghost" data-action="location-queue#showNotLocated">Not located</button>
+        </div>
+
+        <div data-location-queue-target="locateSection">
+          <%= form_with url: ops_location_confirm_path(request), method: :post, local: true, html: { class: "location-action-form" } do %>
+            <%= hidden_field_tag :lock_version, request.lock_version %>
             <% if variant.standard? %>
-              <%= form_with url: ops_location_not_located_path(request), method: :post, local: true, html: { class: "ops-inline-form" } do %>
-                <%= hidden_field_tag :lock_version, request.lock_version %>
-                <%= hidden_field_tag :convert_to_special_order, "1" %>
-                <label>
-                  Notes
-                  <input type="text" name="notes" value="<%= @selected_row_id.to_s == request.id.to_s && @error_action == :special_order ? @submitted&.fetch("notes", nil) : nil %>" autocomplete="off">
-                </label>
+              <p><strong>Physical confirmation required.</strong> Confirm that you have this copy in hand before reserving it for the customer.</p>
+              <label class="location-confirmation">
+                <input type="checkbox" name="physical_copy_confirmed" value="1" required<%= " aria-describedby=location_confirm_#{request.id}_error" if selected && @error_action == :confirm %>>
+                I physically located one copy of this title.
+              </label>
+            <% else %>
+              <p>Scan the exact Used inventory unit. Selection is available as a fallback.</p>
+              <label>
+                Unit scan
+                <input type="text" name="unit_identifier" value="<%= selected ? @submitted&.fetch("unit_identifier", nil) : nil %>" autocomplete="off" inputmode="numeric" data-location-scan>
+              </label>
+              <label>
+                Select unit instead
+                <select name="inventory_unit_id">
+                  <option value="">Select unit…</option>
+                  <% @units_by_request.fetch(request.id).each do |unit| %>
+                    <option value="<%= unit.id %>" <%= "selected" if selected && @submitted&.fetch("inventory_unit_id", nil) == unit.id %>><%= unit.unit_identifier %></option>
+                  <% end %>
+                </select>
+              </label>
+            <% end %>
+            <button type="submit" class="btn" data-location-submit>Reserve for <%= request.customer.display_name %></button>
+            <%= render "ops/shared/inline_row_error", action: :confirm, row_id: request.id, id: "location_confirm_#{request.id}_error" %>
+          <% end %>
+        </div>
+
+        <div hidden data-location-queue-target="notLocatedSection">
+          <%= form_with url: ops_location_not_located_path(request), method: :post, local: true, html: { class: "location-action-form" } do %>
+            <%= hidden_field_tag :lock_version, request.lock_version %>
+            <label>
+              Notes (optional)
+              <input type="text" name="notes" value="<%= selected ? @submitted&.fetch("notes", nil) : nil %>" autocomplete="off">
+            </label>
+            <% if variant.standard? %>
+              <fieldset>
+                <legend>Resolution</legend>
+                <label><input type="radio" name="resolution" value="cancel" checked data-action="location-queue#toggleResolution"> Cancel request</label>
+                <label><input type="radio" name="resolution" value="special_order" data-action="location-queue#toggleResolution"> Convert to special order</label>
+              </fieldset>
+              <div hidden data-location-queue-target="specialOrderFields">
+                <input type="hidden" name="convert_to_special_order" value="0" data-location-queue-target="convertField">
                 <label>
                   Supplier (optional if preferred)
                   <select name="supplier_id">
                     <option value="">Preferred source…</option>
-                    <% submitted_supplier = @selected_row_id.to_s == request.id.to_s ? @submitted&.fetch("supplier_id", nil) : nil %>
-                    <% if submitted_supplier.present? && Supplier.active.none? { |supplier| supplier.id == submitted_supplier } %>
-                      <option value="<%= submitted_supplier %>" selected>Unavailable submitted supplier (<%= submitted_supplier %>)</option>
-                    <% end %>
-                    <% Supplier.active.admin_ordered.each do |supplier| %>
-                      <option value="<%= supplier.id %>" <%= "selected" if @selected_row_id.to_s == request.id.to_s && @submitted&.fetch("supplier_id", nil) == supplier.id %>><%= supplier.admin_label %></option>
+                    <% @suppliers.each do |supplier| %>
+                      <option value="<%= supplier.id %>" <%= "selected" if selected && @submitted&.fetch("supplier_id", nil) == supplier.id %>><%= supplier.admin_label %></option>
                     <% end %>
                   </select>
                 </label>
                 <label>
                   Expected cost (cents)
-                  <input type="number" name="expected_unit_cost_cents" value="<%= @selected_row_id.to_s == request.id.to_s ? @submitted&.fetch("expected_unit_cost_cents", nil) : nil %>" min="0" <%= "autofocus aria-describedby=location_special_#{request.id}_error" if @selected_row_id.to_s == request.id.to_s && @error_action == :special_order %>>
+                  <input type="number" name="expected_unit_cost_cents" value="<%= selected ? @submitted&.fetch("expected_unit_cost_cents", nil) : nil %>" min="0">
                 </label>
-                <button type="submit">Not located — special order</button>
-                <%= render "ops/shared/inline_row_error", action: :special_order, row_id: request.id, id: "location_special_#{request.id}_error" %>
-              <% end %>
+              </div>
+            <% else %>
+              <p>This Used request cannot become a supplier order. Not located will cancel it.</p>
             <% end %>
-          </td>
-        </tr>
-      <% end %>
-    </tbody>
-  </table>
+            <button type="submit" class="btn btn--danger" data-location-resolution-submit><%= variant.standard? ? "Cancel request" : "Cancel Used request" %></button>
+            <%= render "ops/shared/inline_row_error", action: :not_located, row_id: request.id, id: "location_cancel_#{request.id}_error" %>
+            <%= render "ops/shared/inline_row_error", action: :special_order, row_id: request.id, id: "location_special_#{request.id}_error" %>
+          <% end %>
+        </div>
+      </section>
+    <% end %>
+  </div>
 <% end %>

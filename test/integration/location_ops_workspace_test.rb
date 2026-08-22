@@ -1,0 +1,83 @@
+# frozen_string_literal: true
+
+require "test_helper"
+
+class LocationOpsWorkspaceTest < ActionDispatch::IntegrationTest
+  setup do
+    bootstrap = bootstrap!
+    @store = bootstrap[:store]
+    @actor = bootstrap[:administrator]
+    tax = tax_class(code: "location_ops_#{SecureRandom.hex(3)}")
+    @variant = pos_sellable_variant(actor: @actor, tax_class: tax, name: "Find This Book")
+    open_quantity_stock(store: @store, variant: @variant, actor: @actor, quantity: 1, unit_cost_cents: 500)
+    @older_customer = Customer.create!(display_name: "Older Reader", phone: "555-0100")
+    @newer_customer = Customer.create!(display_name: "Newer Reader", email: "newer@example.com")
+    @older_request = create_request(@older_customer)
+    @newer_request = create_request(@newer_customer)
+    @older_request.update_columns(created_at: 2.days.ago)
+    @newer_request.update_columns(created_at: 1.hour.ago)
+    post session_path, params: { session: { username: @actor.username, password: "correct-horse-battery" } }
+  end
+
+  test "queue is oldest first and presents concise search context with focused actions" do
+    get ops_location_path
+
+    assert_response :success
+    rows = css_select(".location-queue tbody tr")
+    assert_equal [ @older_request.id, @newer_request.id ], rows.map { |row| row["data-request-id"] }
+    assert_select rows.first, text: /Older Reader/
+    assert_select rows.first, text: /555-0100/
+    assert_select rows.first, text: /Find This Book/
+    assert_select rows.first, text: /Standard/
+    assert_select rows.first, text: /SKU/
+    assert_select rows.first, text: /Not categorized/
+    assert_select rows.first, text: /1/
+    assert_select ".location-action-panel:not([hidden])", count: 1 do
+      assert_select "input[name='physical_copy_confirmed'][required]"
+      assert_select "button", text: /Reserve for Older Reader/
+      assert_select "input[name='resolution'][value='special_order']"
+      assert_select "[data-location-queue-target='specialOrderFields'][hidden]"
+    end
+  end
+
+  test "standard locate requires server-side physical confirmation" do
+    post ops_location_confirm_path(@older_request), params: { lock_version: @older_request.lock_version }
+
+    assert_response :unprocessable_entity
+    assert_select "[data-ops-error-summary]", text: /physically located/i
+    assert_equal "pending_location", @older_request.reload.status
+
+    post ops_location_confirm_path(@older_request), params: {
+      lock_version: @older_request.lock_version,
+      physical_copy_confirmed: "1"
+    }
+    assert_redirected_to ops_location_path
+    assert_equal "available", @older_request.reload.status
+  end
+
+  test "competing locate failure stays inline on the selected request" do
+    Customers::ConfirmLocation.call(customer_request: @older_request, actor: @actor)
+
+    post ops_location_confirm_path(@newer_request), params: {
+      lock_version: @newer_request.lock_version,
+      physical_copy_confirmed: "1"
+    }
+
+    assert_response :unprocessable_entity
+    assert_select "[data-ops-error-summary]", text: /no available/i
+    assert_select ".location-action-panel:not([hidden])[data-request-id='#{@newer_request.id}'] .ops-row-error",
+                  text: /no available/i
+    assert_equal "pending_location", @newer_request.reload.status
+  end
+
+  private
+
+  def create_request(customer)
+    Customers::CreateRequest.call(
+      store: @store,
+      customer: customer,
+      product_variant: @variant,
+      actor: @actor
+    )
+  end
+end

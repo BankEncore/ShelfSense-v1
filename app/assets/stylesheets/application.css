@@ -186,6 +186,64 @@ summary:focus-visible {
   outline-offset: -3px;
 }
 
+.location-workspace {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.location-queue td {
+  vertical-align: top;
+}
+
+.location-queue__secondary {
+  display: block;
+  margin-top: var(--space-1);
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+}
+
+.location-action-panel {
+  position: sticky;
+  bottom: var(--space-3);
+  box-shadow: 0 -0.5rem 1.5rem rgb(15 23 42 / 12%);
+}
+
+.location-action-panel__header,
+.location-action-panel__choices,
+.location-action-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: var(--space-3);
+}
+
+.location-action-panel__header {
+  justify-content: space-between;
+}
+
+.location-action-panel__header h2,
+.location-action-panel__header p {
+  margin-block: 0 var(--space-1);
+}
+
+.location-action-panel__choices {
+  margin-block: var(--space-3);
+}
+
+.location-action-form > p,
+.location-action-form > fieldset,
+.location-action-form > .ops-row-error {
+  flex-basis: 100%;
+}
+
+.location-confirmation {
+  flex-basis: 100%;
+}
+
+.ops-empty-state {
+  text-align: center;
+}
+
 form[data-dirty="true"] {
   border-inline-start: 3px solid var(--color-warning);
   padding-inline-start: var(--space-2);
