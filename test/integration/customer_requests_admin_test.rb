@@ -93,6 +93,24 @@ class CustomerRequestsAdminTest < ActionDispatch::IntegrationTest
     assert_operator response.body.index("##{active_request.number}"), :<, response.body.index("##{@request.number}")
   end
 
+  test "show presents current promise and chronological fulfillment summary" do
+    sign_in_as("admin")
+    select_store
+
+    get admin_customer_request_path(@request)
+
+    assert_response :success
+    assert_select "h2", text: "Needs locating"
+    assert_select "h2", text: "Fulfillment timeline"
+    assert_select ".request-summary", text: /Alex Similar/
+    assert_select ".request-summary", text: /555-0199/
+    assert_select ".request-summary", text: /Accessible Lookup Book/
+    assert_select ".request-summary", text: /Pending location/
+    assert_select ".request-next-action a", text: "Open location queue"
+    assert_select ".fulfillment-timeline__event", minimum: 1, text: /Request created/
+    assert_select "details.technical-details", text: /Request ID/
+  end
+
   test "lookup endpoints deny direct requests without management permission" do
     viewer = User.create!(
       username: "request_viewer",

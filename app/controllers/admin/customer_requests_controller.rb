@@ -179,7 +179,34 @@ module Admin
     end
 
     def set_customer_request
-      @customer_request = CustomerRequest.find(params[:id])
+      @customer_request = CustomerRequest.includes(
+        :store,
+        :customer,
+        :location_failed_by,
+        :cancelled_by,
+        { product_variant: [ :product, :merchandise_condition ] },
+        { customer_request_allocations: [
+          :inventory_unit,
+          :released_by,
+          { purchase_receipt_line: :purchase_receipt },
+          { fulfilled_pos_transaction_line: :pos_transaction }
+        ] },
+        { orders: [
+          :supplier,
+          :replaces_order,
+          :cancelled_by,
+          { purchase_order_line: [
+            :line_state,
+            :cancellations,
+            { purchase_receipt_lines: :purchase_receipt },
+            :purchase_order
+          ] }
+        ] }
+      ).find(params[:id])
+      @allocations = @customer_request.customer_request_allocations.sort_by(&:created_at)
+      @related_orders = @customer_request.orders.sort_by(&:created_at)
+      @active_allocation = @allocations.find(&:reserved?)
+      @unsent_special_orders = @related_orders.select { |order| !order.cancelled? && order.unsent? }
       permission = action_name == "cancel" ? "customer_requests.manage" : "customers.view"
       nil unless authorize!(permission, store: @customer_request.store)
     end
