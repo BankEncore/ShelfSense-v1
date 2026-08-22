@@ -17,9 +17,24 @@
       <%= render "pos/receipts/directional_totals", transaction: @transaction %>
     </dl>
 
-    <% if @post_void_eligible %>
-      <p><%= link_to "Post-void", pos_transaction_post_void_path(@transaction), class: "btn" %></p>
-    <% end %>
+    <div class="actions pos-history__actions">
+      <% if @returnable %>
+        <%= action_link_to(
+              "Return items",
+              pos_transaction_return_items_path(@transaction),
+              style: :outline,
+              intent: :neutral
+            ) %>
+      <% end %>
+      <% if @post_void_eligible %>
+        <%= action_link_to(
+              "Post-void",
+              pos_transaction_post_void_path(@transaction),
+              style: :outline,
+              intent: :danger
+            ) %>
+      <% end %>
+    </div>
 
     <% @transaction.pos_controlled_actions.select { |action| action.action_type == "post_void" }.each do |action| %>
       <section aria-label="post void">
@@ -35,10 +50,6 @@
           <% end %>
         </dl>
       </section>
-    <% end %>
-
-    <% if @returnable %>
-      <p><%= link_to "Return items", pos_transaction_return_items_path(@transaction), class: "btn" %></p>
     <% end %>
 
     <section aria-label="Lines">
@@ -72,10 +83,10 @@
   <div class="pos-receipt__actions pos-no-print">
     <% receipt = Pos::CustomerReceipt.build(@transaction) %>
     <% if receipt.printable? %>
-      <button type="button" class="btn" data-action="pos-receipt#print">Reprint receipt</button>
+      <%= action_button("Reprint receipt", style: :outline, intent: :neutral, data: { action: "pos-receipt#print" }) %>
     <% else %>
       <p class="pos-enter__alert" role="alert"><%= receipt.error %></p>
     <% end %>
-    <%= link_to "Back to transactions", pos_transactions_path, class: "btn btn--secondary" %>
+    <%= action_link_to("Back to transactions", pos_transactions_path, style: :ghost, intent: :neutral) %>
   </div>
 </main>

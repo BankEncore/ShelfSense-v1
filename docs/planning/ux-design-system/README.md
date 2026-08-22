@@ -1,6 +1,6 @@
 # UX design system
 
-Status: **UDS-1 Implemented** for screen-chrome palette and shared primitives ([ADR-022](../../adr/ADR-022-warm-parchment-visual-tokens.md)). Phase 2.2 **architecture** remains; the Phase 2.2 **teal/plum palette is superseded**. UDS-2/UDS-3 continue representative and Register visual adoption. Grouped admin navigation remains Proposed until its prototype gate passes.
+Status: **UDS-1 Implemented**; **UDS-2 Implemented** for reference screens (Suppliers, Receiving, history/show) with ActionButtonHelper. Matrix rows remain **partial** until [accessibility-ergonomic-test-matrix.md](accessibility-ergonomic-test-matrix.md) evidence is attached. Phase 2.2 **architecture** remains; teal/plum palette superseded. UDS-3 continues Register visual adoption. Grouped admin navigation remains Proposed until its prototype gate passes.
 
 This packet is the cross-phase authority for ShelfSense presentation: Warm Parchment visual direction, button and action semantics, administrative navigation grouping, surface contracts (Register basket vs history vs print), deferred interaction patterns, and an incremental adoption program.
 
@@ -28,6 +28,8 @@ Do not fold POS into a shared ops shell. Do not replace admin show pages with dr
 | [program-plan.md](program-plan.md) | Adoption slices UDS-0–UDS-3, rollout contract, deferrals, acceptance | Proposed |
 | [uds-1-plan.md](uds-1-plan.md) | UDS-1 implementation plan (tokens, ActionButtonHelper, shared primitives; not a Phase N.M) | Implemented (UDS-1a–1d) |
 | [uds-1-user-stories.md](uds-1-user-stories.md) | Issue-ready backlog stories for UDS-1a–1d | Implemented (acceptance checked) |
+| [uds-2-plan.md](uds-2-plan.md) | UDS-2 representative screen convergence (Suppliers, Receiving, history, review dialogs) | Implemented (partial matrix; a11y evidence pending) |
+| [uds-2-user-stories.md](uds-2-user-stories.md) | Issue-ready backlog stories for UDS-2a–2d | Implemented |
 | [accessibility-ergonomic-test-matrix.md](accessibility-ergonomic-test-matrix.md) | Manual a11y/ergonomic gate + timed cashier scenarios for UDS-2/UDS-3 | Proposed acceptance gate |
 | [warm-parchment.md](warm-parchment.md) | Tokens, typography, density, contrast (AA baseline) | Implemented (UDS-1) |
 | [warm-parchment-palette-mockup.html](warm-parchment-palette-mockup.html) | Static HTML demo of the contrast-complete palette | Inspirational |

@@ -110,6 +110,30 @@ class SuppliersAdminTest < ActionDispatch::IntegrationTest
     assert_not source.reload.active?
   end
 
+  test "supplier show and form use ActionButtonHelper controlled classes" do
+    sign_in_as("admin")
+    supplier = Supplier.create!(name: "Markup Supp", code: "mk_#{SecureRandom.hex(2)}")
+
+    get admin_suppliers_path
+    assert_response :success
+    assert_select "a.btn.btn--solid.btn--brand.btn--standard", text: "New supplier"
+
+    get admin_supplier_path(supplier)
+    assert_response :success
+    assert_select "a.btn.btn--outline.btn--neutral.btn--standard[href=?]", edit_admin_supplier_path(supplier), text: "Edit"
+    assert_select "form[action=?][method=post]", admin_supplier_path(supplier) do
+      assert_select "input[name=_method][value=delete]"
+      assert_select "button.btn.btn--outline.btn--warning.btn--standard[type=submit]", text: "Deactivate"
+    end
+    assert_select "[data-turbo-confirm]", count: 0
+    assert_select "a[data-method]", count: 0
+
+    get edit_admin_supplier_path(supplier)
+    assert_response :success
+    assert_select "form.form button.btn.btn--solid.btn--brand.btn--standard", text: "Save Changes"
+    assert_select "a.btn.btn--ghost.btn--neutral.btn--standard[href=?]", admin_supplier_path(supplier), text: "Cancel"
+  end
+
   test "cannot deactivate supplier with draft purchase orders" do
     sign_in_as("admin")
     store = @bootstrap[:store]
