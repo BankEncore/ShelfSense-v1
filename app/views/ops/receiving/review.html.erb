@@ -10,6 +10,7 @@
   </div>
   <p><%= link_to "Back to draft", ops_receiving_path(@receipt) %></p>
 </header>
+<%= render "ops/shared/error_summary", errors: @mutation_errors, conflict: @conflict, title: "Receipt cannot be posted" %>
 
 <section>
   <h2>Summary</h2>
@@ -72,6 +73,7 @@
   <%= form_with url: ops_receiving_post_path(@receipt), method: :post, local: true do %>
     <%= hidden_field_tag :lock_version, @receipt.lock_version %>
     <%= hidden_field_tag :idempotency_key, SecureRandom.uuid_v7 %>
-    <button type="submit">Post receipt</button>
+    <button type="submit" <%= "autofocus aria-describedby=receipt_post_error" if @error_action == :post %>>Post receipt</button>
+    <%= render "ops/shared/inline_row_error", action: :post, id: "receipt_post_error" %>
   <% end %>
 </section>

@@ -9,6 +9,7 @@
     · <%= link_to "Exit to Purchasing", admin_orders_path %>
   </p>
 </header>
+<%= render "ops/shared/error_summary", errors: @mutation_errors, conflict: false, title: "Draft receipt could not be created" %>
 
 <% if effective_permissions.include?("purchase_receipts.manage") %>
   <section class="ops-actions">
@@ -16,22 +17,23 @@
     <%= form_with url: ops_receiving_create_path, method: :post, local: true do %>
       <label>
         Supplier
-        <select name="supplier_id" required>
+        <select name="supplier_id" required <%= "autofocus aria-describedby=receipt_create_error" if @error_action == :create %>>
           <option value="">Select…</option>
           <% @suppliers.each do |supplier| %>
-            <option value="<%= supplier.id %>"><%= supplier.admin_label %></option>
+            <option value="<%= supplier.id %>" <%= "selected" if @submitted&.fetch("supplier_id", nil) == supplier.id %>><%= supplier.admin_label %></option>
           <% end %>
         </select>
       </label>
       <label>
         Received at
-        <input type="datetime-local" name="received_at">
+        <input type="datetime-local" name="received_at" value="<%= @submitted&.fetch("received_at", nil) %>">
       </label>
       <label>
         Supplier document #
-        <input type="text" name="supplier_document_number" autocomplete="off">
+        <input type="text" name="supplier_document_number" value="<%= @submitted&.fetch("supplier_document_number", nil) %>" autocomplete="off">
       </label>
       <button type="submit">Create draft</button>
+      <%= render "ops/shared/inline_row_error", action: :create, id: "receipt_create_error" %>
     <% end %>
   </section>
 <% end %>

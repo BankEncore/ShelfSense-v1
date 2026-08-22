@@ -1,0 +1,3 @@
+<% if @error_action == local_assigns[:action] && (!local_assigns.key?(:row_id) || @selected_row_id.to_s == row_id.to_s) %>
+  <span class="field-error ops-row-error" id="<%= local_assigns.fetch(:id, "ops_row_error") %>" role="alert"><%= Array(@mutation_errors).to_sentence %></span>
+<% end %>

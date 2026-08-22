@@ -1,11 +1,12 @@
 <% content_for :title, "Location queue" %>
 <h1>Location queue</h1>
 <p>Pending in-store customer requests for <%= current_store.admin_label %>. Confirm location to reserve, or mark not located.</p>
+<%= render "ops/shared/error_summary", errors: @mutation_errors, conflict: @conflict, title: "Location action could not be completed" %>
 
 <% if @pending_requests.empty? %>
   <p>No pending location requests.</p>
 <% else %>
-  <table class="ops-queue" data-controller="focus-restore row-selection" data-action="keydown->row-selection#keydown">
+  <table class="ops-queue" data-controller="<%= @mutation_errors.present? ? 'row-selection' : 'focus-restore row-selection' %>" data-action="keydown->row-selection#keydown">
     <thead>
       <tr>
         <th scope="col">#</th>
@@ -18,7 +19,7 @@
     <tbody>
       <% @pending_requests.each do |request| %>
         <% variant = request.product_variant %>
-        <tr tabindex="-1" aria-selected="false" data-row-selection-target="row">
+        <tr tabindex="-1" aria-selected="<%= (@selected_row_id.to_s == request.id.to_s).to_s %>" class="<%= "is-selected" if @selected_row_id.to_s == request.id.to_s %>" data-row-selection-target="row">
           <td><%= request.number %></td>
           <td><%= request.customer.display_name %></td>
           <td>
@@ -33,27 +34,29 @@
                 <% units = Inventory::Availability.unreserved_on_hand_units(current_store, variant).order(:unit_identifier) %>
                 <label>
                   Unit
-                  <select name="inventory_unit_id" required>
+                  <select name="inventory_unit_id" required <%= "autofocus aria-describedby=location_confirm_#{request.id}_error" if @selected_row_id.to_s == request.id.to_s && @error_action == :confirm %>>
                     <option value="">Select unit…</option>
                     <% units.each do |unit| %>
-                      <option value="<%= unit.id %>"><%= unit.unit_identifier %></option>
+                      <option value="<%= unit.id %>" <%= "selected" if @selected_row_id.to_s == request.id.to_s && @submitted&.fetch("inventory_unit_id", nil) == unit.id %>><%= unit.unit_identifier %></option>
                     <% end %>
                   </select>
                 </label>
                 <label>
                   or scan
-                  <input type="text" name="unit_identifier" autocomplete="off" inputmode="numeric"<%= " data-focus-restore-target=lookup" if request == @pending_requests.first %>>
+                  <input type="text" name="unit_identifier" value="<%= @selected_row_id.to_s == request.id.to_s ? @submitted&.fetch("unit_identifier", nil) : nil %>" autocomplete="off" inputmode="numeric"<%= " data-focus-restore-target=lookup" if request == @pending_requests.first %>>
                 </label>
               <% end %>
               <button type="submit" data-row-primary<%= " data-focus-restore-target=lookup" if request == @pending_requests.first && variant.standard? %>>Located</button>
+              <%= render "ops/shared/inline_row_error", action: :confirm, row_id: request.id, id: "location_confirm_#{request.id}_error" %>
             <% end %>
             <%= form_with url: ops_location_not_located_path(request), method: :post, local: true, html: { class: "ops-inline-form" } do %>
               <%= hidden_field_tag :lock_version, request.lock_version %>
               <label>
                 Notes
-                <input type="text" name="notes" autocomplete="off">
+                <input type="text" name="notes" value="<%= @selected_row_id.to_s == request.id.to_s && @error_action == :not_located ? @submitted&.fetch("notes", nil) : nil %>" autocomplete="off" <%= "autofocus aria-describedby=location_cancel_#{request.id}_error" if @selected_row_id.to_s == request.id.to_s && @error_action == :not_located %>>
               </label>
               <button type="submit">Not located — cancel</button>
+              <%= render "ops/shared/inline_row_error", action: :not_located, row_id: request.id, id: "location_cancel_#{request.id}_error" %>
             <% end %>
             <% if variant.standard? %>
               <%= form_with url: ops_location_not_located_path(request), method: :post, local: true, html: { class: "ops-inline-form" } do %>
@@ -61,22 +64,27 @@
                 <%= hidden_field_tag :convert_to_special_order, "1" %>
                 <label>
                   Notes
-                  <input type="text" name="notes" autocomplete="off">
+                  <input type="text" name="notes" value="<%= @selected_row_id.to_s == request.id.to_s && @error_action == :special_order ? @submitted&.fetch("notes", nil) : nil %>" autocomplete="off">
                 </label>
                 <label>
                   Supplier (optional if preferred)
                   <select name="supplier_id">
                     <option value="">Preferred source…</option>
+                    <% submitted_supplier = @selected_row_id.to_s == request.id.to_s ? @submitted&.fetch("supplier_id", nil) : nil %>
+                    <% if submitted_supplier.present? && Supplier.active.none? { |supplier| supplier.id == submitted_supplier } %>
+                      <option value="<%= submitted_supplier %>" selected>Unavailable submitted supplier (<%= submitted_supplier %>)</option>
+                    <% end %>
                     <% Supplier.active.admin_ordered.each do |supplier| %>
-                      <option value="<%= supplier.id %>"><%= supplier.admin_label %></option>
+                      <option value="<%= supplier.id %>" <%= "selected" if @selected_row_id.to_s == request.id.to_s && @submitted&.fetch("supplier_id", nil) == supplier.id %>><%= supplier.admin_label %></option>
                     <% end %>
                   </select>
                 </label>
                 <label>
                   Expected cost (cents)
-                  <input type="number" name="expected_unit_cost_cents" min="0">
+                  <input type="number" name="expected_unit_cost_cents" value="<%= @selected_row_id.to_s == request.id.to_s ? @submitted&.fetch("expected_unit_cost_cents", nil) : nil %>" min="0" <%= "autofocus aria-describedby=location_special_#{request.id}_error" if @selected_row_id.to_s == request.id.to_s && @error_action == :special_order %>>
                 </label>
                 <button type="submit">Not located — special order</button>
+                <%= render "ops/shared/inline_row_error", action: :special_order, row_id: request.id, id: "location_special_#{request.id}_error" %>
               <% end %>
             <% end %>
           </td>

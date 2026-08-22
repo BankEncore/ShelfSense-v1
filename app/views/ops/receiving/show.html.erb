@@ -16,6 +16,7 @@
     · <%= link_to "Exit to Purchasing", admin_orders_path %>
   </p>
 </header>
+<%= render "ops/shared/error_summary", errors: @mutation_errors, conflict: @conflict, title: "Receipt was not changed" %>
 
 <% if @receipt.draft? && effective_permissions.include?("purchase_receipts.manage") %>
   <section class="ops-actions">
@@ -24,41 +25,43 @@
       <%= hidden_field_tag :lock_version, @receipt.lock_version %>
       <label>
         Received at
-        <input type="datetime-local" name="received_at" value="<%= @receipt.received_at&.strftime("%Y-%m-%dT%H:%M") %>">
+        <input type="datetime-local" name="received_at" value="<%= @error_action == :update ? @submitted&.fetch("received_at", nil) : @receipt.received_at&.strftime("%Y-%m-%dT%H:%M") %>" <%= "autofocus aria-describedby=receipt_header_error" if @error_action == :update %>>
       </label>
       <label>
         Supplier document #
-        <input type="text" name="supplier_document_number" value="<%= @receipt.supplier_document_number %>">
+        <input type="text" name="supplier_document_number" value="<%= @error_action == :update ? @submitted&.fetch("supplier_document_number", nil) : @receipt.supplier_document_number %>">
       </label>
       <label>
         Supplier document date
-        <input type="date" name="supplier_document_date" value="<%= @receipt.supplier_document_date %>">
+        <input type="date" name="supplier_document_date" value="<%= @error_action == :update ? @submitted&.fetch("supplier_document_date", nil) : @receipt.supplier_document_date %>">
       </label>
       <label>
         Freight (cents)
-        <input type="number" name="freight_cents" min="0" value="<%= @receipt.freight_cents %>">
+        <input type="number" name="freight_cents" min="0" value="<%= @error_action == :update ? @submitted&.fetch("freight_cents", nil) : @receipt.freight_cents %>">
       </label>
       <label>
         Handling (cents)
-        <input type="number" name="handling_cents" min="0" value="<%= @receipt.handling_cents %>">
+        <input type="number" name="handling_cents" min="0" value="<%= @error_action == :update ? @submitted&.fetch("handling_cents", nil) : @receipt.handling_cents %>">
       </label>
       <label>
         Supplier tax (cents)
-        <input type="number" name="supplier_tax_cents" min="0" value="<%= @receipt.supplier_tax_cents %>">
+        <input type="number" name="supplier_tax_cents" min="0" value="<%= @error_action == :update ? @submitted&.fetch("supplier_tax_cents", nil) : @receipt.supplier_tax_cents %>">
       </label>
       <label>
         Misc charges (cents)
-        <input type="number" name="miscellaneous_charges_cents" min="0" value="<%= @receipt.miscellaneous_charges_cents %>">
+        <input type="number" name="miscellaneous_charges_cents" min="0" value="<%= @error_action == :update ? @submitted&.fetch("miscellaneous_charges_cents", nil) : @receipt.miscellaneous_charges_cents %>">
       </label>
       <label>
         Charge notes
-        <input type="text" name="charge_notes" value="<%= @receipt.charge_notes %>">
+        <input type="text" name="charge_notes" value="<%= @error_action == :update ? @submitted&.fetch("charge_notes", nil) : @receipt.charge_notes %>">
       </label>
       <label>
         Notes
-        <input type="text" name="notes" value="<%= @receipt.notes %>">
+        <input type="text" name="notes" value="<%= @error_action == :update ? @submitted&.fetch("notes", nil) : @receipt.notes %>">
       </label>
       <button type="submit" data-ops-save>Save header</button>
+      <%= render "ops/shared/inline_row_error", action: :update, id: "receipt_header_error" %>
+      <% if @conflict && @error_action == :update %><small>Current saved notes: <%= @receipt.notes.presence || "blank" %>; freight: <%= @receipt.freight_cents %> cents.</small><% end %>
     <% end %>
     <p class="ops-hint">Ancillary charges are recorded but never enter inventory valuation.</p>
   </section>

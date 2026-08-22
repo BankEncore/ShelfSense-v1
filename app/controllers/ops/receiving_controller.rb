@@ -74,8 +74,14 @@ module Ops
         notes: params[:notes]
       )
       redirect_to ops_receiving_path(receipt), notice: "Draft receipt created."
-    rescue Purchasing::Error, ActiveRecord::RecordInvalid => e
-      redirect_to ops_receiving_index_path, alert: e.message
+    rescue Purchasing::Error, ActiveRecord::RecordInvalid, ActiveRecord::RecordNotFound => e
+      @submitted = params.to_unsafe_h.slice("supplier_id", "received_at", "supplier_document_number")
+      @error_action = :create
+      @error_field = :supplier_id
+      @mutation_errors = [e.message]
+      @draft_receipts = PurchaseReceipt.draft.for_store(current_store).includes(:supplier, :purchase_receipt_lines).order(created_at: :desc)
+      @suppliers = Supplier.active.admin_ordered
+      render :index, status: :unprocessable_entity
     end
 
     def update
@@ -95,10 +101,9 @@ module Ops
       )
       redirect_to ops_receiving_path(@receipt), notice: "Receipt updated."
     rescue Purchasing::Error, ActiveRecord::RecordInvalid => e
-      redirect_to ops_receiving_path(@receipt), alert: e.message
-    rescue ActiveRecord::StaleObjectError
-      redirect_to ops_receiving_path(@receipt),
-                  alert: "This receipt was changed by someone else. Reload and try again."
+      render_mutation_failure(:update, e, field: :received_at)
+    rescue ActiveRecord::StaleObjectError => e
+      render_mutation_failure(:update, e, field: :received_at, stale: true)
     end
 
     def add_line
@@ -125,10 +130,9 @@ module Ops
         end
       end
     rescue Purchasing::Error, ActiveRecord::RecordInvalid => e
-      redirect_to ops_receiving_path(@receipt), alert: e.message
-    rescue ActiveRecord::StaleObjectError
-      redirect_to ops_receiving_path(@receipt),
-                  alert: "This receipt was changed by someone else. Reload and try again."
+      render_mutation_failure(:add_line, e, field: :received_quantity, row_id: params[:purchase_order_line_id])
+    rescue ActiveRecord::StaleObjectError => e
+      render_mutation_failure(:add_line, e, field: :received_quantity, row_id: params[:purchase_order_line_id], stale: true)
     end
 
     def update_line
@@ -144,10 +148,9 @@ module Ops
       )
       redirect_to ops_receiving_path(@receipt), notice: "Line updated."
     rescue Purchasing::Error, ActiveRecord::RecordInvalid => e
-      redirect_to ops_receiving_path(@receipt), alert: e.message
-    rescue ActiveRecord::StaleObjectError
-      redirect_to ops_receiving_path(@receipt),
-                  alert: "This receipt was changed by someone else. Reload and try again."
+      render_mutation_failure(:update_line, e, field: :received_quantity, row_id: params[:line_id])
+    rescue ActiveRecord::StaleObjectError => e
+      render_mutation_failure(:update_line, e, field: :received_quantity, row_id: params[:line_id], stale: true)
     end
 
     def review
@@ -174,10 +177,9 @@ module Ops
       )
       redirect_to ops_receiving_path(receipt), notice: "Receipt ##{receipt.number} posted."
     rescue Purchasing::Error, ActiveRecord::RecordInvalid => e
-      redirect_to ops_receiving_review_path(@receipt), alert: e.message
-    rescue ActiveRecord::StaleObjectError
-      redirect_to ops_receiving_path(@receipt),
-                  alert: "This receipt was changed by someone else. Reload and try again."
+      render_review_failure(e)
+    rescue ActiveRecord::StaleObjectError => e
+      render_review_failure(e, stale: true)
     end
 
     def reverse
@@ -223,6 +225,33 @@ module Ops
     end
 
     private
+
+    def render_mutation_failure(action, exception, field:, row_id: nil, stale: false)
+      @submitted = params.to_unsafe_h.slice(
+        "received_at", "supplier_document_number", "supplier_document_date", "freight_cents", "handling_cents",
+        "supplier_tax_cents", "miscellaneous_charges_cents", "charge_notes", "notes", "purchase_order_line_id",
+        "received_quantity", "actual_unit_cost_cents"
+      )
+      @error_action = action
+      @error_field = field
+      @selected_row_id = row_id
+      @conflict = stale
+      @mutation_errors = [stale ? "This receipt was changed by someone else." : exception.message]
+      load_receipt_lines
+      respond_to do |format|
+        format.html { render :show, status: :unprocessable_entity }
+        format.turbo_stream { render :mutation_failure, status: :unprocessable_entity }
+      end
+    end
+
+    def render_review_failure(exception, stale: false)
+      @error_action = :post
+      @conflict = stale
+      @mutation_errors = [stale ? "This receipt was changed by someone else." : exception.message]
+      load_receipt_lines
+      @preview_lines = @lines.map { |line| preview_line(line) }
+      render :review, status: :unprocessable_entity
+    end
 
     def load_receipt_lines
       @receipt.reload

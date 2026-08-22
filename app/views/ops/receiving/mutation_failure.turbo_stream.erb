@@ -1,0 +1,9 @@
+<%= turbo_stream.replace "ops_mutation_errors" do %>
+  <%= render "ops/shared/error_summary", errors: @mutation_errors, conflict: @conflict, title: "Receipt was not changed" %>
+<% end %>
+<%= turbo_stream.replace "receiving_line_scanner" do %>
+  <%= render "line_scanner" %>
+<% end %>
+<%= turbo_stream.replace "receiving_line_grid" do %>
+  <%= render "line_grid" %>
+<% end %>
