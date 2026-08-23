@@ -4,7 +4,13 @@ Status: **Accepted** for [uds-foundation-closeout-plan.md](uds-foundation-closeo
 
 ## Phase 1 (C1–C4)
 
-- UDS reference suites run on the integration branch and locally via `./dev/rails-docker bin/rails test test/system/uds_*`.
+- UDS reference suites run on the integration branch and locally via:
+
+  ```sh
+  ./dev/rails-docker sh -c 'bin/rails db:test:prepare && bin/rails test test/system/uds_*'
+  ```
+
+  Use `sh -c` so both commands run inside Docker; `&& bin/rails test ...` after the helper alone executes on the host.
 - Failures may write axe JSON under `tmp/uds-evidence/<sha>/<surface>/` locally.
 - The dedicated `uds_accessibility` CI job is **informational** until C5 freeze.
 
