@@ -141,11 +141,12 @@ class AdminPurchasingHubTest < ActionDispatch::IntegrationTest
     assert_redirected_to root_path
   end
 
-  test "flat nav includes purchasing link when hub eligible" do
+  test "grouped nav includes purchasing hub when hub eligible" do
     sign_in_as("admin")
     get root_path
     assert_response :success
     assert_match admin_purchasing_path, response.body
+    assert_match(/app-nav--grouped/, response.body)
   end
 
   test "hub visibility is memoized for the request across layout and hub action" do

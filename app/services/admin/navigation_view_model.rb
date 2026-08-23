@@ -12,6 +12,7 @@ module Admin
       current_store:,
       accessible_stores:,
       controller_path:,
+      hub_visible: nil,
       routes: Rails.application.routes.url_helpers
     )
       @user = user
@@ -19,6 +20,7 @@ module Admin
       @current_store = current_store
       @accessible_stores = accessible_stores
       @controller_path = controller_path.to_s
+      @hub_visible = hub_visible
       @routes = routes
     end
 
@@ -110,7 +112,7 @@ module Admin
 
     def destination_allowed?(destination)
       if destination.hub
-        return Purchasing::HubAccess.nav_visible?(user: @user, accessible_stores: @accessible_stores)
+        return hub_visible?
       end
 
       case destination.permission
@@ -121,6 +123,12 @@ module Admin
       else
         false
       end
+    end
+
+    def hub_visible?
+      return @hub_visible unless @hub_visible.nil?
+
+      Purchasing::HubAccess.nav_visible?(user: @user, accessible_stores: @accessible_stores)
     end
 
     def path_for(destination)
