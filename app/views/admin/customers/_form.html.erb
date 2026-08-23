@@ -1,10 +1,43 @@
-<%= form_with model: [:admin, customer] do |form| %>
+<%= form_with model: [:admin, customer], class: "form" do |form| %>
   <%= hidden_field_tag :return_to, @return_to if @return_to.present? %>
-  <% if customer.errors.any? %><ul><% customer.errors.full_messages.each do |m| %><li><%= m %></li><% end %></ul><% end %>
+  <%= render "shared/form_errors", record: customer %>
   <%= form.hidden_field :lock_version %>
-  <p><%= form.label :display_name %><%= form.text_field :display_name, autofocus: true %></p>
-  <p><%= form.label :email %><%= form.email_field :email %></p>
-  <p><%= form.label :phone %><%= form.telephone_field :phone %></p>
-  <p><%= form.label :notes %><%= form.text_area :notes %></p>
-  <p><%= form.submit %></p>
+
+  <div class="form-field">
+    <%= form.label :display_name %>
+    <%= form.text_field :display_name, autofocus: true %>
+  </div>
+  <div class="form-field">
+    <%= form.label :email %>
+    <%= form.email_field :email %>
+  </div>
+  <div class="form-field">
+    <%= form.label :phone %>
+    <%= form.telephone_field :phone %>
+  </div>
+  <div class="form-field">
+    <%= form.label :notes %>
+    <%= form.text_area :notes %>
+  </div>
+
+  <div class="actions">
+    <%= action_submit(
+          form,
+          customer.persisted? ? "Save Changes" : "Create Customer",
+          style: :solid,
+          intent: :brand
+        ) %>
+    <%= action_link_to(
+          "Cancel",
+          if @return_to.present?
+            @return_to
+          elsif customer.persisted?
+            admin_customer_path(customer)
+          else
+            admin_customers_path
+          end,
+          style: :ghost,
+          intent: :neutral
+        ) %>
+  </div>
 <% end %>

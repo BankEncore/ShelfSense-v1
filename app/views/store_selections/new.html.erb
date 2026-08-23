@@ -10,6 +10,6 @@
       <%= form.label :store_id, "Store" %>
       <%= form.collection_select :store_id, @stores, :id, :admin_label, { prompt: "Choose a store" }, required: true %>
     </p>
-    <p><%= form.submit "Continue" %></p>
+    <p><%= action_submit(form, "Continue", style: :solid, intent: :brand) %></p>
   <% end %>
 </section>

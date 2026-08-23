@@ -1,6 +1,6 @@
 <% content_for :title, "Merchandise Categories" %>
 <h1>Merchandise Categories</h1>
-<% if effective_permissions.include?("merchandise_categories.create") %><p><%= link_to "New category", new_admin_merchandise_category_path %></p><% end %>
+<% if effective_permissions.include?("merchandise_categories.create") %><p><%= action_link_to("New category", new_admin_merchandise_category_path, style: :solid, intent: :brand) %></p><% end %>
 <% if @merchandise_categories.empty? %>
   <p>No merchandise categories yet.</p>
 <% else %>

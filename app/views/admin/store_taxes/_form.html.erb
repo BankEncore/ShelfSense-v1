@@ -25,5 +25,5 @@
       </p>
     <% end %>
   <% end %>
-  <p><%= form.submit %></p>
+  <p><%= action_submit(form, store_tax.persisted? ? "Save Changes" : "Create Store Tax", style: :solid, intent: :brand) %></p>
 <% end %>

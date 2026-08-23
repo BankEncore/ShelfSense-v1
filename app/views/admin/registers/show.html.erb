@@ -1,7 +1,7 @@
 <% content_for :title, @register.name %>
 <h1><%= @register.name %></h1>
 <p><%= @register.register_number %> · <%= @register.store.admin_label %></p>
-<%= link_to "Edit", edit_admin_register_path(@register) if effective_permissions.include?("registers.manage") %>
+<%= action_link_to("Edit", edit_admin_register_path(@register), style: :outline, intent: :neutral) if effective_permissions.include?("registers.manage") %>
 <% if effective_permissions.include?("registers.deactivate") && @register.active? %>
-  <%= button_to "Deactivate", admin_register_path(@register), method: :delete %>
+  <%= action_button_to("Deactivate", admin_register_path(@register), style: :outline, intent: :warning, method: :delete) %>
 <% end %>

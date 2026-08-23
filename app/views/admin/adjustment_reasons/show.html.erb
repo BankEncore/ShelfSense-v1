@@ -8,11 +8,24 @@
 
 <% actions = [configuration_status_badge(@adjustment_reason.active?)] %>
 <% unless @adjustment_reason.system_protected? %>
-  <% actions << link_to("Edit", edit_admin_adjustment_reason_path(@adjustment_reason), class: "btn btn--secondary") %>
+  <% actions << action_link_to("Edit", edit_admin_adjustment_reason_path(@adjustment_reason), style: :outline, intent: :neutral) %>
   <% if @adjustment_reason.active? %>
-    <% actions << button_to("Deactivate", admin_adjustment_reason_path(@adjustment_reason), method: :delete, class: "btn btn--danger") %>
+    <% actions << action_button_to(
+         "Deactivate",
+         admin_adjustment_reason_path(@adjustment_reason),
+         style: :outline,
+         intent: :warning,
+         method: :delete
+       ) %>
   <% else %>
-    <% actions << button_to("Reactivate", reactivate_admin_adjustment_reason_path(@adjustment_reason), method: :post, params: { lock_version: @adjustment_reason.lock_version }, class: "btn") %>
+    <% actions << action_button_to(
+         "Reactivate",
+         reactivate_admin_adjustment_reason_path(@adjustment_reason),
+         style: :solid,
+         intent: :brand,
+         method: :post,
+         params: { lock_version: @adjustment_reason.lock_version }
+       ) %>
   <% end %>
 <% end %>
 

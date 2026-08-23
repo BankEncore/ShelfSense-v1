@@ -1,6 +1,6 @@
 <% content_for :title, "Roles" %>
 <h1>Roles</h1>
-<% if effective_permissions.include?("roles.create") %><p><%= link_to "New role", new_admin_role_path %></p><% end %>
+<% if effective_permissions.include?("roles.create") %><p><%= action_link_to("New role", new_admin_role_path, style: :solid, intent: :brand) %></p><% end %>
 <ul>
   <% @roles.each do |role| %>
     <li><%= link_to role.name, admin_role_path(role) %> (<%= role.key %>, <%= role.assignment_scope %>)</li>

@@ -8,11 +8,25 @@
 </p>
 <% if @merchandise_condition.description.present? %><p><%= @merchandise_condition.description %></p><% end %>
 <p>
-  <%= link_to "Edit", edit_admin_merchandise_condition_path(@merchandise_condition) if effective_permissions.include?("merchandise_conditions.update") %>
+  <%= action_link_to("Edit", edit_admin_merchandise_condition_path(@merchandise_condition), style: :outline, intent: :neutral) if effective_permissions.include?("merchandise_conditions.update") %>
   <% if effective_permissions.include?("merchandise_conditions.deactivate") && @merchandise_condition.active? %>
-    <%= button_to "Deactivate", admin_merchandise_condition_path(@merchandise_condition), method: :delete, form: { data: { turbo_confirm: "Deactivate this condition?" } } %>
+    <%= action_button_to(
+          "Deactivate",
+          admin_merchandise_condition_path(@merchandise_condition),
+          style: :outline,
+          intent: :warning,
+          method: :delete,
+          form: { data: { turbo_confirm: "Deactivate this condition?" } }
+        ) %>
   <% elsif effective_permissions.include?("merchandise_conditions.deactivate") && !@merchandise_condition.active? %>
-    <%= button_to "Reactivate", reactivate_admin_merchandise_condition_path(@merchandise_condition), method: :post, params: { lock_version: @merchandise_condition.lock_version } %>
+    <%= action_button_to(
+          "Reactivate",
+          reactivate_admin_merchandise_condition_path(@merchandise_condition),
+          style: :solid,
+          intent: :brand,
+          method: :post,
+          params: { lock_version: @merchandise_condition.lock_version }
+        ) %>
   <% end %>
 </p>
-<p><%= link_to "Back to conditions", admin_merchandise_conditions_path %></p>
+<p><%= action_link_to("Back to conditions", admin_merchandise_conditions_path, style: :link, intent: :neutral) %></p>

@@ -105,9 +105,17 @@
   <% end %>
 
   <div class="actions">
-    <%= form.submit class: "btn" %>
-    <%= link_to "Cancel",
+    <%= action_submit(
+          form,
+          form.object.new_record? ? "Create Variant" : "Save Variant",
+          style: :solid,
+          intent: :brand
+        ) %>
+    <%= action_link_to(
+          "Cancel",
           product_variant.persisted? ? admin_product_variant_path(product_variant) : admin_product_path(product),
-          class: "btn btn--ghost" %>
+          style: :ghost,
+          intent: :neutral
+        ) %>
   </div>
 <% end %>

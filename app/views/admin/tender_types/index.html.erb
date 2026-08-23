@@ -7,7 +7,7 @@
 
 <%= render "shared/page_header",
       title: "Tender types",
-      actions: link_to("New Other tender", new_admin_tender_type_path, class: "btn") %>
+      actions: action_link_to("New Other tender", new_admin_tender_type_path, style: :solid, intent: :brand) %>
 
 <% rows = @tender_types.map { |type|
      [

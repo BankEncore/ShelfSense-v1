@@ -9,27 +9,59 @@
 
 <% actions = [status_badge(@product_variant.status, scheme: :product_variant)] %>
 <% if effective_permissions.include?("product_variants.update") %>
-  <% actions << link_to("Edit", edit_admin_product_variant_path(@product_variant), class: "btn btn--secondary") %>
+  <% actions << action_link_to(
+       "Edit",
+       edit_admin_product_variant_path(@product_variant),
+       style: :outline,
+       intent: :neutral
+     ) %>
 <% end %>
 <% if effective_permissions.include?("product_variants.discontinue") && @product_variant.status != "discontinued" %>
-  <% actions << button_to("Discontinue", discontinue_admin_product_variant_path(@product_variant), method: :post, class: "btn btn--danger") %>
+  <% actions << action_button_to(
+       "Discontinue",
+       discontinue_admin_product_variant_path(@product_variant),
+       style: :outline,
+       intent: :warning,
+       method: :post
+     ) %>
 <% end %>
 <% if effective_permissions.include?("product_variants.update") && @product_variant.draft? %>
-  <% actions << button_to("Delete draft", admin_product_variant_path(@product_variant), method: :delete, class: "btn btn--danger") %>
+  <% actions << action_button_to(
+       "Delete draft",
+       admin_product_variant_path(@product_variant),
+       style: :outline,
+       intent: :danger,
+       method: :delete
+     ) %>
 <% end %>
 <% if @show_inventory %>
   <% if @inventory_balance %>
-    <% actions << link_to("View inventory", admin_inventory_balance_path(@inventory_balance), class: "btn btn--secondary") %>
+    <% actions << action_link_to(
+         "View inventory",
+         admin_inventory_balance_path(@inventory_balance),
+         style: :outline,
+         intent: :neutral
+       ) %>
   <% end %>
   <% if effective_permissions.include?("inventory.adjust") && current_store %>
-    <% actions << link_to("Adjust inventory", new_admin_inventory_adjustment_path(store_id: current_store.id, product_variant_id: @product_variant.id), class: "btn btn--secondary") %>
+    <% actions << action_link_to(
+         "Adjust inventory",
+         new_admin_inventory_adjustment_path(store_id: current_store.id, product_variant_id: @product_variant.id),
+         style: :outline,
+         intent: :neutral
+       ) %>
   <% end %>
 <% end %>
 <% if @can_order_stock %>
-  <% actions << link_to("Order stock", order_stock_path_for(@product_variant), class: "btn") %>
+  <% actions << action_link_to("Order stock", order_stock_path_for(@product_variant), style: :solid, intent: :brand) %>
 <% end %>
 <% if @can_create_customer_request %>
-  <% actions << link_to("Create customer request", create_customer_request_path_for(@product_variant), class: "btn btn--secondary") %>
+  <% actions << action_link_to(
+       "Create customer request",
+       create_customer_request_path_for(@product_variant),
+       style: :outline,
+       intent: :neutral
+     ) %>
 <% end %>
 
 <%= render "shared/page_header",
@@ -39,30 +71,28 @@
 
 <section class="section surface">
   <%= render "shared/definition_list", rows: [
-        ["Product", link_to(@product_variant.product.name, admin_product_path(@product_variant.product))],
+        ["Product", (
+          admin_product_link(@product_variant.product) || @product_variant.product.name
+        )],
         ["SKU", @product_variant.sku],
         ["Type", @product_variant.variant_type.humanize],
         ["Status", status_badge(@product_variant.status, scheme: :product_variant)],
         ["Regular price", format_money_cents(@product_variant.regular_price_cents)],
         ["Merchandise class", (
-          if @product_variant.merchandise_class
-            link_to(@product_variant.merchandise_class.admin_label, admin_merchandise_class_path(@product_variant.merchandise_class))
-          end
+          admin_merchandise_class_link(@product_variant.merchandise_class) ||
+            @product_variant.merchandise_class&.admin_label
         )],
         ["Department", (
-          if @product_variant.department
-            link_to(@product_variant.department.admin_label, admin_department_path(@product_variant.department))
-          end
+          admin_department_link(@product_variant.department) ||
+            @product_variant.department&.admin_label
         )],
         ["Effective tax class", (
-          if @product_variant.effective_tax_class
-            link_to(@product_variant.effective_tax_class.admin_label, admin_tax_class_path(@product_variant.effective_tax_class))
-          end
+          admin_tax_class_link(@product_variant.effective_tax_class) ||
+            @product_variant.effective_tax_class&.admin_label
         )],
         ["Tax class override", (
-          if @product_variant.tax_class_override
-            link_to(@product_variant.tax_class_override.admin_label, admin_tax_class_path(@product_variant.tax_class_override))
-          end
+          admin_tax_class_link(@product_variant.tax_class_override) ||
+            @product_variant.tax_class_override&.admin_label
         )],
         ["Condition", @product_variant.merchandise_condition&.admin_label],
         ["Industry identifier", @product_variant.industry_identifier]
@@ -111,9 +141,12 @@
     </p>
     <% if @can_manage_supplier_sources %>
       <div class="actions">
-        <%= link_to "Add supplier source",
+        <%= action_link_to(
+              "Add supplier source",
               new_admin_product_variant_supplier_variant_source_path(@product_variant),
-              class: "btn" %>
+              style: :outline,
+              intent: :neutral
+            ) %>
       </div>
     <% end %>
 
@@ -131,43 +164,63 @@
            end
            badges << "inactive" unless source.active?
            actions = []
-           actions << link_to("View", admin_supplier_variant_source_path(source, return_to: "variant"))
+           actions << action_link_to(
+             "View",
+             admin_supplier_variant_source_path(source, return_to: "variant"),
+             style: :outline,
+             intent: :neutral,
+             size: :small
+           )
            if @can_manage_supplier_sources
-             actions << link_to("Edit", edit_admin_supplier_variant_source_path(source, return_to: "variant"))
+             actions << action_link_to(
+               "Edit",
+               edit_admin_supplier_variant_source_path(source, return_to: "variant"),
+               style: :outline,
+               intent: :neutral,
+               size: :small
+             )
              if source.active?
-               actions << button_to(
+               actions << action_button_to(
                  "Remove",
                  admin_supplier_variant_source_path(source, return_to: "variant"),
+                 style: :outline,
+                 intent: :warning,
+                 size: :small,
                  method: :delete,
-                 form: { data: { turbo_confirm: "Deactivate this supplier source?" } },
-                 class: "btn btn--danger btn--inline"
+                 form: { data: { turbo_confirm: "Deactivate this supplier source?" } }
                )
                if current_store
                  if @store_source_preference&.supplier_variant_source_id == source.id
-                   actions << button_to(
+                   actions << action_button_to(
                      "Clear store preferred",
                      admin_store_supplier_source_preference_path(@store_source_preference, return_to: "variant"),
+                     style: :outline,
+                     intent: :neutral,
+                     size: :small,
                      method: :delete,
-                     form: { data: { turbo_confirm: "Clear this store preference?" } },
-                     class: "btn btn--secondary btn--inline"
+                     form: { data: { turbo_confirm: "Clear this store preference?" } }
                    )
                  else
-                   actions << button_to(
+                   actions << action_button_to(
                      "Set store preferred",
                      admin_supplier_variant_source_store_supplier_source_preferences_path(source, return_to: "variant"),
+                     style: :outline,
+                     intent: :neutral,
+                     size: :small,
                      method: :post,
-                     params: { store_supplier_source_preference: { store_id: current_store.id } },
-                     class: "btn btn--secondary btn--inline"
+                     params: { store_supplier_source_preference: { store_id: current_store.id } }
                    )
                  end
                end
              else
-               actions << button_to(
+               actions << action_button_to(
                  "Reactivate",
                  reactivate_admin_supplier_variant_source_path(source, return_to: "variant"),
+                 style: :solid,
+                 intent: :brand,
+                 size: :small,
                  method: :post,
-                 params: { lock_version: source.lock_version },
-                 class: "btn btn--inline"
+                 params: { lock_version: source.lock_version }
                )
              end
            end
@@ -212,7 +265,14 @@
       <%= render "shared/definition_list", rows: [
             ["Store", current_store.name],
             ["Tracking", tracking.humanize],
-            ["On hand", balance ? balance.on_hand_quantity : 0],
+            ["On hand", (
+              if balance
+                admin_inventory_balance_link(balance, label: balance.on_hand_quantity.to_s) ||
+                  balance.on_hand_quantity
+              else
+                0
+              end
+            )],
             ["Carrying value", format_money_cents(balance&.inventory_value_cents || 0)],
             (tracking == "quantity" ? ["Average unit cost", (avg ? format_money_cents(avg.round) : "—")] : nil)
           ].compact %>
@@ -229,7 +289,7 @@
       <% else %>
         <% unit_rows = @on_hand_units.map { |unit|
              [
-               balance ? link_to(unit.unit_identifier, admin_inventory_balance_path(balance)) : unit.unit_identifier,
+               balance ? (admin_inventory_balance_link(balance, label: unit.unit_identifier) || unit.unit_identifier) : unit.unit_identifier,
                format_money_cents(unit.acquisition_cost_cents),
                format_money_cents(unit.carrying_value_cents),
                format_money_cents(unit.effective_regular_price_cents),

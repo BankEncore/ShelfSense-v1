@@ -8,12 +8,25 @@
 
 <% actions = [configuration_status_badge(@merchandise_class.active?)] %>
 <% if effective_permissions.include?("merchandise_classes.update") %>
-  <% actions << link_to("Edit", edit_admin_merchandise_class_path(@merchandise_class), class: "btn btn--secondary") %>
+  <% actions << action_link_to("Edit", edit_admin_merchandise_class_path(@merchandise_class), style: :outline, intent: :neutral) %>
 <% end %>
 <% if effective_permissions.include?("merchandise_classes.deactivate") && @merchandise_class.active? %>
-  <% actions << button_to("Deactivate", admin_merchandise_class_path(@merchandise_class), method: :delete, class: "btn btn--danger") %>
+  <% actions << action_button_to(
+       "Deactivate",
+       admin_merchandise_class_path(@merchandise_class),
+       style: :outline,
+       intent: :warning,
+       method: :delete
+     ) %>
 <% elsif effective_permissions.include?("merchandise_classes.deactivate") && !@merchandise_class.active? %>
-  <% actions << button_to("Reactivate", reactivate_admin_merchandise_class_path(@merchandise_class), method: :post, params: { lock_version: @merchandise_class.lock_version }, class: "btn") %>
+  <% actions << action_button_to(
+       "Reactivate",
+       reactivate_admin_merchandise_class_path(@merchandise_class),
+       style: :solid,
+       intent: :brand,
+       method: :post,
+       params: { lock_version: @merchandise_class.lock_version }
+     ) %>
 <% end %>
 
 <%= render "shared/page_header",

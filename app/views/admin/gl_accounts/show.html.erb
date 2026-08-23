@@ -11,11 +11,25 @@
   <p>Parent: <%= link_to "#{@gl_account.parent.account_number} — #{@gl_account.parent.name}", admin_gl_account_path(@gl_account.parent) %></p>
 <% end %>
 <p>
-  <%= link_to "Edit", edit_admin_gl_account_path(@gl_account) if effective_permissions.include?("gl_accounts.update") %>
+  <%= action_link_to("Edit", edit_admin_gl_account_path(@gl_account), style: :outline, intent: :neutral) if effective_permissions.include?("gl_accounts.update") %>
   <% if effective_permissions.include?("gl_accounts.deactivate") && @gl_account.active? %>
-    <%= button_to "Deactivate", admin_gl_account_path(@gl_account), method: :delete, form: { data: { turbo_confirm: "Deactivate this GL account?" } } %>
+    <%= action_button_to(
+          "Deactivate",
+          admin_gl_account_path(@gl_account),
+          style: :outline,
+          intent: :warning,
+          method: :delete,
+          form: { data: { turbo_confirm: "Deactivate this GL account?" } }
+        ) %>
   <% elsif effective_permissions.include?("gl_accounts.deactivate") && !@gl_account.active? %>
-    <%= button_to "Reactivate", reactivate_admin_gl_account_path(@gl_account), method: :post, params: { lock_version: @gl_account.lock_version } %>
+    <%= action_button_to(
+          "Reactivate",
+          reactivate_admin_gl_account_path(@gl_account),
+          style: :solid,
+          intent: :brand,
+          method: :post,
+          params: { lock_version: @gl_account.lock_version }
+        ) %>
   <% end %>
 </p>
-<p><%= link_to "Back to GL accounts", admin_gl_accounts_path %></p>
+<p><%= action_link_to("Back to GL accounts", admin_gl_accounts_path, style: :link, intent: :neutral) %></p>

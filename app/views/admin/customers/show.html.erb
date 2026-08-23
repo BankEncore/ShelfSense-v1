@@ -1,32 +1,77 @@
 <% content_for :title, @customer.admin_label %>
-<h1><%= @customer.admin_label %></h1>
-<p>
-  <% if effective_permissions.include?("customers.manage") %>
-    <%= link_to "Edit", edit_admin_customer_path(@customer) %>
-    <% if @customer.active? %>
-      <%= button_to "Deactivate", admin_customer_path(@customer), method: :delete %>
-    <% else %>
-      <%= button_to "Reactivate", reactivate_admin_customer_path(@customer), method: :post %>
-    <% end %>
-  <% end %>
-  <%= link_to "Back", admin_customers_path %>
-</p>
-<dl>
-  <dt>Email</dt><dd><%= @customer.email.presence || "—" %></dd>
-  <dt>Phone</dt><dd><%= @customer.phone.presence || "—" %></dd>
-  <dt>Notes</dt><dd><%= simple_format(@customer.notes.presence || "—") %></dd>
-  <dt>Status</dt><dd><%= @customer.active? ? "active" : "inactive" %></dd>
-</dl>
 
-<h2>Recent requests</h2>
-<% if effective_permissions.include?("customer_requests.manage") %>
-  <p><%= link_to "New request", new_admin_customer_request_path(customer_id: @customer.id) %></p>
-<% end %>
-<ul>
-  <% @customer_requests.each do |request| %>
-    <li>
-      <%= link_to "Request ##{request.number}", admin_customer_request_path(request) %>
-      — <%= request.status %> — <%= request.store.admin_label %>
-    </li>
+<%= render "shared/breadcrumbs", crumbs: [
+  { name: "Home", path: root_path },
+  { name: "Customers", path: admin_customers_path },
+  { name: @customer.admin_label }
+] %>
+
+<% actions = [configuration_status_badge(@customer.active?)] %>
+<% if effective_permissions.include?("customers.manage") %>
+  <% actions << action_link_to("Edit", edit_admin_customer_path(@customer), style: :outline, intent: :neutral) %>
+  <% if @customer.active? %>
+    <% actions << action_button_to(
+         "Deactivate",
+         admin_customer_path(@customer),
+         style: :outline,
+         intent: :warning,
+         method: :delete
+       ) %>
+  <% else %>
+    <% actions << action_button_to(
+         "Reactivate",
+         reactivate_admin_customer_path(@customer),
+         style: :solid,
+         intent: :brand,
+         method: :post
+       ) %>
   <% end %>
-</ul>
+<% end %>
+
+<%= render "shared/page_header",
+      title: @customer.admin_label,
+      actions: safe_join(actions, " ") %>
+
+<section class="section surface">
+  <%= render "shared/definition_list", rows: [
+        ["Email", @customer.email],
+        ["Phone", @customer.phone],
+        ["Notes", (@customer.notes.present? ? simple_format(@customer.notes) : nil)],
+        ["Status", configuration_status_badge(@customer.active?)]
+      ] %>
+</section>
+
+<section class="section">
+  <h2 class="section__title">Recent requests</h2>
+  <% if effective_permissions.include?("customer_requests.manage") %>
+    <div class="actions">
+      <%= action_link_to(
+            "New request",
+            new_admin_customer_request_path(customer_id: @customer.id),
+            style: :solid,
+            intent: :brand
+          ) %>
+    </div>
+  <% end %>
+
+  <% if @customer_requests.any? %>
+    <% rows = @customer_requests.map { |request|
+         [
+           admin_customer_request_cross_link(request, label: "Request ##{request.number}") || "Request ##{request.number}",
+           request.status,
+           request.store.admin_label
+         ]
+       } %>
+    <%= render "shared/data_table",
+          headers: ["Request", "Status", "Store"],
+          rows: rows %>
+  <% else %>
+    <%= render "shared/empty_state",
+          title: "No requests yet",
+          body: "Create a request when this customer needs merchandise located or ordered." %>
+  <% end %>
+</section>
+
+<p>
+  <%= action_link_to("Back to customers", admin_customers_path, style: :link, intent: :neutral) %>
+</p>

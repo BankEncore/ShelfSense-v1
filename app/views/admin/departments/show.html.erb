@@ -7,11 +7,25 @@
 </p>
 <% if @department.description.present? %><p><%= @department.description %></p><% end %>
 <p>
-  <%= link_to "Edit", edit_admin_department_path(@department) if effective_permissions.include?("departments.update") %>
+  <%= action_link_to("Edit", edit_admin_department_path(@department), style: :outline, intent: :neutral) if effective_permissions.include?("departments.update") %>
   <% if effective_permissions.include?("departments.deactivate") && @department.active? %>
-    <%= button_to "Deactivate", admin_department_path(@department), method: :delete, form: { data: { turbo_confirm: "Deactivate this department?" } } %>
+    <%= action_button_to(
+          "Deactivate",
+          admin_department_path(@department),
+          style: :outline,
+          intent: :warning,
+          method: :delete,
+          form: { data: { turbo_confirm: "Deactivate this department?" } }
+        ) %>
   <% elsif effective_permissions.include?("departments.deactivate") && !@department.active? %>
-    <%= button_to "Reactivate", reactivate_admin_department_path(@department), method: :post, params: { lock_version: @department.lock_version } %>
+    <%= action_button_to(
+          "Reactivate",
+          reactivate_admin_department_path(@department),
+          style: :solid,
+          intent: :brand,
+          method: :post,
+          params: { lock_version: @department.lock_version }
+        ) %>
   <% end %>
 </p>
 
@@ -24,4 +38,4 @@
   </ul>
 <% end %>
 
-<p><%= link_to "Back to departments", admin_departments_path %></p>
+<p><%= action_link_to("Back to departments", admin_departments_path, style: :link, intent: :neutral) %></p>

@@ -14,5 +14,5 @@
       </label><br>
     <% end %>
   </fieldset>
-  <p><%= form.submit %></p>
+  <p><%= action_submit(form, role.persisted? ? "Save Changes" : "Create Role", style: :solid, intent: :brand) %></p>
 <% end %>

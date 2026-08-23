@@ -9,11 +9,25 @@
 </p>
 <% if @merchandise_category.description.present? %><p><%= @merchandise_category.description %></p><% end %>
 <p>
-  <%= link_to "Edit", edit_admin_merchandise_category_path(@merchandise_category) if effective_permissions.include?("merchandise_categories.update") %>
+  <%= action_link_to("Edit", edit_admin_merchandise_category_path(@merchandise_category), style: :outline, intent: :neutral) if effective_permissions.include?("merchandise_categories.update") %>
   <% if effective_permissions.include?("merchandise_categories.deactivate") && @merchandise_category.active? %>
-    <%= button_to "Deactivate", admin_merchandise_category_path(@merchandise_category), method: :delete, form: { data: { turbo_confirm: "Deactivate this category?" } } %>
+    <%= action_button_to(
+          "Deactivate",
+          admin_merchandise_category_path(@merchandise_category),
+          style: :outline,
+          intent: :warning,
+          method: :delete,
+          form: { data: { turbo_confirm: "Deactivate this category?" } }
+        ) %>
   <% elsif effective_permissions.include?("merchandise_categories.deactivate") && !@merchandise_category.active? %>
-    <%= button_to "Reactivate", reactivate_admin_merchandise_category_path(@merchandise_category), method: :post, params: { lock_version: @merchandise_category.lock_version } %>
+    <%= action_button_to(
+          "Reactivate",
+          reactivate_admin_merchandise_category_path(@merchandise_category),
+          style: :solid,
+          intent: :brand,
+          method: :post,
+          params: { lock_version: @merchandise_category.lock_version }
+        ) %>
   <% end %>
 </p>
-<p><%= link_to "Back to categories", admin_merchandise_categories_path %></p>
+<p><%= action_link_to("Back to categories", admin_merchandise_categories_path, style: :link, intent: :neutral) %></p>

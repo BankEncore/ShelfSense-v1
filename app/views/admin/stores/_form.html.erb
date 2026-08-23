@@ -115,7 +115,17 @@
   <% end %>
 
   <div class="actions">
-    <%= form.submit class: "btn" %>
-    <%= link_to "Cancel", store.persisted? ? admin_store_path(store) : admin_stores_path, class: "btn btn--ghost" %>
+    <%= action_submit(
+          form,
+          store.persisted? ? "Save Changes" : "Create Store",
+          style: :solid,
+          intent: :brand
+        ) %>
+    <%= action_link_to(
+          "Cancel",
+          store.persisted? ? admin_store_path(store) : admin_stores_path,
+          style: :ghost,
+          intent: :neutral
+        ) %>
   </div>
 <% end %>

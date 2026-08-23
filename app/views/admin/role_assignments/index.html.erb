@@ -1,6 +1,6 @@
 <% content_for :title, "Role assignments" %>
 <h1>Role assignments</h1>
-<p><%= link_to "Assign role", new_admin_role_assignment_path %></p>
+<p><%= action_link_to("Assign role", new_admin_role_assignment_path, style: :solid, intent: :brand) %></p>
 <ul>
   <% @role_assignments.each do |assignment| %>
     <li>
@@ -8,7 +8,7 @@
       <%= assignment.store ? " @ #{assignment.store.admin_label}" : " (global)" %>
       <%= "revoked" if assignment.revoked? %>
       <% unless assignment.revoked? %>
-        <%= button_to "Revoke", admin_role_assignment_path(assignment), method: :delete %>
+        <%= action_button_to("Revoke", admin_role_assignment_path(assignment), style: :outline, intent: :warning, method: :delete) %>
       <% end %>
     </li>
   <% end %>

@@ -19,7 +19,17 @@
     <%= form.label :notes_required, "Notes required" %>
   </div>
   <div class="actions">
-    <%= form.submit class: "btn" %>
-    <%= link_to "Cancel", adjustment_reason.persisted? ? admin_adjustment_reason_path(adjustment_reason) : admin_adjustment_reasons_path, class: "btn btn--ghost" %>
+    <%= action_submit(
+          form,
+          adjustment_reason.persisted? ? "Save Changes" : "Create Adjustment Reason",
+          style: :solid,
+          intent: :brand
+        ) %>
+    <%= action_link_to(
+          "Cancel",
+          adjustment_reason.persisted? ? admin_adjustment_reason_path(adjustment_reason) : admin_adjustment_reasons_path,
+          style: :ghost,
+          intent: :neutral
+        ) %>
   </div>
 <% end %>

@@ -8,9 +8,13 @@
 <%= render "shared/page_header",
       title: "Inventory",
       subtitle: "On-hand quantity and carrying value by store and variant",
-      actions: (link_to("New adjustment", new_admin_inventory_adjustment_path, class: "btn") if effective_permissions.include?("inventory.adjust")) %>
+      actions: (
+        if effective_permissions.include?("inventory.adjust")
+          action_link_to("New adjustment", new_admin_inventory_adjustment_path, style: :solid, intent: :brand)
+        end
+      ) %>
 
-<%= form_with url: admin_inventory_balances_path, method: :get, local: true, class: "form form--inline" do %>
+<%= form_with url: admin_inventory_balances_path, method: :get, local: true, class: "filters" do |form| %>
   <div class="form-field">
     <%= label_tag :q, "Identifier" %>
     <%= text_field_tag :q, params[:q] %>
@@ -19,7 +23,9 @@
     <%= label_tag :tracking, "Tracking" %>
     <%= select_tag :tracking, options_for_select([["Any", ""], ["Quantity", "quantity"], ["Individual", "individual"]], params[:tracking]) %>
   </div>
-  <%= submit_tag "Filter", class: "btn btn--secondary" %>
+  <div class="form-field">
+    <%= action_submit(form, "Apply", style: :solid, intent: :brand) %>
+  </div>
 <% end %>
 
 <% if @balances.empty? %>
@@ -41,14 +47,24 @@
         headers: ["Store", "Variant", "Tracking", "On hand", "Value", "Avg cost"],
         rows: rows %>
   <% if @index.total_pages > 1 %>
-    <nav class="pager" aria-label="Pagination">
+    <div class="pagination">
+      <span class="muted">Page <%= @index.page %> of <%= @index.total_pages %></span>
       <% if @index.page > 1 %>
-        <%= link_to "Previous", admin_inventory_balances_path(q: params[:q], tracking: params[:tracking], page: @index.page - 1) %>
+        <%= action_link_to(
+              "Previous",
+              admin_inventory_balances_path(q: params[:q], tracking: params[:tracking], page: @index.page - 1),
+              style: :ghost,
+              intent: :neutral
+            ) %>
       <% end %>
-      <span>Page <%= @index.page %> of <%= @index.total_pages %></span>
       <% if @index.page < @index.total_pages %>
-        <%= link_to "Next", admin_inventory_balances_path(q: params[:q], tracking: params[:tracking], page: @index.page + 1) %>
+        <%= action_link_to(
+              "Next",
+              admin_inventory_balances_path(q: params[:q], tracking: params[:tracking], page: @index.page + 1),
+              style: :ghost,
+              intent: :neutral
+            ) %>
       <% end %>
-    </nav>
+    </div>
   <% end %>
 <% end %>

@@ -9,15 +9,29 @@
      "cancelled" => "Cancelled"
    }.fetch(@customer_request.status) %>
 <% contact = [@customer_request.customer.phone.presence, @customer_request.customer.email.presence].compact.join(" · ").presence %>
+<% variant = @customer_request.product_variant %>
 <% merchandise = safe_join([
-     @customer_request.product_variant.product.name,
+     admin_product_link(variant.product) || variant.product.name,
      tag.br,
-     content_tag(:span, "#{@customer_request.product_variant.variant_type.humanize} · SKU #{@customer_request.product_variant.sku}", class: "muted")
+     content_tag(
+       :span,
+       admin_product_variant_link(
+         variant,
+         label: "#{variant.variant_type.humanize} · SKU #{variant.sku}"
+       ) || "#{variant.variant_type.humanize} · SKU #{variant.sku}",
+       class: "muted"
+     )
    ]) %>
+
+<%= render "shared/breadcrumbs", crumbs: [
+  { name: "Home", path: root_path },
+  { name: "Customer requests", path: admin_customer_requests_path },
+  { name: @customer_request.admin_label }
+] %>
 
 <%= render "shared/page_header", title: @customer_request.admin_label,
       subtitle: "Customer fulfillment at #{@customer_request.store.admin_label}",
-      actions: link_to("Back to requests", admin_customer_requests_path, class: "btn btn--ghost") %>
+      actions: action_link_to("Back to requests", admin_customer_requests_path, style: :ghost, intent: :neutral) %>
 
 <section class="section surface request-summary" aria-labelledby="current-state-heading">
   <div class="request-summary__heading">
@@ -29,7 +43,7 @@
   </div>
 
   <%= render "shared/definition_list", rows: [
-    ["Customer", link_to(@customer_request.customer.admin_label, admin_customer_path(@customer_request.customer))],
+    ["Customer", admin_customer_link(@customer_request.customer) || @customer_request.customer.admin_label],
     ["Contact method", contact || missing_value("No phone or email")],
     ["Merchandise", merchandise],
     ["Store", @customer_request.store.admin_label],
@@ -52,7 +66,12 @@
     <% elsif @customer_request.completed? %>
       <% transaction = @allocations.filter_map { |allocation| allocation.fulfilled_pos_transaction_line&.pos_transaction }.first %>
       <% if transaction && effective_permissions.include?("pos.transact") && current_store&.id == transaction.store_id %>
-        <%= link_to "Open pickup receipt #{transaction.transaction_reference}", pos_transaction_path(transaction), class: "btn" %>
+        <%= action_link_to(
+              "Open pickup receipt #{transaction.transaction_reference}",
+              pos_transaction_path(transaction),
+              style: :solid,
+              intent: :brand
+            ) %>
       <% else %>
         <p>No action needed. Pickup was completed at the Register.</p>
       <% end %>
@@ -127,7 +146,11 @@
   <% elsif allocation.fulfilled? %>
     <% line = allocation.fulfilled_pos_transaction_line %>
     <% transaction = line&.pos_transaction %>
-    <% receipt_link = transaction && effective_permissions.include?("pos.transact") && current_store&.id == transaction.store_id ? link_to(transaction.transaction_reference, pos_transaction_path(transaction)) : transaction&.transaction_reference %>
+    <% receipt_link = if transaction && current_store&.id == transaction.store_id
+         pos_transaction_cross_link(transaction, label: transaction.transaction_reference) || transaction.transaction_reference
+       else
+         transaction&.transaction_reference
+       end %>
     <% events << { at: transaction&.completed_at || @customer_request.completed_at || allocation.updated_at, title: "Pickup completed", badge: "Completed", body: safe_join(["Fulfilled through POS receipt ", receipt_link || "not available", " · ", format_money_cents(line&.line_total_cents)]) } %>
   <% end %>
 <% end %>
@@ -158,7 +181,12 @@
   <section class="section surface" aria-labelledby="cancel-request-heading">
     <h2 id="cancel-request-heading">Cancel request</h2>
     <div data-controller="review-dialog">
-      <button type="button" class="btn btn--danger" data-review-dialog-target="trigger" data-action="review-dialog#open">Review cancellation</button>
+      <%= action_button(
+            "Review cancellation",
+            style: :outline,
+            intent: :danger,
+            data: { review_dialog_target: "trigger", action: "review-dialog#open" }
+          ) %>
       <dialog class="review-dialog review-dialog--danger" data-review-dialog-target="dialog" data-action="close->review-dialog#restoreFocus">
         <div class="review-dialog__body">
           <h3>Review cancelling request #<%= @customer_request.number %></h3>
@@ -169,7 +197,7 @@
             <dt>Related unsent order</dt><dd><%= @unsent_special_orders.any? ? "An explicit keep-or-cancel decision is required below." : "No unsent related order requires a decision." %></dd>
           </dl>
           <p class="review-dialog__consequences">Sent supplier quantity is not cancelled. Any later receipt for this cancelled request becomes ordinary stock.</p>
-          <%= form_with url: cancel_admin_customer_request_path(@customer_request), method: :post do %>
+          <%= form_with url: cancel_admin_customer_request_path(@customer_request), method: :post do |form| %>
             <%= hidden_field_tag :lock_version, @customer_request.lock_version %>
             <p><%= label_tag :cancellation_reason, "Cancellation reason" %><%= text_field_tag :cancellation_reason, nil, required: true, data: { review_dialog_target: "initialFocus" } %></p>
             <% if @unsent_special_orders.any? %>
@@ -180,8 +208,8 @@
               </fieldset>
             <% end %>
             <div class="review-dialog__actions">
-              <%= submit_tag "Cancel request and release allocation", class: "btn btn--danger" %>
-              <button type="button" data-action="review-dialog#close">Keep request active</button>
+              <%= action_submit(form, "Cancel request and release allocation", style: :solid, intent: :danger) %>
+              <%= action_button("Keep request active", style: :ghost, intent: :neutral, data: { action: "review-dialog#close" }) %>
             </div>
           <% end %>
         </div>

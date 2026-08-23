@@ -8,10 +8,16 @@
 
 <% actions = [configuration_status_badge(@store.active?)] %>
 <% if effective_permissions.include?("stores.manage") %>
-  <% actions << link_to("Edit", edit_admin_store_path(@store), class: "btn btn--secondary") %>
+  <% actions << action_link_to("Edit", edit_admin_store_path(@store), style: :outline, intent: :neutral) %>
 <% end %>
 <% if effective_permissions.include?("stores.deactivate") && @store.active? %>
-  <% actions << button_to("Deactivate", admin_store_path(@store), method: :delete, class: "btn btn--danger") %>
+  <% actions << action_button_to(
+       "Deactivate",
+       admin_store_path(@store),
+       style: :outline,
+       intent: :warning,
+       method: :delete
+     ) %>
 <% end %>
 
 <%= render "shared/page_header",

@@ -7,11 +7,25 @@
   <%= @store_tax.active? ? "active" : "inactive" %>
 </p>
 <p>
-  <%= link_to "Edit", edit_admin_store_tax_path(@store_tax) if effective_permissions.include?("store_taxes.update") %>
+  <%= action_link_to("Edit", edit_admin_store_tax_path(@store_tax), style: :outline, intent: :neutral) if effective_permissions.include?("store_taxes.update") %>
   <% if effective_permissions.include?("store_taxes.deactivate") && @store_tax.active? %>
-    <%= button_to "Deactivate", admin_store_tax_path(@store_tax), method: :delete, form: { data: { turbo_confirm: "Deactivate this store tax?" } } %>
+    <%= action_button_to(
+          "Deactivate",
+          admin_store_tax_path(@store_tax),
+          style: :outline,
+          intent: :warning,
+          method: :delete,
+          form: { data: { turbo_confirm: "Deactivate this store tax?" } }
+        ) %>
   <% elsif effective_permissions.include?("store_taxes.deactivate") && !@store_tax.active? %>
-    <%= button_to "Reactivate", reactivate_admin_store_tax_path(@store_tax), method: :post, params: { lock_version: @store_tax.lock_version } %>
+    <%= action_button_to(
+          "Reactivate",
+          reactivate_admin_store_tax_path(@store_tax),
+          style: :solid,
+          intent: :brand,
+          method: :post,
+          params: { lock_version: @store_tax.lock_version }
+        ) %>
   <% end %>
 </p>
 <h2>Tax class applicability</h2>
@@ -28,4 +42,4 @@
     </li>
   <% end %>
 </ul>
-<p><%= link_to "Back to store taxes", admin_store_taxes_path %></p>
+<p><%= action_link_to("Back to store taxes", admin_store_taxes_path, style: :link, intent: :neutral) %></p>

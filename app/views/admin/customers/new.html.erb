@@ -1,3 +1,11 @@
 <% content_for :title, "New customer" %>
-<h1>New customer</h1>
+
+<%= render "shared/breadcrumbs", crumbs: [
+  { name: "Home", path: root_path },
+  { name: "Customers", path: admin_customers_path },
+  { name: "New" }
+] %>
+
+<%= render "shared/page_header", title: "New customer" %>
+
 <%= render "form", customer: @customer %>

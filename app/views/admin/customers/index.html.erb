@@ -1,13 +1,28 @@
 <% content_for :title, "Customers" %>
-<h1>Customers</h1>
-<% if effective_permissions.include?("customers.manage") %><p><%= link_to "New customer", new_admin_customer_path %></p><% end %>
-<ul>
-  <% @customers.each do |customer| %>
-    <li>
-      <%= link_to customer.admin_label, admin_customer_path(customer) %>
-      <%= customer.email %>
-      <%= customer.phone %>
-      <%= "inactive" unless customer.active? %>
-    </li>
-  <% end %>
-</ul>
+
+<%= render "shared/breadcrumbs", crumbs: [
+  { name: "Home", path: root_path },
+  { name: "Customers" }
+] %>
+
+<% header_actions = nil %>
+<% if effective_permissions.include?("customers.manage") %>
+  <% header_actions = action_link_to("New customer", new_admin_customer_path, style: :solid, intent: :brand) %>
+<% end %>
+
+<%= render "shared/page_header", title: "Customers", actions: header_actions %>
+
+<% rows = @customers.map { |customer|
+     [
+       link_to(customer.admin_label, admin_customer_path(customer)),
+       customer.email.presence || missing_value,
+       customer.phone.presence || missing_value,
+       configuration_status_badge(customer.active?)
+     ]
+   } %>
+<%= render "shared/data_table",
+      headers: ["Name", "Email", "Phone", "Status"],
+      rows: rows,
+      empty: render("shared/empty_state",
+                    title: "No customers yet",
+                    body: "Create a customer to attach requests and contact details.") %>

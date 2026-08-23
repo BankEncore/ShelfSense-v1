@@ -1,6 +1,6 @@
 <% content_for :title, "Tax Classes" %>
 <h1>Tax Classes</h1>
-<% if effective_permissions.include?("tax_classes.create") %><p><%= link_to "New tax class", new_admin_tax_class_path %></p><% end %>
+<% if effective_permissions.include?("tax_classes.create") %><p><%= action_link_to("New tax class", new_admin_tax_class_path, style: :solid, intent: :brand) %></p><% end %>
 <ul>
   <% @tax_classes.each do |tax_class| %>
     <li>

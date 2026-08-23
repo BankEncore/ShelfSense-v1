@@ -2,7 +2,7 @@
 <h1>Merchandise CSV import</h1>
 
 <p>
-  <%= link_to "Download CSV template", template_admin_merchandise_imports_path %>
+  <%= action_link_to("Download CSV template", template_admin_merchandise_imports_path, style: :outline, intent: :neutral) %>
 </p>
 
 <section>
@@ -29,7 +29,7 @@
 
 <%= form_with url: admin_merchandise_imports_path, scope: :import, html: { multipart: true } do |form| %>
   <p><%= form.label :file, "CSV file" %><%= form.file_field :file, accept: ".csv,text/csv" %></p>
-  <p><%= form.submit "Import" %></p>
+  <p><%= action_submit(form, "Import", style: :solid, intent: :brand) %></p>
 <% end %>
 
 <% if @result %>

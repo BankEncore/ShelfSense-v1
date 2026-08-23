@@ -55,7 +55,7 @@ UDS-1 through UDS-3 code is merged. [migration-matrix.md](ux-design-system/migra
 
 ### UDS-4 — Information architecture and adoption
 
-**Status:** Proposed overall; **UDS-4.0 gate Passed**; **UDS-4.1 in progress**. Coordination **Accepted** ([phase7.1-uds-coordination.md](phase7.1-purchasing-polish/phase7.1-uds-coordination.md)).
+**Status:** Proposed overall; **UDS-4.0–4.1 on `main`**; **UDS-4.2 in progress** ([uds-4.2-plan.md](ux-design-system/uds-4.2-plan.md)). Coordination **Accepted** ([phase7.1-uds-coordination.md](phase7.1-purchasing-polish/phase7.1-uds-coordination.md)).
 
 Continue the cross-phase [UX design system](ux-design-system/README.md). Authoritative slice plan: [uds-4-plan.md](ux-design-system/uds-4-plan.md).
 
@@ -367,7 +367,7 @@ The following remain out of scope until a planning packet and ADR review justify
 | Phase 7 — Orders, requests, receiving | Implemented |
 | UDS-1–3 — Warm Parchment foundation | Implemented (code); a11y matrix evidence in progress |
 | Phase 7.1 — Purchasing workflow closeout | **7.1.1–7.1.2 on `main`**; **7.1.3 after UDS-4.1** ([packet](phase7.1-purchasing-polish/README.md)) |
-| UDS-4 — Navigation and information architecture | **UDS-4.1 in progress** (grouped production nav); UDS-4.0 gate **Passed** ([uds-4.0-gate-evidence.md](ux-design-system/uds-4.0-gate-evidence.md)) |
+| UDS-4 — Navigation and information architecture | **UDS-4.2 in progress** ([uds-4.2-plan.md](ux-design-system/uds-4.2-plan.md)); UDS-4.0–4.1 on `main` |
 | Phase 8 — Customer foundation refinement | Next; parallel with 9 |
 | Phase 9 — Catalog and bibliographic enrichment | Next; parallel with 8 |
 | Phase 10 — Stored value and financial event contract | After Phase 8 |

@@ -12,6 +12,6 @@
       <%= form.label :password %>
       <%= form.password_field :password, autocomplete: "current-password", required: true %>
     </p>
-    <p><%= form.submit "Sign in" %></p>
+    <p><%= action_submit(form, "Sign in", style: :solid, intent: :brand) %></p>
   <% end %>
 </section>

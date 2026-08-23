@@ -25,5 +25,5 @@
     <%= form.select :default_used_merchandise_class_id, MerchandiseClass.options_for_select(@merchandise_classes), include_blank: "None" %>
   </p>
   <p><%= form.label :display_order %><%= form.number_field :display_order %></p>
-  <p><%= form.submit %></p>
+  <p><%= action_submit(form, merchandise_category.persisted? ? "Save Changes" : "Create Merchandise Category", style: :solid, intent: :brand) %></p>
 <% end %>

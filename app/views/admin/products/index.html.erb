@@ -10,11 +10,11 @@
       subtitle: "Catalog products and their sellable variants",
       actions: (
         if effective_permissions.include?("products.create")
-          link_to("New product", new_admin_product_path, class: "btn")
+          action_link_to("New product", new_admin_product_path, style: :solid, intent: :brand)
         end
       ) %>
 
-<%= form_with url: admin_products_path, method: :get, local: true, class: "filters" do %>
+<%= form_with url: admin_products_path, method: :get, local: true, class: "filters" do |form| %>
   <div class="form-field form-field--grow">
     <%= label_tag :q, "Search" %>
     <%= text_field_tag :q, @index.q, placeholder: "Name or identifier" %>
@@ -30,7 +30,7 @@
           options_for_select([["Any category", ""]] + MerchandiseCategory.options_for_select(@merchandise_categories), @index.merchandise_category_id) %>
   </div>
   <div class="form-field">
-    <%= submit_tag "Apply", class: "btn" %>
+    <%= action_submit(form, "Apply", style: :solid, intent: :brand) %>
   </div>
 <% end %>
 
@@ -38,7 +38,11 @@
   <%= render "shared/empty_state",
         title: "No products yet",
         body: "Create a product to start the merchandise catalog.",
-        action: (link_to("New product", new_admin_product_path, class: "btn") if effective_permissions.include?("products.create")) %>
+        action: (
+          if effective_permissions.include?("products.create")
+            action_link_to("New product", new_admin_product_path, style: :solid, intent: :brand)
+          end
+        ) %>
 <% elsif @products.empty? %>
   <%= render "shared/empty_state",
         title: "No matching products",
@@ -74,14 +78,20 @@
       Page <%= @index.page %> of <%= @index.total_pages %> · <%= @index.total_count %> total
     </span>
     <% if @index.page > 1 %>
-      <%= link_to "Previous",
+      <%= action_link_to(
+            "Previous",
             admin_products_path(q: @index.q, status: @index.status, merchandise_category_id: @index.merchandise_category_id, page: @index.page - 1),
-            class: "btn btn--ghost" %>
+            style: :ghost,
+            intent: :neutral
+          ) %>
     <% end %>
     <% if @index.page < @index.total_pages %>
-      <%= link_to "Next",
+      <%= action_link_to(
+            "Next",
             admin_products_path(q: @index.q, status: @index.status, merchandise_category_id: @index.merchandise_category_id, page: @index.page + 1),
-            class: "btn btn--ghost" %>
+            style: :ghost,
+            intent: :neutral
+          ) %>
     <% end %>
   </div>
 <% end %>

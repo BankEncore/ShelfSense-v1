@@ -8,7 +8,7 @@
 <%= render "shared/page_header",
       title: "Stores",
       subtitle: "Organization store locations",
-      actions: (link_to("New store", new_admin_store_path, class: "btn") if effective_permissions.include?("stores.create")) %>
+      actions: (action_link_to("New store", new_admin_store_path, style: :solid, intent: :brand) if effective_permissions.include?("stores.create")) %>
 
 <% if @stores.empty? %>
   <%= render "shared/empty_state", title: "No stores", body: "Create a store to continue setup." %>

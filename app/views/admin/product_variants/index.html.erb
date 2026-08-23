@@ -1,14 +1,41 @@
 <% content_for :title, "Variants" %>
-<h1>Variants for <%= @product.name %></h1>
+
+<%= render "shared/breadcrumbs", crumbs: [
+  { name: "Home", path: root_path },
+  { name: "Products", path: admin_products_path },
+  { name: @product.name, path: admin_product_path(@product) },
+  { name: "Variants" }
+] %>
+
+<% header_actions = nil %>
 <% if effective_permissions.include?("product_variants.create") %>
-  <p><%= link_to "New variant", new_admin_product_product_variant_path(@product) %></p>
+  <% header_actions = action_link_to(
+       "New variant",
+       new_admin_product_product_variant_path(@product),
+       style: :solid,
+       intent: :brand
+     ) %>
 <% end %>
-<ul>
-  <% @product_variants.each do |variant| %>
-    <li>
-      <%= link_to "#{variant.sku} — #{variant.name.presence || "unnamed"}", admin_product_variant_path(variant) %>
-      (<%= variant.status %>)
-    </li>
-  <% end %>
-</ul>
-<p><%= link_to "Back to product", admin_product_path(@product) %></p>
+
+<%= render "shared/page_header",
+      title: "Variants for #{@product.name}",
+      actions: header_actions %>
+
+<% if @product_variants.empty? %>
+  <%= render "shared/empty_state",
+        title: "No variants yet",
+        body: "Add a standard or used variant to make this product sellable." %>
+<% else %>
+  <ul>
+    <% @product_variants.each do |variant| %>
+      <li>
+        <%= link_to "#{variant.sku} — #{variant.name.presence || "unnamed"}", admin_product_variant_path(variant) %>
+        (<%= variant.status %>)
+      </li>
+    <% end %>
+  </ul>
+<% end %>
+
+<p>
+  <%= action_link_to("Back to product", admin_product_path(@product), style: :link, intent: :neutral) %>
+</p>
