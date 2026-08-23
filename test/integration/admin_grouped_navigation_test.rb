@@ -2,7 +2,7 @@
 
 require "test_helper"
 
-class AdminNavigationPrototypeTest < ActionDispatch::IntegrationTest
+class AdminGroupedNavigationTest < ActionDispatch::IntegrationTest
   setup do
     @bootstrap = bootstrap!
     @admin = @bootstrap[:administrator]
@@ -10,9 +10,9 @@ class AdminNavigationPrototypeTest < ActionDispatch::IntegrationTest
   end
 
   test "profile A admin sees all eight groups and store-gated links with store selected" do
-    second = Store.create!(
+    Store.create!(
       store_number: "2",
-      code: "nav_proto_east",
+      code: "nav_prod_east",
       name: "East Nav Store",
       legal_name: "Example Books LLC",
       timezone: "America/New_York",
@@ -22,54 +22,54 @@ class AdminNavigationPrototypeTest < ActionDispatch::IntegrationTest
     sign_in_as("admin")
     post store_selection_path, params: { store_id: @store.id }
 
-    get admin_navigation_prototype_path
+    get admin_products_path
     assert_response :success
     assert_match(/aria-label="Primary"/, response.body)
+    assert_match(/app-nav--grouped/, response.body)
     %w[Merchandise Inventory Purchasing Customers POS\ operations Organization\ configuration Security Audit].each do |label|
       assert_match(/#{Regexp.escape(label)}/, response.body)
     end
-    assert_includes response.body, admin_navigation_prototype_path(as_controller: "admin/purchasing")
-    assert_includes response.body, admin_navigation_prototype_path(as_controller: "ops/receiving")
-    assert_includes response.body, admin_navigation_prototype_path(as_controller: "ops/locations")
-    assert_includes response.body, admin_navigation_prototype_path(as_controller: "ops/draft_pos")
-    assert_includes response.body, admin_navigation_prototype_path(as_controller: "pos/homes")
-    assert_includes response.body, admin_navigation_prototype_path(as_controller: "pos/transactions")
+    assert_includes response.body, admin_purchasing_path
+    assert_includes response.body, admin_orders_path
+    assert_includes response.body, admin_purchase_orders_path
+    assert_includes response.body, admin_purchase_receipts_path
+    assert_includes response.body, ops_receiving_index_path
+    assert_includes response.body, ops_location_path
+    assert_includes response.body, ops_draft_pos_path
+    assert_includes response.body, pos_path
+    assert_includes response.body, pos_transactions_path
     assert_match(/Switch store/, response.body)
     assert_includes response.body, "return_to="
-
-    get admin_navigation_prototype_path(as_controller: "admin/products")
-    assert_response :success
     assert_match(/aria-current="page"/, response.body)
     assert_match(/Current area/, response.body)
     assert_match(/is-current-area/, response.body)
   end
 
-  test "profile A keeps prototype after second store when sole store was previously used" do
+  test "profile A keeps store context after second store when sole store was previously used" do
     sign_in_as("admin")
-    get admin_navigation_prototype_path(as_controller: "admin/products")
+    get admin_products_path
     assert_response :success
-    assert_match(/Currently simulating/, response.body)
+    assert_match(/Current store:/, response.body)
 
     Store.create!(
       store_number: "5",
-      code: "nav_proto_late",
+      code: "nav_prod_late",
       name: "Late Nav Store",
       legal_name: "Example Books LLC",
       timezone: "America/New_York",
       country_code: "US"
     )
 
-    get admin_navigation_prototype_path(as_controller: "admin/products")
+    get admin_products_path
     assert_response :success
-    assert_match(/Currently simulating/, response.body)
-    assert_match(/aria-current="page"/, response.body)
     assert_match(/Current store:/, response.body)
+    assert_includes response.body, ops_receiving_index_path
   end
 
-  test "switch store from prototype returns to as_controller simulation" do
+  test "switch store returns to the referring admin page" do
     Store.create!(
       store_number: "6",
-      code: "nav_proto_return",
+      code: "nav_prod_return",
       name: "Return Nav Store",
       legal_name: "Example Books LLC",
       timezone: "America/New_York",
@@ -77,18 +77,17 @@ class AdminNavigationPrototypeTest < ActionDispatch::IntegrationTest
     )
 
     sign_in_as("admin")
-    return_to = admin_navigation_prototype_path(as_controller: "admin/products")
+    return_to = admin_products_path
     post store_selection_path, params: { store_id: @store.id, return_to: return_to }
     assert_redirected_to return_to
     follow_redirect!
-    assert_match(/Currently simulating/, response.body)
     assert_match(/aria-current="page"/, response.body)
   end
 
   test "profile A without store omits store-gated operational links" do
     Store.create!(
       store_number: "3",
-      code: "nav_proto_west",
+      code: "nav_prod_west",
       name: "West Nav Store",
       legal_name: "Example Books LLC",
       timezone: "America/New_York",
@@ -96,15 +95,15 @@ class AdminNavigationPrototypeTest < ActionDispatch::IntegrationTest
     )
 
     sign_in_as("admin")
-    # Two accessible stores and no selected store => current_store nil
-    get admin_navigation_prototype_path
+    get admin_products_path
     assert_response :success
-    assert_includes response.body, admin_navigation_prototype_path(as_controller: "admin/purchasing")
-    assert_includes response.body, admin_navigation_prototype_path(as_controller: "admin/orders")
-    assert_not_includes response.body, admin_navigation_prototype_path(as_controller: "ops/receiving")
-    assert_not_includes response.body, admin_navigation_prototype_path(as_controller: "ops/locations")
-    assert_not_includes response.body, admin_navigation_prototype_path(as_controller: "ops/draft_pos")
-    assert_not_includes response.body, admin_navigation_prototype_path(as_controller: "pos/homes")
+    assert_includes response.body, admin_purchasing_path
+    assert_includes response.body, admin_orders_path
+    assert_not_includes response.body, ops_receiving_index_path
+    assert_not_includes response.body, ops_location_path
+    assert_not_includes response.body, ops_draft_pos_path
+    assert_no_match(%r{href="#{Regexp.escape(pos_path)}"}, response.body)
+    assert_no_match(%r{href="#{Regexp.escape(pos_transactions_path)}"}, response.body)
   end
 
   test "profile B receiving-only user sees purchasing hub and receiving ops" do
@@ -137,14 +136,15 @@ class AdminNavigationPrototypeTest < ActionDispatch::IntegrationTest
     post session_path, params: { session: { username: user.username, password: "correct-horse-battery" } }
     post store_selection_path, params: { store_id: @store.id }
 
-    get admin_navigation_prototype_path(as_controller: "ops/receiving")
+    get admin_purchasing_path
     assert_response :success
+    assert_match(/app-nav--grouped/, response.body)
     assert_match(/Purchasing/, response.body)
-    assert_includes response.body, admin_navigation_prototype_path(as_controller: "admin/purchasing")
-    assert_includes response.body, admin_navigation_prototype_path(as_controller: "ops/receiving")
-    assert_not_includes response.body, admin_navigation_prototype_path(as_controller: "admin/orders")
-    assert_not_includes response.body, admin_navigation_prototype_path(as_controller: "admin/suppliers")
-    assert_not_includes response.body, admin_navigation_prototype_path(as_controller: "admin/users")
+    assert_includes response.body, admin_purchasing_path
+    assert_includes response.body, ops_receiving_index_path
+    assert_not_includes response.body, admin_orders_path
+    assert_not_includes response.body, admin_suppliers_path
+    assert_not_includes response.body, admin_users_path
     assert_no_match(/Switch store/, response.body)
     assert_match(/Current area/, response.body)
 
@@ -190,45 +190,10 @@ class AdminNavigationPrototypeTest < ActionDispatch::IntegrationTest
     end
 
     post session_path, params: { session: { username: user.username, password: "correct-horse-battery" } }
-    # Multiple accessible stores and no selection => no current_store
-    get admin_navigation_prototype_path
+    get admin_purchasing_path
     assert_response :success
-    assert_match(/No store selected/, response.body)
-    assert_includes response.body, admin_navigation_prototype_path(as_controller: "admin/purchasing")
-    assert_not_includes response.body, admin_navigation_prototype_path(as_controller: "ops/receiving")
-  end
-
-  test "user with no destinations is denied the prototype" do
-    role = Role.create!(
-      key: "nav_none_#{SecureRandom.hex(3)}",
-      name: "No destinations",
-      assignment_scope: "store",
-      system_role: false,
-      active: true
-    )
-    # inventory.view is a destination — use a permission that is NOT in the catalog
-    RolePermission.create!(
-      role: role,
-      permission: Permission.find_by!(key: "pos.sessions.view"),
-      granted_by: @admin
-    )
-    user = User.create!(
-      username: "nav_none_#{SecureRandom.hex(3)}",
-      display_name: "Nav None",
-      password: "correct-horse-battery",
-      password_confirmation: "correct-horse-battery"
-    )
-    RoleAssignment.create!(
-      user: user,
-      role: role,
-      store: @store,
-      assigned_by: @admin,
-      effective_at: Time.current
-    )
-
-    post session_path, params: { session: { username: user.username, password: "correct-horse-battery" } }
-    get admin_navigation_prototype_path
-    assert_redirected_to root_path
+    assert_includes response.body, admin_purchasing_path
+    assert_not_includes response.body, ops_receiving_index_path
   end
 
   private

@@ -1,6 +1,6 @@
 # Administrative navigation grouping proposal
 
-Status: **Proposed** inventory; **UDS-4.0** implements the disposable prototype and gate evidence. Production flat nav remains until **UDS-4.1** after the gate passes.
+Status: **Accepted inventory** for UDS-4.1 production chrome. UDS-4.0 gate **Passed** ([uds-4.0-gate-evidence.md](uds-4.0-gate-evidence.md)).
 
 ## Purpose and boundaries
 

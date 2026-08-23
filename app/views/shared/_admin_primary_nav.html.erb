@@ -1,0 +1,35 @@
+<% nav = admin_navigation %>
+<% if nav %>
+  <nav class="app-nav app-nav--grouped" aria-label="Primary">
+    <div class="app-nav-utilities">
+      <%= link_to "Home", root_path, class: ("is-active" if controller.controller_path == "home") %>
+    </div>
+
+    <% nav.groups.each do |group| %>
+      <section class="app-nav-group<%= " is-current-area" if group.current %>" aria-labelledby="nav-group-<%= group.key %>">
+        <h2 id="nav-group-<%= group.key %>" class="app-nav-group__heading">
+          <%= group.label %>
+          <% if group.current %>
+            <span class="visually-hidden">Current area</span>
+          <% end %>
+        </h2>
+        <ul class="app-nav-group__list">
+          <% group.destinations.each do |destination| %>
+            <li>
+              <%= link_to destination.label, destination.path,
+                    class: ("is-active" if destination.current),
+                    "aria-current": (destination.current ? "page" : nil) %>
+            </li>
+          <% end %>
+        </ul>
+      </section>
+    <% end %>
+
+    <div class="app-nav-utilities" aria-label="Session utilities">
+      <% if nav.show_switch_store? %>
+        <%= link_to "Switch store", new_store_selection_path(return_to: request.fullpath) %>
+      <% end %>
+      <%= button_to "Sign out", session_path, method: :delete, class: "btn btn--ghost" %>
+    </div>
+  </nav>
+<% end %>

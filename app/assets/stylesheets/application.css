@@ -246,21 +246,21 @@ summary:focus-visible {
   display: contents;
 }
 
-.nav-prototype .app-nav--grouped {
+.app-nav--grouped {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-4) var(--space-5);
   align-items: flex-start;
 }
 
-.nav-prototype .app-nav-group {
+.app-nav--grouped .app-nav-group {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
   min-width: 10rem;
 }
 
-.nav-prototype .app-nav-group__heading {
+.app-nav-group__heading {
   margin: 0;
   font-size: 0.75rem;
   font-weight: 700;
@@ -269,11 +269,11 @@ summary:focus-visible {
   color: var(--color-text-muted, var(--color-text));
 }
 
-.nav-prototype .app-nav-group.is-current-area .app-nav-group__heading {
+.app-nav-group.is-current-area .app-nav-group__heading {
   color: var(--color-brand-default);
 }
 
-.nav-prototype .app-nav-group__list {
+.app-nav-group__list {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -282,7 +282,7 @@ summary:focus-visible {
   gap: var(--space-1);
 }
 
-.nav-prototype .app-nav-utilities {
+.app-nav-utilities {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2) var(--space-3);
@@ -302,11 +302,11 @@ summary:focus-visible {
 }
 
 @media (max-width: 40rem) {
-  .nav-prototype .app-nav--grouped {
+  .app-nav--grouped {
     flex-direction: column;
   }
 
-  .nav-prototype .app-nav-group {
+  .app-nav--grouped .app-nav-group {
     min-width: 0;
     width: 100%;
   }

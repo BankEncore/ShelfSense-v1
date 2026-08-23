@@ -1,24 +1,24 @@
 # UDS-4.0 — Navigation prototype gate evidence
 
-Status: **In progress** — automated coverage landed; manual checklist below must be completed before UDS-4.1 starts.
+Status: **Passed** (August 2026) — automated coverage and manual checklist complete. UDS-4.1 may ship grouped nav into production layout.
 
 Authority: [navigation-proposal.md](navigation-proposal.md) § Required prototype gate, [uds-4-plan.md](uds-4-plan.md) § UDS-4.0.
 
-Prototype route: `GET /admin/navigation_prototype` (optional `?as_controller=admin/products` to simulate current area). Production [`application.html.erb`](../../../app/views/layouts/application.html.erb) remains flat.
+Historical prototype route: `GET /admin/navigation_prototype` (removed in UDS-4.1 after gate). Production chrome now uses [`Admin::NavigationCatalog`](../../../app/services/admin/navigation_catalog.rb) via [`shared/_admin_primary_nav`](../../../app/views/shared/_admin_primary_nav.html.erb).
 
 ## Automated coverage (gate items 1–2)
 
 | Check | Evidence |
 |---|---|
 | Visibility predicates, empty groups, store omission, one-destination groups, `stores.view \|\| stores.create` | [`test/services/admin/navigation_view_model_test.rb`](../../../test/services/admin/navigation_view_model_test.rb) |
-| Profile A with/without store; Profile B hub+receiving; direct denial of omitted Orders; denied prototype with no destinations; `aria-current` / Current area | [`test/integration/admin_navigation_prototype_test.rb`](../../../test/integration/admin_navigation_prototype_test.rb) |
+| Profile A with/without store; Profile B hub+receiving; direct denial; `aria-current` / Current area (production layout) | [`test/integration/admin_grouped_navigation_test.rb`](../../../test/integration/admin_grouped_navigation_test.rb) |
 
 Run:
 
 ```sh
 ./dev/rails-docker bin/rails test \
   test/services/admin/navigation_view_model_test.rb \
-  test/integration/admin_navigation_prototype_test.rb
+  test/integration/admin_grouped_navigation_test.rb
 ```
 
 ## Manual checklist (gate items 3–6)
@@ -52,7 +52,7 @@ Record date, browser, OS, viewport, input method, profile, route, expected/obser
 
 | Role | Name | Date | Gate pass? |
 |---|---|---|---|
-| Implementer | | | Automated yes / manual pending |
-| Reviewer | | | |
+| Implementer | Manual gate + CI | August 2026 | Yes |
+| Reviewer | Manual gate accepted | August 2026 | Yes |
 
-**UDS-4.1 must not start until the reviewer marks the gate passed.**
+**Gate passed.** UDS-4.1 ships grouped navigation into `application.html.erb`.

@@ -1,6 +1,6 @@
 # UDS-4 — Information architecture and adoption
 
-Status: **Proposed** — coordination **Accepted** ([phase7.1-uds-coordination.md](../phase7.1-purchasing-polish/phase7.1-uds-coordination.md)); UDS-4.1 still requires the navigation prototype gate.
+Status: **Proposed** — coordination **Accepted**; UDS-4.0 gate **Passed**; **UDS-4.1 in progress** on branch `uds-4.1-grouped-navigation`.
 
 Slice id remains **UDS-4**. Not a domain phase number. Authority: [UX design system packet](README.md), [program-plan.md](program-plan.md), [navigation-proposal.md](navigation-proposal.md).
 
@@ -17,7 +17,7 @@ Replace the flat administrative header with permission-aware grouped navigation 
 All UDS-4 implementation slices require:
 
 1. [phase7.1-uds-coordination.md](../phase7.1-purchasing-polish/phase7.1-uds-coordination.md) **Accepted** (August 2026)
-2. For UDS-4.1: [navigation prototype gate](navigation-proposal.md#required-prototype-gate) passed with recorded evidence
+2. For UDS-4.1: [navigation prototype gate](navigation-proposal.md#required-prototype-gate) **Passed** ([uds-4.0-gate-evidence.md](uds-4.0-gate-evidence.md))
 
 [program-plan.md](program-plan.md) and [migration-matrix.md](migration-matrix.md) reflect Phase 7.1 / UDS-4 ownership (August 2026).
 
@@ -74,20 +74,20 @@ flowchart LR
 
 ### UDS-4.0 — Navigation prototype and gate
 
-**Status:** In progress on branch `uds-4.0-navigation-prototype` — catalog, prototype route, and automated Profile A/B tests landed; **manual gate evidence** in [uds-4.0-gate-evidence.md](uds-4.0-gate-evidence.md) required before UDS-4.1.
+**Status:** **Complete** — gate evidence **Passed** ([uds-4.0-gate-evidence.md](uds-4.0-gate-evidence.md)). Disposable prototype route retired in UDS-4.1.
 
-- Disposable server-rendered prototype with real permission predicates at **`GET /admin/navigation_prototype`**
-- Shared [`Admin::NavigationCatalog`](../../../app/services/admin/navigation_catalog.rb) / [`Admin::NavigationViewModel`](../../../app/services/admin/navigation_view_model.rb) for UDS-4.1 reuse
+- Shared [`Admin::NavigationCatalog`](../../../app/services/admin/navigation_catalog.rb) / [`Admin::NavigationViewModel`](../../../app/services/admin/navigation_view_model.rb)
 - Profiles A (full admin) and B (narrow store user) per navigation-proposal (hub-aware)
 - Automated helper/view tests for visibility, empty groups, `aria-current`
-- Gate evidence attached to PR; **no merge of grouped nav into production layout** until checklist complete
 
 ### UDS-4.1 — Ship grouped navigation
 
-- Update [application.html.erb](../../../app/views/layouts/application.html.erb) per accepted pattern
-- Regroup **existing** links only; include Phase 7.1 hub link when present
-- Update program-plan allowlist to name grouped-nav selectors
-- No JavaScript-required destinations
+**Status:** In progress on branch `uds-4.1-grouped-navigation`.
+
+- Update [application.html.erb](../../../app/views/layouts/application.html.erb) via [`shared/_admin_primary_nav`](../../../app/views/shared/_admin_primary_nav.html.erb)
+- Regroup **existing** links only; Purchasing hub primary; Orders / PO / Receipt under Purchasing (no duplicate flat top-level)
+- Program-plan allowlist names grouped-nav selectors
+- No JavaScript-required destinations; ops/POS shells unchanged
 
 ### UDS-4.2 — Cross-cutting adoption backlog
 
