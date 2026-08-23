@@ -55,31 +55,41 @@ UDS-1 through UDS-3 code is merged. [migration-matrix.md](ux-design-system/migra
 
 ### UDS-4 — Information architecture and adoption
 
-**Status:** Proposed. **Not** a domain Phase 8.
+**Status:** Proposed. **Not** a domain Phase 8. Coordination **Accepted** ([phase7.1-uds-coordination.md](phase7.1-purchasing-polish/phase7.1-uds-coordination.md)); UDS-4.1 still requires the navigation prototype gate.
 
-Continue the cross-phase [UX design system](ux-design-system/README.md). Scope:
+Continue the cross-phase [UX design system](ux-design-system/README.md). Authoritative slice plan: [uds-4-plan.md](ux-design-system/uds-4-plan.md).
+
+Scope:
 
 - Prototype and pass the [navigation prototype gate](ux-design-system/navigation-proposal.md#required-prototype-gate) using real permission and store-context rules.
-- Replace the flat administrative header with permission-aware **grouped navigation**; reconcile canonical group names during the prototype (starting inventory in [navigation-proposal.md](ux-design-system/navigation-proposal.md); target operational groupings may include Sales, Customers, Inventory, Purchasing, Buyback, Cash, Catalog, Reports, and Configuration).
-- Introduce workspace landing pages where useful.
-- Continue migrating screens to Warm Parchment and `ActionButtonHelper`.
-- Standardize customer, product, and transaction cross-links.
+- Replace the flat administrative header with permission-aware **grouped navigation** using the canonical groups in [navigation-proposal.md](ux-design-system/navigation-proposal.md) (not aspirational roadmap labels until those destinations exist).
+- Continue migrating **non–Phase-7.1-owned** screens to Warm Parchment and `ActionButtonHelper` per the coordination ownership table.
+- Standardize **non-purchasing** cross-links; purchasing entity links belong to Phase 7.1.
 
 **Deliverable:**
 
 > Authorized staff can reach operational destinations through grouped, permission-filtered navigation without relying on a flat link list, JavaScript-only access, or hidden authorization boundaries.
 
-UDS-4 may run **in parallel** with Phase 8 and Phase 9 when the navigation prototype is isolated from domain schema work.
+UDS-4.0 prototype may run in parallel with Phase 7.1.1 on flat nav after coordination acceptance.
 
 ## Phase 7.1 — Purchasing polish
 
-**Status:** Proposed. **Builds on** [Phase 7](phase7-orders-and-receiving/README.md).
+**Status:** Proposed. **Builds on** [Phase 7](phase7-orders-and-receiving/README.md). Coordination **Accepted** ([phase7.1-uds-coordination.md](phase7.1-purchasing-polish/phase7.1-uds-coordination.md)).
+
+Authoritative packet: [Phase 7.1](phase7.1-purchasing-polish/README.md).
 
 Phase 7 shipped the bookstore-operable purchasing and customer-request path. Phase 7.1 addresses **targeted purchasing ergonomics** deferred from Phase 7—not supplier returns, request expiration, or the AP/accounting interface.
 
-### Slice 7.1.3 — Purchasing polish
+### Slices (summary)
 
-Deferred Phase 7 ergonomics (consolidation, multi-qty requests, draft/ops workflow improvements, etc.) only when a planning packet justifies each item.
+| Slice | Scope |
+|---|---|
+| 7.1.1 | Purchasing work hub (spec §17.1) |
+| 7.1.2 | Admin orders / PO / receipt presentation and cross-links |
+| 7.1.3 | Ops Location + Draft PO parity with Receiving |
+| 7.1.4 | Customer-request purchasing cross-links (optional) |
+
+Coordination with UDS-4: [phase7.1-uds-coordination.md](phase7.1-purchasing-polish/phase7.1-uds-coordination.md).
 
 ### Explicitly defer (beyond Phase 7.1)
 
@@ -356,8 +366,8 @@ The following remain out of scope until a planning packet and ADR review justify
 | Phases 0–6.1 | Implemented |
 | Phase 7 — Orders, requests, receiving | Implemented |
 | UDS-1–3 — Warm Parchment foundation | Implemented (code); a11y matrix evidence in progress |
-| UDS-4 — Navigation and information architecture | Next; cross-phase; parallel with 8/9 |
-| Phase 7.1 — Purchasing polish (7.1.3) | Optional; after or alongside UDS-4 when ergonomics justify a slice |
+| Phase 7.1 — Purchasing polish | Proposed; coordination **Accepted** — slices 7.1.1+ ([packet](phase7.1-purchasing-polish/README.md)) |
+| UDS-4 — Navigation and information architecture | Proposed; coordination **Accepted** — UDS-4.0 prototype; UDS-4.1 after nav gate |
 | Phase 8 — Customer foundation refinement | Next; parallel with 9 |
 | Phase 9 — Catalog and bibliographic enrichment | Next; parallel with 8 |
 | Phase 10 — Stored value and financial event contract | After Phase 8 |
@@ -377,7 +387,8 @@ The following remain out of scope until a planning packet and ADR review justify
 |---|---|
 | [planning/README.md](README.md) | Domain ownership and dependency guidance; §3 phase outline superseded by this file for forward sequencing |
 | [Phase planning packets](phase1-operational-foundation/phase1-plan.md) | Authoritative detail per implemented phase |
-| [UX design system](ux-design-system/README.md) | Cross-phase presentation program |
+| [Phase 7.1 purchasing polish](phase7.1-purchasing-polish/README.md) | Forward purchasing ergonomics; [coordination with UDS-4](phase7.1-purchasing-polish/phase7.1-uds-coordination.md) |
+| [UDS-4 plan](ux-design-system/uds-4-plan.md) | Grouped navigation and cross-cutting adoption |
 | [preliminary-roadmap.md](../drafts/preliminary-roadmap.md) | Terminal / ADR-018 productization detail; draft POS Phases 4–6B boundary text superseded for domain sequencing |
 | [pos-pending-decisions.md](../drafts/pos-pending-decisions.md) | Open POS policy items referenced during phase planning |
 

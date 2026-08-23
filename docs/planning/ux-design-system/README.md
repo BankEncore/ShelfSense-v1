@@ -25,12 +25,13 @@ Do not fold POS into a shared ops shell. Do not replace admin show pages with dr
 
 | Document | Purpose | Authority |
 |---|---|---|
-| [program-plan.md](program-plan.md) | Adoption slices UDS-0–UDS-3, rollout contract, deferrals, acceptance | Proposed |
+| [program-plan.md](program-plan.md) | Adoption slices UDS-0–UDS-4, rollout contract, deferrals, acceptance | Proposed |
 | [uds-1-plan.md](uds-1-plan.md) | UDS-1 implementation plan (tokens, ActionButtonHelper, shared primitives; not a Phase N.M) | Implemented (UDS-1a–1d) |
 | [uds-1-user-stories.md](uds-1-user-stories.md) | Issue-ready backlog stories for UDS-1a–1d | Implemented (acceptance checked) |
 | [uds-2-plan.md](uds-2-plan.md) | UDS-2 representative screen convergence (Suppliers, Receiving, history, review dialogs) | Implemented (partial matrix; a11y evidence pending) |
 | [uds-2-user-stories.md](uds-2-user-stories.md) | Issue-ready backlog stories for UDS-2a–2d | Implemented |
 | [uds-3-plan.md](uds-3-plan.md) | UDS-3 Register visual refinement (basket hierarchy, shortcut groups, overlays) | Implemented (partial matrix; a11y evidence pending) |
+| [uds-4-plan.md](uds-4-plan.md) | UDS-4 grouped navigation and cross-cutting adoption; gated by [phase7.1-uds-coordination.md](../phase7.1-purchasing-polish/phase7.1-uds-coordination.md) | Proposed |
 | [uds-3-user-stories.md](uds-3-user-stories.md) | Issue-ready backlog stories for UDS-3a–3c | Implemented |
 | [accessibility-ergonomic-test-matrix.md](accessibility-ergonomic-test-matrix.md) | Manual a11y/ergonomic gate + timed cashier scenarios for UDS-2/UDS-3 | Proposed acceptance gate |
 | [warm-parchment.md](warm-parchment.md) | Tokens, typography, density, contrast (AA baseline) | Implemented (UDS-1) |
