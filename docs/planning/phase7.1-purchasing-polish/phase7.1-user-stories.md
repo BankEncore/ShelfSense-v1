@@ -1,6 +1,6 @@
 # Phase 7.1 — User stories
 
-Status: **Complete** — **7.1.1–7.1.3** and **UDS-4** on branch `phase-7.1.3-purchasing-ops-closeout` ([phase7.1.3-plan.md](phase7.1.3-plan.md)); **7.1.4 deferred**.
+Status: **Ready for review** — **7.1.1–7.1.2** and **UDS-4** on `main`; **7.1.3** on branch `phase-7.1.3-purchasing-ops-closeout` (PR #40; [phase7.1.3-plan.md](phase7.1.3-plan.md)); **7.1.4 deferred**.
 
 Concise stories for slices 7.1.1–7.1.4; acceptance bullets are the review bar.
 

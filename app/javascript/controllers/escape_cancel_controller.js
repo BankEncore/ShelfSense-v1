@@ -26,20 +26,43 @@ export default class extends Controller {
       return
     }
 
+    const dirtyForm = this.findDirtyDraftForm()
+    if (dirtyForm) {
+      event.preventDefault()
+      this.resetDirtyForm(dirtyForm)
+      return
+    }
+
     const selected = this.element.querySelector("[data-row-selection-target='row'].is-selected")
     if (selected) {
       event.preventDefault()
       selected.classList.remove("is-selected")
       selected.setAttribute("aria-selected", "false")
       this.element.querySelector("[data-focus-restore-target='lookup']")?.focus()
-      return
+    }
+  }
+
+  findDirtyDraftForm() {
+    const activeForm = document.activeElement?.closest("form[data-dirty='true']")
+    if (activeForm) return activeForm
+
+    const selected = this.element.querySelector("[data-row-selection-target='row'].is-selected")
+    if (selected) {
+      const rowDirty = selected.querySelector("form[data-dirty='true']")
+      if (rowDirty) return rowDirty
     }
 
-    const dirtyForm = document.activeElement?.closest("form[data-dirty='true']") || this.element.querySelector("form[data-dirty='true']")
-    if (!dirtyForm) return
-    event.preventDefault()
-    dirtyForm.reset()
-    dirtyForm.dispatchEvent(new CustomEvent("ops:dirty-cancel", { bubbles: true, detail: { form: dirtyForm } }))
+    return this.element.querySelector("form[data-dirty='true']")
+  }
+
+  resetDirtyForm(form) {
+    form.reset()
+    form.dispatchEvent(new CustomEvent("ops:dirty-cancel", { bubbles: true, detail: { form } }))
+    const row = form.closest("[data-row-selection-target='row']")
+    if (row?.classList.contains("is-selected")) {
+      row.classList.remove("is-selected")
+      row.setAttribute("aria-selected", "false")
+    }
     this.element.querySelector("[data-focus-restore-target='lookup']")?.focus()
   }
 }

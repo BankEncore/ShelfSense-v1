@@ -106,6 +106,71 @@ class LocationQueueButtonsTest < ApplicationSystemTestCase
     assert_button "Shortcut help"
   end
 
+  test "dirty not located mode switch to located declines abandonment and preserves notes" do
+    sign_in_and_visit_queue
+    find("tr.is-selected").send_keys :enter
+    click_link "Not located"
+    fill_in "Notes (optional)", with: "Still looking"
+
+    dismiss_confirm("Discard this location entry?") do
+      click_link "Located"
+    end
+
+    assert_field "Notes (optional)", with: "Still looking"
+    assert_selector "[data-location-queue-target='notLocatedSection']:not([hidden])"
+  end
+
+  test "dirty not located abandonment accepted allows locate submit without another prompt" do
+    sign_in_and_visit_queue
+    find("tr.is-selected").send_keys :enter
+    click_link "Not located"
+    fill_in "Notes (optional)", with: "Shelf was empty"
+
+    accept_confirm("Discard this location entry?") do
+      click_link "Located"
+    end
+
+    check "I physically located one copy of this title."
+    click_button "Reserve for Queue Reader"
+    assert_text "located and reserved", wait: 5
+  end
+
+  test "dirty located mode switch to not located requires abandonment" do
+    sign_in_and_visit_queue
+    find("tr.is-selected").send_keys :enter
+    check "I physically located one copy of this title."
+
+    dismiss_confirm("Discard this location entry?") do
+      click_link "Not located"
+    end
+
+    assert_selector "input[name='physical_copy_confirmed']:checked"
+    assert_selector "[data-location-queue-target='locateSection']:not([hidden])"
+  end
+
+  test "dirty panel blocks switching to a different request until abandonment is confirmed" do
+    second_customer = Customer.create!(display_name: "Next Reader", phone: "555-0112")
+    Customers::CreateRequest.call(
+      store: @store,
+      customer: second_customer,
+      product_variant: @variant,
+      actor: @actor
+    )
+
+    sign_in_and_visit_queue
+    find("tr.is-selected", text: "Queue Reader").send_keys :enter
+    click_link "Not located"
+    fill_in "Notes (optional)", with: "Not on shelf"
+
+    dismiss_confirm("Discard this location entry?") do
+      select_link = find("tr", text: "Next Reader").find("a", text: "Select")
+      page.execute_script("arguments[0].click()", select_link)
+    end
+
+    assert_field "Notes (optional)", with: "Not on shelf"
+    assert_selector "tr.is-selected", text: "Queue Reader"
+  end
+
   private
 
   def sign_in_and_visit_queue

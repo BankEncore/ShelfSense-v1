@@ -17,6 +17,10 @@ class PurchasingOpsLayoutTest < ActionDispatch::IntegrationTest
     assert_select "html:not([data-turbo='false'])"
     assert_select "script[type='module']", text: /import \"purchasing_ops\"/
     assert_select "[data-controller~='ops-shortcuts']"
+    assert_select ".ops-shortcuts button.btn--ghost.btn--neutral.btn--small", minimum: 1
+    shortcuts_html = response.body[/\<aside class="ops-shortcuts.*?\<\/aside\>/m]
+    assert shortcuts_html.present?
+    assert_no_match(/class="btn btn--ghost"(?! btn--neutral)/, shortcuts_html)
 
     get root_path
 

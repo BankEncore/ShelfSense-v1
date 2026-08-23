@@ -122,6 +122,26 @@ class PurchasingOpsWorkspaceTest < ApplicationSystemTestCase
     assert_text "Line updated"
   end
 
+  test "escape resets dirty inline edit before clearing row selection" do
+    visit ops_purchase_order_path(@purchase_order)
+    line = @purchase_order.purchase_order_lines.first
+    original_notes = line.order.notes
+
+    row = find("table.ops-queue tbody tr", match: :first)
+    row.click
+    row.send_keys :arrow_down
+    find("tr.is-selected input[name='notes']").fill_in with: "unsaved buyer note"
+
+    send_keys :escape
+
+    assert_field "notes", with: original_notes.to_s
+    assert_no_selector "tr.is-selected"
+    assert_equal "identifier", page.evaluate_script("document.activeElement && document.activeElement.name")
+
+    click_on "All drafts"
+    assert_current_path ops_draft_pos_path
+  end
+
   test "dirty receipt or PO edits require confirmation before Turbo navigation" do
     visit ops_purchase_order_path(@purchase_order)
     notes = find("input[name='notes']", match: :first)

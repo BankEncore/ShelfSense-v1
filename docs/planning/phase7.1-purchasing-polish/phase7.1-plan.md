@@ -2,7 +2,7 @@
 
 ## Status
 
-**7.1.1–7.1.3 on `main`** (7.1.1–7.1.2 PR #35; **7.1.3** branch `phase-7.1.3-purchasing-ops-closeout`). **UDS-4.1 and UDS-4.2 on `main`**. **Phase 7.1 complete** — see [phase7.1.3-plan.md](phase7.1.3-plan.md). **7.1.4 deferred** unless separately opened.
+**7.1.1–7.1.2 on `main`** (PR #35). **UDS-4.1 and UDS-4.2 on `main`**. **7.1.3 ready for review** on branch `phase-7.1.3-purchasing-ops-closeout` (PR #40) — see [phase7.1.3-plan.md](phase7.1.3-plan.md). **7.1.4 deferred** unless separately opened. Phase 7.1 completes when 7.1.3 merges to `main`.
 
 **Not** the inspirational Warm Parchment exploration in [docs/drafts/phase-7.1-ux-refactor/](../../drafts/phase-7.1-ux-refactor/README.md) (cross-phase UX notes; path retained for stability).
 
@@ -28,7 +28,7 @@ Phase 7 on `main` ships suppliers, quantity-one requests, locate/reserve, orders
 |---|---|---|
 | No purchasing work hub with active-work summaries | §17.1 | 7.1.1 ✓ |
 | Bare admin orders/PO/receipt indexes | §17.1 navigation; migration matrix | 7.1.2 ✓ |
-| Location/Draft PO ops interaction closeout | §17.3–17.4 | 7.1.3 ✓ |
+| Location/Draft PO ops interaction closeout | §17.3–17.4 | 7.1.3 (PR #40) |
 | Request admin next-action polish (if hub insufficient) | §17.6 | 7.1.4 deferred |
 
 ## Explicitly out of scope
@@ -122,7 +122,7 @@ flowchart LR
 
 ### Slice 7.1.3 — Purchasing ops interaction closeout
 
-**Status:** **Complete** — see [phase7.1.3-plan.md](phase7.1.3-plan.md) and [phase7.1.3-ops-evidence.md](phase7.1.3-ops-evidence.md).
+**Status:** **Ready for review** on branch `phase-7.1.3-purchasing-ops-closeout` (PR #40) — authoritative plan: [phase7.1.3-plan.md](phase7.1.3-plan.md).
 
 **Note:** Hub exit links and light `ActionButtonHelper` / table-scroll touch-ups on Location, Draft PO, and Receiving templates shipped with **7.1.1** as incidental integration. Those changes do **not** satisfy 7.1.3 acceptance.
 

@@ -3,11 +3,22 @@
   <% if profile[:buttons].any? %>
     <div class="ops-shortcuts__buttons">
       <% profile[:buttons].each do |button| %>
-        <button type="button" class="btn btn--ghost" data-action="<%= button[:action] %>">
-          <%= button[:label] %> <kbd><%= button[:keys] %></kbd>
-        </button>
+        <%= action_button(
+              "#{button[:label]} #{tag.kbd(button[:keys])}".html_safe,
+              style: :ghost,
+              intent: :neutral,
+              size: :small,
+              data: { action: button[:action] }
+            ) %>
       <% end %>
-      <button type="button" class="btn btn--ghost" aria-expanded="false" aria-controls="ops-shortcut-help" data-ops-shortcuts-target="helpButton" data-action="ops-shortcuts#toggleHelp">Shortcut help</button>
+      <%= action_button(
+            "Shortcut help",
+            style: :ghost,
+            intent: :neutral,
+            size: :small,
+            aria: { expanded: "false", controls: "ops-shortcut-help" },
+            data: { ops_shortcuts_target: "helpButton", action: "ops-shortcuts#toggleHelp" }
+          ) %>
     </div>
     <div id="ops-shortcut-help" class="ops-shortcuts__help" data-ops-shortcuts-target="help" hidden>
       <h2>Keyboard shortcuts</h2>
@@ -19,12 +30,19 @@
           </div>
         <% end %>
       </dl>
-      <button type="button" data-action="ops-shortcuts#toggleHelp">Close shortcut help</button>
+      <%= action_button("Close shortcut help", style: :ghost, intent: :neutral, size: :small, data: { action: "ops-shortcuts#toggleHelp" }) %>
     </div>
   <% else %>
     <div class="ops-shortcuts__buttons">
       <p class="ops-hint ops-shortcuts__hint">Use ↑/↓ and Enter on the queue; Esc closes the action panel. Select, Located, and Not located are always available as links.</p>
-      <button type="button" class="btn btn--ghost" aria-expanded="false" aria-controls="ops-shortcut-help" data-ops-shortcuts-target="helpButton" data-action="ops-shortcuts#toggleHelp">Shortcut help</button>
+      <%= action_button(
+            "Shortcut help",
+            style: :ghost,
+            intent: :neutral,
+            size: :small,
+            aria: { expanded: "false", controls: "ops-shortcut-help" },
+            data: { ops_shortcuts_target: "helpButton", action: "ops-shortcuts#toggleHelp" }
+          ) %>
     </div>
     <div id="ops-shortcut-help" class="ops-shortcuts__help" data-ops-shortcuts-target="help" hidden>
       <h2>Keyboard shortcuts</h2>
@@ -36,7 +54,7 @@
           </div>
         <% end %>
       </dl>
-      <button type="button" data-action="ops-shortcuts#toggleHelp">Close shortcut help</button>
+      <%= action_button("Close shortcut help", style: :ghost, intent: :neutral, size: :small, data: { action: "ops-shortcuts#toggleHelp" }) %>
     </div>
   <% end %>
 </aside>

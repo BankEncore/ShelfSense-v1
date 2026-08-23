@@ -1,6 +1,6 @@
 # Phase 7.1 — Purchasing workflow and presentation closeout
 
-Status: **Complete** — coordination **Accepted** (August 2026); **7.1.1–7.1.3** and **UDS-4.1/4.2** on branch `phase-7.1.3-purchasing-ops-closeout` ([phase7.1.3-plan.md](phase7.1.3-plan.md)); **7.1.4 deferred**.
+Status: **Ready for review** — coordination **Accepted** (August 2026); **7.1.1–7.1.2** and **UDS-4.1/4.2** on `main`; **7.1.3** on branch `phase-7.1.3-purchasing-ops-closeout` (PR #40; [phase7.1.3-plan.md](phase7.1.3-plan.md)); **7.1.4 deferred**.
 
 | Document | Purpose |
 |---|---|

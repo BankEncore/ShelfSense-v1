@@ -1,5 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 
+const ABANDON_COPY = "Discard this location entry?"
+
 export default class extends Controller {
   static targets = [
     "row",
@@ -20,6 +22,12 @@ export default class extends Controller {
     this.activePanel = this.panelTargets.find((panel) => !panel.hidden) || null
     if (this.activePanel) this.snapshotPanel(this.activePanel)
     this.restoreFailureState()
+    this.boundPreparePanelSubmit = this.preparePanelSubmit.bind(this)
+    this.element.addEventListener("submit", this.boundPreparePanelSubmit, true)
+  }
+
+  disconnect() {
+    this.element.removeEventListener("submit", this.boundPreparePanelSubmit, true)
   }
 
   keydown(event) {
@@ -37,24 +45,42 @@ export default class extends Controller {
     if (event.key === "Enter") return this.openSelectedPanel()
 
     const step = event.key === "ArrowDown" ? 1 : -1
-    this.select((this.selectedIndex + step + this.rowTargets.length) % this.rowTargets.length)
+    const nextIndex = (this.selectedIndex + step + this.rowTargets.length) % this.rowTargets.length
+    if (!this.prepareRequestChange(nextIndex)) return
+    this.select(nextIndex)
   }
 
   selectRow(event) {
     if (event.target.closest("button, a, input, select")) return
-    this.select(this.rowTargets.indexOf(event.currentTarget))
+    const index = this.rowTargets.indexOf(event.currentTarget)
+    if (!this.prepareRequestChange(index)) return
+    this.select(index)
   }
 
   openPanel(event) {
     event.preventDefault()
     const row = event.currentTarget.closest("tr")
-    this.select(this.rowTargets.indexOf(row), { focus: false })
+    const index = this.rowTargets.indexOf(row)
+    if (!this.prepareRequestChange(index)) return
+    this.select(index, { focus: false })
     this.openSelectedPanel()
   }
 
   openSelectedPanel() {
     const panel = this.panelForSelection
     if (!panel) return
+
+    const outgoing = this.visiblePanel
+    if (outgoing && outgoing !== panel) {
+      if (!this.abandonDirtyPanel(outgoing)) {
+        this.revertSelectionToPanel(outgoing)
+        return
+      }
+      this.resetPanel(outgoing)
+      outgoing.hidden = true
+      this.activePanel = null
+    }
+
     this.panelTargets.forEach((item) => { item.hidden = item !== panel })
     this.activePanel = panel
     this.showLocate()
@@ -66,7 +92,7 @@ export default class extends Controller {
     event?.preventDefault?.()
     const panel = this.visiblePanel
     if (!panel) return
-    if (this.isPanelDirty(panel) && !window.confirm("Discard this location entry?")) return
+    if (!this.abandonDirtyPanel(panel)) return
     this.resetPanel(panel)
     panel.hidden = true
     this.activePanel = null
@@ -75,7 +101,9 @@ export default class extends Controller {
 
   showLocate(event) {
     event?.preventDefault?.()
-    const panel = this.panelForSelection
+    const panel = this.panelForSelection || this.visiblePanel
+    if (!panel) return
+    if (!this.abandonDirtySection(panel, "not-located")) return
     this.sectionIn(panel, "locate")?.removeAttribute("hidden")
     this.sectionIn(panel, "not-located")?.setAttribute("hidden", "")
     this.focusLocate(panel)
@@ -83,7 +111,9 @@ export default class extends Controller {
 
   showNotLocated(event) {
     event?.preventDefault?.()
-    const panel = this.panelForSelection
+    const panel = this.panelForSelection || this.visiblePanel
+    if (!panel) return
+    if (!this.abandonDirtySection(panel, "locate")) return
     this.sectionIn(panel, "locate")?.setAttribute("hidden", "")
     const section = this.sectionIn(panel, "not-located")
     section?.removeAttribute("hidden")
@@ -109,6 +139,16 @@ export default class extends Controller {
     const convert = panel.querySelector("[data-location-queue-target='convertField']")
     if (convert) convert.value = "1"
     fields?.querySelector("select, input:not([type='hidden'])")?.focus()
+  }
+
+  preparePanelSubmit(event) {
+    const form = event.target
+    if (!form.matches?.("form[data-dirty-track]")) return
+    const panel = form.closest("[data-location-queue-target='panel']")
+    if (!panel) return
+    panel.querySelectorAll("form[data-dirty-track]").forEach((other) => {
+      if (other !== form) this.resetForm(other)
+    })
   }
 
   select(index, { focus = true } = {}) {
@@ -156,6 +196,40 @@ export default class extends Controller {
     ;(scan || checkbox || panel?.querySelector("[data-location-submit]"))?.focus()
   }
 
+  prepareRequestChange(nextIndex) {
+    if (nextIndex === this.selectedIndex) return true
+    const outgoing = this.visiblePanel
+    if (!outgoing) return true
+    const nextPanel = this.panelForRowIndex(nextIndex)
+    if (!nextPanel || outgoing === nextPanel) return true
+    if (!this.abandonDirtyPanel(outgoing)) return false
+    this.resetPanel(outgoing)
+    outgoing.hidden = true
+    this.activePanel = null
+    return true
+  }
+
+  abandonDirtySection(panel, sectionKey) {
+    const section = this.sectionIn(panel, sectionKey)
+    if (!section || section.hidden) return true
+    const forms = section.querySelectorAll("form[data-dirty-track]")
+    if (!Array.from(forms).some((form) => this.isFormDirty(form))) return true
+    if (!window.confirm(ABANDON_COPY)) return false
+    forms.forEach((form) => this.resetForm(form))
+    return true
+  }
+
+  abandonDirtyPanel(panel) {
+    if (!this.isPanelDirty(panel)) return true
+    if (!window.confirm(ABANDON_COPY)) return false
+    return true
+  }
+
+  revertSelectionToPanel(panel) {
+    const index = this.rowTargets.findIndex((row) => row.dataset.requestId === panel.dataset.requestId)
+    if (index >= 0) this.select(index, { focus: true })
+  }
+
   snapshotPanel(panel) {
     panel.querySelectorAll("form[data-dirty-track]").forEach((form) => {
       this.panelSnapshots.set(form, this.serializeForm(form))
@@ -175,32 +249,41 @@ export default class extends Controller {
     return values
   }
 
+  isFormDirty(form) {
+    if (form.dataset.dirty === "true") return true
+    const snapshot = this.panelSnapshots.get(form)
+    if (!snapshot) return false
+    const current = this.serializeForm(form)
+    return Object.keys(snapshot).some((key) => snapshot[key] !== current[key])
+  }
+
   isPanelDirty(panel) {
-    return Array.from(panel.querySelectorAll("form[data-dirty-track]")).some((form) => {
-      if (form.dataset.dirty === "true") return true
-      const snapshot = this.panelSnapshots.get(form)
-      if (!snapshot) return false
-      const current = this.serializeForm(form)
-      return Object.keys(snapshot).some((key) => snapshot[key] !== current[key])
-    })
+    return Array.from(panel.querySelectorAll("form[data-dirty-track]")).some((form) => this.isFormDirty(form))
   }
 
   resetPanel(panel) {
-    panel.querySelectorAll("form[data-dirty-track]").forEach((form) => {
-      form.reset()
-      delete form.dataset.dirty
-      form.dispatchEvent(new CustomEvent("ops:dirty-cancel", { bubbles: true, detail: { form } }))
-    })
+    panel.querySelectorAll("form[data-dirty-track]").forEach((form) => this.resetForm(form))
     this.snapshotPanel(panel)
+  }
+
+  resetForm(form) {
+    form.reset()
+    delete form.dataset.dirty
+    form.dispatchEvent(new CustomEvent("ops:dirty-cancel", { bubbles: true, detail: { form } }))
+    this.panelSnapshots.set(form, this.serializeForm(form))
   }
 
   sectionIn(panel, name) {
     return panel?.querySelector(`[data-location-queue-target='${name === "locate" ? "locateSection" : "notLocatedSection"}']`)
   }
 
-  get panelForSelection() {
-    const id = this.rowTargets[this.selectedIndex]?.dataset.requestId
+  panelForRowIndex(index) {
+    const id = this.rowTargets[index]?.dataset.requestId
     return this.panelTargets.find((panel) => panel.dataset.requestId === id)
+  }
+
+  get panelForSelection() {
+    return this.panelForRowIndex(this.selectedIndex)
   }
 
   get visiblePanel() {
