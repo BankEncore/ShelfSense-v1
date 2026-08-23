@@ -92,7 +92,7 @@ module AdminCrossLinksHelper
     return false unless current_user && store
 
     @admin_cross_link_permissions ||= {}
-    key = [permission_key, store.id]
+    key = [ permission_key, store.id ]
 
     @admin_cross_link_permissions.fetch(key) do
       @admin_cross_link_permissions[key] =
