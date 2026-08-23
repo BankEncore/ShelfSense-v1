@@ -89,12 +89,18 @@ module AdminCrossLinksHelper
   private
 
   def permission_allowed_at?(permission_key, store:)
-    return false unless current_user
+    return false unless current_user && store
 
-    Authorization::PermissionEvaluator.allowed?(
-      user: current_user,
-      permission_key: permission_key,
-      store: store
-    )
+    @admin_cross_link_permissions ||= {}
+    key = [permission_key, store.id]
+
+    @admin_cross_link_permissions.fetch(key) do
+      @admin_cross_link_permissions[key] =
+        Authorization::PermissionEvaluator.allowed?(
+          user: current_user,
+          permission_key: permission_key,
+          store: store
+        )
+    end
   end
 end

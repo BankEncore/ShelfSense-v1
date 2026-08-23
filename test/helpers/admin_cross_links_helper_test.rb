@@ -85,6 +85,38 @@ class AdminCrossLinksHelperTest < ActionView::TestCase
     assert_nil admin_customer_request_cross_link(denied)
   end
 
+  test "permission_allowed_at memoizes repeated permission and store checks" do
+    other = Store.create!(
+      store_number: "97",
+      code: "xlink_memo",
+      name: "Memo Cross Store",
+      legal_name: "Example Books LLC",
+      timezone: "America/New_York",
+      country_code: "US"
+    )
+    stubs_auth!(user: @admin, permissions: Set.new, store: @store)
+
+    calls = 0
+    original = Authorization::PermissionEvaluator.method(:allowed?)
+    Authorization::PermissionEvaluator.define_singleton_method(:allowed?) do |**kwargs|
+      calls += 1
+      original.call(**kwargs)
+    end
+
+    begin
+      3.times { assert permission_allowed_at?("inventory.view", store: @store) }
+      assert_equal 1, calls
+
+      assert permission_allowed_at?("inventory.view", store: other)
+      assert_equal 2, calls
+
+      assert_not permission_allowed_at?("inventory.view", store: nil)
+      assert_equal 2, calls
+    ensure
+      Authorization::PermissionEvaluator.define_singleton_method(:allowed?, original)
+    end
+  end
+
   private
 
   def store_scoped_user!(username_prefix:, permission_key:, store:)
