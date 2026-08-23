@@ -237,6 +237,25 @@ class PosTransactionHistoryTest < ActionDispatch::IntegrationTest
     assert_select "a[href='#{pos_register_workspace_path(register_id: @register.id)}']", text: "Register", count: 0
   end
 
+  test "transaction history index exposes search landmarks for workflow layer" do
+    transaction = complete_cash_sale!
+    get pos_transactions_path
+    assert_response :success
+    assert_select "main"
+    assert_select "h1", text: /Transactions/i
+    assert_select "form[action='#{pos_transactions_path}']"
+    assert_select "a", text: transaction.transaction_reference
+  end
+
+  test "transaction detail exposes immutable receipt structure for workflow layer" do
+    transaction = complete_cash_sale!
+    get pos_transaction_path(transaction)
+    assert_response :success
+    assert_select ".pos-receipt"
+    assert_select ".pos-receipt__line-description", text: /Example Book/
+    assert_match transaction.transaction_reference, response.body
+  end
+
   private
 
   def sign_in_as(username)

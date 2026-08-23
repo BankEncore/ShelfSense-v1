@@ -1,0 +1,8 @@
+# frozen_string_literal: true
+
+# Per-surface axe rule IDs allowed at foundation closeout (moderate/minor only).
+# Critical/serious violations must never appear here.
+supplier_admin: []
+receiving: []
+transaction_history: []
+register: []

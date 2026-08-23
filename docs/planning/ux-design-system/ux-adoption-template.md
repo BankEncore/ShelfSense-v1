@@ -1,0 +1,20 @@
+# UX adoption targets (template)
+
+Copy this section into feature-phase plans that create or materially change screens.
+
+## UX adoption targets
+
+- **Screens created or materially changed:** _(list paths)_
+- **Current migration-matrix state:** _(legacy / partial / verified-automated / conforming / locked)_
+- **Accepted primitives and interaction contracts:** _(ActionButtonHelper intents, shared partials, ops/register contracts as applicable)_
+- **Applicable automated evidence:** _(Layer A axe / Layer B workflow / Layer C layout; cite test files)_
+- **Matrix rows to update after validation:** _(link migration-matrix rows)_
+
+### Rules
+
+- New screens begin with accepted UDS primitives.
+- A materially changed legacy screen becomes that phase's migration responsibility.
+- Unrelated neighboring screens do not enter scope automatically.
+- New interaction patterns require their own specification.
+- Evidence and matrix updates ship in the same PR as the feature.
+- Inherited Warm Parchment colors never establish verification or conformance.
