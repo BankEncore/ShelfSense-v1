@@ -58,7 +58,7 @@ Targeted manual gate for Location and Draft PO (not full UDS accessibility matri
 |---|---|
 | PR | #40 |
 | Merge commit | `2db6f1d` |
-| Evidence head SHA | _set on evidence-completion commit_ |
+| Evidence head SHA | `575557611e46dec52e71e3da09c9b92225beaf22` |
 | Reviewer | Approved and merged August 2026 |
 | Browser | Chromium (Capybara system tests; reflow via viewport resize + `document.documentElement.style.zoom`) |
 | Date | 2026-08-23 |
