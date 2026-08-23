@@ -57,7 +57,7 @@ Targeted manual gate for Location and Draft PO (not full UDS accessibility matri
 |---|---|
 | Branch | `phase-7.1.3-purchasing-ops-closeout` |
 | PR | #40 |
-| Evidence head SHA | _set on merge-ready commit_ |
+| Evidence head SHA | `eaa856248581e6d4d69556e18a5b413eee1428de` |
 | Reviewer | _pending merge approval_ |
 | Browser | Chromium (Capybara system tests) |
 | Date | 2026-08-23 |
