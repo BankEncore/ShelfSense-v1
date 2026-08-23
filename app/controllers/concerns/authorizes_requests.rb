@@ -82,7 +82,13 @@ module AuthorizesRequests
       return selected if selected
     end
 
-    return stores.first if stores.one?
+    # Persist the sole accessible store so adding a second store does not
+    # silently clear context (session had never been written for the .one? case).
+    if stores.one?
+      store = stores.first
+      session[:current_store_id] = store.id
+      return store
+    end
 
     nil
   end

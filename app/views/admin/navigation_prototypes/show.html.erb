@@ -10,7 +10,8 @@
       subtitle: "Disposable grouped navigation for the prototype gate. Production admin chrome remains flat until UDS-4.1." %>
 
 <p class="muted">
-  Simulate current area with <code>?as_controller=admin/products</code> (or another catalog controller path).
+  Destination links stay on this prototype and set <code>?as_controller=…</code> to simulate the current area
+  (for example Products → <code>?as_controller=admin/products</code>). Production admin chrome remains flat until UDS-4.1.
   <% if @demo_controller_path.present? %>
     Currently simulating <code><%= @demo_controller_path %></code>.
   <% end %>
@@ -28,7 +29,7 @@
 
   <nav class="app-nav app-nav--grouped" aria-label="Primary">
     <div class="app-nav-utilities">
-      <%= link_to "Home", root_path, class: ("is-active" if @demo_controller_path.blank? && @nav.current_destination.nil?) %>
+      <%= link_to "Home", admin_navigation_prototype_path, class: ("is-active" if @demo_controller_path.blank? && @nav.current_destination.nil?) %>
     </div>
 
     <% @nav.groups.each do |group| %>
@@ -42,7 +43,8 @@
         <ul class="app-nav-group__list">
           <% group.destinations.each do |destination| %>
             <li>
-              <%= link_to destination.label, destination.path,
+              <%= link_to destination.label,
+                    admin_navigation_prototype_path(as_controller: destination.controller_path),
                     class: ("is-active" if destination.current),
                     "aria-current": (destination.current ? "page" : nil) %>
             </li>
@@ -53,7 +55,7 @@
 
     <div class="app-nav-utilities" aria-label="Session utilities">
       <% if @nav.show_switch_store? %>
-        <%= link_to "Switch store", new_store_selection_path %>
+        <%= link_to "Switch store", new_store_selection_path(return_to: request.fullpath) %>
       <% end %>
       <%= button_to "Sign out", session_path, method: :delete, class: "btn btn--ghost" %>
     </div>

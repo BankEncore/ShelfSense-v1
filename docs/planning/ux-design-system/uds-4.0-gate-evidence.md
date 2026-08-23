@@ -29,24 +29,24 @@ Record date, browser, OS, viewport, input method, profile, route, expected/obser
 
 | Scenario | Viewport | Done | Notes / screenshot |
 |---|---|---|---|
-| With current store + multiple stores; all eight groups; Switch store present | Desktop (~1280 CSS px) | [ ] | |
-| Same; simulate `?as_controller=admin/products` — Products current, Merchandise Current area | Desktop | [ ] | |
-| Without current store — store-gated ops omitted; hub/history remain | Desktop | [ ] | |
-| Keyboard-only: Tab through Home → groups → Switch store → Sign out; focus visible | Desktop | [ ] | |
-| Keyboard-only at narrow width | ≤640 CSS px | [ ] | |
-| Reflow 320 CSS px — no destination lost; no 2D page scroll required for nav | 320 CSS px | [ ] | |
-| Zoom 200% and 400% — destinations remain reachable | Desktop | [ ] | |
-| Screen reader: Primary landmark, group heading, current page/area | — | [ ] | |
-| JavaScript disabled — all authorized links still present (admin `data-turbo="false"`; no JS disclosures in UDS-4.0) | Desktop | [ ] | |
+| With current store + multiple stores; all eight groups; Switch store present | Desktop (~1280 CSS px) | [X] | |
+| Same; simulate `?as_controller=admin/products` — Products current, Merchandise Current area | Desktop | [X] | |
+| Without current store — store-gated ops omitted; hub/history remain | Desktop | [X] | |
+| Keyboard-only: Tab through Home → groups → Switch store → Sign out; focus visible | Desktop | [X] | |
+| Keyboard-only at narrow width | ≤640 CSS px | [X] | |
+| Reflow 320 CSS px — no destination lost; no 2D page scroll required for nav | 320 CSS px | [X] | |
+| Zoom 200% and 400% — destinations remain reachable | Desktop | [X] | |
+| Screen reader: Primary landmark, group heading, current page/area | — | [X] | |
+| JavaScript disabled — all authorized links still present (admin `data-turbo="false"`; no JS disclosures in UDS-4.0) | Desktop | [X] | |
 
 ### Profile B — `purchase_receipts.manage` only (store selected)
 
 | Scenario | Viewport | Done | Notes / screenshot |
 |---|---|---|---|
-| Purchasing group shows hub + Receiving ops only; Current area on Receiving when simulating `ops/receiving` | Desktop | [ ] | |
+| Purchasing group shows hub + Receiving ops only; Current area on Receiving when simulating `ops/receiving` | Desktop | [X] | |
 | Direct URL to Orders denied | — | Covered by automated test | |
-| No current store (multi-store assignment) — hub remains; Receiving ops omitted | Desktop | [ ] | |
-| Keyboard-only + narrow reflow | Narrow | [ ] | |
+| No current store (multi-store assignment) — hub remains; Receiving ops omitted | Desktop | [X] | |
+| Keyboard-only + narrow reflow | Narrow | [X] | |
 
 ## Sign-off
 

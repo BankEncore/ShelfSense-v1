@@ -28,19 +28,61 @@ class AdminNavigationPrototypeTest < ActionDispatch::IntegrationTest
     %w[Merchandise Inventory Purchasing Customers POS\ operations Organization\ configuration Security Audit].each do |label|
       assert_match(/#{Regexp.escape(label)}/, response.body)
     end
-    assert_match admin_purchasing_path, response.body
-    assert_match ops_receiving_index_path, response.body
-    assert_match ops_location_path, response.body
-    assert_match ops_draft_pos_path, response.body
-    assert_match pos_path, response.body
-    assert_match pos_transactions_path, response.body
+    assert_includes response.body, admin_navigation_prototype_path(as_controller: "admin/purchasing")
+    assert_includes response.body, admin_navigation_prototype_path(as_controller: "ops/receiving")
+    assert_includes response.body, admin_navigation_prototype_path(as_controller: "ops/locations")
+    assert_includes response.body, admin_navigation_prototype_path(as_controller: "ops/draft_pos")
+    assert_includes response.body, admin_navigation_prototype_path(as_controller: "pos/homes")
+    assert_includes response.body, admin_navigation_prototype_path(as_controller: "pos/transactions")
     assert_match(/Switch store/, response.body)
+    assert_includes response.body, "return_to="
 
     get admin_navigation_prototype_path(as_controller: "admin/products")
     assert_response :success
     assert_match(/aria-current="page"/, response.body)
     assert_match(/Current area/, response.body)
     assert_match(/is-current-area/, response.body)
+  end
+
+  test "profile A keeps prototype after second store when sole store was previously used" do
+    sign_in_as("admin")
+    get admin_navigation_prototype_path(as_controller: "admin/products")
+    assert_response :success
+    assert_match(/Currently simulating/, response.body)
+
+    Store.create!(
+      store_number: "5",
+      code: "nav_proto_late",
+      name: "Late Nav Store",
+      legal_name: "Example Books LLC",
+      timezone: "America/New_York",
+      country_code: "US"
+    )
+
+    get admin_navigation_prototype_path(as_controller: "admin/products")
+    assert_response :success
+    assert_match(/Currently simulating/, response.body)
+    assert_match(/aria-current="page"/, response.body)
+    assert_match(/Current store:/, response.body)
+  end
+
+  test "switch store from prototype returns to as_controller simulation" do
+    Store.create!(
+      store_number: "6",
+      code: "nav_proto_return",
+      name: "Return Nav Store",
+      legal_name: "Example Books LLC",
+      timezone: "America/New_York",
+      country_code: "US"
+    )
+
+    sign_in_as("admin")
+    return_to = admin_navigation_prototype_path(as_controller: "admin/products")
+    post store_selection_path, params: { store_id: @store.id, return_to: return_to }
+    assert_redirected_to return_to
+    follow_redirect!
+    assert_match(/Currently simulating/, response.body)
+    assert_match(/aria-current="page"/, response.body)
   end
 
   test "profile A without store omits store-gated operational links" do
@@ -57,12 +99,12 @@ class AdminNavigationPrototypeTest < ActionDispatch::IntegrationTest
     # Two accessible stores and no selected store => current_store nil
     get admin_navigation_prototype_path
     assert_response :success
-    assert_match admin_purchasing_path, response.body
-    assert_match admin_orders_path, response.body
-    assert_no_match(%r{href="#{Regexp.escape(ops_receiving_index_path)}"}, response.body)
-    assert_no_match(%r{href="#{Regexp.escape(ops_location_path)}"}, response.body)
-    assert_no_match(%r{href="#{Regexp.escape(ops_draft_pos_path)}"}, response.body)
-    assert_no_match(%r{href="#{Regexp.escape(pos_path)}"}, response.body)
+    assert_includes response.body, admin_navigation_prototype_path(as_controller: "admin/purchasing")
+    assert_includes response.body, admin_navigation_prototype_path(as_controller: "admin/orders")
+    assert_not_includes response.body, admin_navigation_prototype_path(as_controller: "ops/receiving")
+    assert_not_includes response.body, admin_navigation_prototype_path(as_controller: "ops/locations")
+    assert_not_includes response.body, admin_navigation_prototype_path(as_controller: "ops/draft_pos")
+    assert_not_includes response.body, admin_navigation_prototype_path(as_controller: "pos/homes")
   end
 
   test "profile B receiving-only user sees purchasing hub and receiving ops" do
@@ -98,11 +140,11 @@ class AdminNavigationPrototypeTest < ActionDispatch::IntegrationTest
     get admin_navigation_prototype_path(as_controller: "ops/receiving")
     assert_response :success
     assert_match(/Purchasing/, response.body)
-    assert_match admin_purchasing_path, response.body
-    assert_match ops_receiving_index_path, response.body
-    assert_no_match admin_orders_path, response.body
-    assert_no_match admin_suppliers_path, response.body
-    assert_no_match admin_users_path, response.body
+    assert_includes response.body, admin_navigation_prototype_path(as_controller: "admin/purchasing")
+    assert_includes response.body, admin_navigation_prototype_path(as_controller: "ops/receiving")
+    assert_not_includes response.body, admin_navigation_prototype_path(as_controller: "admin/orders")
+    assert_not_includes response.body, admin_navigation_prototype_path(as_controller: "admin/suppliers")
+    assert_not_includes response.body, admin_navigation_prototype_path(as_controller: "admin/users")
     assert_no_match(/Switch store/, response.body)
     assert_match(/Current area/, response.body)
 
@@ -152,8 +194,8 @@ class AdminNavigationPrototypeTest < ActionDispatch::IntegrationTest
     get admin_navigation_prototype_path
     assert_response :success
     assert_match(/No store selected/, response.body)
-    assert_match admin_purchasing_path, response.body
-    assert_no_match(%r{href="#{Regexp.escape(ops_receiving_index_path)}"}, response.body)
+    assert_includes response.body, admin_navigation_prototype_path(as_controller: "admin/purchasing")
+    assert_not_includes response.body, admin_navigation_prototype_path(as_controller: "ops/receiving")
   end
 
   test "user with no destinations is denied the prototype" do

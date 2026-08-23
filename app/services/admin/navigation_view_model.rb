@@ -3,7 +3,8 @@
 module Admin
   class NavigationViewModel
     VisibleGroup = Data.define(:key, :label, :current, :destinations)
-    VisibleDestination = Data.define(:key, :label, :path, :current)
+    # controller_path drives prototype-area simulation (UDS-4.0); path is the real destination for UDS-4.1.
+    VisibleDestination = Data.define(:key, :label, :path, :current, :controller_path)
 
     def initialize(
       user:,
@@ -66,7 +67,8 @@ module Admin
               key: destination.key,
               label: destination.label,
               path: destination.path,
-              current: destination.key == current_key
+              current: destination.key == current_key,
+              controller_path: destination.controller_path
             )
           end
           VisibleGroup.new(
@@ -101,7 +103,8 @@ module Admin
         key: destination.key,
         label: destination.label,
         path: path_for(destination),
-        current: false
+        current: false,
+        controller_path: destination.controllers.first
       )
     end
 
