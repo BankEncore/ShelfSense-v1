@@ -3,6 +3,9 @@
 <section>
   <h1>Select a store</h1>
   <%= form_with url: store_selection_path do |form| %>
+    <% if @return_to.present? %>
+      <%= hidden_field_tag :return_to, @return_to %>
+    <% end %>
     <p>
       <%= form.label :store_id, "Store" %>
       <%= form.collection_select :store_id, @stores, :id, :admin_label, { prompt: "Choose a store" }, required: true %>

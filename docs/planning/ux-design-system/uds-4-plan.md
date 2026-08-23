@@ -74,10 +74,13 @@ flowchart LR
 
 ### UDS-4.0 — Navigation prototype and gate
 
-- Disposable server-rendered prototype with real permission predicates
-- Profiles A (full admin) and B (narrow store user) per navigation-proposal
+**Status:** In progress on branch `uds-4.0-navigation-prototype` — catalog, prototype route, and automated Profile A/B tests landed; **manual gate evidence** in [uds-4.0-gate-evidence.md](uds-4.0-gate-evidence.md) required before UDS-4.1.
+
+- Disposable server-rendered prototype with real permission predicates at **`GET /admin/navigation_prototype`**
+- Shared [`Admin::NavigationCatalog`](../../../app/services/admin/navigation_catalog.rb) / [`Admin::NavigationViewModel`](../../../app/services/admin/navigation_view_model.rb) for UDS-4.1 reuse
+- Profiles A (full admin) and B (narrow store user) per navigation-proposal (hub-aware)
 - Automated helper/view tests for visibility, empty groups, `aria-current`
-- Gate evidence attached to PR; no merge to `main` layout until checklist complete
+- Gate evidence attached to PR; **no merge of grouped nav into production layout** until checklist complete
 
 ### UDS-4.1 — Ship grouped navigation
 

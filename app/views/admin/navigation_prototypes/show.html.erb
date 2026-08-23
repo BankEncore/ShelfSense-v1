@@ -1,0 +1,72 @@
+<% content_for :title, "Navigation prototype" %>
+
+<%= render "shared/breadcrumbs", crumbs: [
+  { name: "Home", path: root_path },
+  { name: "Navigation prototype" }
+] %>
+
+<%= render "shared/page_header",
+      title: "Navigation prototype (UDS-4.0)",
+      subtitle: "Disposable grouped navigation for the prototype gate. Production admin chrome remains flat until UDS-4.1." %>
+
+<p class="muted">
+  Destination links stay on this prototype and set <code>?as_controller=…</code> to simulate the current area
+  (for example Products → <code>?as_controller=admin/products</code>). Production admin chrome remains flat until UDS-4.1.
+  <% if @demo_controller_path.present? %>
+    Currently simulating <code><%= @demo_controller_path %></code>.
+  <% end %>
+</p>
+
+<header class="app-header nav-prototype">
+  <div>
+    <%= link_to "ShelfSense", root_path, class: "app-brand" %>
+    <% if current_store.present? %>
+      <div class="app-header-meta">Current store: <%= current_store.admin_label %></div>
+    <% else %>
+      <div class="app-header-meta">No store selected</div>
+    <% end %>
+  </div>
+
+  <nav class="app-nav app-nav--grouped" aria-label="Primary">
+    <div class="app-nav-utilities">
+      <%= link_to "Home", admin_navigation_prototype_path, class: ("is-active" if @demo_controller_path.blank? && @nav.current_destination.nil?) %>
+    </div>
+
+    <% @nav.groups.each do |group| %>
+      <section class="app-nav-group<%= " is-current-area" if group.current %>" aria-labelledby="nav-group-<%= group.key %>">
+        <h2 id="nav-group-<%= group.key %>" class="app-nav-group__heading">
+          <%= group.label %>
+          <% if group.current %>
+            <span class="visually-hidden">Current area</span>
+          <% end %>
+        </h2>
+        <ul class="app-nav-group__list">
+          <% group.destinations.each do |destination| %>
+            <li>
+              <%= link_to destination.label,
+                    admin_navigation_prototype_path(as_controller: destination.controller_path),
+                    class: ("is-active" if destination.current),
+                    "aria-current": (destination.current ? "page" : nil) %>
+            </li>
+          <% end %>
+        </ul>
+      </section>
+    <% end %>
+
+    <div class="app-nav-utilities" aria-label="Session utilities">
+      <% if @nav.show_switch_store? %>
+        <%= link_to "Switch store", new_store_selection_path(return_to: request.fullpath) %>
+      <% end %>
+      <%= button_to "Sign out", session_path, method: :delete, class: "btn btn--ghost" %>
+    </div>
+  </nav>
+</header>
+
+<section class="section" aria-labelledby="gate-notes-heading">
+  <h2 id="gate-notes-heading" class="section__title">Gate notes</h2>
+  <p class="section__help">
+    This page is for Profiles A and B evidence. It does not replace
+    <code>application.html.erb</code>. Record results in
+    <code>docs/planning/ux-design-system/uds-4.0-gate-evidence.md</code>.
+  </p>
+</section>
