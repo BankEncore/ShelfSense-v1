@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 module ApplicationHelper
+  include ActionButtonHelper
+
   STATUS_SCHEMES = {
     product_variant: {
       "draft" => "draft",

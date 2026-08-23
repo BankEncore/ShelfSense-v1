@@ -25,12 +25,12 @@
             <td><%= format_money_cents(line.actual_unit_cost_cents) %></td>
             <td><%= po_line.order.customer_request.present? ? "Req ##{po_line.order.customer_request.number}" : "—" %></td>
             <% if @receipt.draft? && effective_permissions.include?("purchase_receipts.manage") %>
-              <td><%= form_with url: ops_receiving_update_line_path(@receipt, line), method: :patch, local: true, html: { class: "ops-inline-form", data: { dirty_track: true } } do %>
+              <td><%= form_with url: ops_receiving_update_line_path(@receipt, line), method: :patch, local: true, html: { class: "ops-inline-form", data: { dirty_track: true } } do |form| %>
                 <%= hidden_field_tag :lock_version, @receipt.lock_version %>
                 <label>Qty <input type="number" name="received_quantity" value="<%= @selected_row_id.to_s == line.id.to_s ? @submitted&.fetch("received_quantity", line.received_quantity) : line.received_quantity %>" min="1" required <%= "autofocus aria-describedby=receipt_line_#{line.id}_error" if @selected_row_id.to_s == line.id.to_s %>></label>
                 <label>Actual unit cost ($) <input type="text" inputmode="decimal" name="actual_unit_cost_cents" value="<%= @selected_row_id.to_s == line.id.to_s ? @submitted&.fetch("actual_unit_cost_cents", money_field_value(line.actual_unit_cost_cents)) : money_field_value(line.actual_unit_cost_cents) %>" required></label>
                 <label>Notes <input type="text" name="notes" value="<%= @selected_row_id.to_s == line.id.to_s ? @submitted&.fetch("notes", line.notes) : line.notes %>"></label>
-                <button type="submit" data-ops-save data-row-primary>Save</button>
+                <%= action_submit(form, "Save", style: :solid, intent: :brand, size: :small, data: { ops_save: true, row_primary: true }) %>
                 <%= render "ops/shared/inline_row_error", action: :update_line, row_id: line.id, id: "receipt_line_#{line.id}_error" %>
                 <% if @conflict && @selected_row_id.to_s == line.id.to_s %><small>Current: qty <%= line.received_quantity %>, actual cost <%= format_money_cents(line.actual_unit_cost_cents) %>, notes <%= line.notes.presence || "blank" %>.</small><% end %>
               <% end %></td>

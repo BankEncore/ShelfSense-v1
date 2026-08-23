@@ -1,6 +1,6 @@
 # ShelfSense Button and Action Semantics
 
-**Status:** Proposed  
+**Status:** Accepted for UDS-1 implementation (`ActionButtonHelper` shipped in UDS-1b; broad view adoption is UDS-2)  
 **Packet:** [UX design system](README.md)  
 **Applies to:** Administrative screens, operational workspaces, the Register, dialogs, and other interactive ShelfSense interfaces
 

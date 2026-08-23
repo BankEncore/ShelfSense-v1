@@ -6,58 +6,11 @@
     <span><%= pos_history_line_description(line) %></span>
     <span class="numeric"><%= format_signed_money_cents(line.return? ? -line.line_total_cents : line.line_total_cents) %></span>
   </div>
-  <dl class="pos-history__line-facts">
-    <div><dt>SKU</dt><dd><%= line.merchandise_snapshot.is_a?(Hash) ? line.merchandise_snapshot["sku"] : "" %></dd></div>
-    <% if line.post_void_generated? && line.post_void_source_line&.pos_transaction %>
-      <div>
-        <dt>Post-void of</dt>
-        <dd><%= link_to line.post_void_source_line.pos_transaction.transaction_reference, pos_transaction_path(line.post_void_source_line.pos_transaction) %></dd>
-      </div>
-    <% end %>
-    <div><dt>Reference</dt><dd><%= format_money_cents(line.reference_unit_price_cents) %></dd></div>
-    <div><dt>Selling</dt><dd><%= format_money_cents(line.selling_unit_price_cents) %></dd></div>
-    <div><dt>Extended</dt><dd><%= format_signed_money_cents(pos_line_amount_cents(line)) %></dd></div>
-    <% if line.manual_discount_cents.to_i.positive? %>
-      <div>
-        <dt><%= line.return? ? "Discount reversal" : "Discount" %></dt>
-        <dd>
-          <%= format_signed_money_cents(pos_line_discount_cents(line)) %>
-          <% if line.manual_discount_basis_points.present? %>
-            (<%= number_with_precision(line.manual_discount_basis_points / 100.0, precision: 2) %>%)
-          <% end %>
-        </dd>
-      </div>
-    <% end %>
-    <div><dt>Net</dt><dd><%= format_signed_money_cents(line.return? ? -line.net_merchandise_amount_cents : line.net_merchandise_amount_cents) %></dd></div>
-    <div><dt>Tax</dt><dd><%= format_signed_money_cents(pos_line_tax_cents(line)) %></dd></div>
-    <% if line.sale? && line.default_tax_class_name_snapshot.present? %>
-      <div><dt>Default Tax Class</dt><dd><%= line.default_tax_class_name_snapshot %></dd></div>
-    <% end %>
-    <% if line.tax_class_name_snapshot.present? %>
-      <div><dt>Applied Tax Class</dt><dd><%= line.tax_class_name_snapshot %></dd></div>
-    <% end %>
-    <% if line.return? && !line.post_void_generated? %>
-      <div><dt>Return reason</dt><dd><%= line.return_reason_name_snapshot %></dd></div>
-      <% if line.return_reason_note.present? %>
-        <div><dt>Note</dt><dd><%= line.return_reason_note %></dd></div>
-      <% end %>
-      <% if line.unlinked_return? %>
-        <div><dt>Linkage</dt><dd>Unlinked return</dd></div>
-        <% if pos_unlinked_return_price_adjusted?(line) %>
-          <div><dt>Reference</dt><dd><%= format_money_cents(line.reference_unit_price_cents) %></dd></div>
-          <div><dt>Return price</dt><dd><%= format_money_cents(line.selling_unit_price_cents) %></dd></div>
-        <% end %>
-      <% elsif line.original_transaction_line&.pos_transaction %>
-        <div>
-          <dt>Original receipt</dt>
-          <dd><%= link_to line.original_transaction_line.pos_transaction.transaction_reference, pos_transaction_path(line.original_transaction_line.pos_transaction) %></dd>
-        </div>
-        <div><dt>Original line</dt><dd><%= line.original_transaction_line.line_number %></dd></div>
-      <% end %>
-    <% end %>
-  </dl>
-  <% if line.sale? && summary %>
-    <p class="muted">
+
+  <% if line.unlinked_return? && !line.post_void_generated? %>
+    <p class="pos-history__line-summary muted">Unlinked return</p>
+  <% elsif line.sale? && summary %>
+    <p class="pos-history__line-summary muted">
       Sold <%= summary.sold_quantity %>
       · Returned <%= summary.completed_returned_quantity %>
       · Remaining <%= summary.remaining_quantity %>
@@ -65,52 +18,116 @@
         · Unit <%= line.merchandise_snapshot["unit_identifier"] %>
       <% end %>
     </p>
-    <% if summary.remaining_quantity <= 0 %>
-      <p>Returned in full</p>
-    <% end %>
-    <% if summary.completed_return_lines.any? %>
-      <p>Returns:</p>
-      <ul>
-        <% summary.completed_return_lines.each do |returned| %>
-          <li>
-            <%= link_to returned.pos_transaction.transaction_reference, pos_transaction_path(returned.pos_transaction) %>
-            · Qty <%= returned.quantity %>
-            · <%= returned.pos_transaction.business_date.iso8601 %>
-          </li>
-        <% end %>
-      </ul>
-    <% end %>
   <% end %>
-  <% if line.sale? || line.unlinked_return? %>
-    <% line.pos_controlled_actions.each do |action| %>
-      <section class="pos-history__control" aria-label="<%= pos_controlled_action_label(action) %>">
-        <h3><%= pos_controlled_action_label(action) %></h3>
-        <dl class="pos-history__line-facts">
-          <div><dt>Performed by</dt><dd><%= action.performed_by_name_snapshot %></dd></div>
-          <% if action.approved_by_name_snapshot.present? %>
-            <div><dt>Approved by</dt><dd><%= action.approved_by_name_snapshot %></dd></div>
-          <% end %>
-          <div><dt>Reason</dt><dd><%= action.reason_name_snapshot %></dd></div>
-          <% if action.reason_note.present? %>
-            <div><dt>Note</dt><dd><%= action.reason_note %></dd></div>
-          <% end %>
-          <div><dt>Policy</dt><dd><%= action.policy_result.tr("_", " ") %></dd></div>
-        </dl>
-      </section>
-    <% end %>
-  <% end %>
-  <% components = pos_applicable_tax_components(line) %>
-  <% if components.any? %>
-    <details class="pos-history__tax">
-      <summary>Tax detail</summary>
-      <% components.each do |component| %>
+
+  <details class="pos-history__line-details">
+    <summary>Line details</summary>
+    <dl class="pos-history__line-facts">
+      <div><dt>SKU</dt><dd><%= line.merchandise_snapshot.is_a?(Hash) ? line.merchandise_snapshot["sku"] : "" %></dd></div>
+      <% if line.post_void_generated? && line.post_void_source_line&.pos_transaction %>
         <div>
-          <%= component.store_tax_name_snapshot %>
-          Rate <%= number_with_precision(component.rate_percent, precision: 3) %>%
-          Taxable <%= format_money_cents(component.taxable_basis_cents) %>
-          Tax <%= format_money_cents(component.tax_cents) %>
+          <dt>Post-void of</dt>
+          <dd><%= link_to line.post_void_source_line.pos_transaction.transaction_reference, pos_transaction_path(line.post_void_source_line.pos_transaction) %></dd>
         </div>
       <% end %>
-    </details>
-  <% end %>
+      <div><dt>Reference</dt><dd><%= format_money_cents(line.reference_unit_price_cents) %></dd></div>
+      <div><dt>Selling</dt><dd><%= format_money_cents(line.selling_unit_price_cents) %></dd></div>
+      <div><dt>Extended</dt><dd><%= format_signed_money_cents(pos_line_amount_cents(line)) %></dd></div>
+      <% if line.manual_discount_cents.to_i.positive? %>
+        <div>
+          <dt><%= line.return? ? "Discount reversal" : "Discount" %></dt>
+          <dd>
+            <%= format_signed_money_cents(pos_line_discount_cents(line)) %>
+            <% if line.manual_discount_basis_points.present? %>
+              (<%= number_with_precision(line.manual_discount_basis_points / 100.0, precision: 2) %>%)
+            <% end %>
+          </dd>
+        </div>
+      <% end %>
+      <div><dt>Net</dt><dd><%= format_signed_money_cents(line.return? ? -line.net_merchandise_amount_cents : line.net_merchandise_amount_cents) %></dd></div>
+      <div><dt>Tax</dt><dd><%= format_signed_money_cents(pos_line_tax_cents(line)) %></dd></div>
+      <% if line.sale? && line.default_tax_class_name_snapshot.present? %>
+        <div><dt>Default Tax Class</dt><dd><%= line.default_tax_class_name_snapshot %></dd></div>
+      <% end %>
+      <% if line.tax_class_name_snapshot.present? %>
+        <div><dt>Applied Tax Class</dt><dd><%= line.tax_class_name_snapshot %></dd></div>
+      <% end %>
+      <% if line.return? && !line.post_void_generated? %>
+        <div><dt>Return reason</dt><dd><%= line.return_reason_name_snapshot %></dd></div>
+        <% if line.return_reason_note.present? %>
+          <div><dt>Note</dt><dd><%= line.return_reason_note %></dd></div>
+        <% end %>
+        <% if line.unlinked_return? %>
+          <div><dt>Linkage</dt><dd>Unlinked return</dd></div>
+          <% if pos_unlinked_return_price_adjusted?(line) %>
+            <div><dt>Reference</dt><dd><%= format_money_cents(line.reference_unit_price_cents) %></dd></div>
+            <div><dt>Return price</dt><dd><%= format_money_cents(line.selling_unit_price_cents) %></dd></div>
+          <% end %>
+        <% elsif line.original_transaction_line&.pos_transaction %>
+          <div>
+            <dt>Original receipt</dt>
+            <dd><%= link_to line.original_transaction_line.pos_transaction.transaction_reference, pos_transaction_path(line.original_transaction_line.pos_transaction) %></dd>
+          </div>
+          <div><dt>Original line</dt><dd><%= line.original_transaction_line.line_number %></dd></div>
+        <% end %>
+      <% end %>
+    </dl>
+    <% if line.sale? && summary %>
+      <p class="muted">
+        Sold <%= summary.sold_quantity %>
+        · Returned <%= summary.completed_returned_quantity %>
+        · Remaining <%= summary.remaining_quantity %>
+        <% if line.unit_line? && line.merchandise_snapshot.is_a?(Hash) && line.merchandise_snapshot["unit_identifier"].present? %>
+          · Unit <%= line.merchandise_snapshot["unit_identifier"] %>
+        <% end %>
+      </p>
+      <% if summary.remaining_quantity <= 0 %>
+        <p>Returned in full</p>
+      <% end %>
+      <% if summary.completed_return_lines.any? %>
+        <p>Returns:</p>
+        <ul>
+          <% summary.completed_return_lines.each do |returned| %>
+            <li>
+              <%= link_to returned.pos_transaction.transaction_reference, pos_transaction_path(returned.pos_transaction) %>
+              · Qty <%= returned.quantity %>
+              · <%= returned.pos_transaction.business_date.iso8601 %>
+            </li>
+          <% end %>
+        </ul>
+      <% end %>
+    <% end %>
+    <% if line.sale? || line.unlinked_return? %>
+      <% line.pos_controlled_actions.each do |action| %>
+        <section class="pos-history__control" aria-label="<%= pos_controlled_action_label(action) %>">
+          <h3><%= pos_controlled_action_label(action) %></h3>
+          <dl class="pos-history__line-facts">
+            <div><dt>Performed by</dt><dd><%= action.performed_by_name_snapshot %></dd></div>
+            <% if action.approved_by_name_snapshot.present? %>
+              <div><dt>Approved by</dt><dd><%= action.approved_by_name_snapshot %></dd></div>
+            <% end %>
+            <div><dt>Reason</dt><dd><%= action.reason_name_snapshot %></dd></div>
+            <% if action.reason_note.present? %>
+              <div><dt>Note</dt><dd><%= action.reason_note %></dd></div>
+            <% end %>
+            <div><dt>Policy</dt><dd><%= action.policy_result.tr("_", " ") %></dd></div>
+          </dl>
+        </section>
+      <% end %>
+    <% end %>
+    <% components = pos_applicable_tax_components(line) %>
+    <% if components.any? %>
+      <details class="pos-history__tax">
+        <summary>Tax detail</summary>
+        <% components.each do |component| %>
+          <div>
+            <%= component.store_tax_name_snapshot %>
+            Rate <%= number_with_precision(component.rate_percent, precision: 3) %>%
+            Taxable <%= format_money_cents(component.taxable_basis_cents) %>
+            Tax <%= format_money_cents(component.tax_cents) %>
+          </div>
+        <% end %>
+      </details>
+    <% end %>
+  </details>
 </article>

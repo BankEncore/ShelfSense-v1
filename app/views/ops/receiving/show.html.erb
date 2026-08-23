@@ -12,8 +12,8 @@
     </p>
   </div>
   <p>
-    <%= link_to "All drafts", ops_receiving_index_path %>
-    · <%= link_to "Exit to Purchasing", admin_orders_path %>
+    <%= action_link_to("All drafts", ops_receiving_index_path, style: :link, intent: :neutral) %>
+    · <%= action_link_to("Exit to Purchasing", admin_orders_path, style: :link, intent: :neutral) %>
   </p>
 </header>
 <%= render "ops/shared/error_summary", errors: @mutation_errors, conflict: @conflict, title: "Receipt was not changed" %>
@@ -21,7 +21,7 @@
 <% if @receipt.draft? && effective_permissions.include?("purchase_receipts.manage") %>
   <section class="ops-actions">
     <h2>Receipt header</h2>
-    <%= form_with url: ops_receiving_update_path(@receipt), method: :patch, local: true, html: { data: { dirty_track: true } } do %>
+    <%= form_with url: ops_receiving_update_path(@receipt), method: :patch, local: true, html: { data: { dirty_track: true } } do |form| %>
       <%= hidden_field_tag :lock_version, @receipt.lock_version %>
       <label>
         Received at
@@ -59,7 +59,7 @@
         Notes
         <input type="text" name="notes" value="<%= @error_action == :update ? @submitted&.fetch("notes", nil) : @receipt.notes %>">
       </label>
-      <button type="submit" data-ops-save>Save header</button>
+      <%= action_submit(form, "Save header", style: :solid, intent: :brand, data: { ops_save: true }) %>
       <%= render "ops/shared/inline_row_error", action: :update, id: "receipt_header_error" %>
       <% if @conflict && @error_action == :update %><small>Current saved notes: <%= @receipt.notes.presence || "blank" %>; freight: <%= format_money_cents(@receipt.freight_cents) %>.</small><% end %>
     <% end %>
@@ -74,7 +74,7 @@
 <% if @receipt.draft? && effective_permissions.include?("purchase_receipts.post") && @lines.any? %>
   <section class="ops-actions">
     <h2>Post</h2>
-    <p><%= link_to "Review and post", ops_receiving_review_path(@receipt), data: { ops_primary: true } %></p>
+    <p><%= action_link_to("Review and post", ops_receiving_review_path(@receipt), style: :solid, intent: :brand, data: { ops_primary: true }) %></p>
   </section>
 <% end %>
 
@@ -111,7 +111,12 @@
               <td>
                 <% if line.remaining_reversible_quantity.positive? %>
                   <div data-controller="review-dialog">
-                    <button type="button" data-review-dialog-target="trigger" data-action="review-dialog#open">Review line reversal</button>
+                    <%= action_button(
+                          "Review line reversal",
+                          style: :outline,
+                          intent: :danger,
+                          data: { review_dialog_target: "trigger", action: "review-dialog#open" }
+                        ) %>
                     <dialog class="review-dialog review-dialog--danger" data-review-dialog-target="dialog" data-action="close->review-dialog#restoreFocus">
                       <div class="review-dialog__body">
                         <h3>Review receipt-line reversal</h3>
@@ -122,11 +127,14 @@
                           <dt>Customer allocation</dt><dd><%= line.customer_request_allocation&.reserved? ? "The active receipt allocation will be released/reconciled." : "No active receipt allocation will be released." %></dd>
                           <dt>Downstream sale</dt><dd>A completed pickup or sale blocks exact reversal; compensation requires separate authorization.</dd>
                         </dl>
-                        <%= form_with url: ops_receiving_reverse_line_path(@receipt, line), method: :post, local: true do %>
+                        <%= form_with url: ops_receiving_reverse_line_path(@receipt, line), method: :post, local: true do |form| %>
                           <label>Reason <input type="text" name="reason" required data-review-dialog-target="initialFocus"></label>
                           <label>Quantity <input type="number" name="quantity" min="1" max="<%= line.remaining_reversible_quantity %>" value="<%= line.remaining_reversible_quantity %>" required></label>
                           <% if @can_compensate %><label><input type="checkbox" name="authorize_compensate" value="1"> Authorize compensation if exact reversal is unsafe</label><% end %>
-                          <div class="review-dialog__actions"><button type="submit">Reverse receipt line quantity and value</button><button type="button" data-action="review-dialog#close">Keep receipt line</button></div>
+                          <div class="review-dialog__actions">
+                            <%= action_submit(form, "Reverse receipt line quantity and value", style: :solid, intent: :danger) %>
+                            <%= action_button("Keep receipt line", style: :ghost, intent: :neutral, data: { action: "review-dialog#close" }) %>
+                          </div>
                         <% end %>
                       </div>
                     </dialog>
@@ -138,16 +146,24 @@
               <td>
                 <% if line.remaining_reversible_quantity.positive? %>
                   <div data-controller="review-dialog">
-                    <button type="button" data-review-dialog-target="trigger" data-action="review-dialog#open">Review cost correction</button>
+                    <%= action_button(
+                          "Review cost correction",
+                          style: :outline,
+                          intent: :warning,
+                          data: { review_dialog_target: "trigger", action: "review-dialog#open" }
+                        ) %>
                     <dialog class="review-dialog review-dialog--information" data-review-dialog-target="dialog" data-action="close->review-dialog#restoreFocus">
                       <div class="review-dialog__body">
                         <h3>Review cost-only correction</h3>
                         <p class="review-dialog__consequences"><strong>Physical quantity will not change.</strong> This posts only a valuation delta; the posted receipt remains immutable.</p>
                         <dl class="review-dialog__facts"><dt>Item</dt><dd><%= line.product_variant.product.name %></dd><dt>Current unit cost</dt><dd><%= format_money_cents(line.actual_unit_cost_cents) %></dd><dt>Inventory effect</dt><dd>No on-hand or customer-allocation change.</dd></dl>
-                        <%= form_with url: ops_receiving_correct_cost_path(@receipt, line), method: :post, local: true do %>
+                        <%= form_with url: ops_receiving_correct_cost_path(@receipt, line), method: :post, local: true do |form| %>
                           <label>Reason <input type="text" name="reason" required data-review-dialog-target="initialFocus"></label>
                           <label>Corrected unit cost ($) <input type="text" inputmode="decimal" name="corrected_unit_cost_cents" value="<%= @selected_row_id.to_s == line.id.to_s ? @submitted&.fetch("corrected_unit_cost_cents", nil) : nil %>" required aria-invalid="<%= @error_field == :corrected_unit_cost_cents && @selected_row_id.to_s == line.id.to_s %>"></label>
-                          <div class="review-dialog__actions"><button type="submit">Post cost-only valuation correction</button><button type="button" data-action="review-dialog#close">Keep current cost</button></div>
+                          <div class="review-dialog__actions">
+                            <%= action_submit(form, "Post cost-only valuation correction", style: :solid, intent: :brand) %>
+                            <%= action_button("Keep current cost", style: :ghost, intent: :neutral, data: { action: "review-dialog#close" }) %>
+                          </div>
                         <% end %>
                       </div>
                     </dialog>
@@ -164,14 +180,22 @@
       <% if @lines.any? { |l| l.remaining_reversible_quantity.positive? } %>
         <h3>Reverse whole receipt</h3>
         <div data-controller="review-dialog">
-          <button type="button" data-review-dialog-target="trigger" data-action="review-dialog#open">Review whole-receipt reversal</button>
+          <%= action_button(
+                "Review whole-receipt reversal",
+                style: :outline,
+                intent: :danger,
+                data: { review_dialog_target: "trigger", action: "review-dialog#open" }
+              ) %>
           <dialog class="review-dialog review-dialog--danger" data-review-dialog-target="dialog" data-action="close->review-dialog#restoreFocus">
             <div class="review-dialog__body">
               <h3>Review whole-receipt reversal</h3>
               <dl class="review-dialog__facts"><dt>Inventory</dt><dd>Reverse all remaining eligible physical quantities atomically.</dd><dt>Valuation</dt><dd>Reverse their exact linked receipt values.</dd><dt>Customer allocations</dt><dd>Active receipt allocations are released/reconciled.</dd><dt>Downstream sales</dt><dd>Any unsafe line, including completed pickup/sale consequences, blocks the entire reversal.</dd></dl>
-              <%= form_with url: ops_receiving_reverse_path(@receipt), method: :post, local: true do %>
+              <%= form_with url: ops_receiving_reverse_path(@receipt), method: :post, local: true do |form| %>
                 <label>Reason <input type="text" name="reason" required data-review-dialog-target="initialFocus"></label>
-                <div class="review-dialog__actions"><button type="submit">Reverse entire eligible receipt atomically</button><button type="button" data-action="review-dialog#close">Keep posted receipt</button></div>
+                <div class="review-dialog__actions">
+                  <%= action_submit(form, "Reverse entire eligible receipt atomically", style: :solid, intent: :danger) %>
+                  <%= action_button("Keep posted receipt", style: :ghost, intent: :neutral, data: { action: "review-dialog#close" }) %>
+                </div>
               <% end %>
             </div>
           </dialog>

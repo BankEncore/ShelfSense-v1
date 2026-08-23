@@ -36,8 +36,8 @@ Objective migration states, the alias retirement register, and evidence columns 
 |---|---|---|---|
 | UDS-0 | None | None | None; documentation and baseline capture only |
 | UDS-1 | `:root`; base `body`, `a`, and the existing `:focus-visible` control list; `.app-shell`, `.app-header`, `.app-brand`, `.app-header-meta`, `.app-content`; `.ops-header`, `.ops-content`, `.ops-shortcuts`, `.ops-shortcuts__buttons`, `.ops-shortcuts__help`, `.ops-empty-state`; `.btn`, `.button`, `button`, `input[type="submit"]`, `.btn--secondary`, `.button-secondary`, `.btn--danger`, `.button-danger`, `.btn--ghost`; new `btn--solid` / `btn--outline` / `btn--link` / `btn--brand` / `btn--neutral` / `btn--warning` / size classes from the action matrix; `.flash`, `.flash--notice`, `.flash--alert`; `.status-badge` and existing status modifiers; `.muted`, `.missing-value`, `.definition-list`, `.section`, `.section__title`, `.section__help`, `.form`, `.form-field`, `.form-errors`, `.table-scroll`, `.data-table`, `.empty-state`, `.empty-state__title`, `.technical-details`, `.pagination`, `.filters`; `.review-dialog` and existing severity/body/facts/consequences/actions variants; new token/primitive selectors named individually in the PR. **Grouped navigation selectors** (e.g. `.app-nav`, `.app-nav-group`) only after the [navigation prototype gate](navigation-proposal.md#required-prototype-gate) passes and this allowlist is updated to name them. | `app/helpers/application_helper.rb` (including `ActionButtonHelper` when introduced); `app/views/shared/_actions.html.erb`, `_breadcrumbs.html.erb`, `_currency_field.html.erb`, `_data_table.html.erb`, `_definition_list.html.erb`, `_empty_state.html.erb`, `_flash.html.erb`, `_form_errors.html.erb`, `_form_section.html.erb`, `_page_header.html.erb`, `_status_badge.html.erb`, `_technical_details.html.erb`; `app/views/layouts/application.html.erb`, `app/views/layouts/ops.html.erb` (token/chrome only; **no** grouped-nav IA change until the navigation prototype gate) | None except a minimal fixture/use-site change needed to exercise a shared primitive; name it in the PR |
-| UDS-2 | UDS-1 primitives plus `.request-next-action`, `.request-summary__heading`, `.fulfillment-timeline*`, `.ops-queue` (as used by Receiving), `.pos-history*`, `.pos-receipt__actions`, `.review-dialog` variants listed in UDS-1, and new selectors named individually and scoped to an allowlisted reference view | UDS-1 shared partials; `app/helpers/purchasing_helper.rb`, `app/helpers/pos_helper.rb`; `app/views/ops/shared/_error_summary.html.erb`, `_inline_row_error.html.erb`; `app/views/pos/receipts/_directional_totals.html.erb`, `_post_void_banner.html.erb`; layouts may be consumed but not structurally changed | `app/views/admin/suppliers/{index,show,new,edit,_form}.html.erb`; **Receiving only:** `app/views/ops/receiving/{index,show,review,_line_grid,_line_scanner}.html.erb` (Location and Draft PO are post-UDS-2); `app/views/pos/completed_transactions/show.html.erb`; existing consequence-dialog markup within those views |
-| UDS-3 | `.pos-body`, `.pos-shell`, `.pos-header*`, `.pos-main`, `.pos-basket`, `.pos-lines`, `.pos-line-flags`, `.pos-totals*`, `.pos-feedback`, `.pos-actions`, `.pos-command*`, `.pos-picker`, `.pos-banner`, `.pos-overlay*`, `.pos-hidden`; UDS-1 `.review-dialog` and button/token primitives only when a Register state exposes a defect; new Register selectors named individually in the PR | `app/helpers/pos_helper.rb`; `app/views/layouts/pos.html.erb`; `app/views/pos/transactions/_chrome.html.erb`, `_line.html.erb`; `app/views/pos/workspaces/_surface.html.erb` | `app/views/pos/workspaces/show.html.erb` and Turbo stream replacements for that workspace; no printed receipt view or print selector |
+| UDS-2 | UDS-1 primitives plus `.request-next-action`, `.request-summary__heading`, `.fulfillment-timeline*`, `.ops-queue` (as used by Receiving), `.pos-history*`, `.pos-receipt__actions`, `.review-dialog` variants listed in UDS-1, and new selectors named individually and scoped to an allowlisted reference view | UDS-1 shared partials; `app/helpers/purchasing_helper.rb`, `app/helpers/pos_helper.rb`; `app/views/ops/shared/_error_summary.html.erb`, `_inline_row_error.html.erb`; `app/views/pos/receipts/_directional_totals.html.erb`, `_post_void_banner.html.erb`; layouts may be consumed but not structurally changed | `app/views/admin/suppliers/{index,show,new,edit,_form}.html.erb`; **Receiving only:** `app/views/ops/receiving/{index,show,review,_line_grid,_line_scanner}.html.erb` (Location and Draft PO are post-UDS-2); `app/views/pos/completed_transactions/show.html.erb`; `app/views/pos/transactions/show.html.erb`, `_line.html.erb` (history Line details); existing consequence-dialog markup within those views |
+| UDS-3 | `.pos-body`, `.pos-shell`, `.pos-header*`, `.pos-main`, `.pos-basket`, `.pos-lines`, `.pos-line__title`, `.pos-line__meta`, `.pos-line__id`, `.pos-line__provenance`, `.pos-line-flags`, `.pos-totals*`, `.pos-feedback`, `.pos-actions`, `.pos-actions__group`, `.pos-actions__group--escape`, `.pos-command*`, `.pos-picker`, `.pos-banner`, `.pos-overlay*`, `.pos-hidden`; UDS-1 `.review-dialog` and button/token primitives only when a Register state exposes a defect; new Register selectors named individually in the PR | `app/helpers/pos_helper.rb`; `app/views/layouts/pos.html.erb`; `app/views/pos/transactions/_chrome.html.erb`, `_line.html.erb`; `app/views/pos/workspaces/_surface.html.erb` | `app/views/pos/workspaces/show.html.erb` and Turbo stream replacements for that workspace; no printed receipt view or print selector |
 
 Across all slices, `app/views/pos/receipts/_print.html.erb`, `.pos-receipt__print*`, service/controller/domain code, Stimulus key bindings, Turbo target IDs, form actions/methods, and authorization conditions are locked. A needed change to one of these is a separate behavior slice, not incidental UDS work.
 
@@ -99,22 +99,26 @@ Administrative navigation remains a proposal at this point. Before assigning it 
 
 ### UDS-1 — Tokens and shared visual primitives
 
+**Implementation plan:** [uds-1-plan.md](uds-1-plan.md) (UDS-1a–1d **complete**). Slice id stays **UDS-1**—not a Phase 7 domain number. [ADR-022](../../adr/ADR-022-warm-parchment-visual-tokens.md) is **Implemented**.
+
 High-leverage, low-behavior changes:
 
 - Warm Parchment canvas, surface, text, border, semantic, and interaction tokens ([warm-parchment.md](warm-parchment.md)).
 - Controlled migration / aliases so existing components update consistently.
-- Typography hierarchy using **locally packaged or system fonts** (no runtime Google Fonts dependency).
+- Typography hierarchy using **locally packaged or system fonts** (no runtime Google Fonts dependency). Face packaging / stack choice is owned by **UDS-1c** (see [uds-1-plan.md](uds-1-plan.md)); not UDS-1a/1b.
 - Tabular numerals and identifier treatments.
 - Button matrix per [button-action-semantics.md](button-action-semantics.md) via `ActionButtonHelper` (`action_link_to` / `action_button_to` / `action_submit` / `action_button`); no free-form class lists for new work.
 - Map legacy `btn--secondary` → outline/neutral; preserve `btn--ghost` (style) and `btn--danger` (intent) tokens during the documented alias → deprecation sequence.
 - Solid modal surfaces; consequence dialog headers/footers; focus restoration unchanged.
 - Tables, definition lists, cards, forms, validation, flashes, badges, empty states, focus rings.
 - Standard and compact **density classes by screen type**—not a persisted user toggle.
-- Navigation may enter this slice as a shared semantic/responsive primitive only after the [navigation prototype gate](navigation-proposal.md#required-prototype-gate) passes; no Hotwire, permanent sidebar, or global search.
+- Navigation may enter this slice as a shared semantic/responsive primitive only after the [navigation prototype gate](navigation-proposal.md#required-prototype-gate) passes; no Hotwire, permanent sidebar, or global search. Grouped admin nav remains **out of UDS-1** until that gate passes (see implementation plan).
 
-**Deliverable:** many screens improve without rewriting each template; conventions palette section updated when tokens ship.
+**Deliverable:** many screens improve without rewriting each template; conventions palette section updated when tokens ship. **Met in UDS-1** (tokens, helper, shared primitives, docs exit). Broad helper adoption and reference-screen conforming status remain UDS-2.
 
 ### UDS-2 — Representative screen convergence
+
+**Implementation plan:** [uds-2-plan.md](uds-2-plan.md) (sub-slices UDS-2a–2d; backlog [uds-2-user-stories.md](uds-2-user-stories.md)).
 
 Migrate a small reference set:
 
@@ -131,7 +135,7 @@ For transaction/receipt detail:
 - Keep return/post-void eligibility server-authoritative.
 - Leave printed receipt markup unchanged unless separately specified.
 
-**Deliverable:** reference surfaces conforming; [migration-matrix.md](migration-matrix.md) updated.
+**Deliverable:** reference surfaces conforming; [migration-matrix.md](migration-matrix.md) updated. **UDS-2a–2d code landed** (helper adoption on allowlisted views); mark matrix **conforming** only after a11y-matrix evidence.
 
 ### UDS-3 — Register visual refinement
 
@@ -146,7 +150,7 @@ Separate implementation slice:
 
 Validate with the [accessibility and ergonomic test matrix](accessibility-ergonomic-test-matrix.md), including timed cashier workflows—not visual review alone.
 
-**Deliverable:** Register uses revised patterns without behavior regressions.
+**Deliverable:** Register uses revised patterns without behavior regressions. **UDS-3 code landed**; mark matrix **conforming** only after a11y-matrix evidence.
 
 ## After the foundation program
 
