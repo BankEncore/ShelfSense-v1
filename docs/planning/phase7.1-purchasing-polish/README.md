@@ -1,6 +1,6 @@
 # Phase 7.1 — Purchasing workflow and presentation closeout
 
-Status: **In progress** — coordination **Accepted** (August 2026); implementation on branch `phase-7.1-purchasing-polish`.
+Status: **In progress** — coordination **Accepted** (August 2026); **7.1.1–7.1.2** on branch `phase-7.1-purchasing-polish`; **7.1.3 blocked until after UDS-4.1**.
 
 | Document | Purpose |
 |---|---|
@@ -10,6 +10,6 @@ Status: **In progress** — coordination **Accepted** (August 2026); implementat
 
 Builds on implemented [Phase 7](../phase7-orders-and-receiving/README.md). Forward summary: [roadmap.md](../roadmap.md) § Phase 7.1.
 
-Phase 7.1 closes **Phase 7 purchasing operability** (hub, admin presentation, ops parity)—not supplier returns, request expiration, PO consolidation, multi-quantity requests, or AP/accounting.
+Phase 7.1 closes **Phase 7 purchasing operability** (hub and admin presentation now; Location/Draft PO ops parity later)—not supplier returns, request expiration, PO consolidation, multi-quantity requests, or AP/accounting.
 
 **Naming note:** this packet is distinct from inspirational Warm Parchment drafts under [docs/drafts/phase-7.1-ux-refactor/](../../drafts/phase-7.1-ux-refactor/README.md) (cross-phase UX exploration; folder name retained for path stability).

@@ -1,6 +1,6 @@
 # Phase 7.1 — User stories
 
-Status: **In progress** backlog. Coordination **Accepted** — slice implementation on `phase-7.1-purchasing-polish`.
+Status: **In progress** backlog. Coordination **Accepted** — **7.1.1–7.1.2** on `phase-7.1-purchasing-polish`; **7.1.3 blocked until after UDS-4.1**.
 
 Concise stories for slices 7.1.1–7.1.4; acceptance bullets are the review bar.
 
@@ -61,16 +61,18 @@ Acceptance:
 
 ## Slice 7.1.3 — Ops workspace parity
 
+**Blocked until after UDS-4.1.** Hub exit links on Location/Draft PO/Receiving are incidental **7.1.1** integration and do not close these stories.
+
 ### 7.1.3.1 Location queue matches Receiving ergonomics
 
 **As a** floor associate, **I want** the location queue to behave like receiving **so that** keyboard and scanner workflows feel consistent.
 
 Acceptance:
 
-- Ops shortcut help visible via ops layout; keyboard hint on queue.
-- Exit link to purchasing hub; `ActionButtonHelper` on touched actions.
-- Focus restoration after successful locate/not-located actions.
-- Existing [location_queue_buttons_test.rb](../../../test/system/location_queue_buttons_test.rb) assertions unchanged or strengthened only.
+- Focus restoration after successful locate/not-located actions and after cancellation/close paths.
+- Dirty-form / Escape behavior aligned with Receiving where applicable.
+- Additive assertions in [location_queue_buttons_test.rb](../../../test/system/location_queue_buttons_test.rb); existing assertions unchanged or strengthened only.
+- program-plan allowlist updated for touched selectors in the 7.1.3 PR.
 
 ### 7.1.3.2 Draft PO workspace matches Receiving ergonomics
 
@@ -78,9 +80,8 @@ Acceptance:
 
 Acceptance:
 
-- Draft PO index/show use ops-doc-header pattern and hub exit link.
-- Dirty-form confirm behavior matches receiving/draft PO tests in [purchasing_ops_workspace_test.rb](../../../test/system/purchasing_ops_workspace_test.rb).
-- program-plan allowlist updated for touched selectors.
+- Dirty-form confirm and focus restoration match Receiving-grade coverage in [purchasing_ops_workspace_test.rb](../../../test/system/purchasing_ops_workspace_test.rb).
+- program-plan allowlist updated for touched selectors in the 7.1.3 PR.
 
 ---
 

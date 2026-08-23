@@ -4,7 +4,7 @@ module AuthorizesRequests
   extend ActiveSupport::Concern
 
   included do
-    helper_method :current_store, :effective_permissions, :accessible_stores
+    helper_method :current_store, :effective_permissions, :accessible_stores, :purchasing_hub_accessible?
   end
 
   private
@@ -27,6 +27,17 @@ module AuthorizesRequests
     @effective_permissions ||= Authorization::PermissionEvaluator.permissions_for(
       user: current_user,
       store: current_store
+    )
+  end
+
+  # Memoized for the request so layout nav and hub controller share one evaluation.
+  def purchasing_hub_accessible?
+    return false unless current_user
+    return @purchasing_hub_accessible if defined?(@purchasing_hub_accessible)
+
+    @purchasing_hub_accessible = Purchasing::HubAccess.nav_visible?(
+      user: current_user,
+      accessible_stores: accessible_stores
     )
   end
 

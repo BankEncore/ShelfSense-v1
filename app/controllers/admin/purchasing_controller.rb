@@ -15,7 +15,7 @@ module Admin
     private
 
     def require_hub_access!
-      return if Purchasing::HubAccess.hub_allowed?(user: current_user, accessible_stores: accessible_stores)
+      return if purchasing_hub_accessible?
 
       Audit::Recorder.record!(
         action: "authorization.denied",

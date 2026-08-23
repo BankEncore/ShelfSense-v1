@@ -26,9 +26,7 @@ module PurchasingHelper
   end
 
   def purchasing_hub_nav_visible?
-    return false unless current_user
-
-    Purchasing::HubAccess.nav_visible?(user: current_user, accessible_stores: accessible_stores)
+    purchasing_hub_accessible?
   end
 
   def purchasing_link_to(label, url, **options)
@@ -87,53 +85,40 @@ module PurchasingHelper
 
   private
 
-  def purchasing_can_view_order?(order)
-    Authorization::PermissionEvaluator.allowed?(
+  def purchasing_permission_keys_for(store)
+    @purchasing_permission_keys_by_store_id ||= {}
+    cache_key = store&.id || :global
+    @purchasing_permission_keys_by_store_id[cache_key] ||= Authorization::PermissionEvaluator.permissions_for(
       user: current_user,
-      permission_key: "orders.view",
-      store: order.store
+      store: store
     )
+  end
+
+  def purchasing_can_view_order?(order)
+    purchasing_permission_keys_for(order.store).include?("orders.view")
   end
 
   def purchasing_can_view_purchase_order?(purchase_order)
-    Authorization::PermissionEvaluator.allowed?(
-      user: current_user,
-      permission_key: "orders.view",
-      store: purchase_order.store
-    )
+    purchasing_permission_keys_for(purchase_order.store).include?("orders.view")
   end
 
   def purchasing_can_view_purchase_receipt?(receipt)
-    Authorization::PermissionEvaluator.allowed?(
-      user: current_user,
-      permission_key: "purchase_receipts.view",
-      store: receipt.store
-    )
+    purchasing_permission_keys_for(receipt.store).include?("purchase_receipts.view")
   end
 
   def purchasing_can_view_customer_request?(request)
-    Authorization::PermissionEvaluator.allowed?(
-      user: current_user,
-      permission_key: "customers.view",
-      store: request.store
-    )
+    purchasing_permission_keys_for(request.store).include?("customers.view")
   end
 
   def purchasing_can_manage_draft_po?(purchase_order)
     return false unless purchase_order.draft?
 
-    Authorization::PermissionEvaluator.allowed?(
-      user: current_user,
-      permission_key: "orders.manage",
-      store: purchase_order.store
-    ) && current_store&.id == purchase_order.store_id
+    purchasing_permission_keys_for(purchase_order.store).include?("orders.manage") &&
+      current_store&.id == purchase_order.store_id
   end
 
   def purchasing_can_access_receiving?(receipt)
-    Authorization::PermissionEvaluator.allowed?(
-      user: current_user,
-      permission_key: "purchase_receipts.view",
-      store: receipt.store
-    ) && current_store&.id == receipt.store_id
+    purchasing_permission_keys_for(receipt.store).include?("purchase_receipts.view") &&
+      current_store&.id == receipt.store_id
   end
 end

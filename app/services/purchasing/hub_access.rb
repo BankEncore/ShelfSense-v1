@@ -22,12 +22,18 @@ module Purchasing
       nav_visible?(user:, accessible_stores:)
     end
 
+    # Evaluates at most one permission set for the global scope, then one set per
+    # accessible store, stopping at the first matching hub-eligible key.
     def permission_allowed_anywhere?(user:, permission_keys:, accessible_stores:)
-      permission_keys.any? do |key|
-        Authorization::PermissionEvaluator.allowed?(user: user, permission_key: key, store: nil) ||
-          accessible_stores.any? do |store|
-            Authorization::PermissionEvaluator.allowed?(user: user, permission_key: key, store: store)
-          end
+      wanted = permission_keys.to_set
+      return false if wanted.empty?
+
+      global_keys = Authorization::PermissionEvaluator.permissions_for(user: user, store: nil)
+      return true if wanted.intersect?(global_keys)
+
+      accessible_stores.any? do |store|
+        store_keys = Authorization::PermissionEvaluator.permissions_for(user: user, store: store)
+        wanted.intersect?(store_keys)
       end
     end
   end

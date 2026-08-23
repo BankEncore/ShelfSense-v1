@@ -148,6 +148,66 @@ class AdminPurchasingHubTest < ActionDispatch::IntegrationTest
     assert_match admin_purchasing_path, response.body
   end
 
+  test "hub visibility is memoized for the request across layout and hub action" do
+    stores = Array.new(4) do |i|
+      Store.create!(
+        store_number: (30 + i).to_s,
+        code: "memo_#{i}_#{SecureRandom.hex(2)}",
+        name: "Memo Store #{i}",
+        legal_name: "Example Books LLC",
+        timezone: "America/New_York",
+        country_code: "US"
+      )
+    end
+
+    role = Role.create!(
+      key: "memo_recv_#{SecureRandom.hex(3)}",
+      name: "Memo receiving",
+      assignment_scope: "store",
+      system_role: false,
+      active: true
+    )
+    RolePermission.create!(
+      role: role,
+      permission: Permission.find_by!(key: "purchase_receipts.manage"),
+      granted_by: @actor
+    )
+    user = User.create!(
+      username: "memo_hub_#{SecureRandom.hex(3)}",
+      display_name: "Memo Hub",
+      password: "correct-horse-battery",
+      password_confirmation: "correct-horse-battery"
+    )
+    stores.each do |store|
+      RoleAssignment.create!(
+        user: user,
+        role: role,
+        store: store,
+        assigned_by: @actor,
+        effective_at: Time.current
+      )
+    end
+
+    post session_path, params: { session: { username: user.username, password: "correct-horse-battery" } }
+    post store_selection_path, params: { store_id: stores.first.id }
+
+    calls = 0
+    original = Purchasing::HubAccess.method(:nav_visible?)
+    Purchasing::HubAccess.define_singleton_method(:nav_visible?) do |**kwargs|
+      calls += 1
+      original.call(**kwargs)
+    end
+
+    begin
+      get admin_purchasing_path
+      assert_response :success
+      # Layout and require_hub_access! share purchasing_hub_accessible? memoization.
+      assert_equal 1, calls
+    ensure
+      Purchasing::HubAccess.define_singleton_method(:nav_visible?, original)
+    end
+  end
+
   private
 
   def sign_in_as(username)

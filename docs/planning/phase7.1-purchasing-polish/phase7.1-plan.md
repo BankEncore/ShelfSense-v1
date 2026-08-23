@@ -2,7 +2,7 @@
 
 ## Status
 
-**In progress** on integration branch `phase-7.1-purchasing-polish` — slices **7.1.1–7.1.3** implemented; pending merge to `main`.
+**In progress** on integration branch `phase-7.1-purchasing-polish` — slices **7.1.1–7.1.2** implemented (hub exit-link touch-ups on ops templates are incidental 7.1.1 integration). **7.1.3** remains **blocked until after UDS-4.1**.
 
 **Not** the inspirational Warm Parchment exploration in [docs/drafts/phase-7.1-ux-refactor/](../../drafts/phase-7.1-ux-refactor/README.md) (cross-phase UX notes; path retained for stability).
 
@@ -49,7 +49,7 @@ Same as [roadmap.md](../roadmap.md) and Phase 7 §4 deferrals:
 1. **Coordination gate** — [phase7.1-uds-coordination.md](phase7.1-uds-coordination.md) is **Accepted** (August 2026).
 2. **Phase 7 contracts unchanged** — one order ↔ one PO line; `available = on_hand - active_reserved - unavailable`; [phase7-lock-order.md](../phase7-orders-and-receiving/phase7-lock-order.md) binding.
 3. **Shell boundaries** — admin chrome server-rendered without Hotwire; ops workspaces remain Register-class siblings of POS.
-4. **Merge policy** — integration branch **`phase-7.1-purchasing-polish`** from `main`; slice branches PR into integration; final PR to `main` after 7.1.1–7.1.3 (+ optional 7.1.4). Manual gate: no Phase 7 command or lock-order behavior changed.
+4. **Merge policy** — integration branch **`phase-7.1-purchasing-polish`** from `main`; slice branches PR into integration; merge **7.1.1–7.1.2** to `main` when ready. **7.1.3** ships later after UDS-4.1 (+ optional 7.1.4). Manual gate: no Phase 7 command or lock-order behavior changed.
 5. **UDS ownership** — nav chrome and non-purchasing adoption per coordination table; Phase 7.1 owns purchasing templates and hub queries.
 6. **Hub section visibility** — omit sections the user is **not authorized** to see; **show authorized sections even when count is zero** with a compact clear state (not a full `empty_state` panel). Hub layout stays stable for an authorized user.
 7. **No-store hub** — hub remains reachable when the user has any hub-eligible permission globally or on any accessible store; without `current_store`, show “Select a store to view purchasing work” and org-wide history links only; **no auto-redirect** away from the hub; no store-scoped counts without a store.
@@ -117,15 +117,17 @@ flowchart LR
 
 ### Slice 7.1.3 — Ops workspace parity (Location + Draft PO)
 
-**Coordination row:** 6. Ships **after UDS-4.1** (or parallel UDS-4.2 if no template overlap).
+**Status:** **Blocked / pending after UDS-4.1** (coordination row 6). Not part of the 7.1.1–7.1.2 merge.
 
-**Scope:**
+**Note:** Hub exit links and light `ActionButtonHelper` / table-scroll touch-ups on Location, Draft PO, and Receiving templates shipped with **7.1.1** as incidental integration so ops workspaces point at the new hub. Those changes do **not** satisfy 7.1.3 acceptance (keyboard/dirty/focus parity, program-plan allowlist, a11y evidence).
 
-- Align Location and Draft PO with Receiving: ops layout shortcuts, `ActionButtonHelper`, focus restoration, dirty-form guard, error partials
-- Exit links point to **`admin_purchasing_path`** hub
+**Scope (when unblocked):**
+
+- Align Location and Draft PO with Receiving: shortcut help behavior, focus restoration (success and cancel), dirty-form guard, error partials
 - Extract shared Stimulus only where behavior is identical
-- Update program-plan allowlist in same PR
+- Update program-plan allowlist in the 7.1.3 PR
 - No keyboard binding changes without updating frozen system tests
+- Additive coverage in `purchasing_ops_workspace_test.rb` and `location_queue_buttons_test.rb`
 
 **Accessibility acceptance:**
 
@@ -149,7 +151,7 @@ flowchart LR
 ## Acceptance criteria (phase complete)
 
 1. Coordination doc Accepted.
-2. Slices **7.1.1** and **7.1.2** implemented; **7.1.3** after UDS-4.1 per coordination; **7.1.4** only if justified.
+2. Slices **7.1.1** and **7.1.2** implemented and mergeable; **7.1.3** after UDS-4.1 per coordination; **7.1.4** only if justified.
 3. Staff can discover active purchasing work without hunting flat nav links.
 4. No Phase 7 locked decisions or lock-order rows changed silently.
 5. [roadmap.md](../roadmap.md) and docs index reflect Phase 7.1 status.

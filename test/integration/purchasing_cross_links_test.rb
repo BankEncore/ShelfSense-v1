@@ -94,6 +94,87 @@ class PurchasingCrossLinksTest < ActionDispatch::IntegrationTest
     assert_match admin_purchase_order_path(@po), response.body
   end
 
+  test "multi-line receipt show evaluates store permissions a bounded number of times" do
+    variants = Array.new(4) do |i|
+      pos_sellable_variant(actor: @actor, tax_class: @tax, name: "Bound Book #{i}")
+    end
+    variants.each do |variant|
+      SupplierVariantSource.create!(
+        supplier: @supplier,
+        product_variant: variant,
+        pricing_method: "direct_unit_cost",
+        expected_unit_cost_cents: 250,
+        organization_preferred: true
+      )
+    end
+
+    first_order = Purchasing::CreateStockOrder.call(
+      store: @store,
+      product_variant: variants.first,
+      actor: @actor,
+      quantity: 1,
+      supplier: @supplier
+    )
+    po = first_order.purchase_order
+    variants.drop(1).each do |variant|
+      Purchasing::CreateStockOrder.call(
+        store: @store,
+        product_variant: variant,
+        actor: @actor,
+        quantity: 1,
+        supplier: @supplier
+      )
+    end
+    Purchasing::GeneratePurchaseOrder.call(purchase_order: po.reload, actor: @actor)
+    Purchasing::SendPurchaseOrder.call(
+      purchase_order: po.reload,
+      actor: @actor,
+      transmission_method: "email"
+    )
+
+    receipt = Purchasing::CreateDraftPurchaseReceipt.call(
+      store: @store,
+      supplier: @supplier,
+      actor: @actor
+    )
+    po.purchase_order_lines.find_each do |line|
+      Purchasing::AddPurchaseReceiptLine.call(
+        purchase_receipt: receipt.reload,
+        purchase_order_line: line,
+        actor: @actor,
+        received_quantity: 1,
+        actual_unit_cost_cents: 250
+      )
+    end
+    Purchasing::PostPurchaseReceipt.call(
+      purchase_receipt: receipt.reload,
+      actor: @actor,
+      idempotency_key: SecureRandom.uuid_v7
+    )
+
+    sign_in_as("admin")
+    post store_selection_path, params: { store_id: @store.id }
+
+    store_evaluations = Hash.new(0)
+    original = Authorization::PermissionEvaluator.method(:permissions_for)
+    Authorization::PermissionEvaluator.define_singleton_method(:permissions_for) do |user:, store:|
+      store_evaluations[store&.id || :global] += 1
+      original.call(user: user, store: store)
+    end
+
+    begin
+      get admin_purchase_receipt_path(receipt)
+      assert_response :success
+      assert_operator receipt.purchase_receipt_lines.count, :>=, 4
+      # Cross-link helpers share one memoized permission set per store for the render.
+      # Allow a small constant for layout/current-store effective_permissions plus hub nav.
+      assert_operator store_evaluations[@store.id], :<=, 3
+      assert_operator store_evaluations[@store.id], :>=, 1
+    ensure
+      Authorization::PermissionEvaluator.define_singleton_method(:permissions_for, original)
+    end
+  end
+
   private
 
   def sign_in_as(user_or_username)
