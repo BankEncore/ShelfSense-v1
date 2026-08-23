@@ -202,6 +202,27 @@ class PurchasingOpsWorkspaceTest < ApplicationSystemTestCase
     assert_equal "receiving_lookup", page.evaluate_script("document.activeElement && document.activeElement.name")
   end
 
+  test "draft PO detail reflow remains usable at 320x568 and zoomed viewports" do
+    visit ops_purchase_order_path(@purchase_order)
+
+    with_viewport(width: 320, height: 568) do
+      assert_selector ".ops-scan"
+      assert_selector ".table-scroll"
+      assert_text "Add stock line"
+    end
+
+    with_viewport(width: 1280, height: 720, zoom: 2) do
+      assert_button "Focus lookup /"
+      assert_selector ".ops-queue"
+      assert_text "Add stock line"
+    end
+
+    with_viewport(width: 1280, height: 720, zoom: 4) do
+      assert_selector ".table-scroll"
+      assert_selector ".ops-queue"
+    end
+  end
+
   private
 
   def sign_in_admin

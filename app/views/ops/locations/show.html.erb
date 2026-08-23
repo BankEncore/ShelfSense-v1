@@ -137,7 +137,7 @@
               <p>Scan the exact Used inventory unit. Selection is available as a fallback.</p>
               <label>
                 Unit scan
-                <input type="text" name="unit_identifier" value="<%= selected ? @submitted&.fetch("unit_identifier", nil) : nil %>" autocomplete="off" inputmode="numeric" data-location-scan>
+                <input type="text" name="unit_identifier" value="<%= selected ? @submitted&.fetch("unit_identifier", nil) : nil %>" autocomplete="off" inputmode="numeric" data-location-scan<%= " autofocus aria-describedby=location_confirm_#{request.id}_error" if selected && @error_action == :confirm && variant.used? %>>
               </label>
               <label>
                 Select unit instead
@@ -183,7 +183,7 @@
                 </label>
                 <label>
                   Expected unit cost ($)
-                  <input type="text" inputmode="decimal" name="expected_unit_cost_cents" value="<%= selected ? @submitted&.fetch("expected_unit_cost_cents", nil) : nil %>" <%= "aria-invalid=true" if selected && @error_field == :expected_unit_cost_cents %>>
+                  <input type="text" inputmode="decimal" name="expected_unit_cost_cents" value="<%= selected ? @submitted&.fetch("expected_unit_cost_cents", nil) : nil %>" <%= "autofocus aria-describedby=location_special_#{request.id}_error" if selected && @error_action == :special_order && @error_field == :expected_unit_cost_cents %> aria-invalid="<%= selected && @error_field == :expected_unit_cost_cents %>">
                 </label>
                 <%= action_submit(form, "Convert to special order", style: :solid, intent: :brand) %>
               </div>

@@ -97,7 +97,7 @@ class LocationQueueButtonsTest < ApplicationSystemTestCase
     check "I physically located one copy of this title."
     click_button "Reserve for Queue Reader"
     assert_text "Location work is caught up", wait: 5
-    assert_equal "location-empty-heading", page.evaluate_script("document.activeElement.id")
+    assert_selector "#location-empty-heading:focus", wait: 5
   end
 
   test "location workspace does not show draft PO shortcut controls" do
@@ -171,14 +171,104 @@ class LocationQueueButtonsTest < ApplicationSystemTestCase
     assert_selector "tr.is-selected", text: "Queue Reader"
   end
 
+  test "invalid used unit scan retains value and focuses scan field" do
+    tax = tax_class(code: "lq_used_#{SecureRandom.hex(3)}")
+    used_variant, = pos_on_hand_unit(store: @store, actor: @actor, tax_class: tax, name: "Used Locate Book")
+    used_request = Customers::CreateRequest.call(
+      store: @store,
+      customer: @customer,
+      product_variant: used_variant,
+      actor: @actor
+    )
+
+    sign_in_and_visit_queue(ops_location_path(request_id: used_request.id, mode: "locate"))
+    find("input[name='unit_identifier']").fill_in with: "not-a-real-unit"
+    click_button "Reserve for Queue Reader"
+    assert_selector ".ops-row-error"
+    assert_field "unit_identifier", with: "not-a-real-unit"
+    assert_equal "unit_identifier", page.evaluate_script("document.activeElement && document.activeElement.name")
+  end
+
+  test "used unit scan success reserves the copy" do
+    tax = tax_class(code: "lq_used_ok_#{SecureRandom.hex(3)}")
+    used_variant, unit = pos_on_hand_unit(store: @store, actor: @actor, tax_class: tax, name: "Used Found Book")
+    used_request = Customers::CreateRequest.call(
+      store: @store,
+      customer: @customer,
+      product_variant: used_variant,
+      actor: @actor
+    )
+
+    sign_in_and_visit_queue(ops_location_path(request_id: used_request.id, mode: "locate"))
+    find("input[name='unit_identifier']").fill_in with: unit.unit_identifier
+    click_button "Reserve for Queue Reader"
+    assert_text "located and reserved", wait: 5
+  end
+
+  test "special order cost failure retains value and focuses cost field" do
+    supplier = Supplier.create!(name: "Locate Supplier", code: "ls_#{SecureRandom.hex(3)}")
+    SupplierVariantSource.create!(
+      supplier: supplier,
+      product_variant: @variant,
+      pricing_method: "direct_unit_cost",
+      expected_unit_cost_cents: 725,
+      organization_preferred: true
+    )
+
+    sign_in_and_visit_queue
+    find("tr.is-selected").send_keys :enter
+    click_link "Not located"
+    choose "Convert to special order"
+    fill_in "Expected unit cost ($)", with: "not-a-price"
+    click_button "Convert to special order"
+    assert_selector "[data-ops-error-summary]"
+    assert_field "expected_unit_cost_cents", with: "not-a-price"
+    assert_equal "expected_unit_cost_cents", page.evaluate_script("document.activeElement && document.activeElement.name")
+  end
+
+  test "stale locate request preserves panel context" do
+    sign_in_and_visit_queue
+    find("tr.is-selected").send_keys :enter
+    check "I physically located one copy of this title."
+    @customer_request.update_column(:lock_version, @customer_request.lock_version + 1)
+    click_button "Reserve for Queue Reader"
+    assert_selector "[data-ops-error-summary]", text: /changed by someone else/i
+    assert_selector ".location-action-panel:not([hidden])", text: "Queue Reader"
+  end
+
+  test "location queue reflow remains usable at 320x568 and zoomed viewports" do
+    sign_in_and_visit_queue
+
+    with_viewport(width: 320, height: 568) do
+      assert_selector ".location-queue"
+      assert_selector ".table-scroll"
+      find("tr.is-selected").send_keys :enter
+      assert_selector ".location-action-panel:not([hidden])"
+      assert_text "Physical confirmation required"
+    end
+
+    with_viewport(width: 1280, height: 720, zoom: 2) do
+      assert_selector ".ops-shortcuts"
+      find("tr.is-selected").send_keys :enter
+      assert_selector ".location-action-panel:not([hidden])"
+      assert_text "Physical confirmation required"
+    end
+
+    with_viewport(width: 1280, height: 720, zoom: 4) do
+      assert_selector ".table-scroll"
+      find("tr.is-selected").send_keys :enter
+      assert_selector ".location-action-panel:not([hidden])"
+    end
+  end
+
   private
 
-  def sign_in_and_visit_queue
+  def sign_in_and_visit_queue(path = ops_location_path)
     visit new_session_path
     fill_in "session_username", with: @actor.username
     fill_in "session_password", with: "correct-horse-battery"
     find_field("session_password").send_keys :enter
     assert_text "Signed in successfully"
-    visit ops_location_path
+    visit path
   end
 end

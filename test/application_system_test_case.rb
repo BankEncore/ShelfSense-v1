@@ -22,4 +22,13 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--disable-gpu")
   end
+
+  def with_viewport(width:, height:, zoom: 1)
+    page.driver.browser.manage.window.resize_to(width, height)
+    page.execute_script("document.documentElement.style.zoom = #{zoom.to_f}") unless zoom == 1
+    yield
+  ensure
+    page.execute_script("document.documentElement.style.zoom = 1")
+    page.driver.browser.manage.window.resize_to(1280, 720)
+  end
 end
