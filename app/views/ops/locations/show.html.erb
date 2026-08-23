@@ -10,8 +10,8 @@
 <%= render "ops/shared/error_summary", errors: @mutation_errors, conflict: @conflict, title: "Location action could not be completed" %>
 
 <% if @pending_requests.empty? %>
-  <section class="surface ops-empty-state">
-    <h2>Location work is caught up</h2>
+  <section class="surface ops-empty-state" data-controller="ops-initial-focus" data-ops-initial-focus-selector-value="#location-empty-heading">
+    <h2 id="location-empty-heading" tabindex="-1">Location work is caught up</h2>
     <p>There are no customer requests waiting for a physical search at this store.</p>
     <p><%= action_link_to("View customer requests", admin_customer_requests_path, style: :outline, intent: :neutral) %></p>
   </section>
@@ -65,9 +65,14 @@
                 <td><%= product.merchandise_category&.path_label.presence || "Not categorized" %></td>
                 <td><strong><%= @availability_by_request.fetch(request.id) %></strong></td>
                 <td>
-                  <%= link_to "Select", ops_location_path(request_id: request.id, mode: "locate"),
-                        class: "btn btn--ghost",
-                        data: { action: "location-queue#openPanel" } %>
+                  <%= action_link_to(
+                        "Select",
+                        ops_location_path(request_id: request.id, mode: "locate"),
+                        style: :ghost,
+                        intent: :neutral,
+                        size: :small,
+                        data: { action: "location-queue#openPanel" }
+                      ) %>
                 </td>
               </tr>
             <% end %>
@@ -93,22 +98,34 @@
             <h2 id="location-panel-title-<%= request.id %>"><%= variant.product.name %></h2>
             <p><%= request.customer.display_name %> · apparent availability <strong><%= @availability_by_request.fetch(request.id) %></strong></p>
           </div>
-          <%= link_to ops_location_path, class: "btn btn--ghost", data: { action: "location-queue#closePanel" } do %>
-            Close <kbd>Esc</kbd>
-          <% end %>
+          <%= action_link_to(
+                "Close Esc",
+                ops_location_path,
+                style: :ghost,
+                intent: :neutral,
+                data: { action: "location-queue#closePanel" }
+              ) %>
         </header>
 
         <div class="location-action-panel__choices" role="group" aria-label="Location outcome">
-          <%= link_to "Located", ops_location_path(request_id: request.id, mode: "locate"),
-                class: "btn",
-                data: { location_queue_target: "initialFocus", action: "location-queue#showLocate" } %>
-          <%= link_to "Not located", ops_location_path(request_id: request.id, mode: "not_located"),
-                class: "btn btn--ghost",
-                data: { action: "location-queue#showNotLocated" } %>
+          <%= action_link_to(
+                "Located",
+                ops_location_path(request_id: request.id, mode: "locate"),
+                style: :outline,
+                intent: :neutral,
+                data: { action: "location-queue#showLocate" }
+              ) %>
+          <%= action_link_to(
+                "Not located",
+                ops_location_path(request_id: request.id, mode: "not_located"),
+                style: :outline,
+                intent: :neutral,
+                data: { action: "location-queue#showNotLocated" }
+              ) %>
         </div>
 
         <div data-location-queue-target="locateSection" <%= "hidden" unless panel_open && locate_mode %>>
-          <%= form_with url: ops_location_confirm_path(request), method: :post, local: true, html: { class: "location-action-form" } do %>
+          <%= form_with url: ops_location_confirm_path(request), method: :post, local: true, html: { class: "location-action-form", data: { dirty_track: true } } do |form| %>
             <%= hidden_field_tag :lock_version, request.lock_version %>
             <% if variant.standard? %>
               <p><strong>Physical confirmation required.</strong> Confirm that you have this copy in hand before reserving it for the customer.</p>
@@ -132,14 +149,15 @@
                 </select>
               </label>
             <% end %>
-            <button type="submit" class="btn" data-location-submit>Reserve for <%= request.customer.display_name %></button>
+            <%= action_submit(form, "Reserve for #{request.customer.display_name}", style: :solid, intent: :brand, data: { location_submit: true }) %>
             <%= render "ops/shared/inline_row_error", action: :confirm, row_id: request.id, id: "location_confirm_#{request.id}_error" %>
           <% end %>
         </div>
 
         <div data-location-queue-target="notLocatedSection" <%= "hidden" unless panel_open && !locate_mode %>>
-          <%= form_with url: ops_location_not_located_path(request), method: :post, local: true, html: { class: "location-action-form" } do %>
+          <%= form_with url: ops_location_not_located_path(request), method: :post, local: true, html: { class: "location-action-form", data: { dirty_track: true } } do |form| %>
             <%= hidden_field_tag :lock_version, request.lock_version %>
+            <input type="hidden" name="convert_to_special_order" value="0" data-location-queue-target="convertField">
             <label>
               Notes (optional)
               <input type="text" name="notes" value="<%= selected ? @submitted&.fetch("notes", nil) : nil %>" autocomplete="off">
@@ -147,11 +165,13 @@
             <% if variant.standard? %>
               <fieldset>
                 <legend>Resolution</legend>
-                <label><input type="radio" name="resolution" value="cancel" checked data-action="location-queue#toggleResolution"> Cancel request</label>
-                <label><input type="radio" name="resolution" value="special_order" data-action="location-queue#toggleResolution"> Convert to special order</label>
+                <label><input type="radio" name="resolution" value="cancel" checked data-action="location-queue#showCancelAction"> Cancel request</label>
+                <label><input type="radio" name="resolution" value="special_order" data-action="location-queue#showSpecialOrderAction"> Convert to special order</label>
               </fieldset>
+              <div data-location-queue-target="cancelAction">
+                <%= action_submit(form, "Cancel request", style: :solid, intent: :danger) %>
+              </div>
               <div hidden data-location-queue-target="specialOrderFields">
-                <input type="hidden" name="convert_to_special_order" value="0" data-location-queue-target="convertField">
                 <label>
                   Supplier (optional if preferred)
                   <select name="supplier_id">
@@ -165,11 +185,12 @@
                   Expected unit cost ($)
                   <input type="text" inputmode="decimal" name="expected_unit_cost_cents" value="<%= selected ? @submitted&.fetch("expected_unit_cost_cents", nil) : nil %>" <%= "aria-invalid=true" if selected && @error_field == :expected_unit_cost_cents %>>
                 </label>
+                <%= action_submit(form, "Convert to special order", style: :solid, intent: :brand) %>
               </div>
             <% else %>
               <p>This Used request cannot become a supplier order. Not located will cancel it.</p>
+              <%= action_submit(form, "Cancel Used request", style: :solid, intent: :danger) %>
             <% end %>
-            <button type="submit" class="btn btn--danger" data-location-resolution-submit><%= variant.standard? ? "Cancel request" : "Cancel Used request" %></button>
             <%= render "ops/shared/inline_row_error", action: :not_located, row_id: request.id, id: "location_cancel_#{request.id}_error" %>
             <%= render "ops/shared/inline_row_error", action: :special_order, row_id: request.id, id: "location_special_#{request.id}_error" %>
           <% end %>

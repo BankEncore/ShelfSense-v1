@@ -8,7 +8,6 @@ export default class extends Controller {
   }
 
   cancel(event) {
-
     const dialog = this.element.querySelector("dialog[open]")
     if (dialog) {
       event.preventDefault()
@@ -20,6 +19,10 @@ export default class extends Controller {
     if (help) {
       event.preventDefault()
       this.element.querySelector("[data-action~='ops-shortcuts#toggleHelp']")?.click()
+      return
+    }
+
+    if (this.element.dataset.opsWorkspace === "location") {
       return
     }
 
@@ -37,5 +40,6 @@ export default class extends Controller {
     event.preventDefault()
     dirtyForm.reset()
     dirtyForm.dispatchEvent(new CustomEvent("ops:dirty-cancel", { bubbles: true, detail: { form: dirtyForm } }))
+    this.element.querySelector("[data-focus-restore-target='lookup']")?.focus()
   }
 }

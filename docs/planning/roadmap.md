@@ -74,20 +74,20 @@ UDS-4.0 gate passed; UDS-4.1 ships grouped nav into `application.html.erb`.
 
 ## Phase 7.1 — Purchasing workflow and presentation closeout
 
-**Status:** **7.1.1–7.1.2 on `main`** (PR #35); **7.1.3 blocked until after UDS-4.1**. UDS-4.1 grouped nav deduplication remains a UDS-4 deliverable.
+**Status:** **Complete** — **7.1.1–7.1.3** on branch `phase-7.1.3-purchasing-ops-closeout` (7.1.1–7.1.2 PR #35 on `main`); **UDS-4.1/4.2 on `main`**; **7.1.4 deferred**.
 
 Authoritative packet: [Phase 7.1](phase7.1-purchasing-polish/README.md).
 
-Phase 7 shipped the bookstore-operable purchasing and customer-request path. Phase 7.1 closes **Phase 7 operability** (work hub and admin purchasing presentation first; Location/Draft PO ops parity in **7.1.3 after UDS-4.1**)—not supplier returns, request expiration, or the AP/accounting interface. Forward domains (stored value, buyback, customer expansion, bibliographic enrichment, register cash) proceed separately; UDS grouped navigation is a parallel UDS program.
+Phase 7 shipped the bookstore-operable purchasing and customer-request path. Phase 7.1 closes **Phase 7 operability** (work hub, admin purchasing presentation, and ops interaction closeout in **7.1.3**)—not supplier returns, request expiration, or the AP/accounting interface. Forward domains (stored value, buyback, customer expansion, bibliographic enrichment, register cash) proceed separately; UDS grouped navigation is a parallel UDS program.
 
 ### Slices (summary)
 
 | Slice | Scope |
 |---|---|
-| 7.1.1 | Purchasing work hub (spec §17.1) |
-| 7.1.2 | Admin orders / PO / receipt presentation and cross-links |
-| 7.1.3 | Ops Location + Draft PO parity with Receiving |
-| 7.1.4 | Customer-request purchasing cross-links (optional) |
+| 7.1.1 | Purchasing work hub (spec §17.1) ✓ |
+| 7.1.2 | Admin orders / PO / receipt presentation and cross-links ✓ |
+| 7.1.3 | Ops Location + Draft PO interaction closeout ✓ |
+| 7.1.4 | Customer-request purchasing cross-links (deferred) |
 
 Coordination with UDS-4: [phase7.1-uds-coordination.md](phase7.1-purchasing-polish/phase7.1-uds-coordination.md).
 
@@ -366,7 +366,7 @@ The following remain out of scope until a planning packet and ADR review justify
 | Phases 0–6.1 | Implemented |
 | Phase 7 — Orders, requests, receiving | Implemented |
 | UDS-1–3 — Warm Parchment foundation | Implemented (code); a11y matrix evidence in progress |
-| Phase 7.1 — Purchasing workflow closeout | **7.1.1–7.1.2 on `main`**; **7.1.3 after UDS-4.1** ([packet](phase7.1-purchasing-polish/README.md)) |
+| Phase 7.1 — Purchasing workflow closeout | **Complete** on branch `phase-7.1.3-purchasing-ops-closeout` ([packet](phase7.1-purchasing-polish/README.md)) |
 | UDS-4 — Navigation and information architecture | **UDS-4.2 in progress** ([uds-4.2-plan.md](ux-design-system/uds-4.2-plan.md)); UDS-4.0–4.1 on `main` |
 | Phase 8 — Customer foundation refinement | Next; parallel with 9 |
 | Phase 9 — Catalog and bibliographic enrichment | Next; parallel with 8 |

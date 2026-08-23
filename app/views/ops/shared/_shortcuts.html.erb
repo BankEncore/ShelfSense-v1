@@ -1,0 +1,42 @@
+<% profile = ops_shortcuts_profile %>
+<aside class="ops-shortcuts ops-shortcuts--<%= profile[:workspace] %>" aria-label="Purchasing operations keyboard shortcuts">
+  <% if profile[:buttons].any? %>
+    <div class="ops-shortcuts__buttons">
+      <% profile[:buttons].each do |button| %>
+        <button type="button" class="btn btn--ghost" data-action="<%= button[:action] %>">
+          <%= button[:label] %> <kbd><%= button[:keys] %></kbd>
+        </button>
+      <% end %>
+      <button type="button" class="btn btn--ghost" aria-expanded="false" aria-controls="ops-shortcut-help" data-ops-shortcuts-target="helpButton" data-action="ops-shortcuts#toggleHelp">Shortcut help</button>
+    </div>
+    <div id="ops-shortcut-help" class="ops-shortcuts__help" data-ops-shortcuts-target="help" hidden>
+      <h2>Keyboard shortcuts</h2>
+      <dl>
+        <% profile[:help].each do |keys, description| %>
+          <div>
+            <dt><kbd><%= keys %></kbd></dt>
+            <dd><%= description %></dd>
+          </div>
+        <% end %>
+      </dl>
+      <button type="button" data-action="ops-shortcuts#toggleHelp">Close shortcut help</button>
+    </div>
+  <% else %>
+    <div class="ops-shortcuts__buttons">
+      <p class="ops-hint ops-shortcuts__hint">Use ↑/↓ and Enter on the queue; Esc closes the action panel. Select, Located, and Not located are always available as links.</p>
+      <button type="button" class="btn btn--ghost" aria-expanded="false" aria-controls="ops-shortcut-help" data-ops-shortcuts-target="helpButton" data-action="ops-shortcuts#toggleHelp">Shortcut help</button>
+    </div>
+    <div id="ops-shortcut-help" class="ops-shortcuts__help" data-ops-shortcuts-target="help" hidden>
+      <h2>Keyboard shortcuts</h2>
+      <dl>
+        <% profile[:help].each do |keys, description| %>
+          <div>
+            <dt><kbd><%= keys %></kbd></dt>
+            <dd><%= description %></dd>
+          </div>
+        <% end %>
+      </dl>
+      <button type="button" data-action="ops-shortcuts#toggleHelp">Close shortcut help</button>
+    </div>
+  <% end %>
+</aside>

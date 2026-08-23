@@ -1,13 +1,24 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = [ "row", "panel", "initialFocus", "locateSection", "notLocatedSection", "specialOrderFields", "convertField" ]
+  static targets = [
+    "row",
+    "panel",
+    "locateSection",
+    "notLocatedSection",
+    "specialOrderFields",
+    "cancelAction",
+    "convertField"
+  ]
   static values = { selectedId: String }
 
   connect() {
+    this.panelSnapshots = new Map()
     this.selectedIndex = Math.max(0, this.rowTargets.findIndex((row) => row.dataset.requestId === this.selectedIdValue))
-    this.select(this.selectedIndex, { focus: false })
+    const panelOpen = this.panelTargets.some((panel) => !panel.hidden)
+    this.select(this.selectedIndex, { focus: !panelOpen })
     this.activePanel = this.panelTargets.find((panel) => !panel.hidden) || null
+    if (this.activePanel) this.snapshotPanel(this.activePanel)
     this.restoreFailureState()
   }
 
@@ -16,6 +27,7 @@ export default class extends Controller {
 
     if (event.key === "Escape" && this.visiblePanel) {
       event.preventDefault()
+      event.stopPropagation()
       this.closePanel()
       return
     }
@@ -46,6 +58,7 @@ export default class extends Controller {
     this.panelTargets.forEach((item) => { item.hidden = item !== panel })
     this.activePanel = panel
     this.showLocate()
+    this.snapshotPanel(panel)
     this.focusLocate(panel)
   }
 
@@ -53,6 +66,8 @@ export default class extends Controller {
     event?.preventDefault?.()
     const panel = this.visiblePanel
     if (!panel) return
+    if (this.isPanelDirty(panel) && !window.confirm("Discard this location entry?")) return
+    this.resetPanel(panel)
     panel.hidden = true
     this.activePanel = null
     this.rowTargets[this.selectedIndex]?.focus()
@@ -72,19 +87,28 @@ export default class extends Controller {
     this.sectionIn(panel, "locate")?.setAttribute("hidden", "")
     const section = this.sectionIn(panel, "not-located")
     section?.removeAttribute("hidden")
+    this.showCancelAction({ currentTarget: panel })
     section?.querySelector("input[name='notes']")?.focus()
   }
 
-  toggleResolution(event) {
-    const panel = event.currentTarget.closest("[data-location-queue-target='panel']")
-    const special = event.currentTarget.value === "special_order"
-    const fields = panel.querySelector("[data-location-queue-target='specialOrderFields']")
+  showCancelAction(event) {
+    const panel = event.currentTarget.closest?.("[data-location-queue-target='panel']") || this.panelForSelection
+    if (!panel) return
+    panel.querySelector("[data-location-queue-target='cancelAction']")?.removeAttribute("hidden")
+    panel.querySelector("[data-location-queue-target='specialOrderFields']")?.setAttribute("hidden", "")
     const convert = panel.querySelector("[data-location-queue-target='convertField']")
-    const submit = panel.querySelector("[data-location-resolution-submit]")
-    fields.hidden = !special
-    convert.value = special ? "1" : "0"
-    submit.textContent = special ? "Convert to special order" : "Cancel request"
-    if (special) fields.querySelector("select, input")?.focus()
+    if (convert) convert.value = "0"
+  }
+
+  showSpecialOrderAction(event) {
+    const panel = event.currentTarget.closest?.("[data-location-queue-target='panel']") || this.panelForSelection
+    if (!panel) return
+    panel.querySelector("[data-location-queue-target='cancelAction']")?.setAttribute("hidden", "")
+    const fields = panel.querySelector("[data-location-queue-target='specialOrderFields']")
+    fields?.removeAttribute("hidden")
+    const convert = panel.querySelector("[data-location-queue-target='convertField']")
+    if (convert) convert.value = "1"
+    fields?.querySelector("select, input:not([type='hidden'])")?.focus()
   }
 
   select(index, { focus = true } = {}) {
@@ -96,14 +120,11 @@ export default class extends Controller {
       row.setAttribute("aria-selected", selected.toString())
       row.tabIndex = selected ? 0 : -1
     })
-    if (focus) this.rowTargets[index].focus()
+    if (focus) this.rowTargets[index]?.focus()
   }
 
   restoreFailureState() {
-    const sibling = this.element.previousElementSibling
-    const summary = sibling?.matches?.("[data-ops-error-summary]")
-      ? sibling
-      : sibling?.querySelector?.("[data-ops-error-summary]")
+    const summary = this.element.parentElement?.querySelector?.("[data-ops-error-summary]")
     if (!summary) return
     this.openSelectedPanel()
     const error = this.panelForSelection?.querySelector(".ops-row-error")
@@ -115,7 +136,13 @@ export default class extends Controller {
         const special = this.panelForSelection.querySelector("input[name='resolution'][value='special_order']")
         if (special) {
           special.checked = true
-          this.toggleResolution({ currentTarget: special })
+          this.showSpecialOrderAction({ currentTarget: special })
+        }
+      } else {
+        const cancel = this.panelForSelection.querySelector("input[name='resolution'][value='cancel']")
+        if (cancel) {
+          cancel.checked = true
+          this.showCancelAction({ currentTarget: cancel })
         }
       }
     }
@@ -125,7 +152,46 @@ export default class extends Controller {
 
   focusLocate(panel) {
     const scan = panel?.querySelector("[data-location-scan]")
-    ;(scan || panel?.querySelector("[data-location-submit]"))?.focus()
+    const checkbox = panel?.querySelector("input[name='physical_copy_confirmed']")
+    ;(scan || checkbox || panel?.querySelector("[data-location-submit]"))?.focus()
+  }
+
+  snapshotPanel(panel) {
+    panel.querySelectorAll("form[data-dirty-track]").forEach((form) => {
+      this.panelSnapshots.set(form, this.serializeForm(form))
+    })
+  }
+
+  serializeForm(form) {
+    const values = {}
+    Array.from(form.elements).forEach((element) => {
+      if (!element.name || element.disabled) return
+      if (element.type === "checkbox" || element.type === "radio") {
+        values[element.name] = element.checked ? element.value : ""
+      } else {
+        values[element.name] = element.value
+      }
+    })
+    return values
+  }
+
+  isPanelDirty(panel) {
+    return Array.from(panel.querySelectorAll("form[data-dirty-track]")).some((form) => {
+      if (form.dataset.dirty === "true") return true
+      const snapshot = this.panelSnapshots.get(form)
+      if (!snapshot) return false
+      const current = this.serializeForm(form)
+      return Object.keys(snapshot).some((key) => snapshot[key] !== current[key])
+    })
+  }
+
+  resetPanel(panel) {
+    panel.querySelectorAll("form[data-dirty-track]").forEach((form) => {
+      form.reset()
+      delete form.dataset.dirty
+      form.dispatchEvent(new CustomEvent("ops:dirty-cancel", { bubbles: true, detail: { form } }))
+    })
+    this.snapshotPanel(panel)
   }
 
   sectionIn(panel, name) {

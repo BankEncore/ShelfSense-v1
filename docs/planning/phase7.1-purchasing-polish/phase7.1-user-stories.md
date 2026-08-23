@@ -1,12 +1,14 @@
 # Phase 7.1 — User stories
 
-Status: **In progress** backlog. Coordination **Accepted** — **7.1.1–7.1.2** on `phase-7.1-purchasing-polish`; **7.1.3 blocked until after UDS-4.1**.
+Status: **Complete** — **7.1.1–7.1.3** and **UDS-4** on branch `phase-7.1.3-purchasing-ops-closeout` ([phase7.1.3-plan.md](phase7.1.3-plan.md)); **7.1.4 deferred**.
 
 Concise stories for slices 7.1.1–7.1.4; acceptance bullets are the review bar.
 
 ---
 
 ## Slice 7.1.1 — Purchasing work hub
+
+**Status:** Complete on `main`.
 
 ### 7.1.1.1 See active purchasing work
 
@@ -36,6 +38,8 @@ Acceptance:
 
 ## Slice 7.1.2 — Admin purchasing indexes
 
+**Status:** Complete on `main`.
+
 ### 7.1.2.1 Consistent purchasing history indexes
 
 **As a** buyer, **I want** orders, purchase orders, and receipt history to use the same admin patterns as other modern screens **so that** I can scan results quickly.
@@ -59,33 +63,38 @@ Acceptance:
 
 ---
 
-## Slice 7.1.3 — Ops workspace parity
+## Slice 7.1.3 — Purchasing ops interaction closeout
 
-**Blocked until after UDS-4.1.** Hub exit links on Location/Draft PO/Receiving are incidental **7.1.1** integration and do not close these stories.
+**In progress.** Hub exit links on Location/Draft PO/Receiving are incidental **7.1.1** integration and do not close these stories.
 
-### 7.1.3.1 Location queue matches Receiving ergonomics
+### 7.1.3.1 Location queue interaction closeout
 
-**As a** floor associate, **I want** the location queue to behave like receiving **so that** keyboard and scanner workflows feel consistent.
-
-Acceptance:
-
-- Focus restoration after successful locate/not-located actions and after cancellation/close paths.
-- Dirty-form / Escape behavior aligned with Receiving where applicable.
-- Additive assertions in [location_queue_buttons_test.rb](../../../test/system/location_queue_buttons_test.rb); existing assertions unchanged or strengthened only.
-- program-plan allowlist updated for touched selectors in the 7.1.3 PR.
-
-### 7.1.3.2 Draft PO workspace matches Receiving ergonomics
-
-**As a** buyer, **I want** draft PO editing to share receiving-grade error handling and dirty guards **so that** I do not lose work silently.
+**As a** floor associate, **I want** the location queue to honor shared ops interaction contracts **so that** I can work safely with keyboard and scanner without losing in-progress entries.
 
 Acceptance:
 
-- Dirty-form confirm and focus restoration match Receiving-grade coverage in [purchasing_ops_workspace_test.rb](../../../test/system/purchasing_ops_workspace_test.rb).
-- program-plan allowlist updated for touched selectors in the 7.1.3 PR.
+- Contextual shortcut chrome (no misleading lookup/save/primary controls).
+- Dirty panel tracking with **“Discard this location entry?”** on Close/Escape.
+- Focus restoration after success, cancel, and recoverable errors (post-redirect).
+- Stable cancel vs convert commit buttons (no morphing single submit).
+- Additive assertions in [location_queue_buttons_test.rb](../../../test/system/location_queue_buttons_test.rb).
+
+### 7.1.3.2 Draft PO interaction repair
+
+**As a** buyer, **I want** draft PO editing to honor shared ops interaction contracts **so that** I do not lose work silently and errors focus the right field.
+
+Acceptance:
+
+- Add-line form dirty tracking; conditional lookup auto-focus when server designates error fields.
+- Stale/validation failures focus affected row fields.
+- Additive coverage in [purchasing_ops_workspace_test.rb](../../../test/system/purchasing_ops_workspace_test.rb).
+- One Draft PO index keyboard smoke test.
 
 ---
 
 ## Slice 7.1.4 — Customer-request cross-links (optional)
+
+**Status:** Deferred — hub covers active-work discovery.
 
 ### 7.1.4.1 Request show emphasizes next purchasing action
 
@@ -93,5 +102,5 @@ Acceptance:
 
 Acceptance:
 
-- Only if hub does not subsume this need in 7.1.1.
+- Reopen only if hub does not subsume this need.
 - Cross-links permission-gated per coordination conventions.

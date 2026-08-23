@@ -2,7 +2,7 @@
 
 ## Status
 
-**In progress** on integration branch `phase-7.1-purchasing-polish` — slices **7.1.1–7.1.2** implemented (hub exit-link touch-ups on ops templates are incidental 7.1.1 integration). **7.1.3** remains **blocked until after UDS-4.1**.
+**7.1.1–7.1.3 on `main`** (7.1.1–7.1.2 PR #35; **7.1.3** branch `phase-7.1.3-purchasing-ops-closeout`). **UDS-4.1 and UDS-4.2 on `main`**. **Phase 7.1 complete** — see [phase7.1.3-plan.md](phase7.1.3-plan.md). **7.1.4 deferred** unless separately opened.
 
 **Not** the inspirational Warm Parchment exploration in [docs/drafts/phase-7.1-ux-refactor/](../../drafts/phase-7.1-ux-refactor/README.md) (cross-phase UX notes; path retained for stability).
 
@@ -26,10 +26,10 @@ Phase 7 on `main` ships suppliers, quantity-one requests, locate/reserve, orders
 
 | Gap | Spec reference | Slice |
 |---|---|---|
-| No purchasing work hub with active-work summaries | §17.1 | 7.1.1 |
-| Bare admin orders/PO/receipt indexes | §17.1 navigation; migration matrix | 7.1.2 |
-| Location/Draft PO ops below Receiving parity | §17.3–17.5; optional shared Stimulus | 7.1.3 |
-| Request admin next-action polish (if hub insufficient) | §17.6 | 7.1.4 optional |
+| No purchasing work hub with active-work summaries | §17.1 | 7.1.1 ✓ |
+| Bare admin orders/PO/receipt indexes | §17.1 navigation; migration matrix | 7.1.2 ✓ |
+| Location/Draft PO ops interaction closeout | §17.3–17.4 | 7.1.3 ✓ |
+| Request admin next-action polish (if hub insufficient) | §17.6 | 7.1.4 deferred |
 
 ## Explicitly out of scope
 
@@ -50,6 +50,7 @@ Same as [roadmap.md](../roadmap.md) and Phase 7 §4 deferrals:
 2. **Phase 7 contracts unchanged** — one order ↔ one PO line; `available = on_hand - active_reserved - unavailable`; [phase7-lock-order.md](../phase7-orders-and-receiving/phase7-lock-order.md) binding.
 3. **Shell boundaries** — admin chrome server-rendered without Hotwire; ops workspaces remain Register-class siblings of POS.
 4. **Merge policy** — integration branch **`phase-7.1-purchasing-polish`** from `main`; slice branches PR into integration; merge **7.1.1–7.1.2** to `main` when ready. **7.1.3** ships later after UDS-4.1 (+ optional 7.1.4). Manual gate: no Phase 7 command or lock-order behavior changed.
+   - **Supersedes decision 4 for 7.1.3+ (August 2026):** slice branch `phase-7.1.3-purchasing-ops-closeout` targets **`main` directly**; integration branch retired after 7.1.1–7.1.2 merged.
 5. **UDS ownership** — nav chrome and non-purchasing adoption per coordination table; Phase 7.1 owns purchasing templates and hub queries.
 6. **Hub section visibility** — omit sections the user is **not authorized** to see; **show authorized sections even when count is zero** with a compact clear state (not a full `empty_state` panel). Hub layout stays stable for an authorized user.
 7. **No-store hub** — hub remains reachable when the user has any hub-eligible permission globally or on any accessible store; without `current_store`, show “Select a store to view purchasing work” and org-wide history links only; **no auto-redirect** away from the hub; no store-scoped counts without a store.
@@ -71,14 +72,16 @@ flowchart LR
   gate[Coordination_accepted]
   s711[7.1.1 Work_hub]
   s712[7.1.2 Admin_indexes]
-  uds41[UDS_4_1_grouped_nav]
-  s713[7.1.3 Ops_parity]
+  uds4[UDS_4_complete]
+  s713[7.1.3 Ops_closeout]
   s714[7.1.4 Request_links]
-  gate --> s711 --> s712 --> uds41 --> s713
+  gate --> s711 --> s712 --> uds4 --> s713
   s711 --> s714
 ```
 
 ### Slice 7.1.1 — Purchasing work hub
+
+**Status:** **Complete** on `main`.
 
 **Coordination rows:** 1, 9, 10.
 
@@ -98,6 +101,8 @@ flowchart LR
 
 ### Slice 7.1.2 — Admin purchasing history presentation
 
+**Status:** **Complete** on `main`.
+
 **Coordination rows:** 4, 7, 8.
 
 **Scope:**
@@ -115,32 +120,27 @@ flowchart LR
 | Purchase orders | Existing `status` param filter preserved |
 | Receipts | Layout modernization only; index remains posted/reversed scope |
 
-### Slice 7.1.3 — Ops workspace parity (Location + Draft PO)
+### Slice 7.1.3 — Purchasing ops interaction closeout
 
-**Status:** **Blocked / pending after UDS-4.1** (coordination row 6). Not part of the 7.1.1–7.1.2 merge.
+**Status:** **Complete** — see [phase7.1.3-plan.md](phase7.1.3-plan.md) and [phase7.1.3-ops-evidence.md](phase7.1.3-ops-evidence.md).
 
-**Note:** Hub exit links and light `ActionButtonHelper` / table-scroll touch-ups on Location, Draft PO, and Receiving templates shipped with **7.1.1** as incidental integration so ops workspaces point at the new hub. Those changes do **not** satisfy 7.1.3 acceptance (keyboard/dirty/focus parity, program-plan allowlist, a11y evidence).
+**Note:** Hub exit links and light `ActionButtonHelper` / table-scroll touch-ups on Location, Draft PO, and Receiving templates shipped with **7.1.1** as incidental integration. Those changes do **not** satisfy 7.1.3 acceptance.
 
-**Scope (when unblocked):**
+**Scope:**
 
-- Align Location and Draft PO with Receiving: shortcut help behavior, focus restoration (success and cancel), dirty-form guard, error partials
-- Extract shared Stimulus only where behavior is identical
-- Update program-plan allowlist in the 7.1.3 PR
-- No keyboard binding changes without updating frozen system tests
+- Close shared ops interaction contracts for Location and Draft PO (dirty abandonment, focus restoration, recoverable errors, contextual shortcuts, action presentation)
+- Workspace-aware Escape precedence across shared Stimulus controllers
+- Receiving is protected reference evidence only—no Receiving template changes
+- Update program-plan allowlist and [phase7.1.3-ops-evidence.md](phase7.1.3-ops-evidence.md)
 - Additive coverage in `purchasing_ops_workspace_test.rb` and `location_queue_buttons_test.rb`
-
-**Accessibility acceptance:**
-
-- Focus returns to initiating control after modal/dialog closes (success and cancel)
-- Dirty-form warnings distinguish abandoning a form from cancelling a business transaction
-- Button labels follow action-semantics guidance
-- Table links and actions usable without color-only or icon-only recognition
 
 ### Slice 7.1.4 — Customer-request admin cross-links (optional)
 
+**Status:** **Deferred** — hub covers active-work discovery; reopen only if request show/index purchasing deep links are still insufficient.
+
 **Coordination row:** 5.
 
-**Scope:** Only if 7.1.1 hub does not subsume index next-actions—polish request index/show purchasing deep links.
+**Scope:** Only if justified—polish request index/show purchasing deep links.
 
 ## Engineering constraints
 
@@ -151,7 +151,7 @@ flowchart LR
 ## Acceptance criteria (phase complete)
 
 1. Coordination doc Accepted.
-2. Slices **7.1.1** and **7.1.2** implemented and mergeable; **7.1.3** after UDS-4.1 per coordination; **7.1.4** only if justified.
+2. Slices **7.1.1**, **7.1.2**, and **7.1.3** implemented on `main`; **7.1.4** explicitly deferred unless separately opened.
 3. Staff can discover active purchasing work without hunting flat nav links.
 4. No Phase 7 locked decisions or lock-order rows changed silently.
 5. [roadmap.md](../roadmap.md) and docs index reflect Phase 7.1 status.
