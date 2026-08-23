@@ -1,6 +1,6 @@
 # Administrative navigation grouping proposal
 
-Status: **Proposed** (UDS-0 inventory; prototype gate required before UDS-1 or UDS-2 implementation)
+Status: **Proposed** inventory; **UDS-4.0** implements the disposable prototype and gate evidence. Production flat nav remains until **UDS-4.1** after the gate passes.
 
 ## Purpose and boundaries
 
@@ -32,7 +32,8 @@ This is an inventory of the signed-in, permission-gated destinations in `app/vie
 | **Inventory** | Inventory → `admin_inventory_balances_path` | `inventory.view` | Inventory balances and history |
 | | Adjustment reasons → `admin_adjustment_reasons_path` | `inventory.manage_adjustment_reasons` | Inventory configuration |
 | | Inventory reconcile → `admin_inventory_reconciliation_path` | `inventory.reconcile` | Inventory reconciliation task |
-| **Purchasing** | Orders → `admin_orders_path` | `orders.view` | Supplier-order workflow |
+| **Purchasing** | Purchasing → `admin_purchasing_path` | Hub-eligible via `Purchasing::HubAccess` / `purchasing_hub_accessible?` | Phase 7.1 purchasing work hub (primary Purchasing entry) |
+| | Orders → `admin_orders_path` | `orders.view` | Supplier-order workflow |
 | | Purchase orders → `admin_purchase_orders_path` | `orders.view` | Purchase-order history and administration |
 | | Purchase receipts → `admin_purchase_receipts_path` | `purchase_receipts.view` | Receiving history |
 | | Receiving ops → `ops_receiving_index_path` | `purchase_receipts.manage` + Store | Store receiving workspace |
@@ -109,7 +110,7 @@ This proposal is an **UDS-0 inventory**, not permission to ship navigation in UD
 
 Prototype with a global system administrator, an active current store, and multiple accessible stores. Expected result:
 
-- all eight canonical groups and all 32 permission-gated destinations above are present;
+- all eight canonical groups and all **33** permission-gated destinations above are present (including the Purchasing hub);
 - all four Store-gated operational links (Receiving ops, Location ops, Draft PO ops, POS) plus store-gated Transactions are present;
 - Switch store and Sign out remain separate utilities; and
 - a route in each group marks exactly one destination and its containing group current.
@@ -118,18 +119,19 @@ Repeat without `current_store`: the five Store-gated links are absent, other glo
 
 ### Profile B — narrowly scoped store user
 
-Prototype a store-scoped receiving user with only `purchase_receipts.manage` in one active store and that store selected. Expected result:
+Prototype a store-scoped receiving user with only `purchase_receipts.manage` in one active store and that store selected. Expected result (after Phase 7.1 hub eligibility includes `purchase_receipts.manage`):
 
 ```text
 Home
 Purchasing (Current area when on the workspace)
+├── Purchasing (hub)
 └── Receiving ops
 Sign out
 ```
 
-No empty groups, Purchase receipts history, Suppliers, Switch store, security/configuration links, or POS links appear. Direct access to an unauthorized admin route remains denied by the server. Repeat with no current store: Purchasing disappears because its sole destination requires Store, while Home and Sign out remain operable.
+No empty groups, Purchase receipts history, Suppliers, Switch store, security/configuration links, or POS links appear. Direct access to an unauthorized admin route remains denied by the server. Repeat with no current store: **Receiving ops** is omitted (store-gated); the **Purchasing hub** remains if hub-eligible without store-scoped counts (hub access is organization/any-store), while Home and Sign out remain operable.
 
-This narrow profile intentionally exercises the one-permission/one-destination case. If fixtures or policy couple `purchase_receipts.manage` to another permission, use the narrowest real store role and record the additional links rather than weakening authorization to fit the mockup.
+This narrow profile exercises the minimal receiving permission. If fixtures or policy couple `purchase_receipts.manage` to another permission, use the narrowest real store role and record the additional links rather than weakening authorization to fit the mockup.
 
 ### Prototype checks and evidence
 

@@ -55,7 +55,7 @@ UDS-1 through UDS-3 code is merged. [migration-matrix.md](ux-design-system/migra
 
 ### UDS-4 — Information architecture and adoption
 
-**Status:** Proposed. **Not** a domain Phase 8. Coordination **Accepted** ([phase7.1-uds-coordination.md](phase7.1-purchasing-polish/phase7.1-uds-coordination.md)); UDS-4.1 still requires the navigation prototype gate.
+**Status:** Proposed overall; **UDS-4.0 in progress** (prototype + gate). Coordination **Accepted** ([phase7.1-uds-coordination.md](phase7.1-purchasing-polish/phase7.1-uds-coordination.md)); UDS-4.1 still requires the navigation prototype gate.
 
 Continue the cross-phase [UX design system](ux-design-system/README.md). Authoritative slice plan: [uds-4-plan.md](ux-design-system/uds-4-plan.md).
 
@@ -70,11 +70,11 @@ Scope:
 
 > Authorized staff can reach operational destinations through grouped, permission-filtered navigation without relying on a flat link list, JavaScript-only access, or hidden authorization boundaries.
 
-UDS-4.0 prototype may run in parallel with Phase 7.1.1 on flat nav after coordination acceptance.
+UDS-4.0 prototype runs after Phase 7.1.1–7.1.2 on `main`; production flat nav remains until UDS-4.1.
 
 ## Phase 7.1 — Purchasing workflow and presentation closeout
 
-**Status:** In progress on integration branch `phase-7.1-purchasing-polish` — slices **7.1.1–7.1.2** implemented; **7.1.3 blocked until after UDS-4.1**. UDS-4.1 grouped nav deduplication remains a UDS-4 deliverable.
+**Status:** **7.1.1–7.1.2 on `main`** (PR #35); **7.1.3 blocked until after UDS-4.1**. UDS-4.1 grouped nav deduplication remains a UDS-4 deliverable.
 
 Authoritative packet: [Phase 7.1](phase7.1-purchasing-polish/README.md).
 
@@ -366,8 +366,8 @@ The following remain out of scope until a planning packet and ADR review justify
 | Phases 0–6.1 | Implemented |
 | Phase 7 — Orders, requests, receiving | Implemented |
 | UDS-1–3 — Warm Parchment foundation | Implemented (code); a11y matrix evidence in progress |
-| Phase 7.1 — Purchasing workflow closeout | **7.1.1–7.1.2** on `phase-7.1-purchasing-polish`; **7.1.3 after UDS-4.1** ([packet](phase7.1-purchasing-polish/README.md)) |
-| UDS-4 — Navigation and information architecture | Proposed; coordination **Accepted** — UDS-4.0 prototype; UDS-4.1 after nav gate |
+| Phase 7.1 — Purchasing workflow closeout | **7.1.1–7.1.2 on `main`**; **7.1.3 after UDS-4.1** ([packet](phase7.1-purchasing-polish/README.md)) |
+| UDS-4 — Navigation and information architecture | **UDS-4.0 in progress** (prototype + automated gate tests); manual evidence pending; UDS-4.1 after gate ([uds-4.0-gate-evidence.md](ux-design-system/uds-4.0-gate-evidence.md)) |
 | Phase 8 — Customer foundation refinement | Next; parallel with 9 |
 | Phase 9 — Catalog and bibliographic enrichment | Next; parallel with 8 |
 | Phase 10 — Stored value and financial event contract | After Phase 8 |

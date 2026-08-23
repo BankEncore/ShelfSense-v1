@@ -31,7 +31,8 @@ Do not fold POS into a shared ops shell. Do not replace admin show pages with dr
 | [uds-2-plan.md](uds-2-plan.md) | UDS-2 representative screen convergence (Suppliers, Receiving, history, review dialogs) | Implemented (partial matrix; a11y evidence pending) |
 | [uds-2-user-stories.md](uds-2-user-stories.md) | Issue-ready backlog stories for UDS-2a–2d | Implemented |
 | [uds-3-plan.md](uds-3-plan.md) | UDS-3 Register visual refinement (basket hierarchy, shortcut groups, overlays) | Implemented (partial matrix; a11y evidence pending) |
-| [uds-4-plan.md](uds-4-plan.md) | UDS-4 grouped navigation and cross-cutting adoption; gated by [phase7.1-uds-coordination.md](../phase7.1-purchasing-polish/phase7.1-uds-coordination.md) | Proposed |
+| [uds-4-plan.md](uds-4-plan.md) | UDS-4 grouped navigation and cross-cutting adoption; gated by [phase7.1-uds-coordination.md](../phase7.1-purchasing-polish/phase7.1-uds-coordination.md) | Proposed; **UDS-4.0 in progress** |
+| [uds-4.0-gate-evidence.md](uds-4.0-gate-evidence.md) | Prototype gate checklist and evidence for Profiles A/B | In progress (automated yes; manual pending) |
 | [uds-3-user-stories.md](uds-3-user-stories.md) | Issue-ready backlog stories for UDS-3a–3c | Implemented |
 | [accessibility-ergonomic-test-matrix.md](accessibility-ergonomic-test-matrix.md) | Manual a11y/ergonomic gate + timed cashier scenarios for UDS-2/UDS-3 | Proposed acceptance gate |
 | [warm-parchment.md](warm-parchment.md) | Tokens, typography, density, contrast (AA baseline) | Implemented (UDS-1) |
@@ -39,7 +40,7 @@ Do not fold POS into a shared ops shell. Do not replace admin show pages with dr
 | [receipt-overview-mockup.html](receipt-overview-mockup.html) | Inspirational completed-transaction / history layout | Inspirational |
 | [shelvesense-warm-parchment-product-mockups.html](shelvesense-warm-parchment-product-mockups.html) | Inspirational product admin chrome (sidebar/Cmd+K shown are deferred) | Inspirational |
 | [button-action-semantics.md](button-action-semantics.md) | Labels, intents, styles, sizes, review dialogs | Implemented helper (UDS-1b); broad adoption UDS-2 |
-| [navigation-proposal.md](navigation-proposal.md) | Permission-gated administrative destinations, canonical groups, accessible responsive pattern, and prototype gate | Proposed (UDS-0 inventory) |
+| [navigation-proposal.md](navigation-proposal.md) | Permission-gated administrative destinations, canonical groups, accessible responsive pattern, and prototype gate | Proposed inventory; UDS-4.0 implements gate |
 | [surface-contracts.md](surface-contracts.md) | Basket, transaction history, printed receipt | Proposed |
 | [deferred-patterns.md](deferred-patterns.md) | Drawers, global search, density prefs, etc. | Proposed (explicitly deferred) |
 | [migration-matrix.md](migration-matrix.md) | Area status: legacy / partial / conforming / locked; UDS-0 path-level inventory | Working tracker |

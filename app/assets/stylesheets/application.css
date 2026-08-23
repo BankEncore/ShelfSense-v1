@@ -246,6 +246,72 @@ summary:focus-visible {
   display: contents;
 }
 
+.nav-prototype .app-nav--grouped {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4) var(--space-5);
+  align-items: flex-start;
+}
+
+.nav-prototype .app-nav-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 10rem;
+}
+
+.nav-prototype .app-nav-group__heading {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-muted, var(--color-text));
+}
+
+.nav-prototype .app-nav-group.is-current-area .app-nav-group__heading {
+  color: var(--color-brand-default);
+}
+
+.nav-prototype .app-nav-group__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.nav-prototype .app-nav-utilities {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
+  align-items: center;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (max-width: 40rem) {
+  .nav-prototype .app-nav--grouped {
+    flex-direction: column;
+  }
+
+  .nav-prototype .app-nav-group {
+    min-width: 0;
+    width: 100%;
+  }
+}
+
 .app-content {
   width: min(100% - 2rem, var(--content-max));
   margin: var(--space-5) auto;
