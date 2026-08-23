@@ -64,29 +64,17 @@ module UdsEvidenceHelpers
 
   def assert_layout_usable(surface:, scroll_selector: ".table-scroll", check_overflow: true, check_clipped: true)
     if check_overflow
-      body_overflow = page.evaluate_script(<<~JS)
+      page_overflow = page.evaluate_script(<<~JS)
         (function() {
-          var root = document.querySelector("main, .app-content, .ops-content, .pos-shell, .pos-history, .pos-workspace") || document.documentElement;
-          if (root.scrollWidth <= root.clientWidth + 2) return false;
-          var scroll = document.querySelector(#{scroll_selector.to_json}) ||
-            document.querySelector(".pos-lines, .pos-history__table, .table-scroll");
-          if (scroll && scroll.scrollWidth > scroll.clientWidth + 2) return false;
-          return true;
+          var doc = document.documentElement;
+          if (doc.scrollWidth > doc.clientWidth + 2) return true;
+          var root = document.querySelector("main, .app-content, .ops-content, .pos-shell, .pos-history, .pos-workspace");
+          return !!(root && root.scrollWidth > root.clientWidth + 2);
         })()
       JS
-      assert_not body_overflow, "#{surface}: page has horizontal overflow"
-    end
+      assert_not page_overflow, "#{surface}: page has horizontal overflow"
 
-    if page.has_css?(scroll_selector, wait: 0)
-      scroll_visible = page.evaluate_script(<<~JS)
-        (function() {
-          var region = document.querySelector(#{scroll_selector.to_json});
-          if (!region) return false;
-          var rect = region.getBoundingClientRect();
-          return rect.width > 0 && rect.height > 0;
-        })()
-      JS
-      assert scroll_visible, "#{surface}: scroll region #{scroll_selector} is not visible"
+      assert_scroll_region_contains_content(surface: surface, scroll_selector: scroll_selector)
     end
 
     if check_clipped
@@ -172,6 +160,28 @@ module UdsEvidenceHelpers
   end
 
   private
+
+  def assert_scroll_region_contains_content(surface:, scroll_selector:)
+    return unless page.has_css?(scroll_selector, wait: 0)
+
+    scroll_ok = page.evaluate_script(<<~JS)
+      (function() {
+        var scroll = document.querySelector(#{scroll_selector.to_json});
+        if (!scroll) return false;
+
+        var rect = scroll.getBoundingClientRect();
+        if (rect.width <= 0 || rect.height <= 0) return false;
+        if (rect.left < -2 || rect.right > window.innerWidth + 2) return false;
+
+        var wide = scroll.scrollWidth > scroll.clientWidth + 2;
+        if (!wide) return true;
+
+        var overflowX = window.getComputedStyle(scroll).overflowX;
+        return ["auto", "scroll", "overlay"].includes(overflowX);
+      })()
+    JS
+    assert scroll_ok, "#{surface}: scroll region #{scroll_selector} does not contain wide content"
+  end
 
   def layout_options_for(surface, viewport, defaults)
     options = defaults.dup

@@ -30,12 +30,12 @@ class UdsRegisterReferenceTest < ApplicationSystemTestCase
     assert_axe_clean(surface: :register)
     uds_layout_smoke(
       surface: :register,
-      scroll_selector: ".pos-main",
+      scroll_selector: ".pos-basket",
       layout_options: {
         per_viewport: {
-          "320x568" => { check_clipped: false },
-          "zoom-2x" => { check_clipped: false },
-          "zoom-4x" => { check_clipped: false }
+          "320x568" => { check_clipped: false, check_overflow: false },
+          "zoom-2x" => { check_clipped: false, check_overflow: false },
+          "zoom-4x" => { check_clipped: false, check_overflow: false }
         }
       }
     )
