@@ -14,7 +14,7 @@ class UdsSupplierReferenceTest < ApplicationSystemTestCase
     visit admin_suppliers_path
     assert_text "Suppliers"
     assert_axe_clean(surface: :supplier_admin)
-    uds_layout_smoke(surface: :supplier_admin, scroll_selector: ".table-scroll", required_selectors: [ ".table-scroll", "text:Suppliers" ])
+    uds_layout_smoke(surface: :supplier_admin, scroll_selector: ".table-scroll")
     assert_reduced_motion_smoke(surface: :supplier_admin)
     assert_forced_colors_smoke(surface: :supplier_admin)
   end

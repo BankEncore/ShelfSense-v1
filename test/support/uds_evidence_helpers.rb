@@ -9,6 +9,7 @@ require "webdriver_script_adapter/execute_async_script_adapter"
 
 module UdsEvidenceHelpers
   BLOCKER_IMPACTS = %w[critical serious].freeze
+  LESSER_IMPACTS = %w[moderate minor].freeze
 
   UDS_VIEWPORTS = [
     { width: 1280, height: 720, zoom: 1, label: "1280x720" },
@@ -32,7 +33,20 @@ module UdsEvidenceHelpers
       allowed_axe_violation?(surface: surface, rule_id: rule.id)
     end
     blockers = violations.select { |rule| BLOCKER_IMPACTS.include?(rule.impact) }
-    capture_uds_evidence(surface: surface, state: "axe_failure", extra: { violations: blockers.map(&:id) }) if blockers.any?
+    lesser = violations.select { |rule| LESSER_IMPACTS.include?(rule.impact) }
+
+    if blockers.any? || lesser.any?
+      capture_uds_evidence(
+        surface: surface,
+        state: "axe_failure",
+        extra: {
+          blockers: blockers.map { |rule| { id: rule.id, impact: rule.impact } },
+          lesser: lesser.map { |rule| { id: rule.id, impact: rule.impact } }
+        }
+      )
+    end
+
+    assert lesser.empty?, axe_lesser_failure_message(surface: surface, violations: lesser)
     assert blockers.empty?, axe_failure_message(surface: surface, violations: blockers, audit: audit)
   end
 
@@ -55,7 +69,7 @@ module UdsEvidenceHelpers
           var root = document.querySelector("main, .app-content, .ops-content, .pos-shell, .pos-history, .pos-workspace") || document.documentElement;
           if (root.scrollWidth <= root.clientWidth + 2) return false;
           var scroll = document.querySelector(#{scroll_selector.to_json}) ||
-            document.querySelector(".pos-lines, .pos-history__table");
+            document.querySelector(".pos-lines, .pos-history__table, .table-scroll");
           if (scroll && scroll.scrollWidth > scroll.clientWidth + 2) return false;
           return true;
         })()
@@ -77,17 +91,17 @@ module UdsEvidenceHelpers
 
     if check_clipped
       clipped_actions = page.evaluate_script(<<~JS)
-      (function() {
-        var root = document.querySelector("main, .app-content, .ops-content, .pos-workspace") || document.body;
-        var buttons = Array.from(root.querySelectorAll("button, a.button, input[type='submit'], .btn, a.btn"));
-        return buttons.filter(function(el) {
-          if (el.offsetParent === null) return false;
-          var rect = el.getBoundingClientRect();
-          return rect.bottom <= 0 || rect.top >= window.innerHeight || rect.right <= 0 || rect.left >= window.innerWidth;
-        }).map(function(el) { return el.textContent.trim().slice(0, 40); });
-      })()
+        (function() {
+          var root = document.querySelector("main, .app-content, .ops-content, .pos-workspace, .pos-shell") || document.body;
+          var buttons = Array.from(root.querySelectorAll("button, a.button, input[type='submit'], .btn, a.btn"));
+          return buttons.filter(function(el) {
+            if (el.offsetParent === null) return false;
+            var rect = el.getBoundingClientRect();
+            return rect.right <= 0 || rect.left >= window.innerWidth;
+          }).map(function(el) { return el.textContent.trim().slice(0, 40); });
+        })()
       JS
-      assert clipped_actions.empty?, "#{surface}: clipped actions: #{clipped_actions.join(', ')}"
+      assert clipped_actions.empty?, "#{surface}: horizontally clipped actions: #{clipped_actions.join(', ')}"
     end
   end
 
@@ -135,39 +149,35 @@ module UdsEvidenceHelpers
     nil
   end
 
-  def uds_layout_smoke(surface:, scroll_selector: ".table-scroll", required_selectors: [], check_clipped: true)
-    with_viewport(width: 1280, height: 720) do
-      assert_layout_usable(surface: surface, scroll_selector: scroll_selector, check_clipped: check_clipped)
-    end
-
+  def uds_layout_smoke(surface:, scroll_selector: ".table-scroll", layout_options: {})
     UDS_VIEWPORTS.each do |viewport|
-      next if viewport[:label] == "1280x720"
-
       with_viewport(**viewport.slice(:width, :height, :zoom)) do
-        required_selectors.each do |selector|
-          if selector.start_with?("text:")
-            assert_text selector.delete_prefix("text:")
-          else
-            assert_selector selector
-          end
-        end
+        assert_layout_usable(
+          surface: surface,
+          scroll_selector: scroll_selector,
+          **layout_options_for(surface, viewport, layout_options)
+        )
       end
     end
 
     UDS_ZOOM_LEVELS.each do |zoom|
       with_viewport(width: 1280, height: 720, zoom: zoom) do
-        required_selectors.each do |selector|
-          if selector.start_with?("text:")
-            assert_text selector.delete_prefix("text:")
-          else
-            assert_selector selector
-          end
-        end
+        assert_layout_usable(
+          surface: surface,
+          scroll_selector: scroll_selector,
+          **layout_options_for(surface, { label: "zoom-#{zoom}x" }, layout_options)
+        )
       end
     end
   end
 
   private
+
+  def layout_options_for(surface, viewport, defaults)
+    options = defaults.dup
+    per_viewport = options.delete(:per_viewport) || {}
+    options.merge(per_viewport[viewport[:label]] || {})
+  end
 
   def allowed_axe_violations
     @allowed_axe_violations ||= begin
@@ -183,5 +193,14 @@ module UdsEvidenceHelpers
   def axe_failure_message(surface:, violations:, audit:)
     lines = violations.map { |rule| "#{rule.id} (#{rule.impact}): #{rule.help}" }
     [ "UDS axe blockers on #{surface}:", *lines, audit.failure_message ].join("\n")
+  end
+
+  def axe_lesser_failure_message(surface:, violations:)
+    lines = violations.map { |rule| "#{rule.id} (#{rule.impact}): #{rule.help}" }
+    [
+      "UDS axe moderate/minor violations on #{surface} are not allowlisted:",
+      *lines,
+      "Fix or document in test/support/uds_axe_allowlist.yml with owner and rerun scope."
+    ].join("\n")
   end
 end

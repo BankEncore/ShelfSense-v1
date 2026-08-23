@@ -56,7 +56,7 @@ class UdsReceivingReferenceTest < ApplicationSystemTestCase
     visit ops_receiving_path(@receipt)
     assert_field "receiving_lookup"
     assert_axe_clean(surface: :receiving)
-    uds_layout_smoke(surface: :receiving, scroll_selector: ".table-scroll", required_selectors: [ "input[name='receiving_lookup']" ], check_clipped: false)
+    uds_layout_smoke(surface: :receiving, scroll_selector: ".table-scroll", layout_options: { check_clipped: false })
     assert_reduced_motion_smoke(surface: :receiving)
     assert_forced_colors_smoke(surface: :receiving)
   end
@@ -78,7 +78,16 @@ class UdsReceivingReferenceTest < ApplicationSystemTestCase
     assert_review_dialog_contract(
       trigger_label: "Review send",
       submit_label: "Send PO and freeze snapshots",
-      initial_focus_name: "transmission_method"
+      initial_focus_name: "transmission_method",
+      unchanged: -> {
+        assert @purchase_order.reload.generated?
+        assert_equal "draft", @purchase_order.status
+      },
+      prepare_valid: -> { select "email", from: "Transmission method" },
+      assert_success: -> {
+        assert_text "Purchase order sent"
+        assert_equal "sent", @purchase_order.reload.status
+      }
     )
   end
 end

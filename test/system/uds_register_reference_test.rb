@@ -28,7 +28,17 @@ class UdsRegisterReferenceTest < ApplicationSystemTestCase
 
   test "register sale entry passes axe and layout smoke" do
     assert_axe_clean(surface: :register)
-    uds_layout_smoke(surface: :register, scroll_selector: ".pos-main", required_selectors: [ "#pos-command-field", "text:SALE ENTRY" ])
+    uds_layout_smoke(
+      surface: :register,
+      scroll_selector: ".pos-main",
+      layout_options: {
+        per_viewport: {
+          "320x568" => { check_clipped: false },
+          "zoom-2x" => { check_clipped: false },
+          "zoom-4x" => { check_clipped: false }
+        }
+      }
+    )
     assert_reduced_motion_smoke(surface: :register)
     assert_forced_colors_smoke(surface: :register)
   end

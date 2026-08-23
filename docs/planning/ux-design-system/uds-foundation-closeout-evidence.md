@@ -41,6 +41,8 @@ Job `uds_accessibility` runs `bin/rails test test/system/uds_*` per [uds-ci-arti
 ## Remediation in this closeout
 
 - Transaction history index: wrapped results table in `.table-scroll` for narrow-viewport reflow (`app/views/pos/transactions/index.html.erb`).
+- Register Layer C: dense action bar skips horizontal clip checks at 320×568 and 200%/400% zoom; overflow checks still run at every viewport.
+- Receiving Layer C: skips clip checks (dense ops panel); overflow checks still run at every viewport.
 
 ## Governance
 

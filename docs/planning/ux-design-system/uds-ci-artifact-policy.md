@@ -24,4 +24,4 @@ Status: **Accepted** for [uds-foundation-closeout-plan.md](uds-foundation-closeo
 ## axe policy
 
 - **Critical / serious** violations → blocker.
-- **Moderate / minor** → fix or document in per-surface allowlist with owner and rerun scope.
+- **Moderate / minor** → fix or document in `test/support/uds_axe_allowlist.yml` with owner and rerun scope; unallowlisted findings fail the gate and are written to `tmp/uds-evidence/` on failure.

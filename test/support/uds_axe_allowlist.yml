@@ -1,7 +1,6 @@
-# frozen_string_literal: true
-
 # Per-surface axe rule IDs allowed at foundation closeout (moderate/minor only).
 # Critical/serious violations must never appear here.
+# Each entry must name an owner and rerun scope in the closeout evidence doc when populated.
 supplier_admin: []
 receiving: []
 transaction_history: []

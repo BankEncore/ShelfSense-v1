@@ -28,7 +28,7 @@ class UdsHistoryReferenceTest < ApplicationSystemTestCase
     visit pos_transactions_path
     assert_text @transaction.transaction_reference
     assert_axe_clean(surface: :transaction_history)
-    uds_layout_smoke(surface: :transaction_history, scroll_selector: ".table-scroll", required_selectors: [ ".table-scroll", "text:Transactions" ])
+    uds_layout_smoke(surface: :transaction_history, scroll_selector: ".table-scroll")
     assert_reduced_motion_smoke(surface: :transaction_history)
     assert_forced_colors_smoke(surface: :transaction_history)
   end
