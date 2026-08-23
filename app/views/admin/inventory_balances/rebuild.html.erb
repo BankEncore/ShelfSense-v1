@@ -15,7 +15,7 @@
   <%= hidden_field_tag :command_token, @command_token %>
   <%= hidden_field_tag :idempotency_key, @idempotency_key %>
   <div class="actions">
-    <%= action_submit(form, "Rebuild projection", style: :solid, intent: :brand) %>
+    <%= action_submit(form, "Rebuild projection", style: :solid, intent: :danger) %>
     <%= action_link_to("Cancel", admin_inventory_balance_path(@balance), style: :ghost, intent: :neutral) %>
   </div>
 <% end %>

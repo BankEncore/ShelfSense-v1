@@ -21,7 +21,7 @@
        "Discontinue",
        discontinue_admin_product_variant_path(@product_variant),
        style: :outline,
-       intent: :danger,
+       intent: :warning,
        method: :post
      ) %>
 <% end %>
@@ -184,7 +184,7 @@
                  "Remove",
                  admin_supplier_variant_source_path(source, return_to: "variant"),
                  style: :outline,
-                 intent: :danger,
+                 intent: :warning,
                  size: :small,
                  method: :delete,
                  form: { data: { turbo_confirm: "Deactivate this supplier source?" } }

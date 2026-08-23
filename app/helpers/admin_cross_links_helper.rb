@@ -2,6 +2,8 @@
 
 # Permission-aware non-purchasing admin cross-links (UDS-4.2).
 # Returns nil when the destination is unauthorized or the record is blank.
+# Store-scoped destinations evaluate permission against the destination store,
+# not merely current_store / effective_permissions.
 module AdminCrossLinksHelper
   def admin_product_link(product, label: nil)
     return unless product
@@ -47,14 +49,14 @@ module AdminCrossLinksHelper
 
   def admin_inventory_balance_link(balance, label: nil)
     return unless balance
-    return unless effective_permissions.include?("inventory.view")
+    return unless permission_allowed_at?("inventory.view", store: balance.store)
 
     link_to(label || balance.on_hand_quantity.to_s, admin_inventory_balance_path(balance))
   end
 
   def admin_inventory_adjust_link(store:, product_variant:, label: "Adjust inventory")
     return if store.blank? || product_variant.blank?
-    return unless effective_permissions.include?("inventory.adjust")
+    return unless permission_allowed_at?("inventory.adjust", store: store)
 
     link_to(
       label,
@@ -71,16 +73,28 @@ module AdminCrossLinksHelper
 
   def admin_customer_request_cross_link(request, label: nil)
     return unless request
-    return unless effective_permissions.include?("customers.view")
+    return unless permission_allowed_at?("customers.view", store: request.store)
 
     link_to(label || request.admin_label, admin_customer_request_path(request))
   end
 
   def pos_transaction_cross_link(transaction, label: nil)
     return unless transaction
-    return unless effective_permissions.include?("pos.transact")
+    return unless permission_allowed_at?("pos.transact", store: transaction.store)
 
     text = label.presence || transaction.try(:receipt_number).presence || "Transaction #{transaction.id}"
     link_to(text, pos_transaction_path(transaction))
+  end
+
+  private
+
+  def permission_allowed_at?(permission_key, store:)
+    return false unless current_user
+
+    Authorization::PermissionEvaluator.allowed?(
+      user: current_user,
+      permission_key: permission_key,
+      store: store
+    )
   end
 end

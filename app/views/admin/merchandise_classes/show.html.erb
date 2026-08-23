@@ -15,7 +15,7 @@
        "Deactivate",
        admin_merchandise_class_path(@merchandise_class),
        style: :outline,
-       intent: :danger,
+       intent: :warning,
        method: :delete
      ) %>
 <% elsif effective_permissions.include?("merchandise_classes.deactivate") && !@merchandise_class.active? %>
