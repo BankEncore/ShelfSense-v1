@@ -6,5 +6,5 @@
   <p><%= form.label :email %><%= form.email_field :email %></p>
   <p><%= form.label :password %><%= form.password_field :password %></p>
   <p><%= form.label :password_confirmation %><%= form.password_field :password_confirmation %></p>
-  <p><%= form.submit %></p>
+  <p><%= action_submit(form, user.persisted? ? "Save Changes" : "Create User", style: :solid, intent: :brand) %></p>
 <% end %>

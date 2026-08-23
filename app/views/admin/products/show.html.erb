@@ -9,22 +9,45 @@
 <% actions = [] %>
 <% actions << status_badge(@product.status, scheme: :product_variant) %>
 <% if effective_permissions.include?("products.update") %>
-  <% actions << link_to("Edit", edit_admin_product_path(@product), class: "btn btn--secondary") %>
+  <% actions << action_link_to("Edit", edit_admin_product_path(@product), style: :outline, intent: :neutral) %>
 <% end %>
 <% if effective_permissions.include?("products.discontinue") && @product.status != "discontinued" %>
-  <% actions << button_to("Discontinue", discontinue_admin_product_path(@product), method: :post, class: "btn btn--danger") %>
+  <% actions << action_button_to(
+       "Discontinue",
+       discontinue_admin_product_path(@product),
+       style: :outline,
+       intent: :danger,
+       method: :post
+     ) %>
 <% end %>
 <% if effective_permissions.include?("products.discontinue") && @product.status == "discontinued" %>
-  <% actions << button_to("Reactivate", reactivate_admin_product_path(@product), method: :post, class: "btn") %>
+  <% actions << action_button_to(
+       "Reactivate",
+       reactivate_admin_product_path(@product),
+       style: :solid,
+       intent: :brand,
+       method: :post
+     ) %>
 <% end %>
 <% if effective_permissions.include?("products.update") && @product.draft? %>
-  <% actions << button_to("Delete draft", admin_product_path(@product), method: :delete, class: "btn btn--danger") %>
+  <% actions << action_button_to(
+       "Delete draft",
+       admin_product_path(@product),
+       style: :outline,
+       intent: :danger,
+       method: :delete
+     ) %>
 <% end %>
 <% if @single_stock_orderable %>
-  <% actions << link_to("Order stock", order_stock_path_for(@single_stock_orderable), class: "btn") %>
+  <% actions << action_link_to("Order stock", order_stock_path_for(@single_stock_orderable), style: :solid, intent: :brand) %>
 <% end %>
 <% if @single_requestable %>
-  <% actions << link_to("Create customer request", create_customer_request_path_for(@single_requestable), class: "btn btn--secondary") %>
+  <% actions << action_link_to(
+       "Create customer request",
+       create_customer_request_path_for(@single_requestable),
+       style: :outline,
+       intent: :neutral
+     ) %>
 <% end %>
 
 <%= render "shared/page_header",
@@ -49,9 +72,8 @@
         ["Status", status_badge(@product.status, scheme: :product_variant)],
         ["List price", format_money_cents(@product.list_price_cents)],
         ["Merchandise category", (
-          if @product.merchandise_category
-            link_to(@product.merchandise_category.admin_label, admin_merchandise_category_path(@product.merchandise_category))
-          end
+          admin_merchandise_category_link(@product.merchandise_category) ||
+            @product.merchandise_category&.admin_label
         )],
         ["Subtitle", @product.subtitle],
         ["Brand", @product.brand_name],
@@ -71,7 +93,14 @@
 <section class="section">
   <h2 class="section__title">Variants</h2>
   <% if effective_permissions.include?("product_variants.create") %>
-    <div class="actions"><%= link_to "New variant", new_admin_product_product_variant_path(@product), class: "btn" %></div>
+    <div class="actions">
+      <%= action_link_to(
+            "New variant",
+            new_admin_product_product_variant_path(@product),
+            style: :solid,
+            intent: :brand
+          ) %>
+    </div>
   <% end %>
 
   <% if @product_variants.empty? %>
@@ -92,7 +121,7 @@
              balance = @balances_by_variant_id[variant.id]
              qty = balance&.on_hand_quantity || 0
              if balance
-               link_to(qty.to_s, admin_inventory_balance_path(balance))
+               admin_inventory_balance_link(balance, label: qty.to_s) || qty
              else
                qty
              end

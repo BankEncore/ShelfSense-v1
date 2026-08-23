@@ -1,6 +1,6 @@
 <% content_for :title, "Merchandise Conditions" %>
 <h1>Merchandise Conditions</h1>
-<% if effective_permissions.include?("merchandise_conditions.create") %><p><%= link_to "New condition", new_admin_merchandise_condition_path %></p><% end %>
+<% if effective_permissions.include?("merchandise_conditions.create") %><p><%= action_link_to("New condition", new_admin_merchandise_condition_path, style: :solid, intent: :brand) %></p><% end %>
 <ul>
   <% @merchandise_conditions.each do |condition| %>
     <li>

@@ -2,7 +2,7 @@
 <h1>Merchandise lookup</h1>
 <%= form_with url: admin_merchandise_lookups_path, scope: :lookup do |form| %>
   <p><%= form.label :raw, "Identifier" %><%= form.text_field :raw, value: @raw %></p>
-  <p><%= form.submit "Look up" %></p>
+  <p><%= action_submit(form, "Look up", style: :solid, intent: :brand) %></p>
 <% end %>
 
 <% if @result %>

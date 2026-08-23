@@ -7,14 +7,14 @@
     <% if current_store %>
       <p>Current store: <%= current_store.admin_label %>.</p>
       <% if effective_permissions.include?("pos.transact") %>
-        <p><%= link_to "POS", pos_path %></p>
-        <p><%= link_to "Transactions", pos_transactions_path %></p>
+        <p><%= action_link_to("POS", pos_path, style: :solid, intent: :brand) %></p>
+        <p><%= action_link_to("Transactions", pos_transactions_path, style: :outline, intent: :neutral) %></p>
       <% end %>
     <% elsif accessible_stores.exists? %>
-      <p><%= link_to "Select a store", new_store_selection_path %></p>
+      <p><%= action_link_to("Select a store", new_store_selection_path, style: :solid, intent: :brand) %></p>
     <% else %>
       <p>No accessible store is available for your account.</p>
     <% end %>
-    <p><%= button_to "Sign out", session_path, method: :delete %></p>
+    <p><%= action_button_to("Sign out", session_path, style: :outline, intent: :warning, method: :delete) %></p>
   <% end %>
 </section>

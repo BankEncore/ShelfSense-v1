@@ -1,6 +1,6 @@
 # UDS-4 — Information architecture and adoption
 
-Status: **Proposed** — coordination **Accepted**; UDS-4.0 gate **Passed**; **UDS-4.1 in progress** on branch `uds-4.1-grouped-navigation`.
+Status: **Proposed** — coordination **Accepted**; UDS-4.0–4.1 on `main`; **UDS-4.2 in progress** ([uds-4.2-plan.md](uds-4.2-plan.md)).
 
 Slice id remains **UDS-4**. Not a domain phase number. Authority: [UX design system packet](README.md), [program-plan.md](program-plan.md), [navigation-proposal.md](navigation-proposal.md).
 
@@ -82,18 +82,19 @@ flowchart LR
 
 ### UDS-4.1 — Ship grouped navigation
 
-**Status:** In progress on branch `uds-4.1-grouped-navigation`.
+**Status:** **Complete** on `main` (PR #38).
 
-- Update [application.html.erb](../../../app/views/layouts/application.html.erb) via [`shared/_admin_primary_nav`](../../../app/views/shared/_admin_primary_nav.html.erb)
-- Regroup **existing** links only; Purchasing hub primary; Orders / PO / Receipt under Purchasing (no duplicate flat top-level)
-- Program-plan allowlist names grouped-nav selectors
-- No JavaScript-required destinations; ops/POS shells unchanged
+- [`application.html.erb`](../../../app/views/layouts/application.html.erb) via [`shared/_admin_primary_nav`](../../../app/views/shared/_admin_primary_nav.html.erb)
+- Purchasing hub primary; Orders / PO / Receipt under Purchasing
+- Disposable prototype route retired
 
 ### UDS-4.2 — Cross-cutting adoption backlog
 
+**Status:** In progress — see [uds-4.2-plan.md](uds-4.2-plan.md).
+
 - Migrate migration-matrix rows explicitly **not** owned by Phase 7.1 coordination table
-- Standardize non-purchasing cross-links
-- Each PR cites matrix paths and coordination row compliance
+- Standardize non-purchasing cross-links via `AdminCrossLinksHelper`
+- Sub-slices 4.2a–4.2d; each PR cites matrix paths and coordination row compliance
 
 ## Relationship to Phase 7.1
 

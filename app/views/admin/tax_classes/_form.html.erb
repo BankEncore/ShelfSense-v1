@@ -13,5 +13,5 @@
   <p><%= form.label :name %><%= form.text_field :name %></p>
   <p><%= form.label :description %><%= form.text_area :description %></p>
   <p><%= form.label :display_order %><%= form.number_field :display_order %></p>
-  <p><%= form.submit %></p>
+  <p><%= action_submit(form, tax_class.persisted? ? "Save Changes" : "Create Tax Class", style: :solid, intent: :brand) %></p>
 <% end %>

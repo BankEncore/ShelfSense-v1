@@ -8,5 +8,5 @@
   <% end %>
   <p><%= form.label :name %><%= form.text_field :name %></p>
   <p><%= form.label :description %><%= form.text_area :description %></p>
-  <p><%= form.submit %></p>
+  <p><%= action_submit(form, register.persisted? ? "Save Changes" : "Create Register", style: :solid, intent: :brand) %></p>
 <% end %>

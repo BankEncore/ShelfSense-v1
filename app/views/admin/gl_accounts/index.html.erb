@@ -1,6 +1,6 @@
 <% content_for :title, "GL Accounts" %>
 <h1>GL Accounts</h1>
-<% if effective_permissions.include?("gl_accounts.create") %><p><%= link_to "New GL account", new_admin_gl_account_path %></p><% end %>
+<% if effective_permissions.include?("gl_accounts.create") %><p><%= action_link_to("New GL account", new_admin_gl_account_path, style: :solid, intent: :brand) %></p><% end %>
 <ul>
   <% @gl_accounts.each do |gl_account| %>
     <li>

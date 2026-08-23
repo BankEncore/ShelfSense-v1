@@ -27,7 +27,17 @@
     </div>
   <% end %>
   <div class="actions">
-    <%= form.submit class: "btn" %>
-    <%= link_to "Cancel", tender_type.persisted? ? admin_tender_type_path(tender_type) : admin_tender_types_path, class: "btn btn--ghost" %>
+    <%= action_submit(
+          form,
+          tender_type.persisted? ? "Save Changes" : "Create Tender Type",
+          style: :solid,
+          intent: :brand
+        ) %>
+    <%= action_link_to(
+          "Cancel",
+          tender_type.persisted? ? admin_tender_type_path(tender_type) : admin_tender_types_path,
+          style: :ghost,
+          intent: :neutral
+        ) %>
   </div>
 <% end %>

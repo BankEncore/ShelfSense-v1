@@ -3,11 +3,11 @@
 <p>Username: <%= @user.username %></p>
 <p>Email: <%= @user.email %></p>
 <p>
-  <%= link_to "Edit", edit_admin_user_path(@user) if effective_permissions.include?("users.manage") %>
+  <%= action_link_to("Edit", edit_admin_user_path(@user), style: :outline, intent: :neutral) if effective_permissions.include?("users.manage") %>
   <% if effective_permissions.include?("users.manage") && @user.active? %>
-    <%= button_to "Reset password", reset_password_admin_user_path(@user), method: :post %>
+    <%= action_button_to("Reset password", reset_password_admin_user_path(@user), style: :outline, intent: :warning, method: :post) %>
   <% end %>
   <% if effective_permissions.include?("users.deactivate") && @user.active? && !@user.system_actor? %>
-    <%= button_to "Deactivate", deactivate_admin_user_path(@user), method: :post %>
+    <%= action_button_to("Deactivate", deactivate_admin_user_path(@user), style: :outline, intent: :warning, method: :post) %>
   <% end %>
 </p>

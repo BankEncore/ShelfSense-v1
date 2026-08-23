@@ -9,11 +9,16 @@
 
 <% actions = [] %>
 <% if effective_permissions.include?("inventory.adjust") %>
-  <% actions << link_to("New adjustment", new_admin_inventory_adjustment_path(store_id: @balance.store_id, product_variant_id: variant.id), class: "btn") %>
+  <% actions << action_link_to(
+       "New adjustment",
+       new_admin_inventory_adjustment_path(store_id: @balance.store_id, product_variant_id: variant.id),
+       style: :solid,
+       intent: :brand
+     ) %>
 <% end %>
-<% actions << link_to("History", history_admin_inventory_balance_path(@balance), class: "btn btn--secondary") %>
+<% actions << action_link_to("History", history_admin_inventory_balance_path(@balance), style: :outline, intent: :neutral) %>
 <% if effective_permissions.include?("inventory.reconcile") %>
-  <% actions << link_to("Rebuild", rebuild_admin_inventory_balance_path(@balance), class: "btn btn--secondary") %>
+  <% actions << action_link_to("Rebuild", rebuild_admin_inventory_balance_path(@balance), style: :outline, intent: :neutral) %>
 <% end %>
 
 <%= render "shared/page_header",
@@ -23,6 +28,12 @@
 
 <section class="section surface">
   <%= render "shared/definition_list", rows: [
+        ["Product", (
+          admin_product_link(variant.product) || variant.product.name
+        )],
+        ["Variant", (
+          admin_product_variant_link(variant) || (variant.name.presence || variant.sku)
+        )],
         ["Tracking", variant.derived_inventory_tracking.to_s.humanize],
         ["On hand", @balance.on_hand_quantity],
         ["Carrying value", format_money_cents(@balance.inventory_value_cents)],

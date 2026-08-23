@@ -8,7 +8,7 @@
 <%= render "shared/page_header",
       title: "Merchandise classes",
       subtitle: "Operational sellability and pricing behavior",
-      actions: (link_to("New merchandise class", new_admin_merchandise_class_path, class: "btn") if effective_permissions.include?("merchandise_classes.create")) %>
+      actions: (action_link_to("New merchandise class", new_admin_merchandise_class_path, style: :solid, intent: :brand) if effective_permissions.include?("merchandise_classes.create")) %>
 
 <% if @merchandise_classes.empty? %>
   <%= render "shared/empty_state", title: "No merchandise classes", body: "Create a class to define inventory and pricing behavior." %>

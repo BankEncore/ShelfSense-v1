@@ -8,11 +8,16 @@
 
 <% actions = [] %>
 <% if !@adjustment.reversed? && !@adjustment.reversal? && effective_permissions.include?("inventory.reverse_adjustment") %>
-  <% actions << link_to("Reverse", reverse_admin_inventory_adjustment_path(@adjustment), class: "btn btn--danger") %>
+  <% actions << action_link_to(
+       "Reverse",
+       reverse_admin_inventory_adjustment_path(@adjustment),
+       style: :outline,
+       intent: :danger
+     ) %>
 <% end %>
 <% balance = InventoryBalance.find_by(store_id: @adjustment.store_id, product_variant_id: @adjustment.product_variant_id) %>
 <% if balance %>
-  <% actions << link_to("Balance", admin_inventory_balance_path(balance), class: "btn btn--secondary") %>
+  <% actions << action_link_to("Balance", admin_inventory_balance_path(balance), style: :outline, intent: :neutral) %>
 <% end %>
 
 <%= render "shared/page_header",
@@ -23,7 +28,14 @@
 <section class="section surface">
   <%= render "shared/definition_list", rows: [
         ["Store", @adjustment.store.name],
-        ["Variant", @adjustment.product_variant.sku],
+        ["Product", (
+          admin_product_link(@adjustment.product_variant.product) ||
+            @adjustment.product_variant.product.name
+        )],
+        ["Variant", (
+          admin_product_variant_link(@adjustment.product_variant) ||
+            (@adjustment.product_variant.name.presence || @adjustment.product_variant.sku)
+        )],
         ["Quantity delta", @adjustment.quantity_delta],
         ["Acquisition unit cost", @adjustment.acquisition_unit_cost_cents ? format_money_cents(@adjustment.acquisition_unit_cost_cents) : nil],
         ["Value delta", @valuation ? format_money_cents(@valuation.value_delta_cents) : nil],

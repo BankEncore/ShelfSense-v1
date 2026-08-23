@@ -20,12 +20,17 @@
       ] %>
 </section>
 
-<%= form_with url: admin_inventory_adjustments_path, method: :post, local: true, class: "form" do %>
+<%= form_with url: admin_inventory_adjustments_path, method: :post, local: true, class: "form" do |form| %>
   <% @form.each do |key, value| %>
     <%= hidden_field_tag key, value %>
   <% end %>
   <div class="actions">
-    <%= submit_tag "Post adjustment", class: "btn" %>
-    <%= link_to "Cancel", new_admin_inventory_adjustment_path(product_variant_id: @form[:product_variant_id], store_id: @form[:store_id]), class: "btn btn--ghost" %>
+    <%= action_submit(form, "Post adjustment", style: :solid, intent: :brand) %>
+    <%= action_link_to(
+          "Cancel",
+          new_admin_inventory_adjustment_path(product_variant_id: @form[:product_variant_id], store_id: @form[:store_id]),
+          style: :ghost,
+          intent: :neutral
+        ) %>
   </div>
 <% end %>

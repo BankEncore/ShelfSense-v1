@@ -5,5 +5,5 @@
   <p><%= form.label :user_id %><%= form.collection_select :user_id, @users, :id, :username %></p>
   <p><%= form.label :role_id %><%= form.collection_select :role_id, @roles, :id, :name %></p>
   <p><%= form.label :store_id %><%= form.collection_select :store_id, @stores, :id, :admin_label, include_blank: "Global" %></p>
-  <p><%= form.submit "Assign" %></p>
+  <p><%= action_submit(form, "Assign", style: :solid, intent: :brand) %></p>
 <% end %>

@@ -7,4 +7,4 @@
   <dt>Timezone</dt><dd><%= @settings.default_timezone %></dd>
   <dt>Country</dt><dd><%= @settings.default_country_code %></dd>
 </dl>
-<%= link_to "Edit", edit_admin_system_settings_path if effective_permissions.include?("system_settings.manage") %>
+<%= action_link_to("Edit", edit_admin_system_settings_path, style: :outline, intent: :neutral) if effective_permissions.include?("system_settings.manage") %>

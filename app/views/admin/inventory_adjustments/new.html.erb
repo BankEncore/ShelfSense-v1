@@ -8,7 +8,7 @@
 
 <%= render "shared/page_header", title: "New inventory adjustment" %>
 
-<%= form_with url: preview_admin_inventory_adjustments_path, method: :post, local: true, class: "form" do %>
+<%= form_with url: preview_admin_inventory_adjustments_path, method: :post, local: true, class: "form" do |form| %>
   <%= hidden_field_tag :command_token, @command_token %>
   <%= hidden_field_tag :idempotency_key, @idempotency_key %>
 
@@ -21,7 +21,13 @@
     <%= text_field_tag :product_variant_id, params[:product_variant_id].presence || @product_variant&.sku %>
     <span class="field-help">SKU, industry identifier, or UUID.</span>
     <% if @product_variant %>
-      <span class="field-help"><%= @product_variant.product.name %> · <%= @product_variant.sku %> · <%= @product_variant.derived_inventory_tracking %></span>
+      <span class="field-help">
+        <%= admin_product_link(@product_variant.product) || @product_variant.product.name %>
+        ·
+        <%= admin_product_variant_link(@product_variant) || (@product_variant.name.presence || @product_variant.sku) %>
+        ·
+        <%= @product_variant.derived_inventory_tracking %>
+      </span>
     <% end %>
   </div>
   <div class="form-field">
@@ -65,7 +71,7 @@
     </div>
   <% end %>
   <div class="actions">
-    <%= submit_tag "Preview", class: "btn" %>
-    <%= link_to "Cancel", admin_inventory_balances_path, class: "btn btn--ghost" %>
+    <%= action_submit(form, "Preview", style: :solid, intent: :brand) %>
+    <%= action_link_to("Cancel", admin_inventory_balances_path, style: :ghost, intent: :neutral) %>
   </div>
 <% end %>

@@ -17,5 +17,5 @@
   </p>
   <p><%= form.check_box :posting_allowed %><%= form.label :posting_allowed %></p>
   <p><%= form.label :display_order %><%= form.number_field :display_order %></p>
-  <p><%= form.submit %></p>
+  <p><%= action_submit(form, gl_account.persisted? ? "Save Changes" : "Create GL Account", style: :solid, intent: :brand) %></p>
 <% end %>

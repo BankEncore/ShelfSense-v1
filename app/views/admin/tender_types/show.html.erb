@@ -7,12 +7,25 @@
 ] %>
 
 <% actions = [configuration_status_badge(@tender_type.active?)] %>
-<% actions << link_to("Edit", edit_admin_tender_type_path(@tender_type), class: "btn btn--secondary") %>
+<% actions << action_link_to("Edit", edit_admin_tender_type_path(@tender_type), style: :outline, intent: :neutral) %>
 <% unless @tender_type.system_protected? %>
   <% if @tender_type.active? %>
-    <% actions << button_to("Deactivate", admin_tender_type_path(@tender_type), method: :delete, class: "btn btn--danger") %>
+    <% actions << action_button_to(
+         "Deactivate",
+         admin_tender_type_path(@tender_type),
+         style: :outline,
+         intent: :danger,
+         method: :delete
+       ) %>
   <% else %>
-    <% actions << button_to("Reactivate", reactivate_admin_tender_type_path(@tender_type), method: :post, params: { lock_version: @tender_type.lock_version }, class: "btn") %>
+    <% actions << action_button_to(
+         "Reactivate",
+         reactivate_admin_tender_type_path(@tender_type),
+         style: :solid,
+         intent: :brand,
+         method: :post,
+         params: { lock_version: @tender_type.lock_version }
+       ) %>
   <% end %>
 <% end %>
 

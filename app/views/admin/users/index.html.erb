@@ -1,6 +1,6 @@
 <% content_for :title, "Users" %>
 <h1>Users</h1>
-<% if effective_permissions.include?("users.create") %><p><%= link_to "New user", new_admin_user_path %></p><% end %>
+<% if effective_permissions.include?("users.create") %><p><%= action_link_to("New user", new_admin_user_path, style: :solid, intent: :brand) %></p><% end %>
 <ul>
   <% @users.each do |user| %>
     <li><%= link_to user.username, admin_user_path(user) %> — <%= user.display_name %><%= " (inactive)" unless user.active? %></li>

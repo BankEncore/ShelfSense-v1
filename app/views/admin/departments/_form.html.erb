@@ -32,5 +32,5 @@
     </p>
   <% end %>
   <p><%= form.label :display_order %><%= form.number_field :display_order %></p>
-  <p><%= form.submit %></p>
+  <p><%= action_submit(form, department.persisted? ? "Save Changes" : "Create Department", style: :solid, intent: :brand) %></p>
 <% end %>

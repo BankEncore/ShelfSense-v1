@@ -1,12 +1,12 @@
 <% content_for :title, "Audit events" %>
 <h1>Audit events</h1>
-<%= form_with url: admin_audit_events_path, method: :get do %>
+<%= form_with url: admin_audit_events_path, method: :get do |form| %>
   <p>
     <%= label_tag :action_key, "Action" %><%= text_field_tag :action_key, params[:action_key] %>
     <%= label_tag :outcome, "Outcome" %><%= select_tag :outcome, options_for_select([ "", "succeeded", "failed", "denied" ], params[:outcome]) %>
     <%= label_tag :from, "From" %><%= text_field_tag :from, params[:from] %>
     <%= label_tag :to, "To" %><%= text_field_tag :to, params[:to] %>
-    <%= submit_tag "Filter" %>
+    <%= action_submit(form, "Filter", style: :solid, intent: :brand) %>
   </p>
 <% end %>
 <ul>
