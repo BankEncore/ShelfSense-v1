@@ -44,4 +44,17 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
     find_field("session_password").send_keys :enter
     assert_text "Signed in successfully"
   end
+
+  def teardown
+    reset_uds_viewport!
+  end
+
+  def reset_uds_viewport!
+    return unless page.driver.respond_to?(:browser) && page.driver.browser
+
+    page.execute_script("document.documentElement.style.zoom = '1'")
+    page.driver.browser.manage.window.resize_to(1280, 720)
+  rescue Selenium::WebDriver::Error::WebDriverError, Capybara::NotSupportedByDriverError
+    nil
+  end
 end
