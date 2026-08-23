@@ -59,7 +59,30 @@ class PurchasingOpsWorkspaceTest < ApplicationSystemTestCase
     assert_field "quantity", with: "7"
     assert_field "expected_unit_cost_cents", with: "9.99"
     assert_field "notes", with: "submitted note"
-    assert_equal "identifier", page.evaluate_script("document.activeElement && document.activeElement.name")
+    assert_equal "quantity", page.evaluate_script("document.activeElement && document.activeElement.name")
+  end
+
+  test "dirty add-line form requires confirmation before leaving draft PO" do
+    visit ops_purchase_order_path(@purchase_order)
+    fill_in "Scan / identifier", with: "pending-scan-value"
+
+    dismiss_confirm("Discard unsaved purchasing changes?") do
+      click_on "All drafts"
+    end
+    assert_current_path ops_purchase_order_path(@purchase_order)
+    assert_field "identifier", with: "pending-scan-value"
+
+    accept_confirm("Discard unsaved purchasing changes?") do
+      click_on "All drafts"
+    end
+    assert_current_path ops_draft_pos_path
+  end
+
+  test "draft PO index opens draft detail with lookup focus" do
+    visit ops_draft_pos_path
+    click_on "Open"
+    assert_current_path ops_purchase_order_path(@purchase_order)
+    assert_selector "input[name='identifier']:focus", wait: 5
   end
 
   test "visible shortcuts focus lookup, save the active row, and invoke the primary action" do
@@ -97,6 +120,26 @@ class PurchasingOpsWorkspaceTest < ApplicationSystemTestCase
     lines_row.send_keys :arrow_down
     find("tr.is-selected").send_keys :enter
     assert_text "Line updated"
+  end
+
+  test "escape resets dirty inline edit before clearing row selection" do
+    visit ops_purchase_order_path(@purchase_order)
+    line = @purchase_order.purchase_order_lines.first
+    original_notes = line.order.notes
+
+    row = find("table.ops-queue tbody tr", match: :first)
+    row.click
+    row.send_keys :arrow_down
+    find("tr.is-selected input[name='notes']").fill_in with: "unsaved buyer note"
+
+    send_keys :escape
+
+    assert_field "notes", with: original_notes.to_s
+    assert_no_selector "tr.is-selected"
+    assert_equal "identifier", page.evaluate_script("document.activeElement && document.activeElement.name")
+
+    click_on "All drafts"
+    assert_current_path ops_draft_pos_path
   end
 
   test "dirty receipt or PO edits require confirmation before Turbo navigation" do

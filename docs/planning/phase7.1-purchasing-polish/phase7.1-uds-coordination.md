@@ -35,7 +35,7 @@ Each row must remain stable after acceptance. Change ownership only through an e
 | 3 | **`application.html.erb` structure** | **UDS-4** | 4.1 | UDS-4.1 only slice that introduces grouped nav markup. Phase 7.1 adds flat-nav **Purchasing** link to hub before 4.1; **keeps** existing Orders / PO / Receipt links until 4.1 deduplicates them under the **Purchasing** group (hub primary entry). | Accepted |
 | 4 | **Admin purchasing indexes** (orders, POs, receipts) | **Phase 7.1** | 7.1.2 | Phase 7.1 owns templates, filters, tables, and cross-links. | Accepted |
 | 5 | **Customer requests admin** (index/show polish) | **Phase 7.1** | 7.1.4 optional | Purchasing cross-links in 7.1.4; general Warm Parchment on migration-matrix schedule. | Accepted |
-| 6 | **Ops Location + Draft PO** visual/interaction parity | **Phase 7.1** | 7.1.3 | Ships **after UDS-4.1** (or parallel UDS-4.2 if no template overlap). Update program-plan allowlist when 7.1.3 starts. | Accepted |
+| 6 | **Ops Location + Draft PO** interaction closeout | **Phase 7.1** | 7.1.3 | Unblocked after UDS-4.1; implemented in [phase7.1.3-plan.md](phase7.1.3-plan.md). Update program-plan allowlist when 7.1.3 ships. | Accepted |
 | 7 | **`ActionButtonHelper` on purchasing surfaces** | **Screen owner slice** | 7.1.x / 4.2 | Adopt helper on touched actions in the owning slice PR only. | Accepted |
 | 8 | **Cross-link conventions** | **Shared doc; purchasing links in 7.1** | Coordination + 7.1.2 | Patterns below; UDS-4.2 owns non-purchasing cross-links. | Accepted |
 | 9 | **Purchasing entry / Home** | **Phase 7.1** | 7.1.1 | Dedicated **`GET /admin/purchasing`** hub. Supplements history indexes; grouped nav lists under **Purchasing**. | Accepted |
@@ -44,7 +44,7 @@ Each row must remain stable after acceptance. Change ownership only through an e
 ### Resolved decisions (August 2026)
 
 1. **Hub route** — **`GET /admin/purchasing`** (`Admin::PurchasingController#show`). Orders index remains order history only.
-2. **7.1.3 vs UDS-4.1** — **7.1.1 → 7.1.2 → UDS-4.0 → UDS-4.1 → 7.1.3**. Ops parity does not share a PR with grouped nav; 7.1.3 may parallel UDS-4.2 if templates do not overlap.
+2. **7.1.3 vs UDS-4.1** — **7.1.1 → 7.1.2 → UDS-4.0 → UDS-4.1 → 7.1.3**. Ops closeout does not share a PR with grouped nav; 7.1.3 may parallel UDS-4.2. **7.1.3 is unblocked** with UDS-4.1 on `main`.
 3. **Roadmap nav vocabulary** — [roadmap.md](../roadmap.md) UDS-4 section points here and [navigation-proposal.md](../ux-design-system/navigation-proposal.md); aspirational group names deferred until destinations exist.
 
 ## Cross-link conventions
@@ -72,9 +72,9 @@ Use existing routes; add helpers in `PurchasingHelper` only when the same link t
    - Phase 7.1.1 purchasing work hub at GET /admin/purchasing (flat nav)
 3. Phase 7.1.2 admin purchasing indexes
 4. UDS-4.1 grouped nav (after prototype gate) — **removes redundant top-level Orders / PO / Receipt links**; hub remains primary **Purchasing** group entry (Phase 7.1.1 flat nav intentionally keeps duplicate links until this step)
-5. Phase 7.1.3 ops parity (after UDS-4.1; or parallel with UDS-4.2 if no template overlap)
-6. UDS-4.2 non-purchasing adoption (may parallel 7.1.3)
-7. Phase 7.1.4 if hub does not subsume request next-actions
+5. Phase 7.1.3 ops interaction closeout (UDS-4.1/4.2 on `main`; may parallel UDS-4.2)
+6. UDS-4.2 non-purchasing adoption (complete on `main`)
+7. Phase 7.1.4 deferred unless separately opened
 ```
 
 Phase 8/9 domain work may proceed in parallel if it does not modify purchasing admin shell, grouped nav, or ops layouts under active slices.

@@ -1,0 +1,60 @@
+<% profile = ops_shortcuts_profile %>
+<aside class="ops-shortcuts ops-shortcuts--<%= profile[:workspace] %>" aria-label="Purchasing operations keyboard shortcuts">
+  <% if profile[:buttons].any? %>
+    <div class="ops-shortcuts__buttons">
+      <% profile[:buttons].each do |button| %>
+        <%= action_button(
+              "#{button[:label]} #{tag.kbd(button[:keys])}".html_safe,
+              style: :ghost,
+              intent: :neutral,
+              size: :small,
+              data: { action: button[:action] }
+            ) %>
+      <% end %>
+      <%= action_button(
+            "Shortcut help",
+            style: :ghost,
+            intent: :neutral,
+            size: :small,
+            aria: { expanded: "false", controls: "ops-shortcut-help" },
+            data: { ops_shortcuts_target: "helpButton", action: "ops-shortcuts#toggleHelp" }
+          ) %>
+    </div>
+    <div id="ops-shortcut-help" class="ops-shortcuts__help" data-ops-shortcuts-target="help" hidden>
+      <h2>Keyboard shortcuts</h2>
+      <dl>
+        <% profile[:help].each do |keys, description| %>
+          <div>
+            <dt><kbd><%= keys %></kbd></dt>
+            <dd><%= description %></dd>
+          </div>
+        <% end %>
+      </dl>
+      <%= action_button("Close shortcut help", style: :ghost, intent: :neutral, size: :small, data: { action: "ops-shortcuts#toggleHelp" }) %>
+    </div>
+  <% else %>
+    <div class="ops-shortcuts__buttons">
+      <p class="ops-hint ops-shortcuts__hint">Use ↑/↓ and Enter on the queue; Esc closes the action panel. Select, Located, and Not located are always available as links.</p>
+      <%= action_button(
+            "Shortcut help",
+            style: :ghost,
+            intent: :neutral,
+            size: :small,
+            aria: { expanded: "false", controls: "ops-shortcut-help" },
+            data: { ops_shortcuts_target: "helpButton", action: "ops-shortcuts#toggleHelp" }
+          ) %>
+    </div>
+    <div id="ops-shortcut-help" class="ops-shortcuts__help" data-ops-shortcuts-target="help" hidden>
+      <h2>Keyboard shortcuts</h2>
+      <dl>
+        <% profile[:help].each do |keys, description| %>
+          <div>
+            <dt><kbd><%= keys %></kbd></dt>
+            <dd><%= description %></dd>
+          </div>
+        <% end %>
+      </dl>
+      <%= action_button("Close shortcut help", style: :ghost, intent: :neutral, size: :small, data: { action: "ops-shortcuts#toggleHelp" }) %>
+    </div>
+  <% end %>
+</aside>

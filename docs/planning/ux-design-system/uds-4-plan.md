@@ -1,6 +1,6 @@
 # UDS-4 — Information architecture and adoption
 
-Status: **Proposed** — coordination **Accepted**; UDS-4.0–4.1 on `main`; **UDS-4.2 in progress** ([uds-4.2-plan.md](uds-4.2-plan.md)).
+Status: **Proposed** — coordination **Accepted**; UDS-4.0–4.2 **complete on `main`**. Phase 7.1.3 ops interaction closeout **ready for review** on branch `phase-7.1.3-purchasing-ops-closeout` (PR #40).
 
 Slice id remains **UDS-4**. Not a domain phase number. Authority: [UX design system packet](README.md), [program-plan.md](program-plan.md), [navigation-proposal.md](navigation-proposal.md).
 
@@ -28,8 +28,8 @@ Phase 7.1 may ship purchasing hub and admin indexes on **flat** nav while UDS-4.
 ```text
 7.1.1 hub + 7.1.2 admin indexes (flat nav)  ∥  UDS-4.0 prototype
 → UDS-4.1 grouped nav (after prototype gate)
-→ 7.1.3 ops parity (after UDS-4.1; may parallel UDS-4.2)
-→ UDS-4.2 non-purchasing adoption
+→ UDS-4.2 non-purchasing adoption (complete)
+→ 7.1.3 ops interaction closeout (unblocked)
 ```
 
 See [phase7.1-uds-coordination.md](../phase7.1-purchasing-polish/phase7.1-uds-coordination.md).
