@@ -1,29 +1,40 @@
 <% content_for :title, "Purchase orders" %>
-<h1>Purchase orders</h1>
-<p>
-  Filter:
-  <%= link_to "All", admin_purchase_orders_path %>
-  · <%= link_to "Draft", admin_purchase_orders_path(status: "draft") %>
-  · <%= link_to "Sent", admin_purchase_orders_path(status: "sent") %>
-  · <%= link_to "Closed", admin_purchase_orders_path(status: "closed") %>
-</p>
-<% if @status_filter.present? %>
-  <p>Showing status: <%= @status_filter %></p>
-<% end %>
-<% if effective_permissions.include?("orders.manage") && current_store.present? %>
-  <p><%= link_to "Draft PO workspace", ops_draft_pos_path %></p>
-<% end %>
-<ul>
-  <% @purchase_orders.each do |po| %>
-    <li>
-      <%= link_to po.admin_label, admin_purchase_order_path(po) %>
-      · <%= po.supplier.admin_label %>
-      · <%= po.store.admin_label %>
-      · <%= po.status %>
-      <% if po.number.present? %>· #<%= po.number %><% end %>
-    </li>
+
+<%= render "shared/breadcrumbs", crumbs: [
+  { name: "Home", path: root_path },
+  { name: "Purchasing", path: admin_purchasing_path },
+  { name: "Purchase orders" }
+] %>
+
+<% header_actions = capture do %>
+  <% if effective_permissions.include?("orders.manage") && current_store.present? %>
+    <%= action_link_to("Draft PO workspace", ops_draft_pos_path, style: :outline, intent: :neutral) %>
   <% end %>
-</ul>
-<% if @purchase_orders.empty? %>
-  <p>No purchase orders.</p>
 <% end %>
+
+<%= render "shared/page_header", title: "Purchase orders", actions: header_actions.presence %>
+
+<p class="page-header__subtitle">
+  Filter:
+  <%= action_link_to("All", admin_purchase_orders_path, style: :link, intent: :neutral) %>
+  · <%= action_link_to("Draft", admin_purchase_orders_path(status: "draft"), style: :link, intent: :neutral) %>
+  · <%= action_link_to("Sent", admin_purchase_orders_path(status: "sent"), style: :link, intent: :neutral) %>
+  · <%= action_link_to("Closed", admin_purchase_orders_path(status: "closed"), style: :link, intent: :neutral) %>
+  <% if @status_filter.present? %> · Showing <%= @status_filter %><% end %>
+</p>
+
+<% rows = @purchase_orders.map { |po|
+     [
+       link_to(po.admin_label, admin_purchase_order_path(po)),
+       po.supplier.admin_label,
+       po.store.admin_label,
+       po.status,
+       po.number.present? ? "##{po.number}" : "—"
+     ]
+   } %>
+<%= render "shared/data_table",
+      headers: ["Purchase order", "Supplier", "Store", "Status", "Number"],
+      rows: rows,
+      empty: render("shared/empty_state",
+                    title: "No purchase orders",
+                    body: "Draft and sent purchase orders appear here.") %>

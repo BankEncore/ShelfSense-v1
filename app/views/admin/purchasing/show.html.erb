@@ -1,0 +1,47 @@
+<% content_for :title, "Purchasing" %>
+
+<%= render "shared/breadcrumbs", crumbs: [
+  { name: "Home", path: root_path },
+  { name: "Purchasing" }
+] %>
+
+<%= render "shared/page_header",
+      title: "Purchasing",
+      subtitle: @summary.store_selected? ? "Work and history for #{current_store.admin_label}" : "Organization-wide purchasing history" %>
+
+<% unless @summary.store_selected? %>
+  <section class="surface">
+    <h2>Select a store to view purchasing work</h2>
+    <p>Operational counts and workspace links require an active store context.</p>
+    <% if accessible_stores.many? %>
+      <p><%= action_link_to("Choose store", new_store_selection_path, style: :solid, intent: :brand) %></p>
+    <% elsif accessible_stores.one? %>
+      <%= form_with url: store_selection_path, method: :post, local: true, class: "actions" do |form| %>
+        <%= hidden_field_tag :store_id, accessible_stores.first.id %>
+        <%= action_submit(form, "Use #{accessible_stores.first.admin_label}", style: :solid, intent: :brand) %>
+      <% end %>
+    <% end %>
+  </section>
+<% end %>
+
+<% if @summary.operational_sections.any? %>
+  <section aria-labelledby="purchasing-work-heading">
+    <h2 id="purchasing-work-heading">Active work</h2>
+    <div class="purchasing-hub-sections">
+      <% @summary.operational_sections.each do |section| %>
+        <%= render "section", section: section %>
+      <% end %>
+    </div>
+  </section>
+<% end %>
+
+<% if @summary.history_sections.any? %>
+  <section aria-labelledby="purchasing-history-heading">
+    <h2 id="purchasing-history-heading">History and reference</h2>
+    <div class="purchasing-hub-sections">
+      <% @summary.history_sections.each do |section| %>
+        <%= render "section", section: section %>
+      <% end %>
+    </div>
+  </section>
+<% end %>

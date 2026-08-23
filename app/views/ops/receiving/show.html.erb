@@ -13,7 +13,7 @@
   </div>
   <p>
     <%= action_link_to("All drafts", ops_receiving_index_path, style: :link, intent: :neutral) %>
-    · <%= action_link_to("Exit to Purchasing", admin_orders_path, style: :link, intent: :neutral) %>
+    · <%= action_link_to("Exit to Purchasing", admin_purchasing_path, style: :link, intent: :neutral) %>
   </p>
 </header>
 <%= render "ops/shared/error_summary", errors: @mutation_errors, conflict: @conflict, title: "Receipt was not changed" %>

@@ -6,7 +6,7 @@
   </div>
   <p>
     <%= action_link_to("Draft POs", ops_draft_pos_path, style: :link, intent: :neutral) %>
-    · <%= action_link_to("Exit to Purchasing", admin_orders_path, style: :link, intent: :neutral) %>
+    · <%= action_link_to("Exit to Purchasing", admin_purchasing_path, style: :link, intent: :neutral) %>
   </p>
 </header>
 <%= render "ops/shared/error_summary", errors: @mutation_errors, conflict: false, title: "Draft receipt could not be created" %>

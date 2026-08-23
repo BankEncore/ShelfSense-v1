@@ -59,6 +59,9 @@
             <% if effective_permissions.include?("inventory.view") %>
               <%= link_to "Inventory", admin_inventory_balances_path %>
             <% end %>
+            <% if purchasing_hub_nav_visible? %>
+              <%= link_to "Purchasing", admin_purchasing_path %>
+            <% end %>
             <% if effective_permissions.include?("orders.view") %>
               <%= link_to "Orders", admin_orders_path %>
               <%= link_to "Purchase orders", admin_purchase_orders_path %>

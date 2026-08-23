@@ -96,6 +96,7 @@ Rails.application.routes.draw do
       member { post :cancel }
     end
     resources :orders, only: %i[index show new create]
+    resource :purchasing, only: %i[show], controller: "purchasing"
     resources :purchase_orders, only: %i[index show] do
       member do
         post "lines/:line_id/cancel", action: :cancel_line, as: :cancel_line

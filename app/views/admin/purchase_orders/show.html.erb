@@ -1,24 +1,32 @@
 <% content_for :title, @purchase_order.admin_label %>
-<h1><%= @purchase_order.admin_label %></h1>
-<p>
-  <%= @purchase_order.supplier.admin_label %>
-  · <%= @purchase_order.store.admin_label %>
-  · <%= @purchase_order.status %>
-  <% if @purchase_order.number.present? %>· number <%= @purchase_order.number %><% end %>
-  · revision <%= @purchase_order.document_revision %>
-  <% if @purchase_order.sent_at.present? %>
-    · sent <%= @purchase_order.sent_at %> via <%= @purchase_order.transmission_method %>
+
+<%= render "shared/breadcrumbs", crumbs: [
+  { name: "Home", path: root_path },
+  { name: "Purchasing", path: admin_purchasing_path },
+  { name: "Purchase orders", path: admin_purchase_orders_path },
+  { name: @purchase_order.admin_label }
+] %>
+
+<%= render "shared/page_header",
+      title: @purchase_order.admin_label,
+      subtitle: [
+        @purchase_order.supplier.admin_label,
+        @purchase_order.store.admin_label,
+        @purchase_order.status,
+        (@purchase_order.number.present? ? "number #{@purchase_order.number}" : nil),
+        "revision #{@purchase_order.document_revision}",
+        (@purchase_order.sent_at.present? ? "sent #{@purchase_order.sent_at} via #{@purchase_order.transmission_method}" : nil),
+        (@purchase_order.closed_at.present? ? "closed #{@purchase_order.closed_at}" : nil)
+      ].compact.join(" · ") %>
+
+<% header_actions = capture do %>
+  <%= action_link_to("All purchase orders", admin_purchase_orders_path, style: :link, intent: :neutral) %>
+  <% draft_link = ops_draft_purchase_order_link(@purchase_order) %>
+  <% if draft_link.present? %>
+    <%= draft_link %>
   <% end %>
-  <% if @purchase_order.closed_at.present? %>
-    · closed <%= @purchase_order.closed_at %>
-  <% end %>
-</p>
-<p>
-  <%= link_to "All purchase orders", admin_purchase_orders_path %>
-  <% if @purchase_order.draft? %>
-    · <%= link_to "Open draft workspace", ops_purchase_order_path(@purchase_order) %>
-  <% end %>
-</p>
+<% end %>
+<div class="actions"><%= header_actions %></div>
 
 <section>
   <h2>Lines</h2>
@@ -30,7 +38,7 @@
       <% state = line.line_state %>
       <article>
         <h3>
-          Order <%= link_to "##{order.number}", admin_order_path(order) %>
+          Order <%= admin_order_link(order, label: "##{order.number}") || "##{order.number}" %>
           · <%= line.product_variant.product.name %>
           <code><%= line.product_variant.sku %></code>
         </h3>
@@ -40,7 +48,7 @@
           · cancelled <%= line.cancelled_quantity %>
           · expected unit cost <%= format_money_cents(line.expected_unit_cost_cents_snapshot) %>
           <% if order.customer_request %>
-            · request #<%= order.customer_request.number %> (<%= order.customer_request.status %>)
+            · <%= admin_customer_request_link(order.customer_request, label: "Request ##{order.customer_request.number} (#{order.customer_request.status})") || "Request ##{order.customer_request.number} (#{order.customer_request.status})" %>
           <% end %>
         </p>
 
