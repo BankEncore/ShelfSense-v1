@@ -1,6 +1,6 @@
 # Phase 7.1.3 — Ops interaction evidence
 
-Status: **Ready for review** — automated gate on branch `phase-7.1.3-purchasing-ops-closeout` (PR #40). Merge gate items below must be green before merge; manual **R** reflow and deferred **E** spot-checks are not blockers for this slice.
+Status: **Merged to `main`** (PR #40, merge `2db6f1d`). Automated merge gate passed; manual **R** reflow and deferred **E** spot-checks remain optional follow-up, not blockers for this slice.
 
 Targeted manual gate for Location and Draft PO (not full UDS accessibility matrix conformance).
 
@@ -17,7 +17,7 @@ Targeted manual gate for Location and Draft PO (not full UDS accessibility matri
 
 - [x] Location: ↑/↓ row selection, Enter opens panel, Esc closes panel (`location_queue_buttons_test.rb`)
 - [x] Location: success redirect focuses first remaining row or empty-state action (`location_queue_buttons_test.rb`)
-- [ ] Location: validation failure focuses affected field (Used scan, special-order cost) — **deferred manual spot-check; not part of automated merge gate**
+- [ ] Location: validation failure focuses affected field (Used scan, special-order cost) — **deferred manual spot-check**
 - [x] Draft PO: `/` lookup, Ctrl/⌘+S save row, Ctrl/⌘+Enter primary action (`purchasing_ops_workspace_test.rb`)
 - [x] Draft PO: stale edit focuses quantity/cost/notes field (not lookup) (`purchasing_ops_workspace_test.rb`)
 - [x] Draft PO index: Open link activates draft detail with lookup focus (`purchasing_ops_workspace_test.rb`)
@@ -55,9 +55,9 @@ Targeted manual gate for Location and Draft PO (not full UDS accessibility matri
 
 | Field | Value |
 |---|---|
-| Branch | `phase-7.1.3-purchasing-ops-closeout` |
 | PR | #40 |
+| Merge commit | `2db6f1d` |
 | Evidence head SHA | `eaa856248581e6d4d69556e18a5b413eee1428de` |
-| Reviewer | _pending merge approval_ |
+| Reviewer | Approved and merged August 2026 |
 | Browser | Chromium (Capybara system tests) |
 | Date | 2026-08-23 |

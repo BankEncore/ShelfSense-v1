@@ -1,6 +1,6 @@
 # Phase 7.1.3 — Purchasing ops interaction closeout
 
-Status: **Ready for review** on branch `phase-7.1.3-purchasing-ops-closeout` (PR #40).
+Status: **Complete** on `main` (PR #40, merge `2db6f1d`).
 
 Authority: [phase7.1-plan.md](phase7.1-plan.md), [phase7-spec.md](../phase7-orders-and-receiving/phase7-spec.md) §17.3–17.4, [program-plan.md](../ux-design-system/program-plan.md) Phase 7.1.3 allowlist.
 

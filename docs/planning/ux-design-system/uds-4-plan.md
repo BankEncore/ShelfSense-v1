@@ -1,6 +1,6 @@
 # UDS-4 — Information architecture and adoption
 
-Status: **Proposed** — coordination **Accepted**; UDS-4.0–4.2 **complete on `main`**. Phase 7.1.3 ops interaction closeout **ready for review** on branch `phase-7.1.3-purchasing-ops-closeout` (PR #40).
+Status: **Proposed** — coordination **Accepted**; UDS-4.0–4.2 **complete on `main`**. Phase 7.1.3 ops interaction closeout **complete on `main`** (PR #40).
 
 Slice id remains **UDS-4**. Not a domain phase number. Authority: [UX design system packet](README.md), [program-plan.md](program-plan.md), [navigation-proposal.md](navigation-proposal.md).
 

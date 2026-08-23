@@ -35,7 +35,7 @@ Each row must remain stable after acceptance. Change ownership only through an e
 | 3 | **`application.html.erb` structure** | **UDS-4** | 4.1 | UDS-4.1 only slice that introduces grouped nav markup. Phase 7.1 adds flat-nav **Purchasing** link to hub before 4.1; **keeps** existing Orders / PO / Receipt links until 4.1 deduplicates them under the **Purchasing** group (hub primary entry). | Accepted |
 | 4 | **Admin purchasing indexes** (orders, POs, receipts) | **Phase 7.1** | 7.1.2 | Phase 7.1 owns templates, filters, tables, and cross-links. | Accepted |
 | 5 | **Customer requests admin** (index/show polish) | **Phase 7.1** | 7.1.4 optional | Purchasing cross-links in 7.1.4; general Warm Parchment on migration-matrix schedule. | Accepted |
-| 6 | **Ops Location + Draft PO** interaction closeout | **Phase 7.1** | 7.1.3 | Unblocked after UDS-4.1; implemented in [phase7.1.3-plan.md](phase7.1.3-plan.md). Update program-plan allowlist when 7.1.3 ships. | Accepted |
+| 6 | **Ops Location + Draft PO** interaction closeout | **Phase 7.1** | 7.1.3 | Complete on `main` (PR #40); see [phase7.1.3-plan.md](phase7.1.3-plan.md). | Accepted |
 | 7 | **`ActionButtonHelper` on purchasing surfaces** | **Screen owner slice** | 7.1.x / 4.2 | Adopt helper on touched actions in the owning slice PR only. | Accepted |
 | 8 | **Cross-link conventions** | **Shared doc; purchasing links in 7.1** | Coordination + 7.1.2 | Patterns below; UDS-4.2 owns non-purchasing cross-links. | Accepted |
 | 9 | **Purchasing entry / Home** | **Phase 7.1** | 7.1.1 | Dedicated **`GET /admin/purchasing`** hub. Supplements history indexes; grouped nav lists under **Purchasing**. | Accepted |
