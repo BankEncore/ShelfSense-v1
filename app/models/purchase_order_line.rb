@@ -15,6 +15,35 @@ class PurchaseOrderLine < ApplicationRecord
   validate :variant_must_match_order
   validate :variant_must_be_standard_inventory_bearing
 
+  scope :with_positive_open_quantity, -> {
+    where(<<~SQL.squish)
+      purchase_order_lines.ordered_quantity
+      - COALESCE((
+          SELECT SUM(polc.quantity)
+          FROM purchase_order_line_cancellations polc
+          WHERE polc.purchase_order_line_id = purchase_order_lines.id
+        ), 0)
+      > COALESCE((
+          SELECT SUM(
+            purchase_receipt_lines.matched_quantity
+            - LEAST(
+                purchase_receipt_lines.matched_quantity,
+                COALESCE((
+                  SELECT SUM(prlc.quantity)
+                  FROM purchase_receipt_line_corrections prlc
+                  WHERE prlc.purchase_receipt_line_id = purchase_receipt_lines.id
+                    AND prlc.correction_type IN ('quantity_reversal', 'compensating_adjustment_reference')
+                ), 0)
+              )
+          )
+          FROM purchase_receipt_lines
+          INNER JOIN purchase_receipts ON purchase_receipts.id = purchase_receipt_lines.purchase_receipt_id
+          WHERE purchase_receipt_lines.purchase_order_line_id = purchase_order_lines.id
+            AND purchase_receipts.status = 'posted'
+        ), 0)
+    SQL
+  }
+
   def expected_extended_cents
     ordered_quantity * expected_unit_cost_cents_snapshot
   end

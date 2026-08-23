@@ -1,20 +1,34 @@
 <% content_for :title, "Purchase receipts" %>
-<h1>Purchase receipts</h1>
-<p>Posted receipts. Drafts are managed in the receiving workspace.</p>
-<% if effective_permissions.include?("purchase_receipts.manage") && current_store.present? %>
-  <p><%= link_to "Receiving ops", ops_receiving_index_path %></p>
-<% end %>
-<ul>
-  <% @purchase_receipts.each do |receipt| %>
-    <li>
-      <%= link_to receipt.admin_label, admin_purchase_receipt_path(receipt) %>
-      · <%= receipt.supplier.admin_label %>
-      · <%= receipt.store.admin_label %>
-      · <%= receipt.status %>
-      · merchandise <%= format_money_cents(receipt.merchandise_total_cents) %>
-    </li>
+
+<%= render "shared/breadcrumbs", crumbs: [
+  { name: "Home", path: root_path },
+  { name: "Purchasing", path: admin_purchasing_path },
+  { name: "Purchase receipts" }
+] %>
+
+<% header_actions = capture do %>
+  <% if effective_permissions.include?("purchase_receipts.manage") && current_store.present? %>
+    <%= action_link_to("Receiving workspace", ops_receiving_index_path, style: :outline, intent: :neutral) %>
   <% end %>
-</ul>
-<% if @purchase_receipts.empty? %>
-  <p>No posted purchase receipts.</p>
 <% end %>
+
+<%= render "shared/page_header",
+      title: "Purchase receipts",
+      subtitle: "Posted and reversed receipts. Drafts are managed in the receiving workspace.",
+      actions: header_actions.presence %>
+
+<% rows = @purchase_receipts.map { |receipt|
+     [
+       link_to(receipt.admin_label, admin_purchase_receipt_path(receipt)),
+       receipt.supplier.admin_label,
+       receipt.store.admin_label,
+       receipt.status,
+       format_money_cents(receipt.merchandise_total_cents)
+     ]
+   } %>
+<%= render "shared/data_table",
+      headers: ["Receipt", "Supplier", "Store", "Status", "Merchandise"],
+      rows: rows,
+      empty: render("shared/empty_state",
+                    title: "No posted purchase receipts",
+                    body: "Posted receipt history appears here after receiving is complete.") %>

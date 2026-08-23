@@ -32,7 +32,7 @@ Each row must remain stable after acceptance. Change ownership only through an e
 |---|---|---|---|---|---|
 | 1 | **Purchasing work hub** (counts, exceptions, deep links) | **Phase 7.1** | 7.1.1 | Domain read-model at **`GET /admin/purchasing`**. UDS-4 supplies only shared admin chrome. | Accepted |
 | 2 | **Grouped nav canonical group names** | **UDS-4** | 4.0–4.1 | Adopt the eight groups in [navigation-proposal.md](../ux-design-system/navigation-proposal.md). Roadmap aspirational names are future groupings when destinations exist. | Accepted |
-| 3 | **`application.html.erb` structure** | **UDS-4** | 4.1 | UDS-4.1 only slice that introduces grouped nav markup. Phase 7.1 adds flat-nav **Purchasing** link to hub before 4.1. | Accepted |
+| 3 | **`application.html.erb` structure** | **UDS-4** | 4.1 | UDS-4.1 only slice that introduces grouped nav markup. Phase 7.1 adds flat-nav **Purchasing** link to hub before 4.1; **keeps** existing Orders / PO / Receipt links until 4.1 deduplicates them under the **Purchasing** group (hub primary entry). | Accepted |
 | 4 | **Admin purchasing indexes** (orders, POs, receipts) | **Phase 7.1** | 7.1.2 | Phase 7.1 owns templates, filters, tables, and cross-links. | Accepted |
 | 5 | **Customer requests admin** (index/show polish) | **Phase 7.1** | 7.1.4 optional | Purchasing cross-links in 7.1.4; general Warm Parchment on migration-matrix schedule. | Accepted |
 | 6 | **Ops Location + Draft PO** visual/interaction parity | **Phase 7.1** | 7.1.3 | Ships **after UDS-4.1** (or parallel UDS-4.2 if no template overlap). Update program-plan allowlist when 7.1.3 starts. | Accepted |
@@ -59,7 +59,9 @@ Shared patterns for Phase 7.1.2+ (UDS-4.2 may reuse for non-purchasing):
 | Receipt show | PO line, order, request allocation | Immutable posted facts only |
 | Product / variant show | Existing quick actions unchanged | No new purchasing commands |
 
-Use existing routes; add helpers in `PurchasingHelper` or `ApplicationHelper` only when the same link triple appears three or more times.
+Use existing routes; add helpers in `PurchasingHelper` only when the same link triple appears three or more times.
+
+**Authorization:** helpers return `nil` when the current user lacks destination permission, store access, or record visibility. Views render a link only when the helper returns a path. Direct URL access remains denied by controllers. Tests must cover narrow users viewing an allowed record related to a forbidden destination (link absent; direct access denied)—especially receipt → customer request and PO → internal order.
 
 ## Merge sequencing (after Accept)
 
@@ -69,7 +71,7 @@ Use existing routes; add helpers in `PurchasingHelper` or `ApplicationHelper` on
    - UDS-4.0 navigation prototype + gate evidence
    - Phase 7.1.1 purchasing work hub at GET /admin/purchasing (flat nav)
 3. Phase 7.1.2 admin purchasing indexes
-4. UDS-4.1 grouped nav (after prototype gate)
+4. UDS-4.1 grouped nav (after prototype gate) — **removes redundant top-level Orders / PO / Receipt links**; hub remains primary **Purchasing** group entry (Phase 7.1.1 flat nav intentionally keeps duplicate links until this step)
 5. Phase 7.1.3 ops parity (after UDS-4.1; or parallel with UDS-4.2 if no template overlap)
 6. UDS-4.2 non-purchasing adoption (may parallel 7.1.3)
 7. Phase 7.1.4 if hub does not subsume request next-actions

@@ -4,7 +4,7 @@
     <h1>Location queue</h1>
     <p>Oldest requests appear first for <%= current_store.admin_label %>. Select a request, then record what you found.</p>
   </div>
-  <p><%= link_to "Exit to Purchasing", admin_orders_path %></p>
+  <p><%= action_link_to("Exit to Purchasing", admin_purchasing_path, style: :link, intent: :neutral) %></p>
 </header>
 
 <%= render "ops/shared/error_summary", errors: @mutation_errors, conflict: @conflict, title: "Location action could not be completed" %>
@@ -13,7 +13,7 @@
   <section class="surface ops-empty-state">
     <h2>Location work is caught up</h2>
     <p>There are no customer requests waiting for a physical search at this store.</p>
-    <p><%= link_to "View customer requests", admin_customer_requests_path, class: "btn" %></p>
+    <p><%= action_link_to("View customer requests", admin_customer_requests_path, style: :outline, intent: :neutral) %></p>
   </section>
 <% else %>
   <% selected_id = (@selected_row_id.presence || "").to_s %>

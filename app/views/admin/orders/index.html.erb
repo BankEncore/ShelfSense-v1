@@ -1,27 +1,35 @@
 <% content_for :title, "Orders" %>
-<h1>Orders</h1>
-<% if effective_permissions.include?("orders.manage") && current_store.present? %>
-  <p><%= link_to "New stock order", new_admin_order_path %></p>
-<% end %>
-<% if effective_permissions.include?("orders.manage") && current_store.present? %>
-  <p><%= link_to "Draft PO workspace", ops_draft_pos_path %></p>
-<% end %>
-<ul>
-  <% @orders.each do |order| %>
-    <li>
-      <%= link_to order.admin_label, admin_order_path(order) %>
-      <%= order.product_variant.sku %>
-      · <%= order.supplier.admin_label %>
-      · qty <%= order.requested_quantity %>
-      <% if order.customer_order? %>
-        · customer request #<%= order.customer_request.number %>
-      <% else %>
-        · stock
-      <% end %>
-      <% if order.cancelled? %> · cancelled<% end %>
-    </li>
+
+<%= render "shared/breadcrumbs", crumbs: [
+  { name: "Home", path: root_path },
+  { name: "Purchasing", path: admin_purchasing_path },
+  { name: "Orders" }
+] %>
+
+<% header_actions = capture do %>
+  <% if effective_permissions.include?("orders.manage") && current_store.present? %>
+    <%= action_link_to("New stock order", new_admin_order_path, style: :solid, intent: :brand) %>
+    <%= action_link_to("Draft PO workspace", ops_draft_pos_path, style: :outline, intent: :neutral) %>
   <% end %>
-</ul>
-<% if @orders.empty? %>
-  <p>No orders.</p>
 <% end %>
+
+<%= render "shared/page_header", title: "Orders", actions: header_actions.presence %>
+
+<% rows = @orders.map { |order|
+     label = link_to(order.admin_label, admin_order_path(order))
+     type = order.customer_order? ? "Customer · ##{order.customer_request.number}" : "Stock"
+     type += " · cancelled" if order.cancelled?
+     [
+       label,
+       content_tag(:code, order.product_variant.sku),
+       order.supplier.admin_label,
+       order.requested_quantity.to_s,
+       type
+     ]
+   } %>
+<%= render "shared/data_table",
+      headers: ["Order", "SKU", "Supplier", "Qty", "Type"],
+      rows: rows,
+      empty: render("shared/empty_state",
+                    title: "No orders yet",
+                    body: "Stock and customer orders appear here after they are created.") %>

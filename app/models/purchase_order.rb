@@ -22,6 +22,9 @@ class PurchaseOrder < ApplicationRecord
   scope :for_store, ->(store) { where(store_id: store.id) }
   scope :with_status, ->(status) { where(status: status) }
   scope :admin_ordered, -> { order(Arel.sql("number DESC NULLS LAST"), :created_at) }
+  scope :with_open_lines, -> {
+    where(id: PurchaseOrderLine.with_positive_open_quantity.select(:purchase_order_id))
+  }
 
   def draft?
     status == "draft"

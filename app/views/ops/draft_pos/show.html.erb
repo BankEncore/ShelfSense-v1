@@ -12,9 +12,9 @@
     </p>
   </div>
   <p>
-    <%= link_to "All drafts", ops_draft_pos_path %>
-    · <%= link_to "Purchase orders", admin_purchase_orders_path %>
-    · <%= link_to "Exit to Purchasing", admin_orders_path %>
+    <%= action_link_to("All drafts", ops_draft_pos_path, style: :link, intent: :neutral) %>
+    · <%= action_link_to("Purchase orders", admin_purchase_orders_path, style: :link, intent: :neutral) %>
+    · <%= action_link_to("Exit to Purchasing", admin_purchasing_path, style: :link, intent: :neutral) %>
   </p>
 </header>
 
