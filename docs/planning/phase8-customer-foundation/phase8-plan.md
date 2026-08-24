@@ -137,7 +137,7 @@ Phase 8 does **not** create stored-value accounts. See [phase8-stored-value-boun
 
 ## Parallel work
 
-[Phase 9](../roadmap.md#phase-9--catalog-and-bibliographic-enrichment) may proceed in parallel if it does not modify customer admin surfaces under active Phase 8 slices.
+Phase 8 has shipped. [Phase 9](../roadmap.md#phase-9--catalog-and-bibliographic-enrichment) is the next domain phase and must not reopen customer admin contracts except where a later phase explicitly extends merge consumers.
 
 ## Acceptance
 

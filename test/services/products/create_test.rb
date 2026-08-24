@@ -128,5 +128,25 @@ class Products::CreateTest < ActiveSupport::TestCase
     assert_equal product.industry_identifier, event.after_values["industry_identifier"]
     assert_equal "AUD-1", event.after_values["lookup_code"]
     assert_not event.after_values.key?("identifier_source")
+    assert_not AuditEvent.exists?(action: "products.enrich", subject_id: product.id)
+  end
+
+  test "persists optional bibliographic facts without requiring them" do
+    product = Products::Create.call(
+      attributes: {
+        name: "Bibliographic Book",
+        status: "draft",
+        publisher_name: "Tor",
+        binding: "Hardcover",
+        publication_year: 2020,
+        contribution_rows: [ { "display_name" => "N. K. Jemisin", "role" => "author" } ]
+      },
+      actor: @actor
+    )
+
+    assert_equal "Tor", product.publisher.name
+    assert_equal "Hardcover", product.binding
+    assert_equal 2020, product.publication_year
+    assert_equal "N. K. Jemisin", product.contributors.first.display_name
   end
 end

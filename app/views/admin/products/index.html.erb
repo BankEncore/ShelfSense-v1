@@ -10,14 +10,14 @@
       subtitle: "Catalog products and their sellable variants",
       actions: (
         if effective_permissions.include?("products.create")
-          action_link_to("New product", new_admin_product_path, style: :solid, intent: :brand)
+          action_link_to("New product", new_admin_product_catalog_search_path, style: :solid, intent: :brand)
         end
       ) %>
 
 <%= form_with url: admin_products_path, method: :get, local: true, class: "filters" do |form| %>
   <div class="form-field form-field--grow">
     <%= label_tag :q, "Search" %>
-    <%= text_field_tag :q, @index.q, placeholder: "Name or identifier" %>
+    <%= text_field_tag :q, @index.q, placeholder: "Name, ISBN, or contributor" %>
   </div>
   <div class="form-field">
     <%= label_tag :status, "Status" %>
@@ -40,7 +40,7 @@
         body: "Create a product to start the merchandise catalog.",
         action: (
           if effective_permissions.include?("products.create")
-            action_link_to("New product", new_admin_product_path, style: :solid, intent: :brand)
+            action_link_to("New product", new_admin_product_catalog_search_path, style: :solid, intent: :brand)
           end
         ) %>
 <% elsif @products.empty? %>

@@ -1,6 +1,10 @@
 <%= form_with model: [:admin, product], class: "form" do |form| %>
   <%= render "shared/form_errors", record: product, attribute_ids: { list_price: "product_list_price" } %>
   <%= form.hidden_field :lock_version %>
+  <% if local_assigns[:candidate] %>
+    <%= hidden_field_tag :candidate_isbn13, candidate.isbn13 %>
+    <%= hidden_field_tag :candidate_lookup_key, "isbn:#{candidate.isbn13}" %>
+  <% end %>
 
   <%= render layout: "shared/form_section", locals: { title: "Identity", help: "ShelfSense assigns every product an immutable generated 222 primary identifier. Record the manufacturer GTIN and an optional lookup code here." } do %>
     <% if creating %>
@@ -64,6 +68,64 @@
       <%= form.label :variant_option_name_2, "Variant option name 2" %>
       <%= form.text_field :variant_option_name_2 %>
     </div>
+  <% end %>
+
+  <%= render layout: "shared/form_section", locals: { title: "Bibliographic details", help: "Optional bookstore metadata. Leave blank for sidelines and other non-book merchandise." } do %>
+    <div class="form-field">
+      <%= form.label :publisher_name, "Publisher" %>
+      <%= form.text_field :publisher_name, value: product.publisher_name.presence || product.publisher&.name %>
+    </div>
+    <div class="form-field">
+      <%= form.label :imprint %>
+      <%= form.text_field :imprint %>
+    </div>
+    <div class="form-field">
+      <%= form.label :edition %>
+      <%= form.text_field :edition %>
+    </div>
+    <div class="form-field">
+      <%= form.label :binding, "Binding / format" %>
+      <%= form.text_field :binding %>
+    </div>
+    <div class="form-field">
+      <%= form.label :language_code, "Language" %>
+      <%= form.text_field :language_code %>
+    </div>
+    <div class="form-field">
+      <%= form.label :page_count, "Pages" %>
+      <%= form.number_field :page_count, min: 1 %>
+    </div>
+    <div class="form-field">
+      <%= form.label :publication_year, "Publication year" %>
+      <%= form.number_field :publication_year, min: 1400, max: 2100 %>
+    </div>
+    <div class="form-field">
+      <%= form.label :series_name, "Series" %>
+      <%= form.text_field :series_name %>
+    </div>
+    <div class="form-field">
+      <%= form.label :series_position, "Series position" %>
+      <%= form.text_field :series_position %>
+    </div>
+    <div class="form-field">
+      <%= form.label :cover_image_url, "Cover image URL" %>
+      <%= form.text_field :cover_image_url %>
+    </div>
+    <% contribution_rows = Array(product.contribution_rows.presence || product.product_contributions.map { |row|
+         { "display_name" => row.contributor.display_name, "role" => row.role }
+       }) %>
+    <% contribution_rows += [ {} ] while contribution_rows.length < 3 %>
+    <fieldset class="form-field">
+      <legend>Contributors</legend>
+      <% contribution_rows.each do |row| %>
+        <% row = row.stringify_keys %>
+        <div class="form-field">
+          <%= text_field_tag "product[contribution_rows][][display_name]", row["display_name"], placeholder: "Name" %>
+          <%= select_tag "product[contribution_rows][][role]",
+                options_for_select(ProductContribution::ROLES.map { |role| [ role.humanize, role ] }, row["role"] || "author") %>
+        </div>
+      <% end %>
+    </fieldset>
   <% end %>
 
   <%= render layout: "shared/form_section", locals: { title: "Classification", help: "Merchandise category supplies the default merchandise class for newly created variants. Changing it does not rewrite existing variants." } do %>

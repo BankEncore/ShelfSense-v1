@@ -7,8 +7,12 @@
 # Ignore bundler config.
 /.bundle
 
-# Ignore all environment files.
+# Ignore all environment files except the committed example.
 /.env*
+!.env.example
+
+# Local Compose overrides (may contain secrets). Do not commit.
+/compose.override.yml
 
 # Ignore all logfiles and tempfiles.
 /log/*

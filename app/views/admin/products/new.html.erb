@@ -9,5 +9,8 @@
 <%= render "shared/page_header",
       title: "New product",
       subtitle: "Create a catalog product with a primary identifier" %>
+<% if effective_permissions.include?("products.create") %>
+  <p class="muted"><%= link_to "Look up a book first", new_admin_product_catalog_search_path %></p>
+<% end %>
 
-<%= render "form", product: @product, creating: true %>
+<%= render "form", product: @product, creating: true, candidate: @candidate %>

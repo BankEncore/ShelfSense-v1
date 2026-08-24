@@ -1,3 +1,5 @@
+> **Numbering after Phase 7:** [roadmap.md](roadmap.md) is the canonical forward-looking sequence (Phase 7.1, Phases 8–14, UDS, Terminal). Section 3 below is a **historical** outline from early planning and must not be used to number new work. In particular, it still says “Phase 8 — Buyback” and “Phase 9 — Financial posting”; those labels were superseded.
+
 Your domain list is a solid starting point, but the schema worksheet is not yet ready to become migrations. The best next step is to turn it into a development model organized around domain ownership, dependencies, and vertical workflows—not simply build its 42 current tables from top to bottom.
 
 ## 1\. Refine domain ownership

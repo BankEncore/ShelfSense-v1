@@ -1,6 +1,6 @@
 # UDS-4.2 — Non-purchasing adoption
 
-Status: **In progress** — UDS-4.1 on `main`; sub-slices 4.2a–4.2d implemented on `uds-4.2-non-purchasing-adoption`.
+Status: **Complete** on `main`. Sub-slices 4.2a–4.2d implemented.
 
 Authority: [uds-4-plan.md](uds-4-plan.md) § UDS-4.2, [program-plan.md](program-plan.md) allowlist, [phase7.1-uds-coordination.md](../phase7.1-purchasing-polish/phase7.1-uds-coordination.md) rows 5–8, [migration-matrix.md](migration-matrix.md).
 

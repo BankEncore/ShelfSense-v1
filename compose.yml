@@ -18,6 +18,7 @@ services:
       DATABASE_PASSWORD: postgres
       DATABASE_NAME: shelfsense_development
       TEST_DATABASE_NAME: shelfsense_test
+      ISBNDB_API_KEY: ${ISBNDB_API_KEY:-}
     depends_on:
       - db
     stdin_open: true

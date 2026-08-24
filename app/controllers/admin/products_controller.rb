@@ -6,10 +6,10 @@ module Admin
 
     before_action -> { require_permission!("products.view") }, only: %i[index show]
     before_action -> { require_permission!("products.create") }, only: %i[new create]
-    before_action -> { require_permission!("products.update") }, only: %i[edit update]
+    before_action -> { require_permission!("products.update") }, only: %i[edit update refresh_bibliography]
     before_action -> { require_permission!("products.discontinue") }, only: %i[discontinue reactivate]
     before_action -> { require_permission!("products.update") }, only: :destroy
-    before_action :set_product, only: %i[show edit update destroy discontinue reactivate]
+    before_action :set_product, only: %i[show edit update destroy discontinue reactivate refresh_bibliography]
 
     def index
       @index = Products::AdminIndexQuery.call(
@@ -37,6 +37,8 @@ module Admin
 
     def new
       @product = Product.new(status: "draft")
+      @candidate = Bibliographic::CandidateLoader.call(isbn13: params[:isbn13], lookup_key: params[:lookup_key])
+      apply_candidate_to_product(@product, @candidate) if @candidate
       load_form_options
     end
 
@@ -50,14 +52,31 @@ module Admin
         return
       end
 
-      @product = Products::Create.call(
-        attributes: attrs.except(:industry_identifier, :lookup_code),
-        actor: current_user,
-        industry_identifier: attrs[:industry_identifier],
-        lookup_code: attrs[:lookup_code]
+      candidate = Bibliographic::CandidateLoader.call(
+        isbn13: params[:candidate_isbn13],
+        lookup_key: params[:candidate_lookup_key]
       )
+
+      @product =
+        if candidate
+          Products::CreateFromCandidate.call(
+            candidate: candidate,
+            actor: current_user,
+            attributes: attrs.merge(contribution_rows: contribution_rows_from_params, publisher_name: attrs[:publisher_name])
+          )
+        else
+          Products::Create.call(
+            attributes: attrs.except(:industry_identifier, :lookup_code).merge(
+              contribution_rows: contribution_rows_from_params,
+              publisher_name: attrs[:publisher_name]
+            ),
+            actor: current_user,
+            industry_identifier: attrs[:industry_identifier],
+            lookup_code: attrs[:lookup_code]
+          )
+        end
       redirect_to admin_product_path(@product), notice: "Product created."
-    rescue Products::Create::Error => e
+    rescue Products::Create::Error, Products::CreateFromCandidate::Error => e
       @product = Product.new(attrs)
       @product.errors.add(:base, e.message)
       load_form_options
@@ -93,7 +112,10 @@ module Admin
         begin
           Products::Update.call(
             product: @product,
-            attributes: attrs.to_h.symbolize_keys,
+            attributes: attrs.to_h.symbolize_keys.merge(
+              contribution_rows: contribution_rows_from_params,
+              publisher_name: attrs[:publisher_name]
+            ),
             actor: current_user,
             store: current_store
           )
@@ -143,6 +165,50 @@ module Admin
       end
     end
 
+    def refresh_bibliography
+      rescue_stale do
+        isbn = @product.industry_identifier.presence || @product.bibliographic_provider_key
+        if isbn.blank?
+          redirect_to admin_product_path(@product), alert: "Add an industry identifier before refreshing bibliographic data."
+          return
+        end
+
+        result = Bibliographic::Search.call(query: isbn, skip_local: true)
+        candidate = Array(result.candidates).find { |row| row.isbn13 == isbn } || result.candidates&.first
+        if candidate.blank?
+          redirect_to admin_product_path(@product), alert: result.message.presence || "No bibliographic data found."
+          return
+        end
+
+        apply = Bibliographic::ApplyCandidate.new(
+          product: @product,
+          candidate: candidate,
+          actor: current_user,
+          overwrite_curated: params[:overwrite_curated] == "1"
+        )
+        Product.transaction do
+          apply.call
+          Audit::Recorder.record!(
+            action: "products.refresh",
+            outcome: "succeeded",
+            actor_user: current_user,
+            actor_label: current_user.display_name,
+            store: current_store,
+            subject: @product,
+            after_values: {
+              bibliographic_provider: candidate.provider,
+              bibliographic_provider_key: candidate.provider_key || candidate.isbn13,
+              applied_fields: apply.applied_fields,
+              overwrite_curated: params[:overwrite_curated] == "1"
+            }
+          )
+        end
+        redirect_to admin_product_path(@product), notice: "Bibliographic data refreshed."
+      end
+    rescue Bibliographic::ApplyCandidate::Error => e
+      redirect_to admin_product_path(@product), alert: e.message
+    end
+
     def destroy
       unless @product.draft?
         redirect_to admin_product_path(@product), alert: "Only draft products can be deleted."
@@ -178,7 +244,7 @@ module Admin
     private
 
     def set_product
-      @product = Product.find(params[:id])
+      @product = Product.includes(:publisher, product_contributions: :contributor).find(params[:id])
     end
 
     def load_form_options
@@ -212,7 +278,9 @@ module Admin
       permitted = params.require(:product).permit(
         :name, :subtitle, :description, :brand_name, :product_model, :merchandise_category_id,
         :list_price, :list_price_cents, :release_date, :status, :variant_option_name_1, :variant_option_name_2,
-        :industry_identifier, :lookup_code, :lock_version
+        :industry_identifier, :lookup_code, :lock_version, :publisher_name, :imprint, :edition, :binding,
+        :language_code, :page_count, :series_name, :series_position, :cover_image_url, :publication_year,
+        contribution_rows: [ :display_name, :role ]
       )
 
       if permitted.key?(:list_price) || params[:product]&.key?(:list_price)
@@ -228,10 +296,30 @@ module Admin
 
       %i[merchandise_category_id list_price_cents release_date subtitle description brand_name
          product_model variant_option_name_1 variant_option_name_2 industry_identifier
-         lookup_code].each do |key|
+         lookup_code publisher_name imprint edition binding language_code page_count series_name
+         series_position cover_image_url publication_year].each do |key|
         permitted[key] = nil if permitted[key].blank?
       end
+      permitted[:page_count] = permitted[:page_count].to_i if permitted[:page_count].present?
+      permitted[:publication_year] = permitted[:publication_year].to_i if permitted[:publication_year].present?
       permitted
+    end
+
+    def contribution_rows_from_params
+      rows = params.dig(:product, :contribution_rows)
+      return [] if rows.blank?
+
+      Array(rows).map { |row|
+        data = row.respond_to?(:to_unsafe_h) ? row.to_unsafe_h : row.to_h
+        data.stringify_keys.slice("display_name", "role")
+      }
+    end
+
+    def apply_candidate_to_product(product, candidate)
+      product.assign_attributes(candidate.product_attributes)
+      product.industry_identifier = candidate.isbn13
+      product.publisher_name = candidate.publisher_name
+      product.contribution_rows = candidate.contribution_rows
     end
 
     def render_form_with_money_error(template)

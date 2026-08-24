@@ -1,0 +1,77 @@
+<% content_for :title, "Find a book" %>
+
+<%= render "shared/breadcrumbs", crumbs: [
+  { name: "Home", path: root_path },
+  { name: "Products", path: admin_products_path },
+  { name: "Find a book" }
+] %>
+
+<%= render "shared/page_header",
+      title: "Find a book",
+      subtitle: "Search ShelfSense first, then ISBNdb for unknown titles" %>
+
+<%= form_with url: admin_product_catalog_searches_path, scope: :catalog_search, method: :post, class: "form" do |form| %>
+  <div class="form-field">
+    <%= form.label :q, "ISBN or title" %>
+    <%= form.text_field :q, value: @query, required: true, autocomplete: "off" %>
+  </div>
+  <div class="actions">
+    <%= action_submit(form, "Search", style: :solid, intent: :brand) %>
+    <%= action_link_to("Create blank product", new_admin_product_path(blank: 1), style: :ghost, intent: :neutral) %>
+  </div>
+<% end %>
+
+<% if @result %>
+  <% if @result.message.present? %>
+    <p class="flash flash--alert" role="alert"><%= @result.message %></p>
+  <% end %>
+
+  <% if @result.local_suggestions.present? %>
+    <section class="section surface">
+      <h2 class="section__title">Already in ShelfSense</h2>
+      <ul>
+        <% @result.local_suggestions.each do |product| %>
+          <li>
+            <%= link_to product.name, admin_product_path(product) %>
+            · <%= product.primary_identifier %>
+            <% if product.industry_identifier.present? %>
+              · <%= product.industry_identifier %>
+            <% end %>
+          </li>
+        <% end %>
+      </ul>
+    </section>
+  <% end %>
+
+  <% if @result.candidates.present? %>
+    <section class="section surface">
+      <h2 class="section__title">Bibliographic candidates</h2>
+      <% rows = @result.candidates.map { |candidate|
+           isbn = candidate.isbn13
+           lookup_key = isbn.present? ? "isbn:#{isbn}" : nil
+           action =
+             if isbn.present?
+               action_link_to(
+                 "Use this book",
+                 new_admin_product_path(lookup_key: lookup_key, isbn13: isbn),
+                 style: :solid,
+                 intent: :brand
+               )
+             else
+               "No ISBN"
+             end
+           [
+             candidate.title,
+             isbn,
+             Array(candidate.contributors).map { |row| row.stringify_keys["display_name"] }.compact.join(", "),
+             candidate.publisher_name,
+             format_money_cents(candidate.list_price_cents),
+             action
+           ]
+         } %>
+      <%= render "shared/data_table",
+            headers: [ "Title", "ISBN-13", "Authors", "Publisher", { text: "List price", class: "numeric" }, "Action" ],
+            rows: rows %>
+    </section>
+  <% end %>
+<% end %>

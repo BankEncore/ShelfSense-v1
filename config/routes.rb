@@ -31,6 +31,7 @@ Rails.application.routes.draw do
       member do
         post :discontinue
         post :reactivate
+        post :refresh_bibliography
       end
       resources :product_variants, shallow: true do
         member do
@@ -39,6 +40,7 @@ Rails.application.routes.draw do
         resources :supplier_variant_sources, only: %i[new create]
       end
     end
+    resources :product_catalog_searches, only: %i[new create]
     resources :merchandise_lookups, only: %i[new create]
     resources :merchandise_imports, only: %i[new create] do
       collection { get :template }

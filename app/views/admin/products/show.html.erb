@@ -79,6 +79,38 @@
         ["Brand", @product.brand_name],
         ["Model", @product.product_model],
         ["Release date", format_date(@product.release_date)],
+        ["Publication year", @product.publication_year],
+        ["Publisher", @product.publisher&.name],
+        ["Imprint", @product.imprint],
+        ["Edition", @product.edition],
+        ["Binding / format", @product.binding],
+        ["Language", @product.language_code],
+        ["Pages", @product.page_count],
+        ["Series", [ @product.series_name, @product.series_position ].compact_blank.join(" · ").presence],
+        ["Cover image URL", (
+          url = @product.cover_image_url.to_s.strip
+          if url.match?(%r{\Ahttps://}i)
+            safe_join([
+              image_tag(url, alt: "Cover", height: 80),
+              tag.br,
+              link_to(url, url, rel: "noreferrer noopener")
+            ])
+          elsif url.present?
+            url
+          end
+        )],
+        ["Contributors", (
+          if @product.product_contributions.any?
+            safe_join(@product.product_contributions.map { |row|
+              "#{row.contributor.display_name} (#{row.role.humanize})"
+            }, tag.br)
+          end
+        )],
+        ["Bibliographic source", (
+          if @product.bibliographic_provider.present?
+            "#{@product.bibliographic_provider} · #{@product.bibliographic_provider_key} · fetched #{format_timestamp(@product.bibliographic_fetched_at)}"
+          end
+        )],
         ["Variant option 1", @product.variant_option_name_1],
         ["Variant option 2", @product.variant_option_name_2]
       ] %>
@@ -89,6 +121,24 @@
     </div>
   <% end %>
 </section>
+
+<% if effective_permissions.include?("products.update") && (@product.industry_identifier.present? || @product.bibliographic_provider_key.present?) %>
+  <section class="section surface">
+    <h2 class="section__title">Refresh bibliographic data</h2>
+    <p class="muted">Default refresh updates non-curated fields from ISBNdb. Curated fields stay unless you confirm overwrite.</p>
+    <%= form_with url: refresh_bibliography_admin_product_path(@product), method: :post, class: "form" do |form| %>
+      <div class="form-field">
+        <label>
+          <%= check_box_tag :overwrite_curated, "1", false %>
+          Overwrite curated fields
+        </label>
+      </div>
+      <div class="actions">
+        <%= action_submit(form, "Refresh from ISBNdb", style: :outline, intent: :neutral) %>
+      </div>
+    <% end %>
+  </section>
+<% end %>
 
 <section class="section">
   <h2 class="section__title">Variants</h2>
