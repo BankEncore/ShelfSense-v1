@@ -101,11 +101,20 @@ Coordination with UDS-4: [phase7.1-uds-coordination.md](phase7.1-purchasing-poli
 
 > Authorized purchasing workflows gain justified ergonomics improvements without reopening Phase 7 core contracts or deferring higher-priority forward phases.
 
-## Phase 8 — Customer foundation refinement
+## Phase 8 — Customer foundation (MVP)
 
-**Status:** Proposed. **May run in parallel with Phase 9.**
+**Status:** Proposed. **May run in parallel with Phase 9.** Planning packet: [phase8-customer-foundation/](phase8-customer-foundation/README.md).
 
-Phase 7 created the minimum customer record required for requests. Phase 8 makes customer identity reliable enough for stored value and buyback.
+Phase 7 created the minimum customer record required for requests. Phase 8 concentrates on **reliable identification**, **essential contact methods**, **duplicate prevention and safe merge**, and **minimal lifecycle governance**—not CRM, marketing, multiple contacts, or stored-value ledger design.
+
+### Slices
+
+| Slice | Deliverable |
+|---|---|
+| **8.1** Identity and lookup | Required `display_name`; optional `given_name` / `family_name`; normalized search (partial name, exact phone/email) |
+| **8.2** Essential contact | Single email/phone; normalized values; `preferred_contact_method` with validation |
+| **8.3** Duplicates and merge | Suggestions on create/edit; transactional merge; `merged_into_customer_id` tombstone; `customer_requests` reassignment; merge audit |
+| **8.4** Lifecycle and governance | `active` / `inactive` / `merged`; policy doc for privacy/retention (no automation) |
 
 ### Build on what exists
 
@@ -113,33 +122,23 @@ Phase 7 created the minimum customer record required for requests. Phase 8 makes
 - Customer lookup, requests, reservations, special-order fulfillment, Register pickup
 - Customer and customer-request administrative screens
 
-### Add
-
-- Structured name fields where appropriate, retaining a usable display name
-- Multiple phone numbers, emails, and addresses
-- Preferred contact method; communication and receipt preferences
-- Customer status and lifecycle
-- Duplicate detection; customer merge with durable reference reassignment
-- Search normalization for names, phones, and emails
-- Basic operational notes with visibility rules
-- Privacy, retention, and audit policies
-- Stable eligibility for customer-owned stored-value accounts
-
-### Adjacent deferrals from Phase 7 (evaluate in planning packet)
-
-- **Customer tax exemption** — deferred from Phase 7; may land here or in an early POS policy slice
-- **Marketing, CRM, loyalty, segmentation** — remain deferred
-
 ### Explicitly defer
 
-- Marketing campaigns and sales leads
-- Complex segmentation and loyalty programs
-- Full CRM functionality
-- The consolidated customer-history workspace (Phase 13)
+- Multiple phone numbers, emails, and postal addresses
+- Receipt preferences; marketing consent; communication subscriptions
+- Complex customer statuses beyond active/inactive/merged
+- Note categories and fine-grained note visibility
+- Automated retention, anonymization, or privacy-request processing
+- **Customer tax exemption** — separate early POS policy slice, not Phase 8
+- Customer purchase history workspace (Phase 13); CRM, loyalty, segmentation
+
+### Stored-value boundary
+
+Phase 8 does not create stored-value accounts. It documents the identity contract for Phase 10: canonical UUID, active canonical customer for new financial relationships, merged-alias resolution, explicit financial merge in Phase 10. See [phase8-stored-value-boundary.md](phase8-customer-foundation/phase8-stored-value-boundary.md).
 
 **Deliverable:**
 
-> Staff can reliably identify or create the correct customer, maintain useful contact information, avoid duplicate accounts, and use that identity as the owner of requests and stored value.
+> Staff can quickly find or create the correct customer using name, phone, or email; the system warns about likely duplicates; authorized staff can safely merge duplicates without losing request history; and later customer-owned financial relationships can rely on one durable canonical identity.
 
 ## Phase 9 — Catalog and bibliographic enrichment
 
@@ -368,7 +367,7 @@ The following remain out of scope until a planning packet and ADR review justify
 | UDS-1–3 — Warm Parchment foundation | **Operationally complete** (`verified-automated`); see [uds-foundation-closeout-evidence.md](ux-design-system/uds-foundation-closeout-evidence.md) |
 | Phase 7.1 — Purchasing workflow closeout | **Complete** on `main` ([packet](phase7.1-purchasing-polish/README.md)) |
 | UDS-4 — Navigation and information architecture | **UDS-4.0–4.2 on `main`** ([uds-4-plan.md](ux-design-system/uds-4-plan.md)) |
-| Phase 8 — Customer foundation refinement | Next; parallel with 9 |
+| Phase 8 — Customer foundation (MVP) | Next; parallel with 9 |
 | Phase 9 — Catalog and bibliographic enrichment | Next; parallel with 8 |
 | Phase 10 — Stored value and financial event contract | After Phase 8 |
 | Phase 11 — Cash accountability completion | After Phase 10 |
