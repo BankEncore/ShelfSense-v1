@@ -40,5 +40,30 @@ module Customers
       assert_equal @alex.id, results.first.customer.id
       assert results.first.matched_former_customer
     end
+
+    test "merged mode scopes before limit so late aliases remain visible" do
+      survivor = Customer.create!(display_name: "Limit Survivor", email: "limit.survivor@example.com", phone: "555-700-0001")
+      late_alias = Customer.create!(display_name: "ZZZ Late Alias", email: "late.alias@example.com", phone: "555-700-0002")
+      Customers::MergeCustomers.call(
+        source: late_alias,
+        survivor: survivor,
+        actor: @actor,
+        reason: "limit test",
+        idempotency_key: SecureRandom.uuid_v7
+      )
+
+      # Create many canonical rows that sort before the late alias alphabetically.
+      5.times do |i|
+        Customer.create!(
+          display_name: "AAA Canonical #{i}",
+          email: "aaa#{i}@example.com",
+          phone: "555-710-000#{i}"
+        )
+      end
+
+      results = Customers::Search.call(query: nil, mode: :merged, limit: 3)
+      assert results.all? { |result| result.customer.merged? }
+      assert_includes results.map { |result| result.customer.id }, late_alias.id
+    end
   end
 end

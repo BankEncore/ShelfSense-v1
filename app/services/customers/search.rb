@@ -6,6 +6,7 @@ module Customers
   # Modes:
   # - :operational (default) — active canonical customers for new work
   # - :canonical — active and inactive canonical customers (default management index)
+  # - :merged — merged alias tombstones only (historical browse)
   # - :admin_index — all customers including merged tombstones (historical browse)
   class Search
     Result = Data.define(:customer, :matched_former_customer)
@@ -51,6 +52,8 @@ module Customers
       case @mode
       when :admin_index
         @scope
+      when :merged
+        @scope.merge(Customer.merged)
       when :canonical
         @scope.merge(Customer.canonical)
       else
@@ -66,10 +69,12 @@ module Customers
         exact_phone: Customers::NormalizeContact.phone(@query)
       }
 
-      direct_ids = Customer.where(match_sql, binds).pluck(:id)
+      # Tombstone browse: match only within the scoped relation (merged or all).
+      if @mode == :admin_index || @mode == :merged
+        return base_scope.where(match_sql, binds).pluck(:id)
+      end
 
-      # Historical browse may surface tombstones as their own rows.
-      return direct_ids if @mode == :admin_index
+      direct_ids = Customer.where(match_sql, binds).pluck(:id)
 
       # Operational / canonical: resolve alias matches to the survivor.
       alias_survivor_ids = Customer.merged.where(match_sql, binds).pluck(:merged_into_customer_id)
@@ -90,7 +95,8 @@ module Customers
     end
 
     def former_match_survivor_ids(survivor_ids)
-      return Set.new if @query.blank? || survivor_ids.empty? || @mode == :admin_index
+      return Set.new if @query.blank? || survivor_ids.empty?
+      return Set.new if @mode == :admin_index || @mode == :merged
 
       pattern = "%#{ActiveRecord::Base.sanitize_sql_like(@query)}%"
       Customer.merged

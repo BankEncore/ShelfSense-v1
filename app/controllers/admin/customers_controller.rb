@@ -10,9 +10,12 @@ module Admin
 
     def index
       @lifecycle = params[:lifecycle].presence_in(%w[canonical all merged]) || "canonical"
-      mode = @lifecycle == "canonical" ? :canonical : :admin_index
+      mode = case @lifecycle
+      when "canonical" then :canonical
+      when "merged" then :merged
+      else :admin_index
+      end
       results = Customers::Search.call(query: params[:q], mode: mode, limit: 500)
-      results = results.select { |result| result.customer.merged? } if @lifecycle == "merged"
       @search_results = results
       @customers = results.map(&:customer)
       @q = params[:q].to_s.strip.presence
