@@ -172,7 +172,7 @@ class PosCloseZTest < ApplicationSystemTestCase
     visit pos_register_enter_path(register_id: @register.id)
     fill_in "Opening float", with: opening_float
     click_on "Open register"
-    assert_text "SALE ENTRY"
+    assert_text "SALE ENTRY", wait: 10
   end
 
   def add_current_sku

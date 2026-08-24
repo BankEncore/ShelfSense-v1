@@ -26,7 +26,7 @@
     <% end %>
 
     <% if @register && @gate %>
-      <%= form_with url: pos_register_enter_path, method: :post, class: "pos-enter__form" do %>
+      <%= form_with url: pos_register_enter_path, method: :post, local: true, class: "pos-enter__form" do %>
         <%= hidden_field_tag :register_id, @register.id %>
         <% if @gate.occupied? %>
           <p id="occupied-register" role="alert">

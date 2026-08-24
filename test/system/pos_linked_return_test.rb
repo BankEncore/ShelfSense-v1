@@ -41,7 +41,7 @@ class PosLinkedReturnTest < ApplicationSystemTestCase
     select "Changed mind", from: "items_#{line.id}_reason_code"
     click_on "Add to register"
 
-    assert_text "RETURN"
+    assert_text "RETURN", wait: 10
     assert_text "Refund due"
     click_on "Refund (+)"
     assert_text "REFUND"
@@ -100,7 +100,7 @@ class PosLinkedReturnTest < ApplicationSystemTestCase
     check "item_#{line.id}_selected"
     select "Changed mind", from: "items_#{line.id}_reason_code"
     click_on "Add to register"
-    assert_text "Refund due"
+    assert_text "Refund due", wait: 10
     assert_selector "tr[data-direction='return']"
 
     field = find("#pos-command-field")
@@ -136,14 +136,14 @@ class PosLinkedReturnTest < ApplicationSystemTestCase
     visit pos_register_enter_path(register_id: @register.id)
     fill_in "Opening float", with: "0.00"
     click_on "Open register"
-    assert_text "SALE ENTRY"
+    assert_text "SALE ENTRY", wait: 10
   end
 
   def add_current_sku
     field = find("#pos-command-field")
     field.fill_in with: @variant.sku
     field.send_keys :enter
-    assert_text "Example Book"
+    assert_selector "tbody tr.is-selected", text: "Example Book", wait: 10
   end
 
   def format_signed(cents)

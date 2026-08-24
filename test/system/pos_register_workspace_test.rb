@@ -691,14 +691,14 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     visit pos_register_enter_path(register_id: @register.id)
     fill_in "Opening float", with: "0.00"
     click_on "Open register"
-    assert_text "SALE ENTRY"
+    assert_text "SALE ENTRY", wait: 10
   end
 
   def add_current_sku
     field = find("#pos-command-field")
     field.fill_in with: @variant.sku
     field.send_keys :enter
-    assert_text "Example Book"
+    assert_selector "tbody tr.is-selected", text: "Example Book", wait: 10
   end
 
   def command_field_top

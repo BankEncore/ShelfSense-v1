@@ -11,6 +11,11 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
   CHROME_BINARIES = %w[/usr/bin/chromium /usr/bin/chromium-browser /usr/bin/google-chrome].freeze
   CHROMEDRIVERS = %w[/usr/bin/chromedriver /usr/lib/chromium/chromedriver].freeze
 
+  # Parallel CI workers routinely need more than Capybara's 2s default for Turbo
+  # register enter / workspace morphs. "SALE ENTRY" / "Refund due" also appear in
+  # the POS JS bundle, so failed asserts report misleading non-visible matches.
+  Capybara.default_max_wait_time = 5
+
   chrome_bin = ENV["CHROME_BIN"].presence || CHROME_BINARIES.find { |path| File.executable?(path) }
   chromedriver = ENV["SE_CHROMEDRIVER"].presence || ENV["CHROMEDRIVER_PATH"].presence ||
     CHROMEDRIVERS.find { |path| File.executable?(path) }

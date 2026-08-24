@@ -194,6 +194,7 @@ export default class extends Controller {
 
   disconnect() {
     this.unbindFunctionKeyCapture()
+    if (this.hasChromeTarget) this.chromeTarget.inert = false
   }
 
   onKeydown(event) {

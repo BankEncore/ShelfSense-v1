@@ -133,7 +133,7 @@ class PosMixedReturnTest < ApplicationSystemTestCase
     visit pos_register_enter_path(register_id: @register.id)
     fill_in "Opening float", with: "0.00"
     click_on "Open register"
-    assert_text "SALE ENTRY"
+    assert_text "SALE ENTRY", wait: 10
   end
 
   def priced_variants(*prices)
