@@ -24,7 +24,7 @@ module Customers
     def call
       email_n = Customers::NormalizeContact.email(@attributes[:email])
       phone_n = Customers::NormalizeContact.phone(@attributes[:phone])
-      tokens = name_tokens(@attributes[:display_name])
+      tokens = name_tokens(search_display_name)
 
       candidates = {}
 
@@ -80,6 +80,18 @@ module Customers
 
     def excluded?(customer)
       @exclude_id.present? && customer.id == @exclude_id
+    end
+
+    # Prefer an explicit display_name; otherwise derive Family, Given so weak
+    # matching still runs when staff leave display_name blank.
+    def search_display_name
+      explicit = @attributes[:display_name].to_s.strip.presence
+      return explicit if explicit
+
+      Customer.derived_display_name(
+        family_name: @attributes[:family_name],
+        given_name: @attributes[:given_name]
+      )
     end
 
     def name_tokens(value)

@@ -138,7 +138,7 @@ module Admin
     end
 
     def search_customers(query)
-      Customers::Search.call(query: query, mode: :operational, limit: 25).map(&:customer)
+      Customers::Search.call(query: query, mode: :operational, limit: 25)
     end
 
     def search_merchandise(query)

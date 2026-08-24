@@ -9,9 +9,12 @@ module Admin
     before_action :reject_merged_mutation!, only: %i[edit update destroy]
 
     def index
-      results = Customers::Search.call(query: params[:q], mode: :admin_index, limit: 500)
-      @customers = results.map(&:customer)
+      @lifecycle = params[:lifecycle].presence_in(%w[canonical all merged]) || "canonical"
+      mode = @lifecycle == "canonical" ? :canonical : :admin_index
+      results = Customers::Search.call(query: params[:q], mode: mode, limit: 500)
+      results = results.select { |result| result.customer.merged? } if @lifecycle == "merged"
       @search_results = results
+      @customers = results.map(&:customer)
       @q = params[:q].to_s.strip.presence
     end
 
@@ -75,11 +78,7 @@ module Admin
         prospective.id = @customer.id
 
         suggestions = Customers::SuggestDuplicates.call(
-          attributes: {
-            display_name: prospective.display_name,
-            email: prospective.email,
-            phone: prospective.phone
-          },
+          attributes: suggestion_attributes_for(prospective),
           exclude_id: @customer.id
         )
         if suggestions.any? && !@acknowledge_duplicates
@@ -233,16 +232,12 @@ module Admin
     end
 
     def duplicate_check_params
-      params.permit(:display_name, :email, :phone).to_h
+      params.permit(:display_name, :given_name, :family_name, :email, :phone).to_h
     end
 
     def load_duplicate_suggestions
       attrs = if @customer&.persisted?
-        {
-          display_name: @customer.display_name,
-          email: @customer.email,
-          phone: @customer.phone
-        }
+        suggestion_attributes_for(@customer)
       else
         customer_params_for_suggestions
       end
@@ -255,18 +250,26 @@ module Admin
     end
 
     def customer_params_for_suggestions
-      params.fetch(:customer, {}).permit(:display_name, :email, :phone).to_h
+      params.fetch(:customer, {}).permit(
+        :display_name, :given_name, :family_name, :email, :phone
+      ).to_h
+    end
+
+    def suggestion_attributes_for(customer)
+      {
+        display_name: customer.display_name,
+        given_name: customer.given_name,
+        family_name: customer.family_name,
+        email: customer.email,
+        phone: customer.phone
+      }
     end
 
     def duplicate_block_needed?
       return false if @acknowledge_duplicates
 
       suggestions = Customers::SuggestDuplicates.call(
-        attributes: {
-          display_name: @customer.display_name,
-          email: @customer.email,
-          phone: @customer.phone
-        },
+        attributes: suggestion_attributes_for(@customer),
         exclude_id: @customer.id
       )
       @duplicate_suggestions = suggestions

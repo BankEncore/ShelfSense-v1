@@ -47,19 +47,24 @@
     <% if @customer_results.empty? %>
       <p role="status">No active customers matched. Try another name, contact detail, or identifier.</p>
     <% else %>
-      <% rows = @customer_results.map { |customer| [
-           customer.display_name,
-           customer.phone.presence || missing_value("No phone"),
-           customer.email.presence || missing_value("No email"),
-           customer.id,
-           action_link_to(
-             "Select",
-             new_admin_customer_request_path(customer_request: request_state.merge(customer_id: customer.id)),
-             style: :ghost,
-             intent: :neutral,
-             aria: { label: "Select #{customer.display_name}, #{customer.email.presence || customer.phone.presence || customer.id}" }
-           )
-         ] } %>
+      <% rows = @customer_results.map { |result|
+           customer = result.customer
+           name_label = customer.display_name
+           name_label = "#{name_label} (matched former customer record)" if result.matched_former_customer
+           [
+             name_label,
+             customer.phone.presence || missing_value("No phone"),
+             customer.email.presence || missing_value("No email"),
+             customer.id,
+             action_link_to(
+               "Select",
+               new_admin_customer_request_path(customer_request: request_state.merge(customer_id: customer.id)),
+               style: :ghost,
+               intent: :neutral,
+               aria: { label: "Select #{customer.display_name}, #{customer.email.presence || customer.phone.presence || customer.id}" }
+             )
+           ]
+         } %>
       <%= render "shared/data_table", headers: ["Name", "Phone", "Email", "Customer ID", "Action"], rows: rows %>
     <% end %>
   <% end %>

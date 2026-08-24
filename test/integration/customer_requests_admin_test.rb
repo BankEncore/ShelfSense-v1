@@ -52,6 +52,35 @@ class CustomerRequestsAdminTest < ActionDispatch::IntegrationTest
     assert_no_match(/Product variant ID/, response.body)
   end
 
+  test "customer lookup shows matched former customer record indication" do
+    survivor = Customer.create!(
+      display_name: "Survivor Lookup",
+      email: "survivor.lookup@example.com",
+      phone: "555-400-1000"
+    )
+    source = Customer.create!(
+      display_name: "Former Lookup",
+      email: "former.lookup@example.com",
+      phone: "555-400-2000"
+    )
+    Customers::MergeCustomers.call(
+      source: source,
+      survivor: survivor,
+      actor: @admin,
+      reason: "dedupe",
+      idempotency_key: SecureRandom.uuid_v7
+    )
+
+    sign_in_as("admin")
+    select_store
+
+    get customer_lookup_admin_customer_requests_path, params: { customer_q: "555-400-2000" }
+    assert_response :success
+    assert_includes response.body, "Survivor Lookup"
+    assert_includes response.body, "matched former customer record"
+    assert_includes response.body, survivor.id
+  end
+
   test "creating a customer returns to preserved request state" do
     sign_in_as("admin")
     select_store

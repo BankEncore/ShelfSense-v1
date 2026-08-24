@@ -49,6 +49,62 @@ class CustomersAdminTest < ActionDispatch::IntegrationTest
     assert_redirected_to admin_customer_path(Customer.find_by!(display_name: "Someone Else"))
   end
 
+  test "structured name only create still triggers weak duplicate warning" do
+    Customer.create!(display_name: "Jamie Lee Reader", email: "jamie.lee@example.com", phone: "555-222-3333")
+    sign_in_as("admin")
+
+    post admin_customers_path, params: {
+      customer: {
+        given_name: "Jamie",
+        family_name: "Lee",
+        email: "new.jamie@example.com"
+      }
+    }
+    assert_response :unprocessable_entity
+    assert_includes response.body, "Possible duplicates"
+    assert_nil Customer.find_by(email: "new.jamie@example.com")
+  end
+
+  test "structured name only update still triggers weak duplicate warning" do
+    existing = Customer.create!(display_name: "Jamie Lee Reader", email: "jamie.update@example.com", phone: "555-222-4444")
+    editing = Customer.create!(display_name: "Other Person", email: "other.update@example.com", phone: "555-222-5555")
+    sign_in_as("admin")
+
+    patch admin_customer_path(editing), params: {
+      customer: {
+        display_name: "",
+        given_name: "Jamie",
+        family_name: "Lee",
+        email: editing.email,
+        phone: editing.phone,
+        lock_version: editing.lock_version
+      }
+    }
+    assert_response :unprocessable_entity
+    assert_includes response.body, "Possible duplicates"
+    assert_equal "Other Person", editing.reload.display_name
+    assert_equal existing.display_name, "Jamie Lee Reader"
+  end
+
+  test "default index search resolves alias match to survivor" do
+    survivor = Customer.create!(display_name: "Canonical Survivor", email: "canon@example.com", phone: "555-333-0001")
+    source = Customer.create!(display_name: "Former Alias", email: "former@example.com", phone: "555-333-0002")
+    Customers::MergeCustomers.call(
+      source: source,
+      survivor: survivor,
+      actor: @admin,
+      reason: "dedupe",
+      idempotency_key: SecureRandom.uuid_v7
+    )
+    sign_in_as("admin")
+
+    get admin_customers_path, params: { q: "555-333-0002" }
+    assert_response :success
+    assert_includes response.body, "Canonical Survivor"
+    assert_includes response.body, "matched former record"
+    assert_not_includes response.body, ">Former Alias<"
+  end
+
   test "merge review and confirm merges customers" do
     source = Customer.create!(display_name: "Merge Source", email: "ms@example.com", phone: "555-800-0000")
     survivor = Customer.create!(display_name: "Merge Survivor", email: "mv@example.com", phone: "555-800-0001")

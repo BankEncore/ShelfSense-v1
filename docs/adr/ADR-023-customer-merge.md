@@ -94,7 +94,8 @@ Historical displays may show the originally recorded customer plus current canon
 
 ### 8. Alias search and visibility
 
-- **Operational lookup** (admin index, request create, POS customer pick): may match former name, phone, or email stored on a merged alias, but **returns the canonical survivor** with a “Matched former customer record” (or equivalent) indication. Merged aliases are excluded as independent duplicate candidates and cannot be selected as operational targets.
+- **Operational lookup** (default customer management index, request create, POS customer pick): may match former name, phone, or email stored on a merged alias, but **returns the canonical survivor** with a “Matched former customer record” (or equivalent) indication. Merged aliases are excluded as independent duplicate candidates and cannot be selected as operational targets.
+- **Customer management index default** lists canonical customers (active and inactive). Staff may switch a lifecycle filter to browse all rows or merged aliases only for historical/admin inspection; that filter is **not** the operational pick path.
 - **Admin/audit view:** a source tombstone may be opened directly for history and audit.
 - **Historical record:** may show the original identity reference plus current canonical identity where useful.
 

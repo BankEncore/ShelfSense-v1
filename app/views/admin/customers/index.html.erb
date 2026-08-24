@@ -18,6 +18,18 @@
     <%= text_field_tag :q, @q, placeholder: "Name, email, or phone" %>
   </div>
   <div class="form-field">
+    <%= label_tag :lifecycle, "Show" %>
+    <%= select_tag :lifecycle,
+          options_for_select(
+            [
+              [ "Canonical customers", "canonical" ],
+              [ "All including merged aliases", "all" ],
+              [ "Merged aliases only", "merged" ]
+            ],
+            @lifecycle
+          ) %>
+  </div>
+  <div class="form-field">
     <%= action_submit(form, "Search", style: :solid, intent: :brand) %>
   </div>
 <% end %>

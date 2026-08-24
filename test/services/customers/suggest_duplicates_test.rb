@@ -29,6 +29,21 @@ module Customers
       assert_equal :weak, suggestions.first.match_strength
     end
 
+    test "weak match derives display name from given and family when blank" do
+      suggestions = Customers::SuggestDuplicates.call(
+        attributes: {
+          display_name: "",
+          given_name: "Jamie",
+          family_name: "Lee",
+          email: nil,
+          phone: nil
+        }
+      )
+      assert_equal 1, suggestions.size
+      assert_equal :weak, suggestions.first.match_strength
+      assert_equal @existing.id, suggestions.first.customer.id
+    end
+
     test "excludes merged aliases as candidates" do
       survivor = Customer.create!(display_name: "Survivor", email: "s@example.com", phone: "555-999-9999")
       @existing.update!(active: false, merged_into_customer: survivor)

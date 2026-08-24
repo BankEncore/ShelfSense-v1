@@ -14,13 +14,10 @@ module Customers
     end
 
     def call
-      scope = CustomerRequest.where(
+      CustomerRequest.where(
         customer_id: @source.id,
         status: CustomerRequest::ACTIVE_STATUSES
-      )
-      count = scope.count
-      scope.update_all(customer_id: @survivor.id, updated_at: Time.current) if count.positive?
-      count
+      ).update_all(customer_id: @survivor.id, updated_at: Time.current)
     end
   end
 end

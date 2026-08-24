@@ -75,15 +75,17 @@ module Customers
       begin
         result = nil
         Customer.transaction do
-          lock_ids = ([ @source.id, @survivor.id ] + Customer.where(merged_into_customer_id: @source.id).pluck(:id)).uniq.sort
-          locked = lock_ids.index_with { |id| Customer.lock.find(id) }
-
-          source = locked.fetch(@source.id)
-          survivor = locked.fetch(@survivor.id)
-          aliases = locked.values.select { |c| c.merged_into_customer_id == source.id }
+          # Lock source and survivor first (deterministic UUID order) so competing
+          # merges that share either row cannot miss newly created aliases.
+          primary = [ @source.id, @survivor.id ].uniq.sort.index_with { |id| Customer.lock.find(id) }
+          source = primary.fetch(@source.id)
+          survivor = primary.fetch(@survivor.id)
 
           validate_merge!(source, survivor)
           assert_lock_versions!(source, survivor)
+
+          alias_ids = Customer.where(merged_into_customer_id: source.id).order(:id).pluck(:id)
+          aliases = alias_ids.map { |id| Customer.lock.find(id) }
 
           aliases.each do |alias_customer|
             alias_customer.update!(merged_into_customer_id: survivor.id)
