@@ -213,6 +213,28 @@ export default class extends Controller {
       return
     }
 
+    // Child pickers (product/variant/unit/open-price) must beat parent overlays
+    // (unlinked/search) when stacked on top.
+    if (this.productOverlayOpen()) {
+      this.onProductOverlayKeydown(event, key)
+      return
+    }
+
+    if (this.variantOverlayOpen()) {
+      this.onVariantOverlayKeydown(event, key)
+      return
+    }
+
+    if (this.unitOverlayOpen()) {
+      this.onUnitOverlayKeydown(event, key)
+      return
+    }
+
+    if (this.openPriceOverlayOpen()) {
+      this.onOpenPriceOverlayKeydown(event, key)
+      return
+    }
+
     if (this.unlinkedOverlayOpen()) {
       this.onUnlinkedOverlayKeydown(event, key)
       return
@@ -245,26 +267,6 @@ export default class extends Controller {
 
     if (this.pickupOverlayOpen()) {
       this.onPickupOverlayKeydown(event, key)
-      return
-    }
-
-    if (this.productOverlayOpen()) {
-      this.onProductOverlayKeydown(event, key)
-      return
-    }
-
-    if (this.variantOverlayOpen()) {
-      this.onVariantOverlayKeydown(event, key)
-      return
-    }
-
-    if (this.unitOverlayOpen()) {
-      this.onUnitOverlayKeydown(event, key)
-      return
-    }
-
-    if (this.openPriceOverlayOpen()) {
-      this.onOpenPriceOverlayKeydown(event, key)
       return
     }
 
@@ -1051,10 +1053,7 @@ export default class extends Controller {
     if (key === "Escape") {
       event.preventDefault()
       this.closeProductOverlay()
-      if (this.unlinkedPickerActive) {
-        this.unlinkedPickerActive = false
-        this.unlinkedSelection = null
-      }
+      this.abortUnlinkedPicker()
       return
     }
     if (key === "ArrowUp" || key === "ArrowDown") {
@@ -1104,10 +1103,7 @@ export default class extends Controller {
     if (key === "Escape") {
       event.preventDefault()
       this.closeVariantOverlay()
-      if (this.unlinkedPickerActive) {
-        this.unlinkedPickerActive = false
-        this.unlinkedSelection = null
-      }
+      this.abortUnlinkedPicker()
       return
     }
     if (key === "ArrowUp" || key === "ArrowDown") {
@@ -1161,10 +1157,7 @@ export default class extends Controller {
     if (key === "Escape") {
       event.preventDefault()
       this.closeUnitOverlay()
-      if (this.unlinkedPickerActive) {
-        this.unlinkedPickerActive = false
-        this.unlinkedSelection = null
-      }
+      this.abortUnlinkedPicker()
       return
     }
     if (key === "ArrowUp" || key === "ArrowDown") {
@@ -1746,10 +1739,21 @@ export default class extends Controller {
       this.unlinkedQuantityFieldTarget.disabled = fixed
     }
     if (this.hasUnlinkedApplyTarget) this.unlinkedApplyTarget.hidden = false
-    if (this.hasUnlinkedQuantityFieldTarget && !fixed) {
-      this.unlinkedQuantityFieldTarget.focus()
-    } else if (this.hasUnlinkedReasonFieldTarget) {
-      this.unlinkedReasonFieldTarget.focus()
+
+    const focusTarget = (this.hasUnlinkedQuantityFieldTarget && !fixed)
+      ? this.unlinkedQuantityFieldTarget
+      : (this.hasUnlinkedReasonFieldTarget && this.unlinkedReasonFieldTarget)
+    this.showOverlay(this.unlinkedOverlayTarget, focusTarget)
+  }
+
+  // Abandon a stacked merchandise picker opened from Return without receipt.
+  // Closes only the picker; keeps the unlinked overlay open and restores focus.
+  abortUnlinkedPicker() {
+    if (!this.unlinkedPickerActive) return
+    this.unlinkedPickerActive = false
+    this.unlinkedSelection = null
+    if (this.unlinkedOverlayOpen() && this.hasUnlinkedIdentifierFieldTarget) {
+      this.unlinkedIdentifierFieldTarget.focus()
     }
   }
 
@@ -1888,7 +1892,13 @@ export default class extends Controller {
   }
 
   activeOverlayElement() {
+    // Topmost child pickers first so Tab/focus traps match visible stacking when
+    // a picker opens above unlinked/search parents.
     const overlays = [
+      this.hasProductOverlayTarget && this.productOverlayTarget,
+      this.hasVariantOverlayTarget && this.variantOverlayTarget,
+      this.hasUnitOverlayTarget && this.unitOverlayTarget,
+      this.hasOpenPriceOverlayTarget && this.openPriceOverlayTarget,
       this.hasUnlinkedOverlayTarget && this.unlinkedOverlayTarget,
       this.hasReturnChooserOverlayTarget && this.returnChooserOverlayTarget,
       this.hasLinkedOverlayTarget && this.linkedOverlayTarget,
@@ -1896,10 +1906,6 @@ export default class extends Controller {
       this.hasOtherOverlayTarget && this.otherOverlayTarget,
       this.hasSearchOverlayTarget && this.searchOverlayTarget,
       this.hasPickupOverlayTarget && this.pickupOverlayTarget,
-      this.hasProductOverlayTarget && this.productOverlayTarget,
-      this.hasVariantOverlayTarget && this.variantOverlayTarget,
-      this.hasUnitOverlayTarget && this.unitOverlayTarget,
-      this.hasOpenPriceOverlayTarget && this.openPriceOverlayTarget,
       this.hasOverlayTarget && this.overlayTarget
     ]
     return overlays.find((el) => el && !el.hidden) || null
@@ -1917,8 +1923,10 @@ export default class extends Controller {
   hideOverlay(overlay) {
     if (!overlay) return
     overlay.hidden = true
-    if (this.hasChromeTarget) this.chromeTarget.inert = false
-    this.restoreFocus()
+    if (this.activeOverlayElement() == null) {
+      if (this.hasChromeTarget) this.chromeTarget.inert = false
+      this.restoreFocus()
+    }
   }
 
   clearOverlayError(overlay) {

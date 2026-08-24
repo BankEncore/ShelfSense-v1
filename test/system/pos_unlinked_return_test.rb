@@ -95,6 +95,62 @@ class PosUnlinkedReturnTest < ApplicationSystemTestCase
     assert unit.reload.on_hand?
   end
 
+  test "shared lookup opens product picker without Escape then posts the return" do
+    other = pos_sellable_variant(actor: @actor, tax_class: @tax, name: "Beta Shared Return")
+    open_quantity_stock(store: @store, variant: other, actor: @actor, quantity: 3)
+    @variant.product.update!(lookup_code: "UNL-SHARED")
+    other.product.update!(lookup_code: "UNL-SHARED")
+
+    open_register_as("admin")
+    open_unlinked_overlay
+
+    identifier = find("#pos-unlinked-identifier")
+    identifier.fill_in with: "unl-shared"
+    identifier.send_keys :enter
+
+    assert_selector "#pos_product_overlay", visible: true, wait: 5
+    assert_selector "#pos_unlinked_overlay", visible: true
+    assert_selector "#pos_product_overlay li", count: 2
+    assert page.evaluate_script("document.activeElement === document.querySelector('#pos_product_overlay li.is-selected')")
+
+    send_keys :enter
+
+    assert_no_selector "#pos_product_overlay", visible: true, wait: 5
+    assert_selector "#pos_unlinked_overlay", visible: true
+    assert_text "Current price", wait: 5
+    assert_text(/Example Book|Beta Shared Return/)
+    assert_equal 0, PosTransaction.working.find_by!(register: @register).pos_transaction_lines.count
+
+    select "Defective", from: "Return reason"
+    click_on "Add return"
+
+    assert_text "RETURN", wait: 10
+    assert_text "Unlinked return"
+    assert_equal 1, PosTransaction.working.find_by!(register: @register).pos_transaction_lines.count
+  end
+
+  test "Escape on stacked product picker leaves Return without receipt open" do
+    other = pos_sellable_variant(actor: @actor, tax_class: @tax, name: "Gamma Shared Return")
+    open_quantity_stock(store: @store, variant: other, actor: @actor, quantity: 2)
+    @variant.product.update!(lookup_code: "UNL-ESC")
+    other.product.update!(lookup_code: "UNL-ESC")
+
+    open_register_as("admin")
+    open_unlinked_overlay
+
+    identifier = find("#pos-unlinked-identifier")
+    identifier.fill_in with: "unl-esc"
+    identifier.send_keys :enter
+
+    assert_selector "#pos_product_overlay", visible: true, wait: 5
+    send_keys :escape
+
+    assert_no_selector "#pos_product_overlay", visible: true
+    assert_selector "#pos_unlinked_overlay", visible: true
+    assert_field "pos-unlinked-identifier"
+    assert_equal 0, PosTransaction.working.find_by!(register: @register).pos_transaction_lines.count
+  end
+
   private
 
   def open_register_as(username)
