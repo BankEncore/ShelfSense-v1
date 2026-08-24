@@ -155,13 +155,13 @@ Extends Phases 2 and 6.1; does not replace the product model. Policy: [ADR-024](
 
 ### Add
 
-- Contributors and contribution roles; publisher and imprint
-- Publication date, edition, binding/format, language, page count, series
-- Descriptions and cover references; additional industry identifiers where justified
-- External bibliographic providers
+- Contributor display names and roles; publisher/brand on `brand_name`; imprint
+- Publication date (with approximate flag), edition display text, product form, language, page count, series
+- Descriptions and local cover images; additional industry identifiers where justified
+- External bibliographic providers with reviewed apply
 - Search-result matching against existing products; candidate-product creation from external data
-- Field provenance and last-refresh information; staff-controlled overwrite and conflict rules
-- Background enrichment without silently changing curated data
+- Field provenance; staff-controlled selected-field apply
+- Subject schemes and headings without remapping merchandise categories
 
 The external lookup boundary returns **normalized candidate data**; the Product aggregate remains authoritative.
 

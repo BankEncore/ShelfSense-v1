@@ -72,12 +72,12 @@ class ProductCatalogEnrichmentTest < ActionDispatch::IntegrationTest
 
     created = Product.find_by!(industry_identifier: FIXTURE_ISBN13)
     assert created.primary_identifier.start_with?("222")
-    assert_equal "Ace", created.publisher.name
+    assert_equal "Ace", created.brand_name
     follow_redirect!
     assert_equal 1, created.product_contributions.count
-    assert_equal "Ursula K. Le Guin", created.product_contributions.first.contributor.display_name
+    assert_equal "Ursula K. Le Guin", created.product_contributions.first.display_name
     assert_select ".product-identity__contributors", text: /Ursula K. Le Guin/
-    assert_select "img.product-cover[src=?]", "https://images.isbndb.com/covers/81/25/9780441478125.jpg"
+    assert_select "img.product-cover", count: 0
     assert_select "dt", text: "Imprint", count: 0
     assert_select "dt", text: "Series", count: 0
     assert_match(/isbndb/, response.body)
@@ -87,14 +87,15 @@ class ProductCatalogEnrichmentTest < ActionDispatch::IntegrationTest
     assert_no_match(/ISBNDB_API_KEY|test-key|image_original|other_isbns/, payload)
   end
 
-  test "refresh does not overwrite curated list price without confirmation" do
+  test "refresh opens review and does not apply until selected fields are submitted" do
     product = Products::CreateFromCandidate.call(
       candidate: bibliographic_candidate,
       actor: @admin,
       attributes: { name: "Staff title", list_price_cents: 2500 }
     )
-    assert_includes product.bibliographic_curated_fields, "name"
-    assert_includes product.bibliographic_curated_fields, "list_price_cents"
+    assert_equal "staff", product.bibliographic_field_sources.dig("name", "source")
+    assert_equal "staff", product.bibliographic_field_sources.dig("list_price_cents", "source")
+    lock_before = product.lock_version
 
     sign_in_as("admin")
     stub_bibliographic_provider(FakeIsbnDbProvider.new(candidates: [ bibliographic_candidate ])) do
@@ -103,20 +104,16 @@ class ProductCatalogEnrichmentTest < ActionDispatch::IntegrationTest
       assert_match(/Refresh bibliographic data/, response.body)
 
       post refresh_bibliography_admin_product_path(product)
-      assert_redirected_to admin_product_path(product)
+      assert_response :redirect
+      follow_redirect!
+      assert_match(/Review bibliographic data/, response.body)
     end
 
     product.reload
     assert_equal "Staff title", product.name
     assert_equal 2500, product.list_price_cents
-    assert_equal "Paperback", product.binding
-
-    event = AuditEvent.where(action: "products.refresh", subject_id: product.id).last
-    assert_equal "isbndb", event.after_values["bibliographic_provider"]
-    assert_equal FIXTURE_ISBN13, event.after_values["bibliographic_provider_key"]
-    assert_includes event.after_values["applied_fields"], "binding"
-    assert_not_includes event.after_values["applied_fields"], "list_price_cents"
-    assert_no_match(/ISBNDB_API_KEY/, event.after_values.to_json)
+    assert_equal lock_before, product.lock_version
+    assert_nil AuditEvent.find_by(action: "products.refresh", subject_id: product.id)
   end
 
   test "associates cannot search the catalog or refresh bibliography" do
@@ -185,7 +182,7 @@ class ProductCatalogEnrichmentTest < ActionDispatch::IntegrationTest
     end
 
     created = Product.find_by!(industry_identifier: FIXTURE_ISBN13)
-    assert_equal [ "Ursula K. Le Guin" ], created.product_contributions.map { |row| row.contributor.display_name }
+    assert_equal [ "Ursula K. Le Guin" ], created.product_contributions.map(&:display_name)
   end
 
   test "sideline product show omits contributor subtitle and publication" do
@@ -201,7 +198,7 @@ class ProductCatalogEnrichmentTest < ActionDispatch::IntegrationTest
     assert_select ".product-identity__contributors", count: 0
     assert_select "h2", text: "Publication", count: 0
     assert_select "img.product-cover", count: 0
-    assert_select "dt", text: "Brand"
+    assert_select "dt", text: "Publisher / brand / manufacturer"
     assert_select "dd", text: "ShelfSense"
   end
 

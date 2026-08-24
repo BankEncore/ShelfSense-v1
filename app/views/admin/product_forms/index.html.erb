@@ -1,0 +1,26 @@
+<% content_for :title, "Product forms" %>
+
+<%= render "shared/breadcrumbs", crumbs: [
+  { name: "Home", path: root_path },
+  { name: "Product forms" }
+] %>
+
+<%= render "shared/page_header",
+      title: "Product forms",
+      subtitle: "Seeded format codes. Names and activity can be maintained; codes are immutable." %>
+
+<% if @product_forms.empty? %>
+  <%= render "shared/empty_state", title: "No product forms", body: "Seed the catalog to load the approved form list." %>
+<% else %>
+  <% rows = @product_forms.map { |form|
+       [
+         link_to(form.admin_label, admin_product_form_path(form)),
+         form.code,
+         form.display_order,
+         configuration_status_badge(form.active?)
+       ]
+     } %>
+  <%= render "shared/data_table",
+        headers: ["Name", "Code", "Display order", "Status"],
+        rows: rows %>
+<% end %>

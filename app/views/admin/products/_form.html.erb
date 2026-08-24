@@ -2,8 +2,15 @@
   <%= render "shared/form_errors", record: product, attribute_ids: { list_price: "product_list_price" } %>
   <%= form.hidden_field :lock_version %>
   <% if local_assigns[:candidate] %>
-    <%= hidden_field_tag :candidate_isbn13, candidate.isbn13 %>
-    <%= hidden_field_tag :candidate_lookup_key, "isbn:#{candidate.isbn13}" %>
+    <%= hidden_field_tag :candidate_id, candidate.candidate_id %>
+  <% end %>
+  <% if local_assigns[:require_create_confirmation] %>
+    <div class="form-field">
+      <label for="confirm_create_separately">
+        <%= check_box_tag :confirm_create_separately, "1", params[:confirm_create_separately] == "1", id: "confirm_create_separately" %>
+        Create as a new product
+      </label>
+    </div>
   <% end %>
 
   <%= render layout: "shared/form_section", locals: { title: "Identity", help: "ShelfSense assigns every product an immutable generated 222 primary identifier. Record the manufacturer GTIN and an optional lookup code here." } do %>
@@ -49,16 +56,20 @@
       <%= form.text_area :description, rows: 4 %>
     </div>
     <div class="form-field">
-      <%= form.label :brand_name, "Brand name" %>
+      <%= form.label :brand_name, local_assigns[:candidate] ? "Publisher" : product.brand_name_label %>
       <%= form.text_field :brand_name %>
     </div>
     <div class="form-field">
-      <%= form.label :product_model, "Model" %>
+      <%= form.label :product_model, "Edition / model" %>
       <%= form.text_field :product_model %>
     </div>
     <div class="form-field">
       <%= form.label :release_date %>
       <%= form.date_field :release_date %>
+    </div>
+    <div class="form-field">
+      <%= form.check_box :release_date_approximate %>
+      <%= form.label :release_date_approximate, "Approximate date" %>
     </div>
     <div class="form-field">
       <%= form.label :variant_option_name_1, "Variant option name 1" %>
@@ -72,20 +83,12 @@
 
   <%= render layout: "shared/form_section", locals: { title: "Bibliographic details", help: "Optional bookstore metadata. Leave blank for sidelines and other non-book merchandise." } do %>
     <div class="form-field">
-      <%= form.label :publisher_name, "Publisher" %>
-      <%= form.text_field :publisher_name, value: product.publisher_name.presence || product.publisher&.name %>
+      <%= form.label :product_form_id, "Product form" %>
+      <%= form.select :product_form_id, @product_forms || [], include_blank: "None" %>
     </div>
     <div class="form-field">
       <%= form.label :imprint %>
       <%= form.text_field :imprint %>
-    </div>
-    <div class="form-field">
-      <%= form.label :edition %>
-      <%= form.text_field :edition %>
-    </div>
-    <div class="form-field">
-      <%= form.label :binding, "Binding / format" %>
-      <%= form.text_field :binding %>
     </div>
     <div class="form-field">
       <%= form.label :language_code, "Language" %>
@@ -96,23 +99,15 @@
       <%= form.number_field :page_count, min: 1 %>
     </div>
     <div class="form-field">
-      <%= form.label :publication_year, "Publication year" %>
-      <%= form.number_field :publication_year, min: 1400, max: 2100 %>
-    </div>
-    <div class="form-field">
       <%= form.label :series_name, "Series" %>
       <%= form.text_field :series_name %>
     </div>
     <div class="form-field">
       <%= form.label :series_position, "Series position" %>
-      <%= form.text_field :series_position %>
-    </div>
-    <div class="form-field">
-      <%= form.label :cover_image_url, "Cover image URL" %>
-      <%= form.text_field :cover_image_url %>
+      <%= form.number_field :series_position, step: 0.001 %>
     </div>
     <% contribution_rows = Array(product.contribution_rows.presence || product.product_contributions.map { |row|
-         { "display_name" => row.contributor.display_name, "role" => row.role }
+         { "display_name" => row.display_name, "role" => row.role }
        }) %>
     <% contribution_rows += [ {} ] while contribution_rows.length < 3 %>
     <fieldset class="form-field">
@@ -126,6 +121,34 @@
         </div>
       <% end %>
     </fieldset>
+    <% subject_rows = Array(product.subject_rows.presence || product.product_subject_assignments.map { |row|
+         { "subject_heading_id" => row.subject_heading_id, "primary" => row.primary }
+       }) %>
+    <% subject_rows += [ {} ] while subject_rows.length < 3 %>
+    <fieldset class="form-field">
+      <legend>Subjects</legend>
+      <p class="field-help">Product screens show heading names. At most one primary heading per scheme.</p>
+      <% headings = Array(@subject_headings) %>
+      <% subject_rows.each_with_index do |row, index| %>
+        <% row = row.stringify_keys %>
+        <div class="form-field">
+          <%= select_tag "product[subject_rows][#{index}][subject_heading_id]",
+                options_from_collection_for_select(headings, :id, :admin_label, row["subject_heading_id"]),
+                include_blank: "None" %>
+          <label>
+            <%= check_box_tag "product[subject_rows][#{index}][primary]", "1", ActiveModel::Type::Boolean.new.cast(row["primary"]) %>
+            Primary for scheme
+          </label>
+        </div>
+      <% end %>
+    </fieldset>
+    <div class="form-field">
+      <%= form.label :cover_image, "Cover image" %>
+      <% if product.cover_image.attached? %>
+        <div><%= image_tag product.cover_image, alt: "Current cover", class: "product-cover product-cover--thumb" %></div>
+      <% end %>
+      <%= form.file_field :cover_image, accept: "image/jpeg,image/png,image/gif,image/webp" %>
+    </div>
   <% end %>
 
   <%= render layout: "shared/form_section", locals: { title: "Classification", help: "Merchandise category supplies the default merchandise class for newly created variants. Changing it does not rewrite existing variants." } do %>

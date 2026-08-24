@@ -1,0 +1,51 @@
+<% content_for :title, @product_form.name %>
+
+<%= render "shared/breadcrumbs", crumbs: [
+  { name: "Home", path: root_path },
+  { name: "Product forms", path: admin_product_forms_path },
+  { name: @product_form.name }
+] %>
+
+<% actions = [configuration_status_badge(@product_form.active?)] %>
+<% if effective_permissions.include?("product_forms.update") %>
+  <% actions << action_link_to("Edit", edit_admin_product_form_path(@product_form), style: :outline, intent: :neutral) %>
+<% end %>
+<% if effective_permissions.include?("product_forms.deactivate") && @product_form.active? %>
+  <% actions << action_button_to(
+       "Deactivate",
+       admin_product_form_path(@product_form),
+       style: :outline,
+       intent: :warning,
+       method: :delete
+     ) %>
+<% elsif effective_permissions.include?("product_forms.deactivate") && !@product_form.active? %>
+  <% actions << action_button_to(
+       "Reactivate",
+       reactivate_admin_product_form_path(@product_form),
+       style: :solid,
+       intent: :brand,
+       method: :post,
+       params: { lock_version: @product_form.lock_version }
+     ) %>
+<% end %>
+
+<%= render "shared/page_header",
+      title: @product_form.name,
+      subtitle: @product_form.code,
+      actions: safe_join(actions, " ") %>
+
+<section class="section surface">
+  <%= render "shared/definition_list", rows: [
+        ["Code", @product_form.code],
+        ["Name", @product_form.name],
+        ["Display order", @product_form.display_order],
+        ["Status", configuration_status_badge(@product_form.active?)]
+      ] %>
+</section>
+
+<%= render "shared/technical_details", rows: [
+      ["ID", @product_form.id],
+      ["Created", format_timestamp(@product_form.created_at)],
+      ["Updated", format_timestamp(@product_form.updated_at)],
+      ["Lock version", @product_form.lock_version]
+    ] %>

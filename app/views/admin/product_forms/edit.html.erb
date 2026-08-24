@@ -1,0 +1,11 @@
+<% content_for :title, "Edit product form" %>
+
+<%= render "shared/breadcrumbs", crumbs: [
+  { name: "Home", path: root_path },
+  { name: "Product forms", path: admin_product_forms_path },
+  { name: @product_form.name, path: admin_product_form_path(@product_form) },
+  { name: "Edit" }
+] %>
+
+<%= render "shared/page_header", title: "Edit product form", subtitle: @product_form.code %>
+<%= render "form", product_form: @product_form %>

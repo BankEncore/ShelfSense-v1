@@ -16,16 +16,23 @@ class Products::CreateFromCandidateTest < ActiveSupport::TestCase
     assert_match(/\A222\d{10}\z/, product.primary_identifier)
     assert_equal FIXTURE_ISBN13, product.industry_identifier
     assert_equal "The Left Hand of Darkness", product.name
-    assert_equal "Ace", product.publisher.name
+    assert_equal "Ace", product.brand_name
+    assert_equal "50th Anniversary", product.product_model
     assert_equal 1699, product.list_price_cents
+    assert_not product.cover_image.attached?
+    assert_nil product.binding if product.has_attribute?(:binding)
     assert_equal "isbndb", product.bibliographic_provider
+    assert_equal "isbndb", product.bibliographic_field_sources.dig("brand_name", "source")
+    assert_equal "en", product.language_code
+    assert product.release_date_approximate?
+    assert_equal Date.new(1969, 1, 1), product.release_date
     row = Identifiers::Registry.find_active(FIXTURE_ISBN13)
     assert_equal "product_industry", row.identifier_kind
     assert_equal product.id, row.product_id
     assert AuditEvent.exists?(action: "products.enrich", subject_id: product.id)
   end
 
-  test "marks only staff diffs from the candidate as curated" do
+  test "marks only staff diffs from the candidate as staff provenance" do
     product = Products::CreateFromCandidate.call(
       candidate: bibliographic_candidate,
       actor: @actor,
@@ -33,12 +40,14 @@ class Products::CreateFromCandidateTest < ActiveSupport::TestCase
         name: "Local display title",
         subtitle: "50th Anniversary Edition",
         list_price_cents: 1699,
-        publisher_name: "Ace",
+        brand_name: "Ace",
         contribution_rows: [ { "display_name" => "Ursula K. Le Guin", "role" => "author" } ]
       }
     )
 
-    assert_equal [ "name" ], product.bibliographic_curated_fields
+    assert_equal "staff", product.bibliographic_field_sources.dig("name", "source")
+    assert_equal "isbndb", product.bibliographic_field_sources.dig("subtitle", "source")
+    assert_equal "isbndb", product.bibliographic_field_sources.dig("contributions", "source")
   end
 
   test "falls back to candidate contributors when submitted rows are blank" do
@@ -53,8 +62,8 @@ class Products::CreateFromCandidateTest < ActiveSupport::TestCase
       }
     )
 
-    assert_equal [ "Ursula K. Le Guin" ], product.product_contributions.map { |row| row.contributor.display_name }
-    assert_not_includes product.bibliographic_curated_fields, "contributions"
+    assert_equal [ "Ursula K. Le Guin" ], product.product_contributions.map(&:display_name)
+    assert_equal "isbndb", product.bibliographic_field_sources.dig("contributions", "source")
   end
 
   test "rejects a candidate whose ISBN is already on a product" do

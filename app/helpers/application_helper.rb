@@ -84,7 +84,7 @@ module ApplicationHelper
 
   def product_contributor_credits(product)
     product.product_contributions.filter_map { |row|
-      name = row.contributor.display_name.to_s.strip
+      name = row.display_name.to_s.strip
       next if name.blank?
 
       row.role == "author" ? name : "#{name} (#{row.role.humanize})"

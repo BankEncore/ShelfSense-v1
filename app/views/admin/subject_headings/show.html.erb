@@ -1,0 +1,45 @@
+<% content_for :title, @subject_heading.name %>
+
+<%= render "shared/breadcrumbs", crumbs: [
+  { name: "Home", path: root_path },
+  { name: "Subject schemes", path: admin_subject_schemes_path },
+  { name: @subject_scheme.name, path: admin_subject_scheme_path(@subject_scheme) },
+  { name: @subject_heading.name }
+] %>
+
+<% actions = [configuration_status_badge(@subject_heading.active?)] %>
+<% if effective_permissions.include?("subject_headings.update") %>
+  <% actions << action_link_to("Edit", edit_admin_subject_scheme_subject_heading_path(@subject_scheme, @subject_heading), style: :outline, intent: :neutral) %>
+<% end %>
+<% if effective_permissions.include?("subject_headings.deactivate") && @subject_heading.active? %>
+  <% actions << action_button_to(
+       "Deactivate",
+       admin_subject_scheme_subject_heading_path(@subject_scheme, @subject_heading),
+       style: :outline,
+       intent: :warning,
+       method: :delete
+     ) %>
+<% elsif effective_permissions.include?("subject_headings.deactivate") && !@subject_heading.active? %>
+  <% actions << action_button_to(
+       "Reactivate",
+       reactivate_admin_subject_scheme_subject_heading_path(@subject_scheme, @subject_heading),
+       style: :solid,
+       intent: :brand,
+       method: :post,
+       params: { lock_version: @subject_heading.lock_version }
+     ) %>
+<% end %>
+
+<%= render "shared/page_header",
+      title: @subject_heading.name,
+      subtitle: [ @subject_scheme.name, @subject_heading.code ].compact.join(" · "),
+      actions: safe_join(actions, " ") %>
+
+<section class="section surface">
+  <%= render "shared/definition_list", rows: compact_definition_rows([
+        ["Scheme", @subject_scheme.name],
+        ["Code", @subject_heading.code],
+        ["Display order", @subject_heading.display_order],
+        ["Suggested merchandise class", @subject_heading.suggested_merchandise_class&.admin_label]
+      ]) %>
+</section>

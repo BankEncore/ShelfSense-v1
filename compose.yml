@@ -8,6 +8,7 @@ services:
     volumes:
       - .:/app
       - bundle:/bundle
+      - storage-data:/app/storage
     ports:
       - "3000:3000"
     environment:
@@ -38,3 +39,4 @@ services:
 volumes:
   bundle:
   postgres-data:
+  storage-data:

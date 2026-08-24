@@ -1,0 +1,12 @@
+<% content_for :title, "Edit subject heading" %>
+
+<%= render "shared/breadcrumbs", crumbs: [
+  { name: "Home", path: root_path },
+  { name: "Subject schemes", path: admin_subject_schemes_path },
+  { name: @subject_scheme.name, path: admin_subject_scheme_path(@subject_scheme) },
+  { name: @subject_heading.name, path: admin_subject_scheme_subject_heading_path(@subject_scheme, @subject_heading) },
+  { name: "Edit" }
+] %>
+
+<%= render "shared/page_header", title: "Edit subject heading", subtitle: @subject_heading.code %>
+<%= render "form", subject_scheme: @subject_scheme, subject_heading: @subject_heading %>

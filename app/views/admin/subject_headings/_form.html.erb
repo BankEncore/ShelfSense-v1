@@ -1,0 +1,37 @@
+<%= form_with model: [:admin, subject_scheme, subject_heading], class: "form" do |form| %>
+  <%= render "shared/form_errors", record: subject_heading %>
+  <%= form.hidden_field :lock_version %>
+
+  <%= render layout: "shared/form_section", locals: { title: "Heading" } do %>
+    <div class="form-field">
+      <%= form.label :code %>
+      <%= form.text_field :code %>
+      <span class="field-help"><%= subject_scheme.key == "bisac" ? "Required for BISAC headings." : "Optional for house headings." %></span>
+    </div>
+    <div class="form-field">
+      <%= form.label :name %>
+      <%= form.text_field :name, required: true %>
+    </div>
+    <div class="form-field">
+      <%= form.label :display_order %>
+      <%= form.number_field :display_order %>
+    </div>
+    <div class="form-field">
+      <%= form.label :suggested_merchandise_class_id, "Suggested merchandise class" %>
+      <%= form.select :suggested_merchandise_class_id,
+            MerchandiseClass.options_for_select(@merchandise_classes),
+            include_blank: "None" %>
+      <span class="field-help">Prefill hint only. Changing this does not reclassify existing products or variants.</span>
+    </div>
+  <% end %>
+
+  <div class="actions">
+    <%= action_submit(
+          form,
+          subject_heading.persisted? ? "Save heading" : "Create heading",
+          style: :solid,
+          intent: :brand
+        ) %>
+    <%= action_link_to("Cancel", admin_subject_scheme_path(subject_scheme), style: :ghost, intent: :neutral) %>
+  </div>
+<% end %>

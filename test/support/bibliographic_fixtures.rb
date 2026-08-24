@@ -15,9 +15,10 @@ module BibliographicFixtures
         publisher_name: "Ace",
         edition: "50th Anniversary",
         binding: "Paperback",
-        language_code: "eng",
+        language_code: "en",
         page_count: 304,
-        publication_year: 1969,
+        release_date: Date.new(1969, 1, 1),
+        release_date_approximate: true,
         description: "A genderless world.",
         cover_image_url: "https://images.isbndb.com/covers/81/25/9780441478125.jpg",
         list_price_cents: 1699,
@@ -112,5 +113,16 @@ module BibliographicFixtures
     yield
   ensure
     Bibliographic::Search.provider_factory = original
+  end
+
+  def stub_cover_download(result)
+    klass = Bibliographic::CoverDownloader
+    singleton = klass.singleton_class
+    singleton.alias_method :__original_call, :call
+    singleton.define_method(:call) { |**_| result }
+    yield
+  ensure
+    singleton.alias_method :call, :__original_call
+    singleton.remove_method :__original_call
   end
 end

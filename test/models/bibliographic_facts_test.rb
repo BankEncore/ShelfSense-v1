@@ -13,22 +13,15 @@ class BibliographicFactsTest < ActiveSupport::TestCase
       actor: @actor
     )
 
-    assert_nil product.publisher_id
-    assert_nil product.binding
     assert_nil product.page_count
     assert_equal "ShelfBrand", product.brand_name
     assert_empty product.product_contributions
+    assert_equal "staff", product.bibliographic_field_sources.dig("brand_name", "source")
+    assert_equal "staff", product.bibliographic_field_sources.dig("name", "source")
+    assert_nil product.bibliographic_field_sources["status"]
   end
 
-  test "publisher find-or-create reuses a normalized name" do
-    first = Publisher.find_or_create_normalized!("  Ace  Books ")
-    second = Publisher.find_or_create_normalized!("ACE BOOKS")
-
-    assert_equal first.id, second.id
-    assert_equal "ace books", first.name_normalized
-  end
-
-  test "contribution uniqueness is per product, contributor, and role" do
+  test "contribution uniqueness is per product, display name, and role" do
     product = Products::Create.call(
       attributes: {
         name: "Illustrated",
@@ -43,7 +36,7 @@ class BibliographicFactsTest < ActiveSupport::TestCase
 
     assert_equal 2, product.product_contributions.count
     duplicate = product.product_contributions.build(
-      contributor: product.contributors.first,
+      display_name: "Ada Lovelace",
       role: "author",
       position: 9
     )
@@ -51,6 +44,20 @@ class BibliographicFactsTest < ActiveSupport::TestCase
     assert_raises(ActiveRecord::RecordNotUnique) do
       duplicate.save(validate: false)
     end
+  end
+
+  test "unknown contributor roles are rejected" do
+    error = assert_raises(Products::Create::Error) do
+      Products::Create.call(
+        attributes: {
+          name: "Unknown role",
+          status: "draft",
+          contribution_rows: [ { "display_name" => "Ada", "role" => "foreword" } ]
+        },
+        actor: @actor
+      )
+    end
+    assert_match(/unknown contributor role/i, error.message)
   end
 
   test "optimistic locking still rejects a stale product update" do
@@ -74,18 +81,35 @@ class BibliographicFactsTest < ActiveSupport::TestCase
     end
   end
 
-  test "updating a bibliographic field marks it curated" do
+  test "updating one bibliographic field records staff provenance without rewriting others" do
     product = Products::Create.call(
-      attributes: { name: "To Curate", status: "draft", binding: "Paperback" },
+      attributes: { name: "To Curate", status: "draft", brand_name: "Ace", imprint: "Tor" },
       actor: @actor
     )
+    original_brand = product.bibliographic_field_sources["brand_name"]
 
     Products::Update.call(
       product: product,
-      attributes: { binding: "Hardcover", lock_version: product.lock_version },
+      attributes: { imprint: "Orb", lock_version: product.lock_version },
       actor: @actor
     )
 
-    assert_includes product.reload.bibliographic_curated_fields, "binding"
+    product.reload
+    assert_equal "staff", product.bibliographic_field_sources.dig("imprint", "source")
+    assert_equal original_brand, product.bibliographic_field_sources["brand_name"]
+  end
+
+  test "unknown provenance keys are rejected" do
+    error = assert_raises(Products::Create::Error) do
+      Products::Create.call(
+        attributes: {
+          name: "Bad provenance",
+          status: "draft",
+          bibliographic_field_sources: { "not_a_field" => { "source" => "staff", "applied_at" => Time.current.iso8601 } }
+        },
+        actor: @actor
+      )
+    end
+    assert_match(/unknown bibliographic field/i, error.message)
   end
 end

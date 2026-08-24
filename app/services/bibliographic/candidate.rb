@@ -3,9 +3,9 @@
 module Bibliographic
   class Candidate
     ATTRS = %i[
-      isbn13 title subtitle contributors publisher_name imprint edition binding
-      language_code page_count series_name series_position publication_year release_date
-      description cover_image_url list_price_cents provider provider_key fetched_at
+      candidate_id isbn13 title subtitle contributors publisher_name imprint edition binding
+      language_code page_count series_name series_position release_date release_date_approximate
+      description cover_image_url list_price_cents product_form_code subjects provider provider_key fetched_at
     ].freeze
 
     attr_accessor(*ATTRS)
@@ -13,13 +13,17 @@ module Bibliographic
     def initialize(**attrs)
       ATTRS.each { |key| public_send("#{key}=", attrs[key]) }
       self.contributors = Array(contributors)
+      self.subjects = Array(subjects)
       self.provider ||= "isbndb"
       self.fetched_at ||= Time.current
+      self.candidate_id ||= SecureRandom.uuid
+      self.release_date_approximate = !!release_date_approximate
     end
 
     def to_h
       ATTRS.index_with { |key| public_send(key) }.merge(
         "contributors" => contributors.map { |row| self.class.stringify(row) },
+        "subjects" => Array(subjects),
         "release_date" => release_date&.iso8601,
         "fetched_at" => fetched_at&.iso8601
       ).transform_keys(&:to_s)
@@ -28,6 +32,7 @@ module Bibliographic
     def self.from_h(hash)
       data = (hash || {}).stringify_keys
       new(
+        candidate_id: data["candidate_id"],
         isbn13: data["isbn13"],
         title: data["title"],
         subtitle: data["subtitle"],
@@ -40,11 +45,13 @@ module Bibliographic
         page_count: data["page_count"],
         series_name: data["series_name"],
         series_position: data["series_position"],
-        publication_year: data["publication_year"],
         release_date: parse_date(data["release_date"]),
+        release_date_approximate: data["release_date_approximate"],
         description: data["description"],
         cover_image_url: data["cover_image_url"],
         list_price_cents: data["list_price_cents"],
+        product_form_code: data["product_form_code"],
+        subjects: Array(data["subjects"]),
         provider: data["provider"],
         provider_key: data["provider_key"],
         fetched_at: parse_time(data["fetched_at"])
@@ -56,16 +63,15 @@ module Bibliographic
         name: title,
         subtitle: subtitle,
         description: description,
+        brand_name: publisher_name,
         imprint: imprint,
-        edition: edition,
-        binding: binding,
+        product_model: edition,
         language_code: language_code,
         page_count: page_count,
         series_name: series_name,
         series_position: series_position,
-        publication_year: publication_year,
         release_date: release_date,
-        cover_image_url: cover_image_url,
+        release_date_approximate: release_date_approximate,
         list_price_cents: list_price_cents
       }.compact
     end

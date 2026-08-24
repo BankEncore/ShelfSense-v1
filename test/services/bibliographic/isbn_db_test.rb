@@ -17,17 +17,20 @@ class Bibliographic::IsbnDbTest < ActiveSupport::TestCase
     assert_equal [ { "display_name" => "Ursula K. Le Guin", "role" => "author" } ], candidate.contributors
     assert_equal "Ace", candidate.publisher_name
     assert_equal "Paperback", candidate.binding
-    assert_equal "eng", candidate.language_code
+    assert_equal "en", candidate.language_code
     assert_equal 304, candidate.page_count
-    assert_equal 1969, candidate.publication_year
-    assert_nil candidate.release_date
+    assert_equal Date.new(1969, 1, 1), candidate.release_date
+    assert candidate.release_date_approximate
     assert_equal 1699, candidate.list_price_cents
     assert_equal "https://images.isbndb.com/covers/81/25/9780441478125.jpg", candidate.cover_image_url
     assert_not_includes candidate.to_h.values.flatten, "https://images.isbndb.com/original/expires"
-    assert_nil candidate.product_attributes[:brand_name]
+    assert_equal "Ace", candidate.product_attributes[:brand_name]
+    assert_equal "50th Anniversary", candidate.product_attributes[:product_model]
+    assert_nil candidate.product_attributes[:binding]
+    assert_nil candidate.product_attributes[:cover_image_url]
   end
 
-  test "year-month-day publication fills release_date; year-only does not invent January 1" do
+  test "year-month-day publication fills release_date; year-only is approximate" do
     http = FakeIsbnDbHttp.new(
       responses: {
         "book/#{FIXTURE_ISBN13}" => [ 200, { "book" => isbndb_book_payload("date_published" => "1969-03-14") } ]
@@ -35,7 +38,7 @@ class Bibliographic::IsbnDbTest < ActiveSupport::TestCase
     )
     candidate = Bibliographic::Providers::IsbnDb.new(http: http).find_by_isbn(FIXTURE_ISBN13).first
     assert_equal Date.new(1969, 3, 14), candidate.release_date
-    assert_equal 1969, candidate.publication_year
+    assert_not candidate.release_date_approximate
   end
 
   test "returns empty on 404" do

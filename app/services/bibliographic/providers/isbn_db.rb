@@ -7,18 +7,9 @@ module Bibliographic
   module Providers
     class IsbnDb
       LANGUAGE_MAP = {
-        "english" => "eng",
-        "eng" => "eng",
-        "en" => "eng",
-        "french" => "fra",
-        "fra" => "fra",
-        "fr" => "fra",
-        "spanish" => "spa",
-        "spa" => "spa",
-        "es" => "spa",
-        "german" => "deu",
-        "deu" => "deu",
-        "de" => "deu"
+        "english" => "en",
+        "eng" => "en",
+        "en" => "en"
       }.freeze
 
       def initialize(http: Bibliographic::HttpClient.new)
@@ -73,24 +64,51 @@ module Bibliographic
           isbn13: isbn13,
           title: book["title"].to_s.presence,
           subtitle: subtitle_from(book),
-          contributors: Array(book["authors"]).filter_map { |name|
-            next if name.blank?
-
-            { "display_name" => name.to_s.strip, "role" => "author" }
-          },
+          contributors: map_authors(book),
           publisher_name: book["publisher"].to_s.presence,
           edition: book["edition"].to_s.presence,
           binding: book["binding"].to_s.presence,
           language_code: normalize_language(book["language"]),
           page_count: book["pages"].presence&.to_i&.then { |n| n.positive? ? n : nil },
-          publication_year: date[:year],
+          series_name: book["series"].to_s.presence || book["series_name"].to_s.presence,
+          series_position: parse_series_position(book["series_position"] || book["volume"]),
           release_date: date[:date],
-          description: book["synopsis"].presence || book["overview"].presence,
-          cover_image_url: book["image"].to_s.presence,
+          release_date_approximate: date[:approximate],
+          description: Bibliographic::PlainTextCleaner.call(book["synopsis"].presence || book["overview"]),
+          cover_image_url: https_image(book["image"]),
           list_price_cents: Bibliographic::Msrp.to_cents(book["msrp"]),
+          product_form_code: Bibliographic::ProductFormMapper.code_for(book["binding"]),
+          subjects: map_subjects(book["subjects"]),
           provider: "isbndb",
           provider_key: isbn13
         )
+      end
+
+      def map_authors(book)
+        Array(book["authors"]).filter_map do |entry|
+          if entry.is_a?(Hash)
+            data = entry.stringify_keys
+            name = data["name"].presence || data["display_name"].presence
+            next if name.blank?
+
+            { "display_name" => name.to_s.strip, "role" => Bibliographic::ContributorRole.map!(data["role"]) }
+          else
+            next if entry.blank?
+
+            { "display_name" => entry.to_s.strip, "role" => "author" }
+          end
+        end
+      end
+
+      def map_subjects(raw)
+        Array(raw).filter_map do |entry|
+          if entry.is_a?(Hash)
+            data = entry.stringify_keys
+            data["name"].presence || data["code"].presence || data["text"].presence
+          else
+            entry.to_s.strip.presence
+          end
+        end
       end
 
       def subtitle_from(book)
@@ -113,8 +131,7 @@ module Bibliographic
       def normalize_language(raw)
         return if raw.blank?
 
-        key = raw.to_s.strip.downcase
-        LANGUAGE_MAP[key] || (key.match?(/\A[a-z]{2,3}\z/) ? key : nil)
+        LANGUAGE_MAP[raw.to_s.strip.downcase]
       end
 
       def parse_publication(raw)
@@ -122,16 +139,32 @@ module Bibliographic
         return {} if text.blank?
 
         if text.match?(/\A\d{4}-\d{2}-\d{2}\z/)
-          { date: Date.iso8601(text), year: text[0, 4].to_i }
+          { date: Date.iso8601(text), approximate: false }
         elsif text.match?(/\A\d{4}-\d{2}\z/)
-          { year: text[0, 4].to_i }
+          year, month = text.split("-").map(&:to_i)
+          { date: Date.new(year, month, 1), approximate: true }
         elsif text.match?(/\A\d{4}\z/)
-          { year: text.to_i }
+          { date: Date.new(text.to_i, 1, 1), approximate: true }
         else
           {}
         end
       rescue ArgumentError
         {}
+      end
+
+      def parse_series_position(raw)
+        text = raw.to_s.strip
+        return if text.blank?
+        return unless text.match?(/\A-?\d+(?:\.\d+)?\z/)
+
+        BigDecimal(text)
+      rescue ArgumentError
+        nil
+      end
+
+      def https_image(url)
+        text = url.to_s.strip
+        text if text.match?(%r{\Ahttps://}i)
       end
     end
   end

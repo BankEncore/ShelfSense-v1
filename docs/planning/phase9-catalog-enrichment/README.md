@@ -2,6 +2,8 @@
 
 Status: **Implemented** (August 2026). After Phase 8 on `main`. Phase 10 may start in parallel but is not the primary stream.
 
+Remediation: [phase9-remediation.md](phase9-remediation.md). Product forms: [product-forms-seed.md](product-forms-seed.md).
+
 | Document | Purpose |
 |---|---|
 | [phase9-plan.md](phase9-plan.md) | Goal, slices, deferrals, acceptance, UX adoption |

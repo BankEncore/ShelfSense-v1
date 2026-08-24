@@ -24,6 +24,7 @@ module Phase2Fixtures
     bootstrap ||= bootstrap!
     bootstrap[:administrator]
   end
+  alias actor_user actor_user
 
   def external_isbn13
     Identifiers::Ean13.complete("978", "123456789")

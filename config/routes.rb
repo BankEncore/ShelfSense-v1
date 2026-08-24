@@ -27,11 +27,25 @@ Rails.application.routes.draw do
     resources :merchandise_conditions do
       member { post :reactivate }
     end
+    resources :product_forms, except: %i[new create] do
+      member { post :reactivate }
+    end
+    resources :subject_schemes, except: %i[new create destroy] do
+      resources :subject_headings do
+        member { post :reactivate }
+        collection do
+          get :import
+          post :import, action: :process_import
+        end
+      end
+    end
     resources :products do
       member do
         post :discontinue
         post :reactivate
         post :refresh_bibliography
+        get :bibliographic_review
+        post :apply_bibliography
       end
       resources :product_variants, shallow: true do
         member do

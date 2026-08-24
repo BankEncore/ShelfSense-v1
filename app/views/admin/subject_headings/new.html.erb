@@ -1,0 +1,11 @@
+<% content_for :title, "New subject heading" %>
+
+<%= render "shared/breadcrumbs", crumbs: [
+  { name: "Home", path: root_path },
+  { name: "Subject schemes", path: admin_subject_schemes_path },
+  { name: @subject_scheme.name, path: admin_subject_scheme_path(@subject_scheme) },
+  { name: "New heading" }
+] %>
+
+<%= render "shared/page_header", title: "New subject heading", subtitle: @subject_scheme.name %>
+<%= render "form", subject_scheme: @subject_scheme, subject_heading: @subject_heading %>

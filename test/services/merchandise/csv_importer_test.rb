@@ -82,6 +82,8 @@ class Merchandise::CsvImporterTest < ActiveSupport::TestCase
     assert_empty updated.errors
     assert_equal 1, updated.updated_products
     assert_equal "Industry Book Renamed", product.reload.name
+    assert_equal "staff", product.bibliographic_field_sources.dig("name", "source")
+    assert_nil product.bibliographic_field_sources["subtitle"]
   end
 
   test "lookup code locates one product and stores uppercase" do

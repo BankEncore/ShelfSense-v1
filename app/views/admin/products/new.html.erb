@@ -13,4 +13,39 @@
   <p class="muted"><%= link_to "Look up a book first", new_admin_product_catalog_search_path %></p>
 <% end %>
 
-<%= render "form", product: @product, creating: true, candidate: @candidate %>
+<% if @possible_matches && (@possible_matches.strong.any? || @possible_matches.weak.any? || @possible_matches.exact_products.any?) %>
+  <section class="section surface" aria-label="Possible matches">
+    <h2 class="section__title">Possible matches in ShelfSense</h2>
+    <p>Review existing products before creating a separate record. Duplicate merge is not available.</p>
+    <% if @possible_matches.exact_products.any? %>
+      <h3 class="section__title">Exact identifier</h3>
+      <ul>
+        <% @possible_matches.exact_products.each do |product| %>
+          <li><%= link_to product.name, admin_product_path(product) %> · <%= product.industry_identifier %></li>
+        <% end %>
+      </ul>
+    <% end %>
+    <% if @possible_matches.strong.any? %>
+      <h3 class="section__title">Strong possible matches</h3>
+      <ul>
+        <% @possible_matches.strong.each do |product| %>
+          <li><%= link_to product.name, admin_product_path(product) %> · <%= product.primary_identifier %></li>
+        <% end %>
+      </ul>
+    <% end %>
+    <% if @possible_matches.weak.any? %>
+      <h3 class="section__title">Weak possible matches</h3>
+      <ul>
+        <% @possible_matches.weak.each do |product| %>
+          <li><%= link_to product.name, admin_product_path(product) %> · <%= product.primary_identifier %></li>
+        <% end %>
+      </ul>
+    <% end %>
+  </section>
+<% end %>
+
+<%= render "form",
+      product: @product,
+      creating: true,
+      candidate: @candidate,
+      require_create_confirmation: @possible_matches && (@possible_matches.strong.any? || @possible_matches.weak.any? || @possible_matches.exact_products.any?) %>

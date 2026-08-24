@@ -56,6 +56,8 @@ module Installation
         settings = create_settings!
         system_user = create_system_user!
         Authorization::PermissionCatalog.seed!(granted_by: system_user)
+        ProductForms::Catalog.seed!
+        SubjectSchemes::Catalog.seed!
         Inventory::AdjustmentReasons.seed!
         Pos::TenderTypes.seed!
 

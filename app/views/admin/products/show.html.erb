@@ -56,7 +56,7 @@
   <% subtitle_parts << tag.span(contributor_credits.join(", "), class: "product-identity__contributors") %>
 <% end %>
 <% subtitle_parts << "Primary identifier #{@product.primary_identifier}" %>
-<% cover_url = https_image_url(@product.cover_image_url) %>
+<% cover_url = @product.cover_image.attached? ? url_for(@product.cover_image) : https_image_url(@product.try(:cover_image_url)) %>
 <% identity_rows = compact_definition_rows([
      ["Industry identifier (GTIN / ISBN / UPC)", @product.industry_identifier],
      ["Lookup code", (
@@ -74,20 +74,24 @@
          @product.merchandise_category&.admin_label
      )],
      ["Subtitle", @product.subtitle],
-     ["Brand", @product.brand_name],
-     ["Model", @product.product_model],
+     ["Publisher / brand / manufacturer", @product.brand_name],
+     ["Edition / model", @product.product_model],
+     ["Product form", @product.product_form&.name],
+     ["Binding (legacy)", @product.try(:binding_legacy)],
      ["Variant options", [ @product.variant_option_name_1, @product.variant_option_name_2 ].compact_blank.join(" · ").presence]
    ]) %>
 <% publication_rows = compact_definition_rows([
-     ["Publisher", @product.publisher&.name],
      ["Imprint", @product.imprint],
-     ["Edition", @product.edition],
-     ["Binding / format", @product.binding],
      ["Language", @product.language_code],
      ["Pages", @product.page_count],
      ["Series", [ @product.series_name, @product.series_position ].compact_blank.join(" · ").presence],
-     ["Publication year", @product.publication_year],
-     ["Release date", (@product.release_date.present? ? format_date(@product.release_date) : nil)]
+     ["Subjects", @product.subject_headings.map(&:name).join(", ").presence],
+     ["Release date", (
+       if @product.release_date.present?
+         text = format_date(@product.release_date)
+         @product.release_date_approximate? ? "#{text} (approximate)" : text
+       end
+     )]
    ]) %>
 <% can_refresh = effective_permissions.include?("products.update") &&
      (@product.industry_identifier.present? || @product.bibliographic_provider_key.present?) %>
@@ -168,16 +172,10 @@
     <% if can_refresh %>
       <div class="product-refresh">
         <h3 class="section__title">Refresh bibliographic data</h3>
-        <p class="muted">Default refresh updates non-curated fields from ISBNdb. Curated fields stay unless you confirm overwrite.</p>
+        <p class="muted">Fetch a candidate and review each field before applying. Nothing is overwritten until you confirm.</p>
         <%= form_with url: refresh_bibliography_admin_product_path(@product), method: :post, class: "form" do |form| %>
-          <div class="form-field">
-            <label>
-              <%= check_box_tag :overwrite_curated, "1", false %>
-              Overwrite curated fields
-            </label>
-          </div>
           <div class="actions">
-            <%= action_submit(form, "Refresh from ISBNdb", style: :outline, intent: :neutral) %>
+            <%= action_submit(form, "Review bibliographic update", style: :outline, intent: :neutral) %>
           </div>
         <% end %>
       </div>

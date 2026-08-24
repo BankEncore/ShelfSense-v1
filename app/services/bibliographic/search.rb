@@ -5,7 +5,8 @@ module Bibliographic
     class Error < StandardError; end
 
     Result = Struct.new(
-      :status, :existing_product, :local_suggestions, :candidates, :message,
+      :status, :existing_product, :local_suggestions, :strong_matches, :weak_matches,
+      :candidates, :message,
       keyword_init: true
     )
 
@@ -34,18 +35,17 @@ module Bibliographic
         candidates = cached_or_fetch("isbn:#{isbn}", Bibliographic::LookupCache::ISBN_TTL) {
           @provider.find_by_isbn(isbn)
         }
-        return Result.new(status: :candidates, candidates: candidates) if candidates.any?
+        return Result.new(status: :candidates, candidates: candidates, **match_groups(candidates)) if candidates.any?
 
         return Result.new(status: :not_found, message: "No bibliographic match for that ISBN")
       end
 
-      local_suggestions = title_matches
       candidates = cached_or_fetch("title:#{Bibliographic::NameNormalizer.call(@raw)}", Bibliographic::LookupCache::TITLE_TTL) {
         @provider.search_title(@raw)
       }
-      Result.new(status: :candidates, candidates: candidates, local_suggestions: local_suggestions)
+      Result.new(status: :candidates, candidates: candidates, **match_groups(candidates, fallback_title: @raw))
     rescue Bibliographic::HttpClient::Unavailable, Bibliographic::HttpClient::TimeoutError => e
-      Result.new(status: :unavailable, message: e.message, local_suggestions: title_matches)
+      Result.new(status: :unavailable, message: e.message, **match_groups([], fallback_title: @raw))
     end
 
     private
@@ -72,9 +72,23 @@ module Bibliographic
       nil
     end
 
-    def title_matches
-      pattern = "%#{@raw.downcase.gsub(/[\\%_]/) { |char| "\\#{char}" }}%"
-      Product.where("LOWER(products.name) LIKE ? ESCAPE '\\'", pattern).order(:name, :id).limit(10).to_a
+    def match_groups(candidates, fallback_title: nil)
+      first = Array(candidates).first
+      matches = Bibliographic::PossibleMatches.call(
+        candidate: first,
+        title: first&.title,
+        subtitle: first&.subtitle,
+        contributors: first&.contributors,
+        isbn13: first&.isbn13
+      )
+      extra = fallback_title.present? ? Bibliographic::PossibleMatches.call(title: fallback_title) : nil
+      strong = (matches.strong + Array(extra&.strong)).uniq(&:id)
+      weak = ((matches.weak + Array(extra&.weak)).uniq(&:id) - strong)
+      {
+        local_suggestions: strong + weak,
+        strong_matches: strong,
+        weak_matches: weak
+      }
     end
 
     def cached_or_fetch(key, ttl)

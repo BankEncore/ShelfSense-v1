@@ -1,0 +1,39 @@
+<% content_for :title, "Import subject headings" %>
+
+<%= render "shared/breadcrumbs", crumbs: [
+  { name: "Home", path: root_path },
+  { name: "Subject schemes", path: admin_subject_schemes_path },
+  { name: @subject_scheme.name, path: admin_subject_scheme_path(@subject_scheme) },
+  { name: "Import" }
+] %>
+
+<%= render "shared/page_header",
+      title: "Import subject headings",
+      subtitle: @subject_scheme.name %>
+
+<% if @import_error.present? %>
+  <div class="form-errors" role="alert">
+    <p><%= @import_error %></p>
+  </div>
+<% end %>
+
+<%= form_with url: import_admin_subject_scheme_subject_headings_path(@subject_scheme), method: :post, class: "form", html: { multipart: true } do %>
+  <%= render layout: "shared/form_section", locals: {
+        title: "CSV",
+        help: "Columns: code, name, display_order, suggested_merchandise_class_code. The import is all-or-nothing."
+      } do %>
+    <div class="form-field">
+      <label for="csv">CSV file</label>
+      <%= file_field_tag :csv, id: "csv", accept: ".csv,text/csv" %>
+    </div>
+    <div class="form-field">
+      <label for="csv_text">Or paste CSV</label>
+      <%= text_area_tag :csv_text, params[:csv_text], id: "csv_text", rows: 10 %>
+    </div>
+  <% end %>
+
+  <div class="actions">
+    <button type="submit" class="button button--solid button--brand">Import headings</button>
+    <%= action_link_to("Cancel", admin_subject_scheme_path(@subject_scheme), style: :ghost, intent: :neutral) %>
+  </div>
+<% end %>

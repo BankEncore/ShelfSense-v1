@@ -136,17 +136,13 @@ class Products::CreateTest < ActiveSupport::TestCase
       attributes: {
         name: "Bibliographic Book",
         status: "draft",
-        publisher_name: "Tor",
-        binding: "Hardcover",
-        publication_year: 2020,
+        brand_name: "Tor",
         contribution_rows: [ { "display_name" => "N. K. Jemisin", "role" => "author" } ]
       },
       actor: @actor
     )
 
-    assert_equal "Tor", product.publisher.name
-    assert_equal "Hardcover", product.binding
-    assert_equal 2020, product.publication_year
-    assert_equal "N. K. Jemisin", product.contributors.first.display_name
+    assert_equal "Tor", product.brand_name
+    assert_equal "N. K. Jemisin", product.product_contributions.first.display_name
   end
 end

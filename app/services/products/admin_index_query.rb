@@ -70,12 +70,12 @@ module Products
 
       name_pattern = "%#{escape_like(@q)}%"
       identifier_digits = @q.gsub(/[\s-]/, "")
-      relation = relation.left_joins(product_contributions: :contributor)
+      relation = relation.left_joins(:product_contributions)
 
       conditions = [
         "products.name ILIKE :name ESCAPE '\\'",
         "products.subtitle ILIKE :name ESCAPE '\\'",
-        "contributors.display_name ILIKE :name ESCAPE '\\'"
+        "product_contributions.display_name ILIKE :name ESCAPE '\\'"
       ]
       binds = { name: name_pattern }
 
