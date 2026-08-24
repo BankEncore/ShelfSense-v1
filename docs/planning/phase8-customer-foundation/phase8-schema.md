@@ -1,6 +1,6 @@
 # Phase 8 — Customer schema (proposed)
 
-Status: **Accepted** (schema shipped on `phase-8-customer-foundation`). Authoritative with [data dictionary](../../schema/README.md) / `db/schema.rb` after merge to `main`.
+Status: **Accepted** (schema shipped on `main` via PR #42). Authoritative with [data dictionary](../../schema/README.md) / `db/schema.rb`.
 
 Merge policy authority: [ADR-023](../../adr/ADR-023-customer-merge.md).
 

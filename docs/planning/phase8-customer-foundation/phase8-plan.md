@@ -1,6 +1,6 @@
 # Phase 8 — Customer foundation plan
 
-Status: **In progress** on `phase-8-customer-foundation`.
+Status: **Complete** on `main` (PR #42, merge `b5ed590`).
 
 ## Goal
 
