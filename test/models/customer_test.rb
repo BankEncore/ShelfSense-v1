@@ -18,6 +18,26 @@ class CustomerTest < ActiveSupport::TestCase
     assert customer.canonical?
   end
 
+  test "derives display_name as Family, Given when blank" do
+    customer = Customer.create!(given_name: "Jamie", family_name: "Reader", email: "jamie@example.com")
+    assert_equal "Reader, Jamie", customer.display_name
+  end
+
+  test "derives display_name from single name part when blank" do
+    assert_equal "Reader", Customer.create!(family_name: "Reader", email: "a@example.com").display_name
+    assert_equal "Jamie", Customer.create!(given_name: "Jamie", email: "b@example.com").display_name
+  end
+
+  test "does not overwrite manually entered display_name" do
+    customer = Customer.create!(
+      display_name: "The Readers Household",
+      given_name: "Jamie",
+      family_name: "Reader",
+      email: "house@example.com"
+    )
+    assert_equal "The Readers Household", customer.display_name
+  end
+
   test "normalizes email and phone to E.164" do
     customer = Customer.create!(
       display_name: "Norm",

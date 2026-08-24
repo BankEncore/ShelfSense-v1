@@ -17,7 +17,7 @@ class Customer < ApplicationRecord
   validates :preferred_contact_method, inclusion: { in: PREFERRED_CONTACT_METHODS }
   validate :preferred_contact_method_has_value
 
-  before_validation :normalize_contact_fields
+  before_validation :derive_display_name_from_parts, :normalize_contact_fields
 
   scope :active, -> { where(active: true) }
   scope :canonical, -> { where(merged_into_customer_id: nil) }
@@ -30,6 +30,15 @@ class Customer < ApplicationRecord
 
   def self.options_for_select(records = active.canonical.admin_ordered)
     Array(records).map { |customer| [ customer.admin_label, customer.id ] }
+  end
+
+  # "Family, Given" when both present; otherwise the single non-blank part.
+  def self.derived_display_name(family_name:, given_name:)
+    family = family_name.to_s.strip.presence
+    given = given_name.to_s.strip.presence
+    return "#{family}, #{given}" if family && given
+    return family if family
+    given
   end
 
   def merged?
@@ -56,6 +65,15 @@ class Customer < ApplicationRecord
   end
 
   private
+
+  def derive_display_name_from_parts
+    return if display_name.to_s.strip.present?
+
+    self.display_name = self.class.derived_display_name(
+      family_name: family_name,
+      given_name: given_name
+    )
+  end
 
   def normalize_contact_fields
     Customers::NormalizeContact.apply!(self)

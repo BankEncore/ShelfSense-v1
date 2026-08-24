@@ -33,6 +33,7 @@ Make customer identity reliable enough for **stored value** (Phase 10) and **buy
 **Add:**
 
 - Optional `given_name`, `family_name` (never required; `display_name` remains authoritative operational label).
+- When `display_name` is blank at save, derive it as `Family, Given` (or the single non-blank part). Manual `display_name` is never overwritten.
 - Admin customer index search aligned with request lookup patterns.
 - Normalized search:
   - partial match on display name (and optional structured names);

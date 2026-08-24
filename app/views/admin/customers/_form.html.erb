@@ -4,16 +4,19 @@
   <%= form.hidden_field :lock_version %>
 
   <div class="form-field">
-    <%= form.label :display_name %>
-    <%= form.text_field :display_name, autofocus: true %>
-  </div>
-  <div class="form-field">
     <%= form.label :given_name, "Given name" %>
-    <%= form.text_field :given_name %>
+    <%= form.text_field :given_name, autofocus: !customer.persisted? %>
   </div>
   <div class="form-field">
     <%= form.label :family_name, "Family name" %>
     <%= form.text_field :family_name %>
+  </div>
+  <div class="form-field">
+    <%= form.label :display_name, "Display name" %>
+    <%= form.text_field :display_name,
+          placeholder: "Defaults to Family, Given when blank",
+          autofocus: customer.persisted? %>
+    <p class="muted">Leave blank to use Family, Given from the name fields above.</p>
   </div>
   <div class="form-field">
     <%= form.label :email %>

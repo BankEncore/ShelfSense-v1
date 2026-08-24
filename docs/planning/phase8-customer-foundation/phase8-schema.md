@@ -15,7 +15,9 @@ Merge policy authority: [ADR-023](../../adr/ADR-023-customer-merge.md).
 | `preferred_contact_method` | string, NOT NULL, default `none` | `phone`, `email`, `none` — check constraint |
 | `merged_into_customer_id` | uuid, nullable, FK → `customers.id` | Tombstone link; at most one hop to canonical |
 
-**Retain:** `display_name` (required), `email`, `phone`, `notes`, `active`, `lock_version`, UUIDv7 `id`.
+**Retain:** `display_name` (required after save), `email`, `phone`, `notes`, `active`, `lock_version`, UUIDv7 `id`.
+
+**Display name derivation:** If `display_name` is blank at validation and given/family parts are present, set `display_name` to `Family, Given` (or the single non-blank part). A manually entered `display_name` is never overwritten when name parts change.
 
 **Lifecycle encoding:**
 
