@@ -32,7 +32,7 @@ module Products
         field
       end
 
-      contribution_rows = @overrides[:contribution_rows] || @candidate.contribution_rows
+      contribution_rows = submitted_contribution_rows.presence || @candidate.contribution_rows
       publisher_name = @overrides[:publisher_name] || @candidate.publisher_name
       curated << "publisher_id" if publisher_name != @candidate.publisher_name
       curated << "contributions" if contribution_signature(contribution_rows) != contribution_signature(@candidate.contribution_rows)
@@ -59,6 +59,16 @@ module Products
     end
 
     private
+
+    def submitted_contribution_rows
+      rows = Array(@overrides[:contribution_rows])
+      return if rows.none? { |row|
+        data = row.respond_to?(:stringify_keys) ? row.stringify_keys : {}
+        data["display_name"].to_s.strip.present?
+      }
+
+      rows
+    end
 
     def contribution_signature(rows)
       Array(rows).filter_map { |row|

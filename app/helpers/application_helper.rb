@@ -72,4 +72,22 @@ module ApplicationHelper
   def configuration_status_badge(active)
     status_badge(active ? "active" : "inactive", scheme: :configuration)
   end
+
+  def compact_definition_rows(rows)
+    rows.select { |_label, value| value.present? }
+  end
+
+  def https_image_url(url)
+    text = url.to_s.strip
+    text if text.match?(%r{\Ahttps://}i)
+  end
+
+  def product_contributor_credits(product)
+    product.product_contributions.filter_map { |row|
+      name = row.contributor.display_name.to_s.strip
+      next if name.blank?
+
+      row.role == "author" ? name : "#{name} (#{row.role.humanize})"
+    }
+  end
 end

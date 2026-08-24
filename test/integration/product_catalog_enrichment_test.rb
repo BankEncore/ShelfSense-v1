@@ -63,6 +63,7 @@ class ProductCatalogEnrichmentTest < ActionDispatch::IntegrationTest
           industry_identifier: FIXTURE_ISBN13,
           publisher_name: "Ace",
           list_price: "16.99",
+          cover_image_url: "https://images.isbndb.com/covers/81/25/9780441478125.jpg",
           contribution_rows: [ { display_name: "Ursula K. Le Guin", role: "author" } ]
         }
       }
@@ -73,7 +74,12 @@ class ProductCatalogEnrichmentTest < ActionDispatch::IntegrationTest
     assert created.primary_identifier.start_with?("222")
     assert_equal "Ace", created.publisher.name
     follow_redirect!
-    assert_match(/Ursula K. Le Guin/, response.body)
+    assert_equal 1, created.product_contributions.count
+    assert_equal "Ursula K. Le Guin", created.product_contributions.first.contributor.display_name
+    assert_select ".product-identity__contributors", text: /Ursula K. Le Guin/
+    assert_select "img.product-cover[src=?]", "https://images.isbndb.com/covers/81/25/9780441478125.jpg"
+    assert_select "dt", text: "Imprint", count: 0
+    assert_select "dt", text: "Series", count: 0
     assert_match(/isbndb/, response.body)
 
     event = AuditEvent.where(action: "products.enrich", subject_id: created.id).last
@@ -150,9 +156,53 @@ class ProductCatalogEnrichmentTest < ActionDispatch::IntegrationTest
     get admin_product_path(product)
     assert_response :success
     assert_match(/Ace/, response.body)
-    assert_match(/Ursula K. Le Guin/, response.body)
+    assert_select ".product-identity__contributors", text: /Ursula K. Le Guin/
     assert_match(/isbndb/, response.body)
     assert_match(/Refresh bibliographic data/, response.body)
+  end
+
+  test "create-from-candidate keeps candidate contributors when submitted rows are blank" do
+    sign_in_as("admin")
+    stub_bibliographic_provider(FakeIsbnDbProvider.new(candidates: [ bibliographic_candidate ])) do
+      post admin_product_catalog_searches_path, params: { catalog_search: { q: FIXTURE_ISBN13 } }
+      get new_admin_product_path, params: { isbn13: FIXTURE_ISBN13, lookup_key: "isbn:#{FIXTURE_ISBN13}" }
+
+      post admin_products_path, params: {
+        candidate_isbn13: FIXTURE_ISBN13,
+        candidate_lookup_key: "isbn:#{FIXTURE_ISBN13}",
+        product: {
+          name: "The Left Hand of Darkness",
+          status: "draft",
+          industry_identifier: FIXTURE_ISBN13,
+          contribution_rows: {
+            "0" => { display_name: "", role: "author" },
+            "1" => { display_name: "", role: "author" },
+            "2" => { display_name: "", role: "illustrator" }
+          }
+        }
+      }
+      assert_response :redirect
+    end
+
+    created = Product.find_by!(industry_identifier: FIXTURE_ISBN13)
+    assert_equal [ "Ursula K. Le Guin" ], created.product_contributions.map { |row| row.contributor.display_name }
+  end
+
+  test "sideline product show omits contributor subtitle and publication" do
+    product = Products::Create.call(
+      attributes: { name: "Ceramic Mug", status: "draft", brand_name: "ShelfSense" },
+      actor: @admin
+    )
+    sign_in_as("admin")
+
+    get admin_product_path(product)
+    assert_response :success
+    assert_match(/Ceramic Mug/, response.body)
+    assert_select ".product-identity__contributors", count: 0
+    assert_select "h2", text: "Publication", count: 0
+    assert_select "img.product-cover", count: 0
+    assert_select "dt", text: "Brand"
+    assert_select "dd", text: "ShelfSense"
   end
 
   private

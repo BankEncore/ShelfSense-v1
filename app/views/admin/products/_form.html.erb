@@ -117,11 +117,11 @@
     <% contribution_rows += [ {} ] while contribution_rows.length < 3 %>
     <fieldset class="form-field">
       <legend>Contributors</legend>
-      <% contribution_rows.each do |row| %>
+      <% contribution_rows.each_with_index do |row, index| %>
         <% row = row.stringify_keys %>
         <div class="form-field">
-          <%= text_field_tag "product[contribution_rows][][display_name]", row["display_name"], placeholder: "Name" %>
-          <%= select_tag "product[contribution_rows][][role]",
+          <%= text_field_tag "product[contribution_rows][#{index}][display_name]", row["display_name"], placeholder: "Name" %>
+          <%= select_tag "product[contribution_rows][#{index}][role]",
                 options_for_select(ProductContribution::ROLES.map { |role| [ role.humanize, role ] }, row["role"] || "author") %>
         </div>
       <% end %>

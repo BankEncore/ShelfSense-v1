@@ -31,7 +31,10 @@ module Admin
         .order(:sku)
       @recent_audit_events = recent_product_audit_events
       @show_inventory = inventory_display_enabled?
-      @balances_by_variant_id = load_variant_balances(@product_variants.map(&:id)) if @show_inventory
+      if @show_inventory
+        @balances_by_variant_id = load_variant_balances(@product_variants.map(&:id))
+        @product_on_hand_total = @balances_by_variant_id.values.sum { |balance| balance.on_hand_quantity.to_i }
+      end
       load_product_purchasing_actions
     end
 
@@ -294,10 +297,13 @@ module Admin
         end
       end
 
+      submitted = params[:product] || {}
       %i[merchandise_category_id list_price_cents release_date subtitle description brand_name
          product_model variant_option_name_1 variant_option_name_2 industry_identifier
          lookup_code publisher_name imprint edition binding language_code page_count series_name
          series_position cover_image_url publication_year].each do |key|
+        next unless submitted.key?(key) || submitted.key?(key.to_s)
+
         permitted[key] = nil if permitted[key].blank?
       end
       permitted[:page_count] = permitted[:page_count].to_i if permitted[:page_count].present?
@@ -309,7 +315,19 @@ module Admin
       rows = params.dig(:product, :contribution_rows)
       return [] if rows.blank?
 
-      Array(rows).map { |row|
+      list =
+        if rows.is_a?(Array)
+          rows
+        else
+          hash = rows.respond_to?(:to_unsafe_h) ? rows.to_unsafe_h : rows.to_h
+          if hash.keys.all? { |key| key.to_s.match?(/\A\d+\z/) }
+            hash.sort_by { |key, _| key.to_i }.map(&:last)
+          else
+            [ hash ]
+          end
+        end
+
+      list.map { |row|
         data = row.respond_to?(:to_unsafe_h) ? row.to_unsafe_h : row.to_h
         data.stringify_keys.slice("display_name", "role")
       }

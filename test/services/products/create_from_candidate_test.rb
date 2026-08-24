@@ -41,6 +41,22 @@ class Products::CreateFromCandidateTest < ActiveSupport::TestCase
     assert_equal [ "name" ], product.bibliographic_curated_fields
   end
 
+  test "falls back to candidate contributors when submitted rows are blank" do
+    product = Products::CreateFromCandidate.call(
+      candidate: bibliographic_candidate,
+      actor: @actor,
+      attributes: {
+        contribution_rows: [
+          { "display_name" => "", "role" => "author" },
+          { "display_name" => "  ", "role" => "illustrator" }
+        ]
+      }
+    )
+
+    assert_equal [ "Ursula K. Le Guin" ], product.product_contributions.map { |row| row.contributor.display_name }
+    assert_not_includes product.bibliographic_curated_fields, "contributions"
+  end
+
   test "rejects a candidate whose ISBN is already on a product" do
     Products::Create.call(
       attributes: { name: "Existing", status: "draft" },

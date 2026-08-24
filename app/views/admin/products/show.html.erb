@@ -50,108 +50,174 @@
      ) %>
 <% end %>
 
-<%= render "shared/page_header",
-      title: @product.name,
-      subtitle: "Primary identifier #{@product.primary_identifier}",
-      actions: safe_join(actions, " ") %>
+<% contributor_credits = product_contributor_credits(@product) %>
+<% subtitle_parts = [] %>
+<% if contributor_credits.any? %>
+  <% subtitle_parts << tag.span(contributor_credits.join(", "), class: "product-identity__contributors") %>
+<% end %>
+<% subtitle_parts << "Primary identifier #{@product.primary_identifier}" %>
+<% cover_url = https_image_url(@product.cover_image_url) %>
+<% identity_rows = compact_definition_rows([
+     ["Industry identifier (GTIN / ISBN / UPC)", @product.industry_identifier],
+     ["Lookup code", (
+       if @product.lookup_code.present?
+         shared = Product.where(lookup_code: @product.lookup_code).where.not(id: @product.id).count
+         if shared.positive?
+           safe_join([@product.lookup_code, tag.span(" · shared with #{shared} other #{"product".pluralize(shared)}; scan and add will require product selection", class: "muted")])
+         else
+           @product.lookup_code
+         end
+       end
+     )],
+     ["Merchandise category", (
+       admin_merchandise_category_link(@product.merchandise_category) ||
+         @product.merchandise_category&.admin_label
+     )],
+     ["Subtitle", @product.subtitle],
+     ["Brand", @product.brand_name],
+     ["Model", @product.product_model],
+     ["Variant options", [ @product.variant_option_name_1, @product.variant_option_name_2 ].compact_blank.join(" · ").presence]
+   ]) %>
+<% publication_rows = compact_definition_rows([
+     ["Publisher", @product.publisher&.name],
+     ["Imprint", @product.imprint],
+     ["Edition", @product.edition],
+     ["Binding / format", @product.binding],
+     ["Language", @product.language_code],
+     ["Pages", @product.page_count],
+     ["Series", [ @product.series_name, @product.series_position ].compact_blank.join(" · ").presence],
+     ["Publication year", @product.publication_year],
+     ["Release date", (@product.release_date.present? ? format_date(@product.release_date) : nil)]
+   ]) %>
+<% can_refresh = effective_permissions.include?("products.update") &&
+     (@product.industry_identifier.present? || @product.bibliographic_provider_key.present?) %>
+<% variant_active = @product_variants.count { |variant| variant.status == "active" } %>
+<% variant_draft = @product_variants.count { |variant| variant.status == "draft" } %>
+<% variant_note = [ ("#{variant_active} active" if variant_active.positive?),
+                    ("#{variant_draft} draft" if variant_draft.positive?) ].compact.join(" · ").presence %>
 
-<section class="section surface">
-  <%= render "shared/definition_list", rows: [
-        ["Primary identifier", @product.primary_identifier],
-        ["Industry identifier (GTIN / ISBN / UPC)", @product.industry_identifier],
-        ["Lookup code", (
-          if @product.lookup_code.present?
-            shared = Product.where(lookup_code: @product.lookup_code).where.not(id: @product.id).count
-            if shared.positive?
-              safe_join([@product.lookup_code, tag.span(" · shared with #{shared} other #{"product".pluralize(shared)}; scan and add will require product selection", class: "muted")])
-            else
-              @product.lookup_code
-            end
-          end
-        )],
-        ["Status", status_badge(@product.status, scheme: :product_variant)],
-        ["List price", format_money_cents(@product.list_price_cents)],
-        ["Merchandise category", (
-          admin_merchandise_category_link(@product.merchandise_category) ||
-            @product.merchandise_category&.admin_label
-        )],
-        ["Subtitle", @product.subtitle],
-        ["Brand", @product.brand_name],
-        ["Model", @product.product_model],
-        ["Release date", format_date(@product.release_date)],
-        ["Publication year", @product.publication_year],
-        ["Publisher", @product.publisher&.name],
-        ["Imprint", @product.imprint],
-        ["Edition", @product.edition],
-        ["Binding / format", @product.binding],
-        ["Language", @product.language_code],
-        ["Pages", @product.page_count],
-        ["Series", [ @product.series_name, @product.series_position ].compact_blank.join(" · ").presence],
-        ["Cover image URL", (
-          url = @product.cover_image_url.to_s.strip
-          if url.match?(%r{\Ahttps://}i)
-            safe_join([
-              image_tag(url, alt: "Cover", height: 80),
-              tag.br,
-              link_to(url, url, rel: "noreferrer noopener")
-            ])
-          elsif url.present?
-            url
-          end
-        )],
-        ["Contributors", (
-          if @product.product_contributions.any?
-            safe_join(@product.product_contributions.map { |row|
-              "#{row.contributor.display_name} (#{row.role.humanize})"
-            }, tag.br)
-          end
-        )],
-        ["Bibliographic source", (
-          if @product.bibliographic_provider.present?
-            "#{@product.bibliographic_provider} · #{@product.bibliographic_provider_key} · fetched #{format_timestamp(@product.bibliographic_fetched_at)}"
-          end
-        )],
-        ["Variant option 1", @product.variant_option_name_1],
-        ["Variant option 2", @product.variant_option_name_2]
-      ] %>
-  <% if @product.description.present? %>
-    <div class="section">
-      <h2 class="section__title">Description</h2>
-      <p><%= simple_format(@product.description) %></p>
+<div class="product-identity">
+  <% if cover_url %>
+    <%= image_tag cover_url, alt: "Cover", class: "product-cover" %>
+  <% end %>
+  <div class="product-identity__heading">
+    <%= render "shared/page_header",
+          title: @product.name,
+          subtitle: safe_join(subtitle_parts, tag.br),
+          actions: safe_join(actions, " ") %>
+  </div>
+</div>
+
+<section class="surface product-summary" aria-label="Product summary">
+  <div class="product-summary__cell">
+    <span class="product-summary__label">Primary identifier</span>
+    <span class="product-summary__value"><%= @product.primary_identifier %></span>
+  </div>
+  <div class="product-summary__cell">
+    <span class="product-summary__label">List price</span>
+    <span class="product-summary__value"><%= format_money_cents(@product.list_price_cents) %></span>
+  </div>
+  <div class="product-summary__cell">
+    <span class="product-summary__label">Variants</span>
+    <span class="product-summary__value"><%= @product_variants.size %></span>
+    <% if variant_note %>
+      <span class="product-summary__note"><%= variant_note %></span>
+    <% end %>
+  </div>
+  <% if @show_inventory %>
+    <div class="product-summary__cell">
+      <span class="product-summary__label">On hand</span>
+      <span class="product-summary__value"><%= @product_on_hand_total %></span>
+      <% if current_store.present? %>
+        <span class="product-summary__note"><%= current_store.name %></span>
+      <% end %>
     </div>
   <% end %>
 </section>
 
-<% if effective_permissions.include?("products.update") && (@product.industry_identifier.present? || @product.bibliographic_provider_key.present?) %>
+<div class="product-columns">
   <section class="section surface">
-    <h2 class="section__title">Refresh bibliographic data</h2>
-    <p class="muted">Default refresh updates non-curated fields from ISBNdb. Curated fields stay unless you confirm overwrite.</p>
-    <%= form_with url: refresh_bibliography_admin_product_path(@product), method: :post, class: "form" do |form| %>
-      <div class="form-field">
-        <label>
-          <%= check_box_tag :overwrite_curated, "1", false %>
-          Overwrite curated fields
-        </label>
+    <h2 class="section__title">Identity</h2>
+    <% if identity_rows.any? %>
+      <%= render "shared/definition_list", rows: identity_rows %>
+    <% end %>
+
+    <% if publication_rows.any? || @product.bibliographic_provider.present? %>
+      <h2 class="section__title">Publication</h2>
+      <% if publication_rows.any? %>
+        <%= render "shared/definition_list", rows: publication_rows %>
+      <% end %>
+      <% if @product.bibliographic_provider.present? %>
+        <p class="product-provenance muted">
+          <%= @product.bibliographic_provider %>
+          · <%= @product.bibliographic_provider_key %>
+          <% if @product.bibliographic_fetched_at.present? %>
+            · fetched <%= format_timestamp(@product.bibliographic_fetched_at) %>
+          <% end %>
+        </p>
+      <% end %>
+    <% end %>
+
+    <% if @product.description.present? %>
+      <div class="product-description">
+        <h3 class="section__title">Description</h3>
+        <%= simple_format(@product.description) %>
       </div>
-      <div class="actions">
-        <%= action_submit(form, "Refresh from ISBNdb", style: :outline, intent: :neutral) %>
+    <% end %>
+
+    <% if can_refresh %>
+      <div class="product-refresh">
+        <h3 class="section__title">Refresh bibliographic data</h3>
+        <p class="muted">Default refresh updates non-curated fields from ISBNdb. Curated fields stay unless you confirm overwrite.</p>
+        <%= form_with url: refresh_bibliography_admin_product_path(@product), method: :post, class: "form" do |form| %>
+          <div class="form-field">
+            <label>
+              <%= check_box_tag :overwrite_curated, "1", false %>
+              Overwrite curated fields
+            </label>
+          </div>
+          <div class="actions">
+            <%= action_submit(form, "Refresh from ISBNdb", style: :outline, intent: :neutral) %>
+          </div>
+        <% end %>
       </div>
     <% end %>
   </section>
-<% end %>
 
-<section class="section">
-  <h2 class="section__title">Variants</h2>
-  <% if effective_permissions.include?("product_variants.create") %>
-    <div class="actions">
-      <%= action_link_to(
-            "New variant",
-            new_admin_product_product_variant_path(@product),
-            style: :solid,
-            intent: :brand
-          ) %>
-    </div>
+  <% if @recent_audit_events.present? %>
+    <aside class="section surface">
+      <h2 class="section__title">Recent activity</h2>
+      <ul>
+        <% @recent_audit_events.each do |event| %>
+          <li>
+            <%= format_timestamp(event.occurred_at) %> ·
+            <%= event.action %> ·
+            <%= event.outcome %> ·
+            <%= event.actor_label %>
+          </li>
+        <% end %>
+      </ul>
+      <% if effective_permissions.include?("audit_events.view") %>
+        <p><%= link_to "View audit events", admin_audit_events_path(subject_type: "Product") %></p>
+      <% end %>
+    </aside>
   <% end %>
+</div>
+
+<section class="section surface">
+  <div class="product-section-head">
+    <h2 class="section__title">Variants</h2>
+    <% if effective_permissions.include?("product_variants.create") %>
+      <div class="actions">
+        <%= action_link_to(
+              "New variant",
+              new_admin_product_product_variant_path(@product),
+              style: :solid,
+              intent: :brand
+            ) %>
+      </div>
+    <% end %>
+  </div>
 
   <% if @product_variants.empty? %>
     <%= render "shared/empty_state",
@@ -214,25 +280,6 @@
     <% end %>
   <% end %>
 </section>
-
-<% if @recent_audit_events.present? %>
-  <section class="section">
-    <h2 class="section__title">Recent activity</h2>
-    <ul>
-      <% @recent_audit_events.each do |event| %>
-        <li>
-          <%= format_timestamp(event.occurred_at) %> ·
-          <%= event.action %> ·
-          <%= event.outcome %> ·
-          <%= event.actor_label %>
-        </li>
-      <% end %>
-    </ul>
-    <% if effective_permissions.include?("audit_events.view") %>
-      <p><%= link_to "View audit events", admin_audit_events_path(subject_type: "Product") %></p>
-    <% end %>
-  </section>
-<% end %>
 
 <%= render "shared/technical_details", rows: [
       ["ID", @product.id],
