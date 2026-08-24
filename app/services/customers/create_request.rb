@@ -31,6 +31,7 @@ module Customers
     def call
       CustomerRequest.transaction do
         validate_basics!
+        lock_and_revalidate_customer!
         tracking = @product_variant.derived_inventory_tracking
 
         if tracking == "quantity"
@@ -55,7 +56,6 @@ module Customers
     def validate_basics!
       raise Customers::Error, "store is required" if @store.blank?
       raise Customers::Error, "customer is required" if @customer.blank?
-      raise Customers::Error, "customer is inactive" unless @customer.active?
       raise Customers::Error, "product variant is required" if @product_variant.blank?
       raise Customers::Error, "actor is required" if @actor.blank?
 
@@ -63,6 +63,25 @@ module Customers
       unless %w[quantity individual].include?(tracking)
         raise Customers::Error, "variant is not inventory-tracked"
       end
+    end
+
+    def lock_and_revalidate_customer!
+      submitted = Customer.lock.find(@customer.id)
+      customer = if submitted.merged?
+        raise Customers::Error, "customer merge chain detected" if submitted.merged_into_customer.merged?
+
+        Customer.lock.find(submitted.merged_into_customer_id)
+      else
+        submitted
+      end
+
+      raise Customers::Error, "customer is inactive" unless customer.active?
+      raise Customers::Error, "customer is merged and cannot own new requests" if customer.merged?
+      if customer.email.blank? && customer.phone.blank?
+        raise Customers::Error, "customer must have an email or phone before creating a request"
+      end
+
+      @customer = customer
     end
 
     def create_pending_location_request!

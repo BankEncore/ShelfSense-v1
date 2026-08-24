@@ -1,0 +1,60 @@
+<% content_for :title, "Merge customers" %>
+
+<%= render "shared/breadcrumbs", crumbs: [
+  { name: "Home", path: root_path },
+  { name: "Customers", path: admin_customers_path },
+  { name: @source.admin_label, path: admin_customer_path(@source) },
+  { name: "Merge review" }
+] %>
+
+<%= render "shared/page_header",
+      title: "Merge review",
+      subtitle: "Confirm which customer survives. This action cannot be undone from ordinary screens." %>
+
+<section class="section surface">
+  <h2 class="section__title">Survivor (kept)</h2>
+  <%= render "shared/definition_list", rows: [
+        ["Name", @survivor.admin_label],
+        ["Given / family", [@survivor.given_name, @survivor.family_name].compact_blank.join(" ").presence],
+        ["Email", @survivor.email],
+        ["Phone", @survivor.phone],
+        ["Preferred contact", @survivor.preferred_contact_method&.titleize],
+        ["Notes", @survivor.notes]
+      ] %>
+</section>
+
+<section class="section surface">
+  <h2 class="section__title">Source (becomes alias)</h2>
+  <%= render "shared/definition_list", rows: [
+        ["Name", @source.admin_label],
+        ["Given / family", [@source.given_name, @source.family_name].compact_blank.join(" ").presence],
+        ["Email", @source.email],
+        ["Phone", @source.phone],
+        ["Preferred contact", @source.preferred_contact_method&.titleize],
+        ["Notes", @source.notes],
+        ["Active requests to reassign", @active_request_count],
+        ["Existing aliases to flatten", @alias_count]
+      ] %>
+</section>
+
+<section class="section surface">
+  <p>
+    The survivor’s profile fields stay as shown. Source contact details are retained on the alias for search only
+    and are not copied onto the survivor.
+  </p>
+
+  <%= form_with url: merge_admin_customer_path(@source), method: :post, local: true, class: "form" do %>
+    <%= hidden_field_tag :survivor_id, @survivor.id %>
+    <%= hidden_field_tag :idempotency_key, @idempotency_key %>
+    <%= hidden_field_tag :source_lock_version, @source.lock_version %>
+    <%= hidden_field_tag :survivor_lock_version, @survivor.lock_version %>
+    <div class="form-field">
+      <%= label_tag :reason, "Reason" %>
+      <%= text_field_tag :reason, nil, required: true, maxlength: 255 %>
+    </div>
+    <div class="actions">
+      <%= submit_tag "Confirm merge into #{@survivor.admin_label}", class: "button button--solid button--danger" %>
+      <%= action_link_to("Cancel", admin_customer_path(@source), style: :ghost, intent: :neutral) %>
+    </div>
+  <% end %>
+</section>

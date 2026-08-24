@@ -138,14 +138,7 @@ module Admin
     end
 
     def search_customers(query)
-      pattern = "%#{ActiveRecord::Base.sanitize_sql_like(query)}%"
-      Customer.active
-              .where(
-                "display_name ILIKE :q OR email ILIKE :q OR phone ILIKE :q OR id::text ILIKE :q",
-                q: pattern
-              )
-              .admin_ordered
-              .limit(25)
+      Customers::Search.call(query: query, mode: :operational, limit: 25)
     end
 
     def search_merchandise(query)

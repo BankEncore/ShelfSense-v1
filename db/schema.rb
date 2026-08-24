@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_22_100000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_24_030000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -91,9 +91,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_22_100000) do
     t.index ["inventory_unit_id"], name: "index_customer_request_allocations_one_reserved_per_unit", unique: true, where: "(((allocation_type)::text = 'used_unit'::text) AND ((status)::text = 'reserved'::text))"
     t.index ["purchase_receipt_line_id"], name: "index_customer_request_allocations_on_purchase_receipt_line_id"
     t.check_constraint "allocation_type::text = 'used_unit'::text AND inventory_unit_id IS NOT NULL OR allocation_type::text = 'standard_quantity'::text AND inventory_unit_id IS NULL", name: "customer_request_allocations_unit_matches_type"
-    t.check_constraint "allocation_type::text = ANY (ARRAY['standard_quantity'::character varying, 'used_unit'::character varying]::text[])", name: "customer_request_allocations_type_valid"
+    t.check_constraint "allocation_type::text = ANY (ARRAY['standard_quantity'::character varying::text, 'used_unit'::character varying::text])", name: "customer_request_allocations_type_valid"
     t.check_constraint "quantity = 1", name: "customer_request_allocations_quantity_one"
-    t.check_constraint "status::text = ANY (ARRAY['reserved'::character varying, 'fulfilled'::character varying, 'released'::character varying]::text[])", name: "customer_request_allocations_status_valid"
+    t.check_constraint "status::text = ANY (ARRAY['reserved'::character varying::text, 'fulfilled'::character varying::text, 'released'::character varying::text])", name: "customer_request_allocations_status_valid"
   end
 
   create_table "customer_requests", id: :uuid, default: nil, force: :cascade do |t|
@@ -120,7 +120,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_22_100000) do
     t.index ["store_id", "number"], name: "index_customer_requests_on_store_id_and_number", unique: true
     t.index ["store_id", "status"], name: "index_customer_requests_on_store_id_and_status"
     t.check_constraint "requested_quantity = 1", name: "customer_requests_quantity_one"
-    t.check_constraint "status::text = ANY (ARRAY['pending_location'::character varying, 'special_order_pending'::character varying, 'ordered'::character varying, 'available'::character varying, 'completed'::character varying, 'cancelled'::character varying]::text[])", name: "customer_requests_status_valid"
+    t.check_constraint "status::text = ANY (ARRAY['pending_location'::character varying::text, 'special_order_pending'::character varying::text, 'ordered'::character varying::text, 'available'::character varying::text, 'completed'::character varying::text, 'cancelled'::character varying::text])", name: "customer_requests_status_valid"
   end
 
   create_table "customers", id: :uuid, default: nil, force: :cascade do |t|
@@ -128,13 +128,25 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_22_100000) do
     t.timestamptz "created_at", null: false
     t.string "display_name", null: false
     t.string "email"
+    t.string "email_normalized"
+    t.string "family_name"
+    t.string "given_name"
     t.integer "lock_version", default: 0, null: false
+    t.uuid "merged_into_customer_id"
     t.text "notes"
     t.string "phone"
+    t.string "phone_normalized"
+    t.string "preferred_contact_method", default: "none", null: false
     t.timestamptz "updated_at", null: false
     t.index ["display_name"], name: "index_customers_on_display_name"
     t.index ["email"], name: "index_customers_on_email"
+    t.index ["email_normalized"], name: "index_customers_on_email_normalized"
+    t.index ["merged_into_customer_id"], name: "index_customers_on_merged_into_customer_id"
     t.index ["phone"], name: "index_customers_on_phone"
+    t.index ["phone_normalized"], name: "index_customers_on_phone_normalized"
+    t.check_constraint "merged_into_customer_id IS NULL OR active = false", name: "customers_merged_implies_inactive_check"
+    t.check_constraint "merged_into_customer_id IS NULL OR merged_into_customer_id <> id", name: "customers_merged_into_not_self_check"
+    t.check_constraint "preferred_contact_method::text = ANY (ARRAY['phone'::character varying, 'email'::character varying, 'none'::character varying]::text[])", name: "customers_preferred_contact_method_check"
   end
 
   create_table "departments", id: :uuid, default: nil, force: :cascade do |t|
@@ -845,7 +857,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_22_100000) do
     t.index ["purchase_order_line_id"], name: "idx_on_purchase_order_line_id_5f60c1a484"
     t.index ["recorded_by_id"], name: "index_purchase_order_line_cancellations_on_recorded_by_id"
     t.check_constraint "quantity > 0", name: "purchase_order_line_cancellations_quantity_positive"
-    t.check_constraint "source::text = ANY (ARRAY['buyer'::character varying, 'supplier'::character varying]::text[])", name: "purchase_order_line_cancellations_source_valid"
+    t.check_constraint "source::text = ANY (ARRAY['buyer'::character varying::text, 'supplier'::character varying::text])", name: "purchase_order_line_cancellations_source_valid"
   end
 
   create_table "purchase_order_line_states", primary_key: "purchase_order_line_id", id: :uuid, default: nil, force: :cascade do |t|
@@ -901,7 +913,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_22_100000) do
     t.index ["store_id", "status"], name: "index_purchase_orders_on_store_id_and_status"
     t.index ["store_id", "supplier_id"], name: "index_purchase_orders_one_open_draft_per_store_supplier", unique: true, where: "((status)::text = 'draft'::text)"
     t.index ["supplier_id"], name: "index_purchase_orders_on_supplier_id"
-    t.check_constraint "status::text = ANY (ARRAY['draft'::character varying, 'sent'::character varying, 'closed'::character varying, 'cancelled'::character varying]::text[])", name: "purchase_orders_status_valid"
+    t.check_constraint "status::text = ANY (ARRAY['draft'::character varying::text, 'sent'::character varying::text, 'closed'::character varying::text, 'cancelled'::character varying::text])", name: "purchase_orders_status_valid"
   end
 
   create_table "purchase_receipt_line_corrections", id: :uuid, default: nil, force: :cascade do |t|
@@ -921,7 +933,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_22_100000) do
     t.index ["recorded_by_id"], name: "index_purchase_receipt_line_corrections_on_recorded_by_id"
     t.check_constraint "correction_type::text = 'cost_correction'::text AND value_delta_cents IS NOT NULL AND value_delta_cents <> 0 OR correction_type::text = 'compensating_adjustment_reference'::text AND value_delta_cents IS NOT NULL OR correction_type::text = 'quantity_reversal'::text", name: "prl_corrections_cost_value_present"
     t.check_constraint "correction_type::text = 'quantity_reversal'::text AND quantity > 0 OR correction_type::text = 'compensating_adjustment_reference'::text AND quantity > 0 OR correction_type::text = 'cost_correction'::text AND quantity IS NULL", name: "prl_corrections_quantity_matches_type"
-    t.check_constraint "correction_type::text = ANY (ARRAY['quantity_reversal'::character varying, 'cost_correction'::character varying, 'compensating_adjustment_reference'::character varying]::text[])", name: "prl_corrections_type_valid"
+    t.check_constraint "correction_type::text = ANY (ARRAY['quantity_reversal'::character varying::text, 'cost_correction'::character varying::text, 'compensating_adjustment_reference'::character varying::text])", name: "prl_corrections_type_valid"
   end
 
   create_table "purchase_receipt_lines", id: :uuid, default: nil, force: :cascade do |t|
@@ -968,7 +980,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_22_100000) do
     t.index ["store_id", "status"], name: "index_purchase_receipts_on_store_id_and_status"
     t.index ["supplier_id"], name: "index_purchase_receipts_on_supplier_id"
     t.check_constraint "freight_cents >= 0 AND handling_cents >= 0", name: "purchase_receipts_freight_handling_nonnegative"
-    t.check_constraint "status::text = ANY (ARRAY['draft'::character varying, 'posted'::character varying, 'reversed'::character varying]::text[])", name: "purchase_receipts_status_valid"
+    t.check_constraint "status::text = ANY (ARRAY['draft'::character varying::text, 'posted'::character varying::text, 'reversed'::character varying::text])", name: "purchase_receipts_status_valid"
     t.check_constraint "supplier_tax_cents >= 0 AND miscellaneous_charges_cents >= 0", name: "purchase_receipts_tax_misc_nonnegative"
   end
 
@@ -1037,7 +1049,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_22_100000) do
     t.uuid "store_id", null: false
     t.timestamptz "updated_at", null: false
     t.index ["store_id", "document_kind"], name: "index_store_document_sequences_on_store_and_kind", unique: true
-    t.check_constraint "document_kind::text = ANY (ARRAY['customer_request'::character varying, 'order'::character varying, 'purchase_order'::character varying, 'purchase_receipt'::character varying]::text[])", name: "store_document_sequences_kind_valid"
+    t.check_constraint "document_kind::text = ANY (ARRAY['customer_request'::character varying::text, 'order'::character varying::text, 'purchase_order'::character varying::text, 'purchase_receipt'::character varying::text])", name: "store_document_sequences_kind_valid"
     t.check_constraint "next_value > 0", name: "store_document_sequences_next_value_positive"
   end
 
@@ -1127,7 +1139,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_22_100000) do
     t.index ["product_variant_id"], name: "index_supplier_variant_sources_one_org_preferred_active", unique: true, where: "((organization_preferred = true) AND (active = true))"
     t.index ["supplier_id", "supplier_item_number"], name: "index_supplier_variant_sources_on_supplier_and_item_number", unique: true, where: "(supplier_item_number IS NOT NULL)"
     t.index ["supplier_id"], name: "index_supplier_variant_sources_on_supplier_id"
-    t.check_constraint "pricing_method::text = ANY (ARRAY['discount_from_list'::character varying, 'direct_unit_cost'::character varying]::text[])", name: "supplier_variant_sources_pricing_method_valid"
+    t.check_constraint "pricing_method::text = ANY (ARRAY['discount_from_list'::character varying::text, 'direct_unit_cost'::character varying::text])", name: "supplier_variant_sources_pricing_method_valid"
   end
 
   create_table "suppliers", id: :uuid, default: nil, force: :cascade do |t|
@@ -1257,6 +1269,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_22_100000) do
   add_foreign_key "customer_requests", "stores", on_delete: :restrict
   add_foreign_key "customer_requests", "users", column: "cancelled_by_id", on_delete: :restrict
   add_foreign_key "customer_requests", "users", column: "location_failed_by_id", on_delete: :restrict
+  add_foreign_key "customers", "customers", column: "merged_into_customer_id", on_delete: :restrict
   add_foreign_key "departments", "gl_accounts", column: "cost_of_goods_sold_gl_account_id"
   add_foreign_key "departments", "gl_accounts", column: "freight_in_gl_account_id"
   add_foreign_key "departments", "gl_accounts", column: "inventory_adjustment_gain_gl_account_id"

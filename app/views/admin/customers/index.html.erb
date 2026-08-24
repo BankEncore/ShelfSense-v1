@@ -12,17 +12,49 @@
 
 <%= render "shared/page_header", title: "Customers", actions: header_actions %>
 
+<%= form_with url: admin_customers_path, method: :get, local: true, class: "filters" do |form| %>
+  <div class="form-field">
+    <%= label_tag :q, "Search" %>
+    <%= text_field_tag :q, @q, placeholder: "Name, email, or phone" %>
+  </div>
+  <div class="form-field">
+    <%= label_tag :lifecycle, "Show" %>
+    <%= select_tag :lifecycle,
+          options_for_select(
+            [
+              [ "Canonical customers", "canonical" ],
+              [ "All including merged aliases", "all" ],
+              [ "Merged aliases only", "merged" ]
+            ],
+            @lifecycle
+          ) %>
+  </div>
+  <div class="form-field">
+    <%= action_submit(form, "Search", style: :solid, intent: :brand) %>
+  </div>
+<% end %>
+
 <% rows = @customers.map { |customer|
+     status = if customer.merged?
+       "Merged"
+     elsif customer.active?
+       configuration_status_badge(true)
+     else
+       configuration_status_badge(false)
+     end
+     former = @search_results&.find { |r| r.customer.id == customer.id }&.matched_former_customer
+     name_cell = link_to(customer.admin_label, admin_customer_path(customer))
+     name_cell = safe_join([name_cell, tag.span(" (matched former record)", class: "muted")], "") if former
      [
-       link_to(customer.admin_label, admin_customer_path(customer)),
+       name_cell,
        customer.email.presence || missing_value,
        customer.phone.presence || missing_value,
-       configuration_status_badge(customer.active?)
+       status
      ]
    } %>
 <%= render "shared/data_table",
       headers: ["Name", "Email", "Phone", "Status"],
       rows: rows,
       empty: render("shared/empty_state",
-                    title: "No customers yet",
-                    body: "Create a customer to attach requests and contact details.") %>
+                    title: (@q.present? ? "No matching customers" : "No customers yet"),
+                    body: (@q.present? ? "Try a different name, email, or phone." : "Create a customer to attach requests and contact details.")) %>

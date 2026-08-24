@@ -103,7 +103,7 @@ Coordination with UDS-4: [phase7.1-uds-coordination.md](phase7.1-purchasing-poli
 
 ## Phase 8 — Customer foundation (MVP)
 
-**Status:** Proposed. **May run in parallel with Phase 9.** Planning packet: [phase8-customer-foundation/](phase8-customer-foundation/README.md).
+**Status:** In progress on integration branch `phase-8-customer-foundation`. **May run in parallel with Phase 9.** Planning packet: [phase8-customer-foundation/](phase8-customer-foundation/README.md).
 
 Phase 7 created the minimum customer record required for requests. Phase 8 concentrates on **reliable identification**, **essential contact methods**, **duplicate prevention and safe merge**, and **minimal lifecycle governance**—not CRM, marketing, multiple contacts, or stored-value ledger design.
 
@@ -367,7 +367,7 @@ The following remain out of scope until a planning packet and ADR review justify
 | UDS-1–3 — Warm Parchment foundation | **Operationally complete** (`verified-automated`); see [uds-foundation-closeout-evidence.md](ux-design-system/uds-foundation-closeout-evidence.md) |
 | Phase 7.1 — Purchasing workflow closeout | **Complete** on `main` ([packet](phase7.1-purchasing-polish/README.md)) |
 | UDS-4 — Navigation and information architecture | **UDS-4.0–4.2 on `main`** ([uds-4-plan.md](ux-design-system/uds-4-plan.md)) |
-| Phase 8 — Customer foundation (MVP) | Next; parallel with 9 |
+| Phase 8 — Customer foundation (MVP) | In progress (`phase-8-customer-foundation`); parallel with 9 |
 | Phase 9 — Catalog and bibliographic enrichment | Next; parallel with 8 |
 | Phase 10 — Stored value and financial event contract | After Phase 8 |
 | Phase 11 — Cash accountability completion | After Phase 10 |

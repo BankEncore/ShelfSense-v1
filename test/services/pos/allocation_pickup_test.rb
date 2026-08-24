@@ -170,7 +170,7 @@ class Pos::AllocationPickupTest < ActiveSupport::TestCase
       actor: @actor
     )
     Customers::ConfirmLocation.call(customer_request: request_a, actor: @actor, inventory_unit: unit_a)
-    other = Customer.create!(display_name: "Other Pickup")
+    other = Customer.create!(display_name: "Other Pickup", phone: "555-0199")
     request_b = Customers::CreateRequest.call(
       store: @store,
       customer: other,

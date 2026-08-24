@@ -177,7 +177,7 @@ class Customers::RequestAndAvailabilityTest < ActiveSupport::TestCase
   end
 
   test "competing locate second fails when only one available" do
-    second_customer = Customer.create!(display_name: "Other Customer")
+    second_customer = Customer.create!(display_name: "Other Customer", email: "other@example.com")
     first = Customers::CreateRequest.call(
       store: @store,
       customer: @customer,
