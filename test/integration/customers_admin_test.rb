@@ -20,6 +20,55 @@ class CustomersAdminTest < ActionDispatch::IntegrationTest
     assert AuditEvent.exists?(action: "customers.create", subject_id: customer.id)
   end
 
+  test "admin index search finds by name substring" do
+    Customer.create!(display_name: "Zelda Searchable", email: "zelda@example.com")
+    Customer.create!(display_name: "Other Person", email: "other@example.com")
+    sign_in_as("admin")
+
+    get admin_customers_path, params: { q: "Zelda" }
+    assert_response :success
+    assert_includes response.body, "Zelda Searchable"
+    assert_not_includes response.body, "Other Person"
+  end
+
+  test "duplicate warning blocks create until acknowledged" do
+    Customer.create!(display_name: "Dup Person", email: "dup@example.com", phone: "555-777-7777")
+    sign_in_as("admin")
+
+    post admin_customers_path, params: {
+      customer: { display_name: "Someone Else", email: "dup@example.com" }
+    }
+    assert_response :unprocessable_entity
+    assert_includes response.body, "Possible duplicates"
+    assert_nil Customer.find_by(display_name: "Someone Else")
+
+    post admin_customers_path, params: {
+      customer: { display_name: "Someone Else", email: "dup@example.com" },
+      acknowledge_duplicates: "1"
+    }
+    assert_redirected_to admin_customer_path(Customer.find_by!(display_name: "Someone Else"))
+  end
+
+  test "merge review and confirm merges customers" do
+    source = Customer.create!(display_name: "Merge Source", email: "ms@example.com", phone: "555-800-0000")
+    survivor = Customer.create!(display_name: "Merge Survivor", email: "mv@example.com", phone: "555-800-0001")
+    sign_in_as("admin")
+
+    get merge_review_admin_customer_path(source), params: { survivor_id: survivor.id }
+    assert_response :success
+    assert_includes response.body, "Merge review"
+
+    post merge_admin_customer_path(source), params: {
+      survivor_id: survivor.id,
+      reason: "same household",
+      idempotency_key: SecureRandom.uuid_v7,
+      source_lock_version: source.lock_version,
+      survivor_lock_version: survivor.lock_version
+    }
+    assert_redirected_to admin_customer_path(survivor)
+    assert source.reload.merged?
+  end
+
   test "store-scoped customers.view links only accessible requests and denies the rest" do
     east = Store.create!(
       store_number: "2",

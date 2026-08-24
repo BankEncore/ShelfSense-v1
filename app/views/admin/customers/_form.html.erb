@@ -8,6 +8,14 @@
     <%= form.text_field :display_name, autofocus: true %>
   </div>
   <div class="form-field">
+    <%= form.label :given_name, "Given name" %>
+    <%= form.text_field :given_name %>
+  </div>
+  <div class="form-field">
+    <%= form.label :family_name, "Family name" %>
+    <%= form.text_field :family_name %>
+  </div>
+  <div class="form-field">
     <%= form.label :email %>
     <%= form.email_field :email %>
   </div>
@@ -16,9 +24,36 @@
     <%= form.telephone_field :phone %>
   </div>
   <div class="form-field">
+    <%= form.label :preferred_contact_method, "Preferred contact" %>
+    <%= form.select :preferred_contact_method,
+          Customer::PREFERRED_CONTACT_METHODS.map { |m| [m.titleize, m] } %>
+  </div>
+  <div class="form-field">
     <%= form.label :notes %>
     <%= form.text_area :notes %>
   </div>
+
+  <% if @duplicate_suggestions.present? %>
+    <section class="section surface" aria-label="Possible duplicate customers">
+      <h2 class="section__title">Possible duplicates</h2>
+      <p>Review these matches before saving. Use an existing customer, or confirm you still want to continue.</p>
+      <ul>
+        <% @duplicate_suggestions.each do |suggestion| %>
+          <li>
+            <%= link_to suggestion.customer.admin_label, admin_customer_path(suggestion.customer) %>
+            — <%= suggestion.match_strength %> match on <%= suggestion.matched_on %>
+            (<%= suggestion.customer.email.presence || suggestion.customer.phone.presence || "no contact" %>)
+          </li>
+        <% end %>
+      </ul>
+      <div class="form-field">
+        <label>
+          <%= check_box_tag :acknowledge_duplicates, "1", false %>
+          Create / save anyway despite possible duplicates
+        </label>
+      </div>
+    </section>
+  <% end %>
 
   <div class="actions">
     <%= action_submit(

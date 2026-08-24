@@ -6,8 +6,15 @@
   { name: @customer.admin_label }
 ] %>
 
-<% actions = [configuration_status_badge(@customer.active?)] %>
-<% if effective_permissions.include?("customers.manage") %>
+<% lifecycle = if @customer.merged?
+     "Merged"
+   elsif @customer.active?
+     configuration_status_badge(true)
+   else
+     configuration_status_badge(false)
+   end %>
+<% actions = [lifecycle] %>
+<% if effective_permissions.include?("customers.manage") && !@customer.merged? %>
   <% actions << action_link_to("Edit", edit_admin_customer_path(@customer), style: :outline, intent: :neutral) %>
   <% if @customer.active? %>
     <% actions << action_button_to(
@@ -32,18 +39,61 @@
       title: @customer.admin_label,
       actions: safe_join(actions, " ") %>
 
+<% if @customer.merged? %>
+  <section class="section surface" role="status">
+    <p>
+      This customer was merged into
+      <%= link_to @customer.merged_into_customer.admin_label, admin_customer_path(@customer.merged_into_customer) %>.
+      It is retained as a historical alias and cannot be used for new operational work.
+    </p>
+  </section>
+<% end %>
+
 <section class="section surface">
   <%= render "shared/definition_list", rows: [
+        ["Given name", @customer.given_name],
+        ["Family name", @customer.family_name],
         ["Email", @customer.email],
         ["Phone", @customer.phone],
+        ["Preferred contact", @customer.preferred_contact_method&.titleize],
         ["Notes", (@customer.notes.present? ? simple_format(@customer.notes) : nil)],
-        ["Status", configuration_status_badge(@customer.active?)]
+        ["Status", lifecycle]
       ] %>
 </section>
 
+<% if @customer.canonical? && @merged_aliases.present? %>
+  <section class="section">
+    <h2 class="section__title">Merged aliases</h2>
+    <% rows = @merged_aliases.map { |alias_customer|
+         [
+           link_to(alias_customer.admin_label, admin_customer_path(alias_customer)),
+           alias_customer.email.presence || missing_value,
+           alias_customer.phone.presence || missing_value
+         ]
+       } %>
+    <%= render "shared/data_table", headers: ["Name", "Email", "Phone"], rows: rows %>
+  </section>
+<% end %>
+
+<% if effective_permissions.include?("customers.manage") && @customer.canonical? && @customer.active? %>
+  <section class="section surface">
+    <h2 class="section__title">Merge into another customer</h2>
+    <p>Choose the surviving customer. This customer will become a read-only alias.</p>
+    <%= form_with url: merge_review_admin_customer_path(@customer), method: :get, local: true, class: "form" do %>
+      <div class="form-field">
+        <%= label_tag :survivor_id, "Survivor customer ID" %>
+        <%= text_field_tag :survivor_id, params[:survivor_id], required: true %>
+      </div>
+      <div class="actions">
+        <%= submit_tag "Review merge", class: "button button--solid button--brand" %>
+      </div>
+    <% end %>
+  </section>
+<% end %>
+
 <section class="section">
   <h2 class="section__title">Recent requests</h2>
-  <% if effective_permissions.include?("customer_requests.manage") %>
+  <% if effective_permissions.include?("customer_requests.manage") && @customer.canonical? && @customer.active? %>
     <div class="actions">
       <%= action_link_to(
             "New request",

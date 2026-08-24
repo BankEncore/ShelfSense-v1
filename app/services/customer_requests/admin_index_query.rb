@@ -62,8 +62,12 @@ module CustomerRequests
           <<~SQL.squish,
             customer_requests.number::text ILIKE :pattern OR
             customers.display_name ILIKE :pattern OR
+            customers.given_name ILIKE :pattern OR
+            customers.family_name ILIKE :pattern OR
             customers.email ILIKE :pattern OR
             customers.phone ILIKE :pattern OR
+            customers.email_normalized = :exact_email OR
+            customers.phone_normalized = :exact_phone OR
             customers.id::text ILIKE :pattern OR
             products.name ILIKE :pattern OR
             products.primary_identifier = :identifier OR
@@ -73,7 +77,9 @@ module CustomerRequests
             product_variants.industry_identifier = :identifier
           SQL
           pattern: pattern,
-          identifier: normalized_identifier
+          identifier: normalized_identifier,
+          exact_email: Customers::NormalizeContact.email(@q),
+          exact_phone: Customers::NormalizeContact.phone(@q)
         )
     end
 

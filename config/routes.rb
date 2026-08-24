@@ -86,7 +86,12 @@ Rails.application.routes.draw do
       end
     end
     resources :customers do
-      member { post :reactivate }
+      member do
+        post :reactivate
+        get :merge_review
+        post :merge
+      end
+      collection { get :duplicate_check }
     end
     resources :customer_requests, only: %i[index show new create] do
       collection do

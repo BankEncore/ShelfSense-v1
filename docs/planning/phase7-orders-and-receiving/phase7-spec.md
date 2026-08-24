@@ -246,6 +246,8 @@ Phase 7 implements only the identity needed for requests and pickup.
 
 At least one of email or phone should be required by the application when a request will require customer contact. Duplicate detection may warn but must not merge customers automatically.
 
+> **Phase 8:** Contact requirement on request create, normalized lookup, duplicate suggestions, and staff-initiated merge are implemented per [phase8-plan.md](../phase8-customer-foundation/phase8-plan.md) and [ADR-023](../../adr/ADR-023-customer-merge.md). This §7.4 note remains the Phase 7 baseline; Phase 8 is authoritative for those behaviors.
+
 ### 7.5 `customer_requests`
 
 | Field | Requirements |

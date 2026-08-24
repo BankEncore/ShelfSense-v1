@@ -1,6 +1,6 @@
 # Phase 8 — Customer foundation plan
 
-Status: **Proposed**
+Status: **In progress** on `phase-8-customer-foundation`.
 
 ## Goal
 
@@ -95,13 +95,30 @@ Make customer identity reliable enough for **stored value** (Phase 10) and **buy
 
 **UX adoption:** include [ux-adoption-template.md](../ux-design-system/ux-adoption-template.md) section when customer admin screens change materially.
 
+## UX adoption targets
+
+- **Screens created or materially changed:** `admin/customers/index`, `admin/customers/_form`, `admin/customers/show`, `admin/customers/merge_review`
+- **Current migration-matrix state:** `partial` (search, merge review, lifecycle badges)
+- **Accepted primitives and interaction contracts:** `page_header`, breadcrumbs, `data_table`, `definition_list`, `ActionButtonHelper`, filters form pattern from inventory index
+- **Applicable automated evidence:** deferred until customer admin surfaces stabilize post-merge to `main` (optional UDS reference suite follow-up)
+- **Matrix rows to update after validation:** `admin/customers/**` in [migration-matrix.md](../ux-design-system/migration-matrix.md)
+
+### Rules
+
+- New screens begin with accepted UDS primitives.
+- A materially changed legacy screen becomes that phase's migration responsibility.
+- Unrelated neighboring screens do not enter scope automatically.
+- New interaction patterns require their own specification.
+- Evidence and matrix updates ship in the same PR as the feature.
+- Inherited Warm Parchment colors never establish verification or conformance.
+
 ## Stored-value boundary
 
 Phase 8 does **not** create stored-value accounts. See [phase8-stored-value-boundary.md](phase8-stored-value-boundary.md).
 
 ## ADR and documentation triggers
 
-- **Proposed ADR:** [ADR-023](../../adr/ADR-023-customer-merge.md) customer merge policy (tombstone, alias flattening, active-only request reassignment, profile non-combination, alias search, irreversibility, financial-domain exceptions).
+- **Accepted ADR:** [ADR-023](../../adr/ADR-023-customer-merge.md) customer merge policy (tombstone, alias flattening, active-only request reassignment, profile non-combination, alias search, irreversibility, financial-domain exceptions).
 - Update data dictionary / schema reference with new columns and merge audit actions.
 - Amend roadmap Phase 8 (done in same planning pass).
 - Phase 7 spec §7.4 duplicate note: superseded by Phase 8 implementation, not silent behavior change.

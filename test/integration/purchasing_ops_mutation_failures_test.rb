@@ -70,7 +70,7 @@ class PurchasingOpsMutationFailuresTest < ActionDispatch::IntegrationTest
 
   test "location exception retains row notes, cost, supplier choice, and focus" do
     open_quantity_stock(store: @store, variant: @variant, actor: @actor, quantity: 1, unit_cost_cents: 100)
-    customer = Customer.create!(display_name: "Failure Customer")
+    customer = Customer.create!(display_name: "Failure Customer", email: "failure@example.com")
     customer_request = Customers::CreateRequest.call(
       store: @store, customer: customer, product_variant: @variant, actor: @actor
     )

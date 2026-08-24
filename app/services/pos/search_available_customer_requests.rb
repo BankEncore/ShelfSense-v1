@@ -53,6 +53,34 @@ module Pos
       binds << like
       conditions << "customers.phone ILIKE ?"
       binds << like
+      phone_n = Customers::NormalizeContact.phone(@query)
+      if phone_n.present?
+        conditions << "customers.phone_normalized = ?"
+        binds << phone_n
+        conditions << "EXISTS (
+          SELECT 1 FROM customers alias_customers
+          WHERE alias_customers.merged_into_customer_id = customers.id
+            AND (
+              alias_customers.phone ILIKE ?
+              OR alias_customers.phone_normalized = ?
+              OR alias_customers.display_name ILIKE ?
+            )
+        )"
+        binds << like
+        binds << phone_n
+        binds << like
+      else
+        conditions << "EXISTS (
+          SELECT 1 FROM customers alias_customers
+          WHERE alias_customers.merged_into_customer_id = customers.id
+            AND (
+              alias_customers.phone ILIKE ?
+              OR alias_customers.display_name ILIKE ?
+            )
+        )"
+        binds << like
+        binds << like
+      end
       conditions << "products.name ILIKE ?"
       binds << like
       conditions << "product_variants.sku ILIKE ?"
