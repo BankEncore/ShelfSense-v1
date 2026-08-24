@@ -1,8 +1,13 @@
 # frozen_string_literal: true
 
 require "test_helper"
+require_relative "support/uds_evidence_helpers"
+require_relative "support/uds_review_dialog_contract"
 
 class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
+  include UdsEvidenceHelpers
+  include UdsReviewDialogContract
+
   CHROME_BINARIES = %w[/usr/bin/chromium /usr/bin/chromium-browser /usr/bin/google-chrome].freeze
   CHROMEDRIVERS = %w[/usr/bin/chromedriver /usr/lib/chromium/chromedriver].freeze
 
@@ -30,5 +35,26 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
   ensure
     page.execute_script("document.documentElement.style.zoom = 1")
     page.driver.browser.manage.window.resize_to(1280, 720)
+  end
+
+  def sign_in_admin(actor: bootstrap![:administrator])
+    visit new_session_path
+    fill_in "session_username", with: actor.username
+    fill_in "session_password", with: "correct-horse-battery"
+    find_field("session_password").send_keys :enter
+    assert_text "Signed in successfully"
+  end
+
+  def teardown
+    reset_uds_viewport!
+  end
+
+  def reset_uds_viewport!
+    return unless page.driver.respond_to?(:browser) && page.driver.browser
+
+    page.execute_script("document.documentElement.style.zoom = '1'")
+    page.driver.browser.manage.window.resize_to(1280, 720)
+  rescue Selenium::WebDriver::Error::WebDriverError, Capybara::NotSupportedByDriverError
+    nil
   end
 end

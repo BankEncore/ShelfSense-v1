@@ -5,7 +5,7 @@ SERVICE="${RAILS_DOCKER_SERVICE:-web}"
 
 needs_browser_image() {
   local joined="$*"
-  [[ "$joined" == *test:system* || "$joined" == *bin/ci* ]]
+  [[ "$joined" == *test:system* || "$joined" == *test/system/* || "$joined" == *bin/ci* ]]
 }
 
 if ! needs_browser_image "$@" && docker compose ps --status running "$SERVICE" | grep -q "$SERVICE"; then

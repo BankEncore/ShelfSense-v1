@@ -1,10 +1,33 @@
 # UX design system — accessibility and ergonomic test matrix
 
-Status: **Proposed acceptance gate for UDS-2 and UDS-3**
+Status: **Proposed acceptance gate for UDS-2 and UDS-3**; foundation closeout uses the automated layer mapping below.
 
-This matrix turns the foundation program's accessibility and timed cashier requirements into a repeatable manual gate. It applies to the five reference surfaces: **Supplier administration**, **Receiving** (the selected purchasing workspace), **transaction history and completed-transaction detail**, **consequential-action review dialogs**, and the **Register**. It supplements automated tests; it does not replace authorization, request, service, or system tests.
+This matrix turns the foundation program's accessibility and timed cashier requirements into a repeatable gate. It applies to the five reference surfaces: **Supplier administration**, **Receiving** (the selected purchasing workspace), **transaction history and completed-transaction detail**, **consequential-action review dialogs**, and the **Register**. It supplements automated tests; it does not replace authorization, request, service, or system tests.
 
-PR change allowlists, Chromium visual baselines, frozen suites, and token rollback live in the [implementation rollout contract](program-plan.md#implementation-rollout-contract)—complete those on every UDS PR; use this matrix for reference-surface conforming evidence and foundation criterion 10.
+PR change allowlists, Chromium visual baselines, frozen suites, and token rollback live in the [implementation rollout contract](program-plan.md#implementation-rollout-contract)—complete those on every UDS PR; use this matrix for reference-surface **conforming** evidence and foundation criterion 10.
+
+## Automated layer mapping (foundation closeout)
+
+Foundation criterion 10 closes at **`verified-automated`**, not full manual conformance. See [uds-foundation-closeout-plan.md](uds-foundation-closeout-plan.md).
+
+| Evidence ID | Closeout substitute | Deferred for `conforming` |
+|---|---|---|
+| `K` | Layer B — `assert_focus_sequence` / workflow suites | — |
+| `SR` | Layer A axe (partial) | **SR-MANUAL** — screen reader |
+| `D` | Layer B — `assert_dialog_contract` | — |
+| `R` | Layer C — viewport/zoom smoke | Full screenshot review |
+| `S` | Layer C — layout overflow smoke | Stress-fixture screenshots |
+| `C` | Layer C — `assert_forced_colors_smoke` (one per surface) | Full forced-colors matrix |
+| `T` | Layer C — target-size smoke | Full measurement audit |
+| `I` | Layer B — keyboard/scanner paths in frozen suites | Touch emulation |
+| `M` | Layer C — `assert_reduced_motion_smoke` | Full motion catalogue |
+| `E` | Layer B — resilient-state in domain suites | Full state catalogue |
+| Timed cashier | Layer B — PERF **correctness** only in CI | **PERF-HUMAN** — median timing |
+| Independent review | — | **UX-INDEPENDENT** |
+| Firefox | — | **Deferred** |
+| Lighthouse | — | **Deferred** |
+
+Unavailable evidence is recorded as **deferred**, not passed.
 
 ## Test setup, evidence, and ownership
 

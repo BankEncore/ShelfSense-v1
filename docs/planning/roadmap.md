@@ -49,9 +49,9 @@ Several roadmap goals are **not greenfield**. The forward phases below describe 
 
 ## Cross-phase UX program
 
-### UDS foundation exit (in progress)
+### UDS foundation exit (operationally complete)
 
-UDS-1 through UDS-3 code is merged. [migration-matrix.md](ux-design-system/migration-matrix.md) rows may remain **partial** until [accessibility-ergonomic-test-matrix.md](ux-design-system/accessibility-ergonomic-test-matrix.md) evidence is attached per [program-plan.md](ux-design-system/program-plan.md). Completing that evidence is part of closing the UDS foundation program—not a blocker for starting domain Phase 8 planning.
+UDS-1 through UDS-3 code is merged. Reference surfaces reached **`verified-automated`** per [uds-foundation-closeout-plan.md](ux-design-system/uds-foundation-closeout-plan.md) and [uds-foundation-closeout-evidence.md](ux-design-system/uds-foundation-closeout-evidence.md): Layer A (axe), Layer B (workflow), and Layer C (layout smoke). This is **not** full accessibility certification—SR-MANUAL, PERF-HUMAN, and independent review remain open for **`conforming`**. Future feature phases must include [ux-adoption-template.md](ux-design-system/ux-adoption-template.md).
 
 ### UDS-4 — Information architecture and adoption
 
@@ -365,7 +365,7 @@ The following remain out of scope until a planning packet and ADR review justify
 |---|---|
 | Phases 0–6.1 | Implemented |
 | Phase 7 — Orders, requests, receiving | Implemented |
-| UDS-1–3 — Warm Parchment foundation | Implemented (code); a11y matrix evidence in progress |
+| UDS-1–3 — Warm Parchment foundation | **Operationally complete** (`verified-automated`); see [uds-foundation-closeout-evidence.md](ux-design-system/uds-foundation-closeout-evidence.md) |
 | Phase 7.1 — Purchasing workflow closeout | **Complete** on `main` ([packet](phase7.1-purchasing-polish/README.md)) |
 | UDS-4 — Navigation and information architecture | **UDS-4.0–4.2 on `main`** ([uds-4-plan.md](ux-design-system/uds-4-plan.md)) |
 | Phase 8 — Customer foundation refinement | Next; parallel with 9 |

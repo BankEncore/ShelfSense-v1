@@ -179,6 +179,6 @@ class PosCloseZTest < ApplicationSystemTestCase
     field = find("#pos-command-field")
     field.fill_in with: @variant.sku
     field.send_keys :enter
-    assert_text "Example Book"
+    assert_selector "tbody tr.is-selected", text: "Example Book", wait: 10
   end
 end

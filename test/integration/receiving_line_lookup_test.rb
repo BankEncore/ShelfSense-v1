@@ -80,6 +80,16 @@ class ReceivingLineLookupTest < ActionDispatch::IntegrationTest
     order
   end
 
+  test "receiving show exposes scanner landmark for workflow layer" do
+    receipt = Purchasing::CreateDraftPurchaseReceipt.call(store: @store, supplier: @supplier, actor: @actor)
+    get ops_receiving_path(receipt)
+    assert_response :success
+    assert_select "input[name='receiving_lookup']"
+    assert_select "main"
+  end
+
+  private
+
   def sign_in_as(username)
     post session_path, params: { session: { username: username, password: "correct-horse-battery" } }
   end

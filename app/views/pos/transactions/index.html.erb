@@ -33,6 +33,7 @@
   <% elsif @search.records.empty? %>
     <p class="muted">No matching transactions.</p>
   <% else %>
+    <div class="table-scroll">
     <table class="pos-history__table">
       <thead>
         <tr>
@@ -59,6 +60,7 @@
         <% end %>
       </tbody>
     </table>
+    </div>
 
     <div class="pagination">
       <span class="muted">
