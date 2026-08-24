@@ -1,6 +1,6 @@
 # UDS foundation closeout
 
-Status: **Complete** on branch `uds-foundation-closeout`.
+Status: **Complete** — merged to `main` (`328cbbf`, PR #41).
 
 Authority: [program-plan.md](program-plan.md), [accessibility-ergonomic-test-matrix.md](accessibility-ergonomic-test-matrix.md), [migration-matrix.md](migration-matrix.md), [button-action-semantics.md](button-action-semantics.md), [surface-contracts.md](surface-contracts.md).
 

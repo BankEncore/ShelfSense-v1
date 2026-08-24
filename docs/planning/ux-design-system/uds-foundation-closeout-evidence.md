@@ -1,12 +1,12 @@
 # UDS foundation closeout — evidence roll-up
 
-Status: **Frozen** on integration branch `uds-foundation-closeout`.
+Status: **Frozen** — merged to `main` as PR #41.
 
 This document records automated verification at foundation closeout. It does **not** claim screen-reader certification, human cashier timing, or independent accessibility review.
 
 ## Freeze commit
 
-Record the merge commit SHA when `uds-foundation-closeout` merges to `main`. Local development SHA at authoring: see `git rev-parse HEAD` on the integration branch.
+**`328cbbf`** — merge of `uds-foundation-closeout` to `main` ([PR #41](https://github.com/BankEncore/ShelfSense-v1/pull/41)), 2026-08-23.
 
 ## Summary
 
