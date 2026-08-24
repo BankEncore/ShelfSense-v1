@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_24_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_24_130000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -1223,6 +1223,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_24_120000) do
     t.uuid "subject_scheme_id", null: false
     t.uuid "suggested_merchandise_class_id"
     t.timestamptz "updated_at", null: false
+    t.index ["id", "subject_scheme_id"], name: "index_subject_headings_id_and_scheme", unique: true
     t.index ["subject_scheme_id", "code"], name: "index_subject_headings_scheme_code", unique: true, where: "(code IS NOT NULL)"
   end
 
@@ -1466,6 +1467,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_24_120000) do
   add_foreign_key "product_contributions", "products"
   add_foreign_key "product_subject_assignments", "products"
   add_foreign_key "product_subject_assignments", "subject_headings"
+  add_foreign_key "product_subject_assignments", "subject_headings", column: ["subject_heading_id", "subject_scheme_id"], primary_key: ["id", "subject_scheme_id"], name: "fk_product_subject_assignments_heading_scheme"
   add_foreign_key "product_subject_assignments", "subject_schemes"
   add_foreign_key "product_variants", "merchandise_classes"
   add_foreign_key "product_variants", "merchandise_conditions"

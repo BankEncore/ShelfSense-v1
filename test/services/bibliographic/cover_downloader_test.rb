@@ -97,4 +97,63 @@ class Bibliographic::CoverDownloaderTest < ActiveSupport::TestCase
     assert_not_equal old_id, product.cover_image.blob.id
     assert_equal "staff", product.bibliographic_field_sources.dig("cover_image", "source")
   end
+
+  test "staff uploads reject oversized and non-image payloads by detected bytes" do
+    actor = actor_user
+    product = Products::Create.call(
+      attributes: { name: "Cover gate", status: "draft" },
+      actor: actor
+    )
+    oversized = "x" * (Bibliographic::CoverPayload::MAX_BYTES + 1)
+
+    error = assert_raises(Products::Update::Error) do
+      Products::Update.call(
+        product: product,
+        attributes: {
+          lock_version: product.lock_version,
+          cover_image: { io: StringIO.new(oversized), filename: "huge.png", content_type: "image/png" }
+        },
+        actor: actor
+      )
+    end
+    assert_match(/too large/i, error.message)
+    assert_not product.reload.cover_image.attached?
+
+    error = assert_raises(Products::Update::Error) do
+      Products::Update.call(
+        product: product.reload,
+        attributes: {
+          lock_version: product.lock_version,
+          cover_image: { io: StringIO.new("<html>not an image</html>"), filename: "cover.jpg", content_type: "image/jpeg" }
+        },
+        actor: actor
+      )
+    end
+    assert_match(/accepted image/i, error.message)
+    assert_not product.reload.cover_image.attached?
+  end
+
+  test "staff cover blobs are purged when the product update rolls back" do
+    actor = actor_user
+    product = Products::Create.call(
+      attributes: { name: "Cover rollback", status: "draft" },
+      actor: actor
+    )
+    before = ActiveStorage::Blob.count
+
+    assert_raises(Products::Update::Error) do
+      Products::Update.call(
+        product: product,
+        attributes: {
+          lock_version: product.lock_version,
+          name: "",
+          cover_image: { io: StringIO.new(TINY_PNG), filename: "cover.png", content_type: "image/png" }
+        },
+        actor: actor
+      )
+    end
+
+    assert_not product.reload.cover_image.attached?
+    assert_equal before, ActiveStorage::Blob.count
+  end
 end

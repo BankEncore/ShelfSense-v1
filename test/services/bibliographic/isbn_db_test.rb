@@ -82,4 +82,32 @@ class Bibliographic::IsbnDbTest < ActiveSupport::TestCase
     candidate = Bibliographic::Providers::IsbnDb.new(http: http).find_by_isbn(FIXTURE_ISBN13).first
     assert_nil candidate.list_price_cents
   end
+
+  test "maps known language names and codes besides English" do
+    {
+      "French" => "fr",
+      "fra" => "fr",
+      "Spanish" => "es",
+      "deu" => "de",
+      "German" => "de"
+    }.each do |raw, expected|
+      http = FakeIsbnDbHttp.new(
+        responses: { "book/#{FIXTURE_ISBN13}" => [ 200, { "book" => isbndb_book_payload("language" => raw) } ] }
+      )
+      candidate = Bibliographic::Providers::IsbnDb.new(http: http).find_by_isbn(FIXTURE_ISBN13).first
+      assert_equal expected, candidate.language_code, raw
+    end
+  end
+
+  test "ISBN-less books get a candidate-scoped provider key" do
+    http = FakeIsbnDbHttp.new(
+      responses: {
+        "books/" => [ 200, { "books" => [ isbndb_book_payload("isbn" => nil, "isbn13" => nil) ] } ]
+      }
+    )
+    candidate = Bibliographic::Providers::IsbnDb.new(http: http).search_title("Left Hand").first
+    assert_nil candidate.isbn13
+    assert_match(/\Aisbndb:candidate:/, candidate.provider_key)
+    assert_equal candidate.candidate_id, candidate.provider_key.delete_prefix("isbndb:candidate:")
+  end
 end

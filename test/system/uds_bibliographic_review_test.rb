@@ -19,6 +19,7 @@ class UdsBibliographicReviewTest < ApplicationSystemTestCase
     assert_text "Review bibliographic data"
     assert_text "Current"
     assert_text "Proposed"
+    assert_field "proposed[list_price_cents]", with: "$16.99"
     assert_axe_clean(surface: :bibliographic_review)
 
     page.execute_script("document.querySelector('input[name=\"product[lock_version]\"]').value = '-1'")

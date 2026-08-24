@@ -139,4 +139,47 @@ class Products::AssignSubjectsTest < ActiveSupport::TestCase
       )
     end
   end
+
+  test "checkbox-style primary params persist false and true without null" do
+    Products::Update.call(
+      product: @product,
+      attributes: {
+        lock_version: @product.lock_version,
+        subject_rows: [ { "subject_heading_id" => @fiction.id } ]
+      },
+      actor: @actor
+    )
+    assignment = @product.reload.product_subject_assignments.find_by!(subject_heading: @fiction)
+    assert_equal false, assignment.primary
+
+    Products::Update.call(
+      product: @product,
+      attributes: {
+        lock_version: @product.lock_version,
+        subject_rows: [ { "subject_heading_id" => @fiction.id, "primary" => "1" } ]
+      },
+      actor: @actor
+    )
+    assert_equal true, assignment.reload.primary
+  end
+
+  test "generic provider subject text does not attach a BISAC heading by name" do
+    house_fiction = @house.subject_headings.create!(name: "Fiction", active: true)
+
+    assert_equal [ house_fiction.id ], Bibliographic::SubjectMatcher.call([ "Fiction" ]).map(&:id)
+    assert_equal [ @fiction.id ], Bibliographic::SubjectMatcher.call([ "FIC000000" ]).map(&:id)
+  end
+
+  test "assignment scheme must match the heading scheme" do
+    assignment = @product.product_subject_assignments.build(
+      subject_heading: @fiction,
+      subject_scheme: @house,
+      position: 0
+    )
+    assert_not assignment.valid?
+    assert_includes assignment.errors[:subject_scheme_id].join, "match"
+
+    assignment.subject_scheme = @fiction.subject_scheme
+    assert assignment.valid?
+  end
 end

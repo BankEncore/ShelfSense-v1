@@ -202,6 +202,32 @@ class ProductCatalogEnrichmentTest < ActionDispatch::IntegrationTest
     assert_select "dd", text: "ShelfSense"
   end
 
+  test "ISBN-less candidate create uses a provenance-only provider key" do
+    candidate = bibliographic_candidate(isbn13: nil, provider_key: nil, title: "Unnumbered Atlas")
+    sign_in_as("admin")
+
+    stub_bibliographic_provider(FakeIsbnDbProvider.new(candidates: [ candidate ])) do
+      post admin_product_catalog_searches_path, params: { catalog_search: { q: "Unnumbered Atlas" } }
+      assert_response :success
+      assert_match(/Use this book/, response.body)
+
+      get new_admin_product_path, params: { candidate_id: candidate.candidate_id }
+      assert_response :success
+
+      post admin_products_path, params: {
+        candidate_id: candidate.candidate_id,
+        product: { name: "Unnumbered Atlas", status: "draft" }
+      }
+      assert_response :redirect
+    end
+
+    created = Product.find_by!(name: "Unnumbered Atlas")
+    assert_nil created.industry_identifier
+    assert_nil created.bibliographic_provider_key
+    assert_equal "isbndb", created.bibliographic_field_sources.dig("name", "source")
+    assert_match(/\Aisbndb:candidate:/, created.bibliographic_field_sources.dig("name", "provider_key"))
+  end
+
   private
 
   def sign_in_as(username)

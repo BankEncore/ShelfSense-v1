@@ -78,4 +78,19 @@ class Products::CreateFromCandidateTest < ActiveSupport::TestCase
     end
     assert_match(/already uses/i, error.message)
   end
+
+  test "creates an ISBN-less candidate with a provenance-only provider key" do
+    candidate = bibliographic_candidate(isbn13: nil, provider_key: nil, title: "No ISBN Title")
+    assert_match(/\Aisbndb:candidate:/, candidate.provider_key)
+
+    product = Products::CreateFromCandidate.call(candidate: candidate, actor: @actor)
+
+    assert_equal "No ISBN Title", product.name
+    assert_nil product.industry_identifier
+    assert_nil product.bibliographic_provider_key
+    assert_equal "isbndb", product.bibliographic_field_sources.dig("name", "source")
+    assert_equal candidate.provider_key, product.bibliographic_field_sources.dig("name", "provider_key")
+    refute_equal candidate.provider_key, product.primary_identifier
+    assert AuditEvent.exists?(action: "products.enrich", subject_id: product.id)
+  end
 end

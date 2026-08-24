@@ -145,4 +145,33 @@ class Products::CreateTest < ActiveSupport::TestCase
     assert_equal "Tor", product.brand_name
     assert_equal "N. K. Jemisin", product.product_contributions.first.display_name
   end
+
+  test "staff cover uploads are validated from bytes and purged on create rollback" do
+    png = [ "89504e470d0a1a0a0000000d4948445200000001000000010802000000907753de0000000a49444154789c63f80f00000101000518d84e0000000049454e44ae426082" ].pack("H*")
+    before = ActiveStorage::Blob.count
+
+    error = assert_raises(Products::Create::Error) do
+      Products::Create.call(
+        attributes: {
+          name: "Bad cover",
+          status: "draft",
+          cover_image: { io: StringIO.new("<script>nope</script>"), filename: "cover.png", content_type: "image/png" }
+        },
+        actor: @actor
+      )
+    end
+    assert_match(/accepted image/i, error.message)
+    assert_equal before, ActiveStorage::Blob.count
+
+    product = Products::Create.call(
+      attributes: {
+        name: "Good cover",
+        status: "draft",
+        cover_image: { io: StringIO.new(png), filename: "cover.png", content_type: "image/png" }
+      },
+      actor: @actor
+    )
+    assert product.cover_image.attached?
+    assert_equal "image/png", product.cover_image.blob.content_type
+  end
 end

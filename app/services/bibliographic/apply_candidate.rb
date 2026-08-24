@@ -19,7 +19,7 @@ module Bibliographic
     attr_reader :applied_fields
 
     def initialize(product:, candidate:, actor:, selected_fields:, submitted_values: {}, source: "bibliographic",
-                   lock_version: nil)
+                   lock_version: nil, store: nil)
       @product = product
       @candidate = candidate
       @actor = actor
@@ -27,6 +27,7 @@ module Bibliographic
       @submitted_values = submitted_values.to_h
       @source = source
       @lock_version = lock_version
+      @store = store
       @applied_fields = []
     end
 
@@ -44,34 +45,32 @@ module Bibliographic
           next if %w[contributions cover_image subjects product_form].include?(field)
 
           value, edited = resolved_value(field)
-          next if value.nil? && field != "industry_identifier"
-
           attrs[field.to_sym] = value
           if field == "release_date"
             attrs[:release_date_approximate] = edited ? submitted_approximate : @candidate.release_date_approximate
           end
-          provenance << provenance_change(field, edited)
+          provenance << provenance_change(field, edited, value: value)
           @applied_fields << field
         end
 
         if @selected_fields.include?("product_form")
           code, edited = resolved_value("product_form")
           attrs[:product_form_id] = product_form_id_for(code)
-          provenance << provenance_change("product_form", edited)
+          provenance << provenance_change("product_form", edited, value: code)
           @applied_fields << "product_form"
         end
 
         contribution_rows = nil
         if @selected_fields.include?("contributions")
           contribution_rows, edited = resolved_contributions
-          provenance << provenance_change("contributions", edited)
+          provenance << provenance_change("contributions", edited, rows: contribution_rows)
           @applied_fields << "contributions"
         end
 
         subject_rows = nil
         if @selected_fields.include?("subjects")
           subject_rows, edited = resolved_subjects
-          provenance << provenance_change("subjects", edited)
+          provenance << provenance_change("subjects", edited, rows: subject_rows)
           @applied_fields << "subjects"
         end
 
@@ -83,7 +82,7 @@ module Bibliographic
 
         payload = attrs.merge(
           bibliographic_provider: @candidate.provider,
-          bibliographic_provider_key: @candidate.provider_key || @candidate.isbn13,
+          bibliographic_provider_key: @candidate.isbn13.presence || @product.bibliographic_provider_key,
           bibliographic_fetched_at: @candidate.fetched_at,
           bibliographic_applied_at: Time.current,
           lock_version: @lock_version || @product.lock_version
@@ -99,12 +98,27 @@ module Bibliographic
           source: @source,
           provenance_changes: provenance
         )
+        Audit::Recorder.record!(
+          action: "products.enrich",
+          outcome: "succeeded",
+          actor_user: @actor,
+          actor_label: @actor.display_name,
+          store: @store,
+          subject: @product,
+          after_values: {
+            bibliographic_provider: @candidate.provider,
+            bibliographic_provider_key: @candidate.provider_key || @candidate.isbn13,
+            applied_fields: @applied_fields
+          }
+        )
         @product.reload
       end
     rescue Products::Update::Error, ArgumentError, Bibliographic::FieldSources::Invalid,
            Bibliographic::ContributorRole::Unknown, Bibliographic::CoverDownloader::Error,
-           Products::AssignSubjects::Error, ActiveRecord::StaleObjectError => e
-      cover_result&.then { |result| purge_failed_cover }
+           Bibliographic::CoverPayload::Error, Products::AssignSubjects::Error,
+           ActiveRecord::StaleObjectError, Money::ParseCents::Error,
+           Identifiers::NormalizationError => e
+      cover_result&.then { purge_failed_cover }
       raise Error, e.message
     end
 
@@ -115,11 +129,74 @@ module Bibliographic
       submitted = submitted_for(field)
       if submitted.nil?
         [ candidate_value, false ]
-      elsif values_equal?(submitted, candidate_value)
-        [ candidate_value, false ]
       else
-        [ submitted, true ]
+        parsed = parse_submitted(field, submitted)
+        if values_equal?(parsed, candidate_value)
+          [ candidate_value, false ]
+        else
+          [ parsed, true ]
+        end
       end
+    end
+
+    def parse_submitted(field, raw)
+      case field
+      when "page_count" then parse_page_count(raw)
+      when "list_price_cents" then parse_list_price(raw)
+      when "series_position" then parse_series_position(raw)
+      when "release_date" then parse_release_date(raw)
+      when "industry_identifier" then parse_industry_identifier(raw)
+      when "product_form" then parse_string(raw)&.upcase
+      else
+        parse_string(raw)
+      end
+    end
+
+    def parse_page_count(raw)
+      return raw if raw.is_a?(Integer)
+      text = raw.to_s.strip
+      return if text.blank?
+
+      Integer(text)
+    end
+
+    def parse_list_price(raw)
+      return raw if raw.is_a?(Integer)
+      text = raw.to_s.strip
+      return if text.blank?
+
+      Money::ParseCents.call(text)
+    end
+
+    def parse_series_position(raw)
+      return raw if raw.is_a?(BigDecimal)
+      return BigDecimal(raw.to_s) if raw.is_a?(Numeric)
+      text = raw.to_s.strip
+      return if text.blank?
+
+      BigDecimal(text)
+    end
+
+    def parse_release_date(raw)
+      return raw if raw.is_a?(Date)
+      text = raw.to_s.strip
+      return if text.blank?
+
+      Date.iso8601(text)
+    end
+
+    def parse_industry_identifier(raw)
+      text = raw.to_s.strip
+      return if text.blank?
+
+      Identifiers::Normalizer.normalize(text, allow_shelfsense_222: false)
+    end
+
+    def parse_string(raw)
+      return if raw.nil?
+
+      text = raw.to_s.unicode_normalize(:nfkc).strip.gsub(/\s+/, " ")
+      text.presence
     end
 
     def resolved_contributions
@@ -201,12 +278,24 @@ module Bibliographic
       nil
     end
 
-    def provenance_change(field, edited)
+    def provenance_change(field, edited, value: :unset, rows: nil)
       {
         key: field,
         source: edited ? "staff" : (@candidate.provider.presence || "isbndb"),
-        provider_key: edited ? nil : (@candidate.provider_key || @candidate.isbn13)
+        provider_key: edited ? nil : (@candidate.provider_key || @candidate.isbn13),
+        blank: blank_change?(field, value: value, rows: rows)
       }
+    end
+
+    def blank_change?(field, value:, rows:)
+      case field
+      when "contributions" then !FieldSources.contribution_present?(rows)
+      when "subjects" then !FieldSources.subject_present?(rows)
+      when "cover_image" then false
+      when "product_form" then value.blank?
+      else
+        value != :unset && value.blank? && value != false && value != 0
+      end
     end
 
     def values_equal?(left, right)
@@ -218,6 +307,7 @@ module Bibliographic
       when Date then value.iso8601
       when Time, ActiveSupport::TimeWithZone then value.utc.iso8601
       when BigDecimal then value.to_s("F")
+      when Integer then value
       else
         value.is_a?(String) ? value.to_s.unicode_normalize(:nfkc).strip.gsub(/\s+/, " ") : value
       end

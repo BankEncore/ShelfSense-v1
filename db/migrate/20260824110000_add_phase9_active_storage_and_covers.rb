@@ -32,15 +32,9 @@ class AddPhase9ActiveStorageAndCovers < ActiveRecord::Migration[8.1]
     add_index :active_storage_variant_records, [ :blob_id, :variation_digest ],
               unique: true, name: "index_active_storage_variant_records_uniqueness"
     add_foreign_key :active_storage_variant_records, :active_storage_blobs, column: :blob_id
-
-    report = Bibliographic::CoverUrlMigration.call
-    say "Unmigrated cover URLs (#{report.size}): #{report.map { |row| "#{row['product_id']} #{row['url']}" }.join('; ')}" if report.any?
-
-    remove_column :products, :cover_image_url
   end
 
   def down
-    add_column :products, :cover_image_url, :string
     drop_table :active_storage_variant_records
     drop_table :active_storage_attachments
     drop_table :active_storage_blobs

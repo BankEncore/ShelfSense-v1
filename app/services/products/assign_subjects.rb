@@ -23,7 +23,7 @@ module Products
         heading = SubjectHeading.find(heading_id)
         parsed << {
           heading: heading,
-          primary: ActiveModel::Type::Boolean.new.cast(data["primary"]),
+          primary: ActiveModel::Type::Boolean.new.cast(data["primary"]) == true,
           position: index
         }
       end
@@ -37,6 +37,7 @@ module Products
       end
 
       @product.product_subject_assignments.update_all(primary: false)
+      @product.product_subject_assignments.reset
       keep_ids = []
       parsed.each do |item|
         assignment = @product.product_subject_assignments.find_or_initialize_by(subject_heading: item[:heading])

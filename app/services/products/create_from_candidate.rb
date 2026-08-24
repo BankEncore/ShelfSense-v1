@@ -39,7 +39,7 @@ module Products
           contribution_rows: contribution_rows,
           subject_rows: subject_rows,
           bibliographic_provider: @candidate.provider,
-          bibliographic_provider_key: @candidate.provider_key || isbn,
+          bibliographic_provider_key: isbn.presence,
           bibliographic_fetched_at: @candidate.fetched_at,
           bibliographic_applied_at: Time.current,
           bibliographic_field_sources: sources

@@ -28,6 +28,7 @@ module Products
       @attributes[:release_date_approximate] = ActiveModel::Type::Boolean.new.cast(@attributes[:release_date_approximate]) == true
       @actor = actor
       @source = source
+      @attached_blob = nil
     end
 
     def call
@@ -92,7 +93,8 @@ module Products
     rescue Identifiers::NormalizationError, Identifiers::Registry::ConflictError, Identifiers::Generator::ExhaustedError,
            ActiveRecord::RecordInvalid, ArgumentError, Bibliographic::FieldSources::Invalid,
            Bibliographic::ContributorRole::Unknown, Products::AssignSubjects::Error,
-           Bibliographic::CoverDownloader::Error => e
+           Bibliographic::CoverDownloader::Error, Bibliographic::CoverPayload::Error => e
+      @attached_blob&.purge
       raise Error, e.message
     end
 
@@ -120,14 +122,20 @@ module Products
 
     def attach_cover!(product)
       if @cover_download
-        product.cover_image.attach(
-          io: StringIO.new(@cover_download.bytes),
-          filename: @cover_download.filename,
-          content_type: @cover_download.content_type
-        )
+        attach_blob!(product, @cover_download.bytes, @cover_download.filename, @cover_download.content_type)
       elsif @cover_image.present?
-        product.cover_image.attach(@cover_image)
+        payload = Bibliographic::CoverPayload.from_upload(@cover_image)
+        attach_blob!(product, payload.bytes, payload.filename, payload.content_type)
       end
+    end
+
+    def attach_blob!(product, bytes, filename, content_type)
+      @attached_blob = ActiveStorage::Blob.create_and_upload!(
+        io: StringIO.new(bytes),
+        filename: filename,
+        content_type: content_type
+      )
+      product.cover_image.attach(@attached_blob)
     end
 
     def normalized_industry(primary)

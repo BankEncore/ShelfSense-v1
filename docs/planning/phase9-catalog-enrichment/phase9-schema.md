@@ -26,14 +26,14 @@ Unique `(product_id, display_name, role)`.
 | `imprint` | string, nullable | |
 | `product_form_id` | uuid, nullable, FK → product_forms | Assigned format |
 | `binding_legacy` | string, nullable | Unmapped leftover binding text |
-| `language_code` | string, nullable | Persist `en` when the adapter recognizes English |
+| `language_code` | string, nullable | Persist recognized ISO 639-1 codes (`en`, `fr`, `es`, `de`) |
 | `page_count` | integer, nullable | Positive when present |
 | `series_name` | string, nullable | |
 | `series_position` | decimal(8,3), nullable | Numeric when parseable |
 | `release_date` | date, nullable | |
 | `release_date_approximate` | boolean, NOT NULL, default false | Year/month-only provider dates |
 | `bibliographic_provider` | string, nullable | e.g. `isbndb` |
-| `bibliographic_provider_key` | string, nullable | Canonical ISBN-13 |
+| `bibliographic_provider_key` | string, nullable | Canonical ISBN-13 when the product has one; never a transient candidate key |
 | `bibliographic_fetched_at` | timestamptz, nullable | |
 | `bibliographic_applied_at` | timestamptz, nullable | |
 | `bibliographic_field_sources` | jsonb, NOT NULL, default `{}` | Per-field provenance |
@@ -80,4 +80,4 @@ Scheme `key` is unique and immutable. Headings: unique `(subject_scheme_id, code
 | `edition` | `product_model` |
 | `date_published` | `release_date` + `release_date_approximate` |
 | `msrp` | `list_price_cents` |
-| `subjects[]` | attach existing headings on catalog match only |
+| `subjects[]` | generic names match the house scheme only; BISAC attaches only from an explicit BISAC code |

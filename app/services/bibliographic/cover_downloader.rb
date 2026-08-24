@@ -7,13 +7,13 @@ require "marcel"
 
 module Bibliographic
   class CoverDownloader
-    class Error < StandardError; end
+    class Error < CoverPayload::Error; end
 
-    MAX_BYTES = 5 * 1024 * 1024
+    MAX_BYTES = CoverPayload::MAX_BYTES
     OPEN_TIMEOUT = 5
     READ_TIMEOUT = 10
     MAX_REDIRECTS = 3
-    ALLOWED_MIME = %w[image/jpeg image/png image/gif image/webp].freeze
+    ALLOWED_MIME = CoverPayload::ALLOWED_MIME
     ALLOWED_HOSTS = %w[images.isbndb.com].freeze
 
     Result = Struct.new(:bytes, :content_type, :filename, :source_url, keyword_init: true) do
@@ -38,24 +38,20 @@ module Bibliographic
       assert_allowed_destination!(uri)
       status, headers, body = follow(uri, redirects: 0)
       raise Error, "cover download failed (#{status})" unless status.to_i.between?(200, 299)
-      raise Error, "cover is too large" if body.bytesize > MAX_BYTES
-
-      mime = Marcel::MimeType.for(StringIO.new(body), name: filename_hint(uri))
-      raise Error, "cover is not an accepted image" unless ALLOWED_MIME.include?(mime)
 
       declared = (headers["content-type"] || headers["Content-Type"]).to_s.split(";").first.to_s.strip.downcase
-      if declared.start_with?("image/") && declared != mime
-        raise Error, "cover is not an accepted image"
-      end
+      payload = CoverPayload.from_bytes(body, filename: filename_hint(uri), declared_type: declared)
 
       Result.new(
-        bytes: body,
-        content_type: mime,
-        filename: filename_for(uri, mime),
+        bytes: payload.bytes,
+        content_type: payload.content_type,
+        filename: payload.filename.presence || filename_for(uri, payload.content_type),
         source_url: @url
       )
     rescue Error
       raise
+    rescue CoverPayload::Error => e
+      raise Error, e.message
     rescue Net::OpenTimeout, Net::ReadTimeout, Net::WriteTimeout, Timeout::Error, Errno::ETIMEDOUT, Net::ReadTimeout, Net::OpenTimeout, Net::WriteTimeout
       raise Error, "cover download timed out"
     rescue StandardError

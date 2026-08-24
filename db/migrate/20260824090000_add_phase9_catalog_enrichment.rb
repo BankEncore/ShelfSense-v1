@@ -26,7 +26,6 @@ class AddPhase9CatalogEnrichment < ActiveRecord::Migration[8.1]
     add_column :products, :page_count, :integer
     add_column :products, :series_name, :string
     add_column :products, :series_position, :decimal, precision: 8, scale: 3
-    add_column :products, :cover_image_url, :string
     add_column :products, :release_date_approximate, :boolean, null: false, default: false
     add_column :products, :bibliographic_provider, :string
     add_column :products, :bibliographic_provider_key, :string
@@ -63,7 +62,6 @@ class AddPhase9CatalogEnrichment < ActiveRecord::Migration[8.1]
     remove_column :products, :bibliographic_provider_key
     remove_column :products, :bibliographic_provider
     remove_column :products, :release_date_approximate
-    remove_column :products, :cover_image_url
     remove_column :products, :series_position
     remove_column :products, :series_name
     remove_column :products, :page_count

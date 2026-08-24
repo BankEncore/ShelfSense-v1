@@ -229,20 +229,8 @@ module Admin
           actor: current_user,
           selected_fields: selected,
           submitted_values: submitted,
-          lock_version: params.dig(:product, :lock_version) || params[:lock_version]
-        )
-        Audit::Recorder.record!(
-          action: "products.enrich",
-          outcome: "succeeded",
-          actor_user: current_user,
-          actor_label: current_user.display_name,
-          store: current_store,
-          subject: @product,
-          after_values: {
-            bibliographic_provider: candidate.provider,
-            bibliographic_provider_key: candidate.provider_key || candidate.isbn13,
-            applied_fields: selected
-          }
+          lock_version: params.dig(:product, :lock_version) || params[:lock_version],
+          store: current_store
         )
         redirect_to admin_product_path(@product), notice: "Bibliographic data applied."
       end
@@ -451,7 +439,7 @@ module Admin
         [ "series_name", "Series", product.series_name, candidate.series_name ],
         [ "series_position", "Series position", product.series_position, candidate.series_position ],
         [ "release_date", "Release date", product.release_date, candidate.release_date ],
-        [ "list_price_cents", "List price", product.list_price_cents, candidate.list_price_cents ],
+        [ "list_price_cents", "List price", format_review_money(product.list_price_cents), format_review_money(candidate.list_price_cents) ],
         [ "industry_identifier", "Industry identifier", product.industry_identifier, candidate.isbn13 ],
         [ "product_form", "Product form", product.product_form&.name, product_form_name_for(candidate.product_form_code), candidate.product_form_code ],
         [ "cover_image", "Cover image", product.cover_image.attached? ? "Attached" : nil, candidate.cover_image_url ],
@@ -473,26 +461,32 @@ module Admin
 
     def review_submitted_values(selected)
       values = {}
+      proposed = params[:proposed]
       Array(selected).each do |field|
-        next if field == "contributions"
-        next unless params.key?(field) || params.dig(:proposed, field)
+        next if %w[contributions subjects cover_image].include?(field)
 
-        values[field] = params[:proposed]&.[](field) || params[field]
+        if proposed&.key?(field)
+          values[field] = proposed[field]
+        elsif params.key?(field)
+          values[field] = params[field]
+        end
       end
-      if selected.include?("contributions") && params[:proposed_contribution_rows]
+      if selected.include?("contributions")
         values["contribution_rows"] = contribution_rows_from_review
       end
       if selected.include?("subjects")
         values["subject_rows"] = Bibliographic::SubjectMatcher.rows_for(@candidate&.subjects)
       end
       if selected.include?("product_form")
-        values["product_form"] = params.dig(:proposed, "product_form").presence || @candidate&.product_form_code
+        values["product_form"] = proposed&.[]("product_form")
       end
-      if values["list_price_cents"].present? && values["list_price_cents"].to_s.include?(".")
-        values["list_price_cents"] = Money::ParseCents.call(values["list_price_cents"])
-      end
-      values["page_count"] = values["page_count"].to_i if values["page_count"].present?
       values
+    end
+
+    def format_review_money(cents)
+      return if cents.nil?
+
+      helpers.format_money_cents(cents)
     end
 
     def contribution_rows_from_review

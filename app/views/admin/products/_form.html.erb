@@ -136,7 +136,8 @@
                 options_from_collection_for_select(headings, :id, :admin_label, row["subject_heading_id"]),
                 include_blank: "None" %>
           <label>
-            <%= check_box_tag "product[subject_rows][#{index}][primary]", "1", ActiveModel::Type::Boolean.new.cast(row["primary"]) %>
+            <%= hidden_field_tag "product[subject_rows][#{index}][primary]", "0", id: "product_subject_rows_#{index}_primary_default" %>
+            <%= check_box_tag "product[subject_rows][#{index}][primary]", "1", ActiveModel::Type::Boolean.new.cast(row["primary"]) == true, id: "product_subject_rows_#{index}_primary" %>
             Primary for scheme
           </label>
         </div>

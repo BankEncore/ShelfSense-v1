@@ -6,12 +6,6 @@ require "erb"
 module Bibliographic
   module Providers
     class IsbnDb
-      LANGUAGE_MAP = {
-        "english" => "en",
-        "eng" => "en",
-        "en" => "en"
-      }.freeze
-
       def initialize(http: Bibliographic::HttpClient.new)
         @http = http
       end
@@ -129,9 +123,7 @@ module Bibliographic
       end
 
       def normalize_language(raw)
-        return if raw.blank?
-
-        LANGUAGE_MAP[raw.to_s.strip.downcase]
+        Bibliographic::LanguageCodes.normalize(raw)
       end
 
       def parse_publication(raw)

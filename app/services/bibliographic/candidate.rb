@@ -18,6 +18,7 @@ module Bibliographic
       self.fetched_at ||= Time.current
       self.candidate_id ||= SecureRandom.uuid
       self.release_date_approximate = !!release_date_approximate
+      self.provider_key = provider_key.presence || isbn13.presence || "#{provider}:candidate:#{candidate_id}"
     end
 
     def to_h

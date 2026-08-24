@@ -98,7 +98,8 @@ module Products
       end
     rescue Identifiers::AssignProductIndustry::Error, ActiveRecord::RecordInvalid, ArgumentError,
            Bibliographic::FieldSources::Invalid, Bibliographic::ContributorRole::Unknown,
-           Products::AssignSubjects::Error, Bibliographic::CoverDownloader::Error => e
+           Products::AssignSubjects::Error, Bibliographic::CoverDownloader::Error,
+           Bibliographic::CoverPayload::Error => e
       @attached_blob&.purge
       raise Error, e.message
     rescue ActiveRecord::StaleObjectError
@@ -160,19 +161,24 @@ module Products
 
     def attach_cover!
       if @cover_download
-        @attached_blob = ActiveStorage::Blob.create_and_upload!(
-          io: StringIO.new(@cover_download.bytes),
-          filename: @cover_download.filename,
-          content_type: @cover_download.content_type
-        )
-        @product.cover_image.attach(@attached_blob)
+        attach_blob!(@cover_download.bytes, @cover_download.filename, @cover_download.content_type)
         true
       elsif @cover_image.present?
-        @product.cover_image.attach(@cover_image)
+        payload = Bibliographic::CoverPayload.from_upload(@cover_image)
+        attach_blob!(payload.bytes, payload.filename, payload.content_type)
         true
       else
         false
       end
+    end
+
+    def attach_blob!(bytes, filename, content_type)
+      @attached_blob = ActiveStorage::Blob.create_and_upload!(
+        io: StringIO.new(bytes),
+        filename: filename,
+        content_type: content_type
+      )
+      @product.cover_image.attach(@attached_blob)
     end
 
     def field_blank?(value)
