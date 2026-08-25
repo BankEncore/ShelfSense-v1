@@ -1,0 +1,49 @@
+<%#
+  locals:
+    field:
+%>
+<fieldset class="bibliographic-review__field" id="review-<%= field[:key] %>">
+  <legend class="type-subtitle"><%= field[:label] %></legend>
+  <div class="bibliographic-review__pair">
+    <div class="bibliographic-review__current">
+      <span class="bibliographic-review__label" id="current-<%= field[:key] %>-label">Current</span>
+      <div id="current-<%= field[:key] %>" class="<%= field[:key] == "industry_identifier" ? "type-identifier" : nil %>"><%= field[:current].presence || "—" %></div>
+    </div>
+    <div class="bibliographic-review__proposed">
+      <span class="bibliographic-review__label" id="proposed-<%= field[:key] %>-label">Proposed</span>
+      <% if field[:key] == "contributions" %>
+        <% rows = @candidate.contribution_rows %>
+        <% rows += [ {} ] while rows.length < 2 %>
+        <% rows.each_with_index do |row, index| %>
+          <div class="form-field">
+            <%= text_field_tag "proposed_contribution_rows[#{index}][display_name]", row["display_name"],
+                  "aria-labelledby": "proposed-#{field[:key]}-label" %>
+            <%= select_tag "proposed_contribution_rows[#{index}][role]",
+                  options_for_select(ProductContribution::ROLES.map { |role| [ role.humanize, role ] }, row["role"] || "author") %>
+          </div>
+        <% end %>
+      <% elsif field[:key] == "product_form" %>
+        <%= select_tag "proposed[product_form]",
+              options_for_select(ProductForm.assignable.admin_ordered.map { |form| [ form.name, form.code ] }, field[:proposed_code] || @candidate.product_form_code),
+              include_blank: true,
+              "aria-labelledby": "proposed-#{field[:key]}-label" %>
+      <% elsif field[:key] == "cover_image" %>
+        <div id="proposed-<%= field[:key] %>"><%= field[:proposed].presence || "—" %></div>
+      <% elsif field[:key] == "subjects" %>
+        <div id="proposed-<%= field[:key] %>"><%= field[:proposed].presence || "—" %></div>
+      <% else %>
+        <%= text_field_tag "proposed[#{field[:key]}]", field[:proposed],
+              "aria-labelledby": "proposed-#{field[:key]}-label" %>
+      <% end %>
+    </div>
+    <div class="bibliographic-review__selected">
+      <span class="bibliographic-review__label">Selected</span>
+      <div class="form-field">
+        <label>
+          <%= check_box_tag "selected_fields[]", field[:key], field[:default_apply], id: "apply-#{field[:key]}" %>
+          Apply proposed <%= field[:label].downcase %>
+        </label>
+      </div>
+    </div>
+  </div>
+</fieldset>

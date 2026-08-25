@@ -1,6 +1,6 @@
 # UDS-5 user stories
 
-Status: **Proposed** (5.0–5.4A complete on `uds-5-administrative-composition`; 5.0 gate Passed; later slices outlined)
+Status: **Proposed** (5.0–5.4B complete on `uds-5-administrative-composition`; 5.0 gate Passed; 5.5 outlined)
 
 Thin stories mapped to GitHub issues [#44](https://github.com/BankEncore/ShelfSense-v1/issues/44)–[#50](https://github.com/BankEncore/ShelfSense-v1/issues/50). Do not file these as additional issues. Authority: [uds-5-plan.md](uds-5-plan.md).
 
@@ -128,9 +128,9 @@ As a merchandiser, I need current vs candidate vs selected fields grouped by fam
 
 **Acceptance**
 
-- [ ] Comparison layout only
-- [ ] ApplyCandidate, provenance, and concurrency tests frozen
-- [ ] Existing domain/workflow tests unchanged and passing
+- [x] Comparison layout only
+- [x] ApplyCandidate, provenance, and concurrency tests frozen
+- [x] Existing domain/workflow tests unchanged and passing
 
 ---
 
