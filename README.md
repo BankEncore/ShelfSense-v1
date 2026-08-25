@@ -12,9 +12,7 @@ The operational foundation through **Phase 9** is implemented on `main`, includi
 - Suppliers, customer requests, reservations, purchase orders, receiving, and corrections
 - Customer identity, contact lookup, duplicate suggestions, and merge
 - Catalog and bibliographic enrichment with reviewed external-data apply
-- The Warm Parchment UX foundation, grouped administrative navigation, and ActionButtonHelper adoption on reference and non-purchasing screens
-
-UDS-5 (administrative composition) is complete on `uds-5-administrative-composition` and is not yet on `main`. Plan: [uds-5-plan.md](docs/planning/ux-design-system/uds-5-plan.md). Closeout: [uds-5.5-closeout-evidence.md](docs/planning/ux-design-system/uds-5.5-closeout-evidence.md).
+- The Warm Parchment UX foundation, grouped administrative navigation, ActionButtonHelper adoption on reference and non-purchasing screens, and UDS-5 administrative composition (compact nav and Product reference family)
 
 Forward domain work is sequenced in the [canonical roadmap](docs/planning/roadmap.md). Phase 10 (stored value and its financial event contract) is proposed but is not identified as the primary stream; later phases cover cash accountability, used buyback, customer-service expansion, and financial/reporting closeout.
 

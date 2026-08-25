@@ -1,6 +1,6 @@
 # UDS-5 user stories
 
-Status: **Proposed** (5.0–5.5 complete on `uds-5-administrative-composition`; 5.0 gate Passed; serif adopted; standing adoption recorded)
+Status: **Implemented** (5.0–5.5 complete on `main`, PR #57; 5.0 gate Passed; serif adopted; standing adoption recorded)
 
 Thin stories mapped to GitHub issues [#44](https://github.com/BankEncore/ShelfSense-v1/issues/44)–[#50](https://github.com/BankEncore/ShelfSense-v1/issues/50). Do not file these as additional issues. Authority: [uds-5-plan.md](uds-5-plan.md).
 

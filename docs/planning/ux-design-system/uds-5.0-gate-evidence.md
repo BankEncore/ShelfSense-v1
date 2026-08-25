@@ -82,7 +82,7 @@ Record date, browser, OS, viewport, input method, profile, route, expected/obser
 | Role | Name | Date | Gate pass? |
 |---|---|---|---|
 | Implementer | Automated gate + Chromium headless system tests | August 2026 | Yes |
-| Reviewer | Pending merge review on `uds-5-administrative-composition` | | |
+| Reviewer | Merge review on [PR #57](https://github.com/BankEncore/ShelfSense-v1/pull/57) | August 2026 | Yes |
 
 **Gate passed.** UDS-5.2 shipped compact `area_row` presentation of the existing catalog and retired the disposable prototype. UDS-5.3 is not blocked.
 

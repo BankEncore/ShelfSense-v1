@@ -46,7 +46,7 @@ This directory contains the project’s technical authority, development guidanc
 | [Phase 9 catalog enrichment](planning/phase9-catalog-enrichment/README.md) | Implemented; [ADR-024](adr/ADR-024-bibliographic-data-authority.md) |
 | [Canonical roadmap](planning/roadmap.md) | Implemented milestones, forward phases 10–14, UDS, Terminal program |
 | [Planning packets](planning/README.md) | Phase and UX packet index |
-| [UX design system](planning/ux-design-system/README.md) | Warm Parchment UDS-1–3 operationally complete; UDS-4.0–4.2 on `main` |
+| [UX design system](planning/ux-design-system/README.md) | Warm Parchment UDS-1–3 operationally complete; UDS-4.0–4.2 and UDS-5 on `main` |
 | [POS Phases 4–6 plan](planning/phase4-6-point-of-sale/spec.md) | Multi-phase POS sequencing (foundation → cash register → MVP); §6 deferred to the Phase 6 packet |
 | [UX conventions](ux-conventions.md) | Shared admin page anatomy, partials, currency boundaries, and Warm Parchment tokens |
 | [Development guide](development.md) | Docker-only local setup, PostgreSQL configuration, application commands, and troubleshooting |

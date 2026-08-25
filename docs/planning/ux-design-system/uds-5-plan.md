@@ -1,6 +1,6 @@
 # UDS-5 — Administrative composition
 
-Status: **Proposed** — UDS-5.0 gate **Passed**; UDS-5.1–5.5 complete on the program branch (serif **adopted**; standing feature-led adoption recorded). Merge to `main` after review.
+Status: **Complete** on `main` (PR #57). UDS-5.0 gate **Passed**; UDS-5.1–5.5 shipped (serif **adopted**; standing feature-led adoption recorded).
 
 Slice id remains **UDS-5**. Not a domain phase number. GitHub tracker: [milestone UDS-5](https://github.com/BankEncore/ShelfSense-v1/milestone/3) ([#44](https://github.com/BankEncore/ShelfSense-v1/issues/44)–[#50](https://github.com/BankEncore/ShelfSense-v1/issues/50)). Authority for later slices is this document; issues do not replace it.
 
@@ -14,22 +14,19 @@ Give administrative screens a readable composition grammar (type roles, page hea
 
 ## Branch and merge sequencing
 
-Program branch: `uds-5-administrative-composition` from `main`. Slices land sequentially on that branch. One pull request to `main` after UDS-5.5. UDS-6 and parked UDS-7 stay off this branch.
+Program branch `uds-5-administrative-composition` merged to `main` via [PR #57](https://github.com/BankEncore/ShelfSense-v1/pull/57). UDS-6 and parked UDS-7 stayed off that branch.
 
 ```text
-main
-  └─ uds-5-administrative-composition
+main  ←  PR #57 (UDS-5.0–5.5)
+  └─ uds-5-administrative-composition  (merged)
        ├─ 5.0  packet, mockup labels, nav gate     (#44)  complete
        ├─ 5.1  typography + primitives             (#45)  complete
        ├─ 5.2  compact nav presentation            (#46)  complete
        ├─ 5.3  Product index + details             (#47)  complete
        ├─ 5.4A catalog search + form               (#48)  complete
        ├─ 5.4B bibliographic review layout         (#49)  complete
-       └─ 5.5  evidence + closeout                 (#50)  this slice
-            └─ PR → main
+       └─ 5.5  evidence + closeout                 (#50)  complete
 ```
-
-If `main` moves, rebase this branch between slices. Do not mix unrelated `main` work into a UDS-5 commit.
 
 ## Shared exclusions
 
@@ -65,7 +62,7 @@ flowchart LR
 
 ### UDS-5.0 — Planning packet, mockup labels, and compact-nav prototype gate
 
-**Status:** **Complete** on `uds-5-administrative-composition`. Gate **Passed** ([uds-5.0-gate-evidence.md](uds-5.0-gate-evidence.md)). **No production chrome change.**
+**Status:** **Complete** on `main`. Gate **Passed** ([uds-5.0-gate-evidence.md](uds-5.0-gate-evidence.md)). **No production chrome change in this slice.**
 
 - Add this plan, [uds-5-user-stories.md](uds-5-user-stories.md), and [uds-5.0-gate-evidence.md](uds-5.0-gate-evidence.md)
 - Label inspirational mockup regions individually (Proposed vs Inspirational/deferred)
@@ -78,43 +75,43 @@ flowchart LR
 
 ### UDS-5.1 — Typography and composition primitives
 
-**Status:** **Complete** on `uds-5-administrative-composition`. Tracker [#45](https://github.com/BankEncore/ShelfSense-v1/issues/45). **No Product family composition** (that is 5.3 / 5.4). Production compact nav is unchanged until 5.2.
+**Status:** **Complete** on `main`. Tracker [#45](https://github.com/BankEncore/ShelfSense-v1/issues/45). **No Product family composition** in this slice (that is 5.3 / 5.4). Production compact nav waited for 5.2.
 
 Local Source Serif 4; `--font-serif` / `--font-mono`; role-based type; `.surface` means panel boundary (`.surface--flush` opts out of the padded compatibility default); extended page-header and form-section; metric strip; table-hierarchy utilities; admin-form sticky footer prototype. Serif only via tokens/role classes. Disposable fixture `GET /admin/uds5_composition_prototype` **retired** after Product screens consumed the primitives.
 
 ### UDS-5.2 — Compact administrative navigation presentation
 
-**Status:** **Complete** on `uds-5-administrative-composition`. Tracker [#46](https://github.com/BankEncore/ShelfSense-v1/issues/46). Gate preferred pattern `area_row` shipped. Catalog membership, predicates, labels, and groups unchanged.
+**Status:** **Complete** on `main`. Tracker [#46](https://github.com/BankEncore/ShelfSense-v1/issues/46). Gate preferred pattern `area_row` shipped. Catalog membership, predicates, labels, and groups unchanged.
 
 Compact utility strip plus an in-flow row of the current group’s destinations. Non-current groups use native `<details>` so every destination remains in the DOM with JavaScript disabled. At `max-width: 40rem` (including the WCAG 400% reflow width of 320 CSS px), the area catalog sits under one **Areas** disclosure and the current destination stays visible, so the header does not become a full-height link wall. Light parchment chrome only. Disposable 5.0 prototype route retired.
 
 ### UDS-5.3 — Product index and details composition
 
-**Status:** **Complete** on `uds-5-administrative-composition`. Tracker [#47](https://github.com/BankEncore/ShelfSense-v1/issues/47).
+**Status:** **Complete** on `main`. Tracker [#47](https://github.com/BankEncore/ShelfSense-v1/issues/47).
 
 Index header/filters/table hierarchy; show identity header, metric strip, identity/publication panels. Operational variant columns stay distinct. No new audit queries. Cover remains a thumbnail. Catalog search and product form shipped in 5.4A; bibliographic review shipped in 5.4B.
 
 ### UDS-5.4A — Product catalog search and form composition
 
-**Status:** **Complete** on `uds-5-administrative-composition`. Tracker [#48](https://github.com/BankEncore/ShelfSense-v1/issues/48).
+**Status:** **Complete** on `main`. Tracker [#48](https://github.com/BankEncore/ShelfSense-v1/issues/48).
 
 Catalog search surface; sectioned product form; related-field grids; sticky admin-form actions. Behavior, params, and validation unchanged.
 
 ### UDS-5.4B — Bibliographic review presentation
 
-**Status:** **Complete** on `uds-5-administrative-composition`. Tracker [#49](https://github.com/BankEncore/ShelfSense-v1/issues/49).
+**Status:** **Complete** on `main`. Tracker [#49](https://github.com/BankEncore/ShelfSense-v1/issues/49).
 
 Comparison layout only. Freeze ApplyCandidate and provenance tests.
 
 ### UDS-5.5 — Evidence and closeout
 
-**Status:** **Complete** on `uds-5-administrative-composition`. Tracker [#50](https://github.com/BankEncore/ShelfSense-v1/issues/50). Evidence: [uds-5.5-closeout-evidence.md](uds-5.5-closeout-evidence.md).
+**Status:** **Complete** on `main`. Tracker [#50](https://github.com/BankEncore/ShelfSense-v1/issues/50). Evidence: [uds-5.5-closeout-evidence.md](uds-5.5-closeout-evidence.md).
 
 Record serif adopt/adjust/reject; update matrix and conventions; add the standing feature-led adoption rule to [ux-conventions.md](../../ux-conventions.md) and [ux-adoption-template.md](ux-adoption-template.md). Print non-regression.
 
 ### Review remediation (PR #57)
 
-Before merge, on this program branch:
+Landed before merge:
 
 - Collapse the area catalog under one **Areas** disclosure at `max-width: 40rem`; keep the current destination visible; assert header height vs viewport
 - Distinguish `header_class` / `cell_class` on `shared/_data_table` so content-role classes do not restyle `<th>`

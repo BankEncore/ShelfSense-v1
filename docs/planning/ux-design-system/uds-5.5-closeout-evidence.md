@@ -1,8 +1,8 @@
 # UDS-5.5 — Evidence and closeout
 
-Status: **Complete** on `uds-5-administrative-composition` (August 2026). Tracker: [#50](https://github.com/BankEncore/ShelfSense-v1/issues/50). Authority: [uds-5-plan.md](uds-5-plan.md) § UDS-5.5.
+Status: **Complete** on `main` (PR #57, August 2026). Tracker: [#50](https://github.com/BankEncore/ShelfSense-v1/issues/50). Authority: [uds-5-plan.md](uds-5-plan.md) § UDS-5.5.
 
-UDS-5 remains **Proposed** until this program branch merges to `main`. This file records closeout evidence for that merge; it does not start UDS-6 or UDS-7.
+This file records closeout evidence for the merged UDS-5 program. It does not start UDS-6 or UDS-7.
 
 ## Serif decision: **Adopt**
 
@@ -63,10 +63,10 @@ UDS-6 (staff history composition) and UDS-7 (sidebar / Cmd+K) stay parked. [defe
 | Printed receipt selectors frozen | See print non-regression |
 | UDS-7 not scheduled | Sidebar and Cmd/Ctrl+K remain deferred |
 
-## Remaining on this branch
+## Remaining after merge
 
-- Merge to `main` after review (one PR for UDS-5).
 - Product family matrix rows stay **partial** / presentation-complete, not a conforming a11y gate.
+- Staff history composition is UDS-6. Sidebar and Cmd/Ctrl+K remain parked (UDS-7).
 
 ## Review remediation (PR #57)
 

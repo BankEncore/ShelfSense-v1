@@ -1,6 +1,6 @@
 # Administrative UX conventions
 
-Status: Implemented (Phase 2.2 architecture; **Warm Parchment palette via UDS-1**). Administrative composition grammar for the Product family and compact grouped nav is recorded in [uds-5-plan.md](planning/ux-design-system/uds-5-plan.md) (complete on the program branch; Proposed until merge). Do not copy inspirational sidebar or Cmd/Ctrl+K chrome.
+Status: Implemented (Phase 2.2 architecture; **Warm Parchment palette via UDS-1**). Administrative composition grammar for the Product family and compact grouped nav is recorded in [uds-5-plan.md](planning/ux-design-system/uds-5-plan.md) (**complete** on `main`). Do not copy inspirational sidebar or Cmd/Ctrl+K chrome.
 
 Concise conventions for ShelfSense server-rendered admin screens. Prefer these patterns over inventing parallel markup or CSS.
 

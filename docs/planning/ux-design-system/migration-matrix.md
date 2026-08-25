@@ -193,7 +193,7 @@ These contracts need an explicit class, a deliberately scoped rule, or a documen
 | UDS-2 transaction history/show | **verified-automated** | Historical screen contract; facts and eligibility remain server-authoritative; print unchanged |
 | UDS-2 native review dialogs | **verified-automated** | Shared contract module; consumers do not inherit status automatically |
 | UDS-3 Register | **verified-automated** | Shortcuts, scanning, focus, layout smoke, PERF correctness in CI; **conforming** requires PERF-HUMAN and SR-MANUAL |
-| UDS-5 administrative composition | **complete on program branch** | Compact grouped nav; Product index/show/search/form/review composition; serif adopted for display roles; feature-led adoption recorded. Not a conforming a11y gate. Merge PR still required. See [uds-5-plan.md](uds-5-plan.md) and [uds-5.5-closeout-evidence.md](uds-5.5-closeout-evidence.md). |
+| UDS-5 administrative composition | **complete on `main`** | Compact grouped nav; Product index/show/search/form/review composition; serif adopted for display roles; feature-led adoption recorded. Not a conforming a11y gate. See [uds-5-plan.md](uds-5-plan.md) and [uds-5.5-closeout-evidence.md](uds-5.5-closeout-evidence.md). |
 | Printed receipts/reports | conforming / locked | Continue to satisfy their separate print contract; never infer Warm Parchment conformance from screen tokens |
 
 No family not explicitly marked **conforming** here should be described as migrated merely because it inherits new UDS-1 tokens.

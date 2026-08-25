@@ -78,20 +78,20 @@ UDS-4.0 gate passed; UDS-4.1 shipped grouped nav into `application.html.erb`; UD
 
 ### UDS-5 — Administrative composition
 
-**Status:** **Proposed** — UDS-5.0–5.5 complete on `uds-5-administrative-composition` (5.0 gate **Passed**; serif **adopted**). Merge to `main` after review ([uds-5-plan.md](ux-design-system/uds-5-plan.md), [uds-5.5-closeout-evidence.md](ux-design-system/uds-5.5-closeout-evidence.md)).
+**Status:** **Complete on `main`** (PR #57). 5.0 gate **Passed**; serif **adopted** ([uds-5-plan.md](ux-design-system/uds-5-plan.md), [uds-5.5-closeout-evidence.md](ux-design-system/uds-5.5-closeout-evidence.md)).
 
 Scope:
 
 - Establish UDS-5 authority and label inspirational mockup regions.
 - Prototype compact presentations of the **existing** UDS-4 grouped catalog (disclosures and optional area row) without changing membership, labels, or predicates.
 - After the gate: type/composition primitives, then Product as the administrative reference family.
-- Record serif adopt/adjust/reject and a standing feature-led adoption rule at closeout (**done** on the program branch; [uds-5.5-closeout-evidence.md](ux-design-system/uds-5.5-closeout-evidence.md)).
+- Record serif adopt/adjust/reject and a standing feature-led adoption rule at closeout (**done**; [uds-5.5-closeout-evidence.md](ux-design-system/uds-5.5-closeout-evidence.md)).
 
 **Deliverable:**
 
 > Authorized staff can scan Product reference screens and the administrative header for identity, status, and next action without a taller grouped-link wall, a persistent sidebar, or any change to catalog membership, permissions, or domain behavior.
 
-Persistent sidebar and global search remain parked ([#56](https://github.com/BankEncore/ShelfSense-v1/issues/56)). Staff history composition is UDS-6 after 5.5.
+Persistent sidebar and global search remain parked ([#56](https://github.com/BankEncore/ShelfSense-v1/issues/56)). Staff history composition is UDS-6.
 
 ## Phase 7.1 — Purchasing workflow and presentation closeout
 
@@ -388,6 +388,7 @@ The following remain out of scope until a planning packet and ADR review justify
 | UDS-1–3 — Warm Parchment foundation | **Operationally complete** (`verified-automated`); see [uds-foundation-closeout-evidence.md](ux-design-system/uds-foundation-closeout-evidence.md) |
 | Phase 7.1 — Purchasing workflow closeout | **Complete** on `main` ([packet](phase7.1-purchasing-polish/README.md)) |
 | UDS-4 — Navigation and information architecture | **UDS-4.0–4.2 on `main`** ([uds-4-plan.md](ux-design-system/uds-4-plan.md)) |
+| UDS-5 — Administrative composition | **Complete** on `main` (PR #57; [uds-5-plan.md](ux-design-system/uds-5-plan.md)) |
 | Phase 8 — Customer foundation (MVP) | **Complete** on `main` (PR #42) |
 | Phase 9 — Catalog and bibliographic enrichment | **Implemented**; Phase 10 unblocked but not primary |
 | Phase 10 — Stored value and financial event contract | After Phase 8 (unblocked; not the primary stream) |

@@ -196,14 +196,14 @@ Validate with the [accessibility and ergonomic test matrix](accessibility-ergono
 **Implementation plan:** [uds-5-plan.md](uds-5-plan.md). Tracker: GitHub milestone UDS-5 ([#44](https://github.com/BankEncore/ShelfSense-v1/issues/44)–[#50](https://github.com/BankEncore/ShelfSense-v1/issues/50)).
 
 - **UDS-5.0** — Packet, mockup region labels, Product/header baselines, disposable compact-nav prototype gate **Passed**. **No production chrome change.**
-- **UDS-5.1** — Typography and composition primitives **complete** on the program branch (local Source Serif 4, type roles, page-header/form-section extensions, metric strip, table hierarchy, admin-form footer). Product family composition waits for 5.3. Disposable composition fixture **retired**.
-- **UDS-5.2** — Compact **area_row** presentation of the existing grouped catalog **complete** on the program branch. Narrow widths use one **Areas** disclosure plus the current destination. Disposable 5.0 prototype route retired. Catalog membership unchanged.
-- **UDS-5.3** — Product index and details composition **complete** on the program branch.
-- **UDS-5.4A** — Product catalog search and form composition **complete** on the program branch.
-- **UDS-5.4B** — Bibliographic review comparison layout **complete** on the program branch. ApplyCandidate and provenance tests remain frozen.
-- **UDS-5.5** — Evidence and closeout **complete** on the program branch. Serif **adopted** for brand/page/record titles. Standing feature-led adoption recorded. Print non-regression recorded ([uds-5.5-closeout-evidence.md](uds-5.5-closeout-evidence.md)).
+- **UDS-5.1** — Typography and composition primitives **complete** on `main` (local Source Serif 4, type roles, page-header/form-section extensions, metric strip, table hierarchy, admin-form footer). Product family composition shipped in 5.3. Disposable composition fixture **retired**.
+- **UDS-5.2** — Compact **area_row** presentation of the existing grouped catalog **complete** on `main`. Narrow widths use one **Areas** disclosure plus the current destination. Disposable 5.0 prototype route retired. Catalog membership unchanged.
+- **UDS-5.3** — Product index and details composition **complete** on `main`.
+- **UDS-5.4A** — Product catalog search and form composition **complete** on `main`.
+- **UDS-5.4B** — Bibliographic review comparison layout **complete** on `main`. ApplyCandidate and provenance tests remain frozen.
+- **UDS-5.5** — Evidence and closeout **complete** on `main`. Serif **adopted** for brand/page/record titles. Standing feature-led adoption recorded. Print non-regression recorded ([uds-5.5-closeout-evidence.md](uds-5.5-closeout-evidence.md)).
 
-**Out of scope for UDS-5:** persistent sidebar, Cmd/Ctrl+K, NavigationCatalog/permission/route changes, Register, purchasing-ops, printed receipt, enrichment policy. Staff history composition is UDS-6 after 5.5.
+**Out of scope for UDS-5:** persistent sidebar, Cmd/Ctrl+K, NavigationCatalog/permission/route changes, Register, purchasing-ops, printed receipt, enrichment policy. Staff history composition is UDS-6.
 
 **Deliverable:** Product reference family and compact admin header use the composition grammar without changing catalog membership or domain behavior.
 
@@ -215,7 +215,7 @@ Validate with the [accessibility and ergonomic test matrix](accessibility-ergono
 - Keep [migration-matrix.md](migration-matrix.md) current.
 - New interaction patterns in [deferred-patterns.md](deferred-patterns.md) require their own specifications.
 - **UDS-4** defers purchasing screens to Phase 7.1 per [phase7.1-uds-coordination.md](../phase7.1-purchasing-polish/phase7.1-uds-coordination.md); see [uds-4-plan.md](uds-4-plan.md).
-- **UDS-5** closeout is on `uds-5-administrative-composition` ([uds-5-plan.md](uds-5-plan.md)); do not pull UDS-6 history or UDS-7 sidebar/search into the merge PR.
+- **UDS-5** is complete on `main` (PR #57; [uds-5-plan.md](uds-5-plan.md)). Do not pull UDS-6 history or UDS-7 sidebar/search into leftover UDS-5 work.
 
 ## Explicitly deferred
 
