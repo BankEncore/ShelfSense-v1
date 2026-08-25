@@ -26,6 +26,15 @@ class AdminGroupedNavigationTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_match(/aria-label="Primary"/, response.body)
     assert_match(/app-nav--grouped/, response.body)
+    assert_select ".app-nav__strip"
+    assert_select ".app-nav__area-row a[aria-current=page]", text: "Products"
+    assert_select ".app-nav-group__heading.is-current-area", text: /Merchandise/
+    assert_select ".app-nav--grouped details", minimum: 7
+    assert_select ".uds-5-nav-prototype", count: 0
+    area_hrefs = destination_hrefs(response.body, ".app-nav__area-row a")
+    assert_includes area_hrefs, admin_products_path
+    assert_not_includes area_hrefs, admin_users_path
+    assert_includes destination_hrefs(response.body, ".app-nav--grouped details a"), admin_users_path
     %w[Merchandise Inventory Purchasing Customers POS\ operations Organization\ configuration Security Audit].each do |label|
       assert_match(/#{Regexp.escape(label)}/, response.body)
     end
@@ -140,8 +149,10 @@ class AdminGroupedNavigationTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_match(/app-nav--grouped/, response.body)
     assert_match(/Purchasing/, response.body)
+    assert_select ".app-nav__area-row a[aria-current=page]", text: "Purchasing"
     assert_includes response.body, admin_purchasing_path
     assert_includes response.body, ops_receiving_index_path
+    assert_includes destination_hrefs(response.body, ".app-nav__area-row a"), ops_receiving_index_path
     assert_not_includes response.body, admin_orders_path
     assert_not_includes response.body, admin_suppliers_path
     assert_not_includes response.body, admin_users_path
@@ -150,6 +161,12 @@ class AdminGroupedNavigationTest < ActionDispatch::IntegrationTest
 
     get admin_orders_path
     assert_redirected_to root_path
+  end
+
+  test "retired 5.0 navigation prototype route is gone" do
+    assert_raises(ActionController::RoutingError) do
+      Rails.application.routes.recognize_path("/admin/uds5_navigation_prototype")
+    end
   end
 
   test "profile B without store keeps hub and omits receiving ops" do
@@ -200,5 +217,9 @@ class AdminGroupedNavigationTest < ActionDispatch::IntegrationTest
 
   def sign_in_as(username)
     post session_path, params: { session: { username: username, password: "correct-horse-battery" } }
+  end
+
+  def destination_hrefs(html, selector)
+    Nokogiri::HTML(html).css(selector).map { |node| node["href"] }.compact
   end
 end

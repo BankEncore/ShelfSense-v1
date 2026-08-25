@@ -1,11 +1,11 @@
 # UDS-5.0 — Compact navigation prototype gate evidence
 
-Status: **Passed** (August 2026) — automated destination-set coverage and Chromium headless height/reflow checks complete. Production chrome is unchanged. UDS-5.2 may ship a compact presentation of the existing catalog.
+Status: **Passed** (August 2026) — automated destination-set coverage and Chromium headless height/reflow checks complete. **UDS-5.2 shipped** the preferred `area_row` pattern and retired the disposable prototype.
 
 Authority: [uds-5-plan.md](uds-5-plan.md) § UDS-5.0, [navigation-proposal.md](navigation-proposal.md). Tracker: [#44](https://github.com/BankEncore/ShelfSense-v1/issues/44).
 
 Disposable prototype: `GET /admin/uds5_navigation_prototype?variant=expanded|disclosures|area_row&as_controller=…`  
-Retire in UDS-5.2 if compact nav ships, or in UDS-5.5 if expanded nav is kept.
+**Retired in UDS-5.2** after production shipped the preferred `area_row` pattern. Historical coverage below used the prototype tests, which were replaced by production grouped-nav tests.
 
 Measure `.uds-5-nav-prototype`, not the live `.app-header`. The live header remains UDS-4.1 expanded grouped nav.
 
@@ -84,7 +84,7 @@ Record date, browser, OS, viewport, input method, profile, route, expected/obser
 | Implementer | Automated gate + Chromium headless system tests | August 2026 | Yes |
 | Reviewer | Pending merge review on `uds-5-administrative-composition` | | |
 
-**Gate passed.** UDS-5.2 may ship compact presentation of the existing catalog. UDS-5.3 is not blocked.
+**Gate passed.** UDS-5.2 shipped compact `area_row` presentation of the existing catalog and retired the disposable prototype. UDS-5.3 is not blocked.
 
 ---
 

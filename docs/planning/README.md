@@ -32,7 +32,7 @@ An early outline in this file numbered Phase 8 as buyback and Phase 9 as financi
 |---|---|
 | [UX design system](ux-design-system/README.md) | UDS-1–3 operationally complete; UDS-4.0–4.2 on `main`; UDS-5 Proposed |
 | [UDS-4 plan](ux-design-system/uds-4-plan.md) | Grouped navigation and non-purchasing adoption |
-| [UDS-5 plan](ux-design-system/uds-5-plan.md) | Administrative composition; 5.0 packet and compact-nav gate **Passed**; 5.1 primitives on the program branch |
+| [UDS-5 plan](ux-design-system/uds-5-plan.md) | Administrative composition; 5.0 packet and compact-nav gate **Passed**; 5.1 primitives and 5.2 compact area-row nav on the program branch |
 
 Further screen migration belongs to the feature phase that materially changes the screen.
 

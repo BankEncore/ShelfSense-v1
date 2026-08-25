@@ -6,7 +6,7 @@ Concise conventions for ShelfSense server-rendered admin screens. Prefer these p
 
 ## Page anatomy
 
-1. **Application shell** — brand, optional current-store label (only when authoritative `current_store` exists), permission-gated nav, flash.
+1. **Application shell** — brand, optional current-store label (only when authoritative `current_store` exists), compact grouped permission-gated nav (current-area row plus native `<details>` for other groups), flash.
 2. **Breadcrumbs** — caller-supplied crumb arrays via `shared/breadcrumbs`. Do not infer crumbs from controller or route names.
 3. **Page header** — optional eyebrow, title, optional subtitle, metadata, and status, with separately aligned actions via `shared/page_header`.
 4. **Content** — one primary task or record view inside `.app-content`. Panels use `.surface` (padded by default; `.surface--flush` for edge-to-edge contents such as tables).

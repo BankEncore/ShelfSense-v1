@@ -1,6 +1,6 @@
 # UDS-5 user stories
 
-Status: **Proposed** (5.0–5.1 complete on `uds-5-administrative-composition`; 5.0 gate Passed; later slices outlined)
+Status: **Proposed** (5.0–5.2 complete on `uds-5-administrative-composition`; 5.0 gate Passed; later slices outlined)
 
 Thin stories mapped to GitHub issues [#44](https://github.com/BankEncore/ShelfSense-v1/issues/44)–[#50](https://github.com/BankEncore/ShelfSense-v1/issues/50). Do not file these as additional issues. Authority: [uds-5-plan.md](uds-5-plan.md).
 
@@ -81,12 +81,12 @@ As a staff user, I need the existing grouped destinations in compact header form
 
 **Acceptance**
 
-- [ ] 5.0 gate has a recorded passing compact pattern, or an explicit keep-expanded decision
-- [ ] Allowlist only: layout, `_admin_primary_nav.html.erb`, CSS, tests, docs
-- [ ] Locked boundary in [uds-5-plan.md](uds-5-plan.md) is honored
-- [ ] Every destination remains reachable with JavaScript disabled
-- [ ] Light chrome only
-- [ ] Disposable 5.0 route retired when production presentation ships (or in 5.5 if expanded is kept)
+- [x] 5.0 gate has a recorded passing compact pattern, or an explicit keep-expanded decision
+- [x] Allowlist only: layout, `_admin_primary_nav.html.erb`, CSS, tests, docs
+- [x] Locked boundary in [uds-5-plan.md](uds-5-plan.md) is honored
+- [x] Every destination remains reachable with JavaScript disabled
+- [x] Light chrome only
+- [x] Disposable 5.0 route retired when production presentation ships (or in 5.5 if expanded is kept)
 
 ---
 

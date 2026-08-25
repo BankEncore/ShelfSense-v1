@@ -78,7 +78,7 @@ UDS-4.0 gate passed; UDS-4.1 shipped grouped nav into `application.html.erb`; UD
 
 ### UDS-5 — Administrative composition
 
-**Status:** **Proposed** — UDS-5.0 packet and compact-nav prototype gate **Passed**; UDS-5.1 primitives complete on `uds-5-administrative-composition` ([uds-5-plan.md](ux-design-system/uds-5-plan.md)). Production compact-nav chrome is unchanged until UDS-5.2.
+**Status:** **Proposed** — UDS-5.0 packet and compact-nav prototype gate **Passed**; UDS-5.1 primitives and UDS-5.2 compact area-row nav complete on `uds-5-administrative-composition` ([uds-5-plan.md](ux-design-system/uds-5-plan.md)).
 
 Scope:
 
