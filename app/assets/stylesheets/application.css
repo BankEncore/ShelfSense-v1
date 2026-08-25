@@ -1091,6 +1091,11 @@ input[type="submit"]:disabled,
   margin-bottom: 0;
 }
 
+.product-identity__heading {
+  min-width: 0;
+  flex: 1 1 16rem;
+}
+
 .product-identity__contributors {
   color: var(--color-text-primary);
   font-size: 1.05rem;
@@ -1107,34 +1112,16 @@ input[type="submit"]:disabled,
   border-radius: var(--radius);
 }
 
-.product-summary {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
-  gap: var(--space-4);
+.product-filters {
   margin-bottom: var(--space-5);
 }
 
-.product-summary__cell {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
+.product-filters .filters {
+  margin-bottom: 0;
 }
 
-.product-summary__label {
-  color: var(--color-text-secondary);
-  font-size: 0.8125rem;
-  font-weight: 600;
-}
-
-.product-summary__value {
-  font-size: 1.125rem;
-  font-weight: 650;
-  word-break: break-word;
-}
-
-.product-summary__note {
-  color: var(--color-text-muted);
-  font-size: 0.8125rem;
+.product-metrics {
+  margin-bottom: var(--space-5);
 }
 
 .product-columns {
@@ -1144,27 +1131,29 @@ input[type="submit"]:disabled,
   align-items: start;
 }
 
+.product-panels {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.product-panels > .section {
+  margin: 0;
+}
+
+.product-variants .data-table th.cell-operational,
+.product-variants .data-table td.cell-operational {
+  background: var(--color-bg-canvas);
+}
+
 @media (min-width: 56rem) {
   .product-columns:has(> :nth-child(2)) {
     grid-template-columns: minmax(0, 2fr) minmax(16rem, 1fr);
   }
 }
 
-.product-description,
-.product-refresh {
-  margin-top: var(--space-4);
-}
-
 .product-provenance {
   margin-top: var(--space-3);
   font-size: 0.875rem;
-}
-
-.product-refresh {
-  padding: var(--space-4);
-  border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius);
-  background: var(--color-bg-subtle);
 }
 
 .bibliographic-review__field {

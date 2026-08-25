@@ -1,6 +1,6 @@
 # UDS-5 user stories
 
-Status: **Proposed** (5.0–5.2 complete on `uds-5-administrative-composition`; 5.0 gate Passed; later slices outlined)
+Status: **Proposed** (5.0–5.3 complete on `uds-5-administrative-composition`; 5.0 gate Passed; later slices outlined)
 
 Thin stories mapped to GitHub issues [#44](https://github.com/BankEncore/ShelfSense-v1/issues/44)–[#50](https://github.com/BankEncore/ShelfSense-v1/issues/50). Do not file these as additional issues. Authority: [uds-5-plan.md](uds-5-plan.md).
 
@@ -98,11 +98,11 @@ As a merchandiser, I need Product index and details to use the UDS-5 primitives 
 
 **Acceptance**
 
-- [ ] Index: composed header, filter grouping, table hierarchy
-- [ ] Show: identity header, metric strip, identity and publication panels
-- [ ] Cover remains a thumbnail
-- [ ] No new audit queries
-- [ ] Existing domain/workflow tests unchanged and passing
+- [x] Index: composed header, filter grouping, table hierarchy
+- [x] Show: identity header, metric strip, identity and publication panels
+- [x] Cover remains a thumbnail
+- [x] No new audit queries
+- [x] Existing domain/workflow tests unchanged and passing
 
 ---
 
