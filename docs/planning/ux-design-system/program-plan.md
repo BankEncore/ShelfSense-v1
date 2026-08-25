@@ -51,6 +51,7 @@ Objective migration states, the alias retirement register, and evidence columns 
 | **UDS-5.3** | UDS-5.1 primitives consumed on Product index/show; `.product-filters`; `.product-metrics`; `.product-panels`; `.product-variants`; `.data-table .cell-operational` | `admin/products/{index,show}.html.erb` only. Do not change ProductsController queries, catalog search, product form, or bibliographic review. `application.html.erb` and `Admin::NavigationCatalog` unchanged | `admin/products/{index,show}.html.erb`. `test/integration/admin_product_composition_test.rb`; `test/system/admin_product_composition_test.rb` |
 | **UDS-5.4A** | UDS-5.1 primitives on catalog search and product form; `.catalog-search-query`; `.catalog-search-results`; `.product-form`; `.product-cover--thumb` | `admin/product_catalog_searches/**`; `admin/products/{new,edit,_form}.html.erb`. Do not change catalog-search params, ranking, ProductsController validation, or bibliographic review. `application.html.erb` and `Admin::NavigationCatalog` unchanged | `admin/product_catalog_searches/new.html.erb`; `admin/products/{new,edit,_form}.html.erb`. `test/integration/admin_product_search_form_composition_test.rb`; `test/system/admin_product_search_form_composition_test.rb` |
 | **UDS-5.4B** | `.bibliographic-review`; `.bibliographic-review__field`; `.bibliographic-review__pair`; `.bibliographic-review__current`; `.bibliographic-review__proposed`; `.bibliographic-review__selected`; `.bibliographic-review__label`; UDS-5.1 form-section and `.admin-form-footer` on the review surface | `admin/products/bibliographic_review.html.erb`; `admin/products/_bibliographic_review_field.html.erb`. Do not change ApplyCandidate, provenance, cover download, subject matching, or lock_version handling. `application.html.erb` and `Admin::NavigationCatalog` unchanged | same views. `test/integration/admin_bibliographic_review_composition_test.rb`; `test/system/admin_bibliographic_review_composition_test.rb` |
+| **UDS-5.5** | None | Docs, matrix, conventions, adoption template, [uds-5.5-closeout-evidence.md](uds-5.5-closeout-evidence.md). Do not change production templates, print, Register, or catalog membership | Evidence only |
 
 Ownership split: [phase7.1-uds-coordination.md](../phase7.1-purchasing-polish/phase7.1-uds-coordination.md) (Accepted August 2026). Phase 7.1 owns purchasing hub, purchasing admin indexes, and Location/Draft PO ops interaction closeout. UDS-4 owns grouped nav chrome and non-purchasing adoption. A needed change to one of these is a separate behavior slice, not incidental UDS work.
 
@@ -90,6 +91,7 @@ The following behavior suites are frozen expectations: a UDS change may add visu
 | UDS-5.3 | Frozen Product suites: `test/integration/phase22_product_ux_test.rb`; `test/integration/product_catalog_enrichment_test.rb`; `test/integration/product_inventory_display_test.rb`. Add composition tests without rewriting those files | Product index/show identity header, filters, metric strip, panels, thumbnail cover, operational variant columns; 320px and 200% zoom |
 | UDS-5.4A | Frozen Product suites: `test/integration/phase22_product_ux_test.rb`; `test/integration/product_catalog_enrichment_test.rb`. Add search/form composition tests without rewriting those files | Catalog search query grouping and candidate table; product form sections/grids/sticky footer; 320px and 200% zoom |
 | UDS-5.4B | Frozen `test/services/bibliographic/apply_candidate_test.rb`; `test/integration/product_catalog_enrichment_test.rb`; `test/system/uds_bibliographic_review_test.rb`. Add composition tests without rewriting those files | Review families, Current/Proposed/Selected columns, sticky footer; 320px and 200% zoom |
+| UDS-5.5 | Frozen print/receipt suites: `test/services/pos/customer_receipt_test.rb`; `test/services/pos/receipt_identity_test.rb`; `test/integration/pos_mvp_closeout_test.rb`. Do not rewrite Register or print assertions | Print templates and `.pos-receipt__print*` unchanged vs `main`; serif decision recorded; no UDS-6/UDS-7 implementation |
 
 Across all slices (including Phase 7.1 and UDS-4), `app/views/pos/receipts/_print.html.erb`, `.pos-receipt__print*`, service/controller/domain code (except Phase 7.1 read-only hub queries), Stimulus key bindings, Turbo target IDs, form actions/methods, and authorization conditions are locked unless the slice explicitly owns that behavior.
 
@@ -199,7 +201,7 @@ Validate with the [accessibility and ergonomic test matrix](accessibility-ergono
 - **UDS-5.3** — Product index and details composition **complete** on the program branch.
 - **UDS-5.4A** — Product catalog search and form composition **complete** on the program branch.
 - **UDS-5.4B** — Bibliographic review comparison layout **complete** on the program branch. ApplyCandidate and provenance tests remain frozen.
-- **UDS-5.5** — Evidence, serif decision, standing feature-led adoption rule.
+- **UDS-5.5** — Evidence and closeout **complete** on the program branch. Serif **adopted** for brand/page/record titles. Standing feature-led adoption recorded. Print non-regression recorded ([uds-5.5-closeout-evidence.md](uds-5.5-closeout-evidence.md)).
 
 **Out of scope for UDS-5:** persistent sidebar, Cmd/Ctrl+K, NavigationCatalog/permission/route changes, Register, purchasing-ops, printed receipt, enrichment policy. Staff history composition is UDS-6 after 5.5.
 
@@ -213,7 +215,7 @@ Validate with the [accessibility and ergonomic test matrix](accessibility-ergono
 - Keep [migration-matrix.md](migration-matrix.md) current.
 - New interaction patterns in [deferred-patterns.md](deferred-patterns.md) require their own specifications.
 - **UDS-4** defers purchasing screens to Phase 7.1 per [phase7.1-uds-coordination.md](../phase7.1-purchasing-polish/phase7.1-uds-coordination.md); see [uds-4-plan.md](uds-4-plan.md).
-- **UDS-5** is the next UX program ([uds-5-plan.md](uds-5-plan.md)); do not pull UDS-6 history or UDS-7 sidebar/search into it.
+- **UDS-5** closeout is on `uds-5-administrative-composition` ([uds-5-plan.md](uds-5-plan.md)); do not pull UDS-6 history or UDS-7 sidebar/search into the merge PR.
 
 ## Explicitly deferred
 

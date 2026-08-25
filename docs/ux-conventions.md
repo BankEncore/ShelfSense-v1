@@ -1,6 +1,6 @@
 # Administrative UX conventions
 
-Status: Implemented (Phase 2.2 architecture; **Warm Parchment palette via UDS-1**). Administrative composition grammar is **Proposed** in [uds-5-plan.md](planning/ux-design-system/uds-5-plan.md); do not copy inspirational sidebar or Cmd/Ctrl+K chrome.
+Status: Implemented (Phase 2.2 architecture; **Warm Parchment palette via UDS-1**). Administrative composition grammar for the Product family and compact grouped nav is recorded in [uds-5-plan.md](planning/ux-design-system/uds-5-plan.md) (complete on the program branch; Proposed until merge). Do not copy inspirational sidebar or Cmd/Ctrl+K chrome.
 
 Concise conventions for ShelfSense server-rendered admin screens. Prefer these patterns over inventing parallel markup or CSS.
 
@@ -93,9 +93,19 @@ Apply type through role classes and tokens. Do not set `font-family` in Product 
 | Tabular numeric | `.type-tabular` | inherits face; `tabular-nums` |
 | Receipt / print | (POS print contract) | `--font-receipt` (Inconsolata) |
 
-Serif is limited to brand, page title, and record title. Controls, navigation, tables, labels, badges, and ordinary body stay sans. Adopt / adjust / reject serif in UDS-5.5.
+Serif is limited to brand, page title, and record title. Controls, navigation, tables, labels, badges, and ordinary body stay sans. **UDS-5.5 adopted** Source Serif 4 for those display roles ([uds-5.5-closeout-evidence.md](planning/ux-design-system/uds-5.5-closeout-evidence.md)).
 
-Composition utilities: `.metric-strip`, `.data-table .cell-primary` / `.cell-secondary` / `.cell-identifier`, `.admin-form-footer` (admin forms; sticky). Exercise them on the disposable fixture until Product slices adopt them.
+Composition utilities: `.metric-strip`, `.data-table .cell-primary` / `.cell-secondary` / `.cell-identifier` / `.cell-operational`, `.admin-form-footer` (admin forms; sticky). The Product family (index, show, catalog search, form, bibliographic review) consumes them. Compact grouped nav uses a utility strip plus the current-area row; other groups stay in native `<details>`.
+
+## Feature-led adoption (UDS-5.5)
+
+- New screens use the current accepted primitives (Warm Parchment tokens, ActionButtonHelper, shared partials, type roles, composition utilities, and compact grouped admin nav).
+- Existing screens adopt those primitives when the feature that owns them is next in scope—not through a UDS sweep of neighboring templates.
+- Unrelated screens do not enter a feature PR automatically.
+- New interaction patterns still need their own specification ([deferred-patterns.md](planning/ux-design-system/deferred-patterns.md)).
+- Update [migration-matrix.md](planning/ux-design-system/migration-matrix.md) in the same change as the feature.
+
+Staff history composition is UDS-6. Persistent sidebar and Cmd/Ctrl+K remain parked (UDS-7).
 
 ## Design system evolution
 
@@ -103,7 +113,7 @@ Phase 2.2 **architecture** (shells, shared partials, money UX, Hotwire boundarie
 
 Authority:
 
-- [UX design system](planning/ux-design-system/README.md) — Warm Parchment, adoption program (UDS-0–UDS-3), migration matrix
+- [UX design system](planning/ux-design-system/README.md) — Warm Parchment, adoption program (UDS-0–UDS-5), migration matrix
 - [Warm Parchment](planning/ux-design-system/warm-parchment.md) — tokens, typography, density (WCAG AA baseline)
 - [Button and action semantics](planning/ux-design-system/button-action-semantics.md) — wording, intent, style, size, review dialogs
 - [UDS-1 implementation plan](planning/ux-design-system/uds-1-plan.md) — foundation delivery (complete through UDS-1d)

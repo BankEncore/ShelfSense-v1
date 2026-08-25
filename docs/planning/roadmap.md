@@ -78,14 +78,14 @@ UDS-4.0 gate passed; UDS-4.1 shipped grouped nav into `application.html.erb`; UD
 
 ### UDS-5 — Administrative composition
 
-**Status:** **Proposed** — UDS-5.0 packet and compact-nav prototype gate **Passed**; UDS-5.1–5.4B complete on `uds-5-administrative-composition` ([uds-5-plan.md](ux-design-system/uds-5-plan.md)).
+**Status:** **Proposed** — UDS-5.0–5.5 complete on `uds-5-administrative-composition` (5.0 gate **Passed**; serif **adopted**). Merge to `main` after review ([uds-5-plan.md](ux-design-system/uds-5-plan.md), [uds-5.5-closeout-evidence.md](ux-design-system/uds-5.5-closeout-evidence.md)).
 
 Scope:
 
 - Establish UDS-5 authority and label inspirational mockup regions.
 - Prototype compact presentations of the **existing** UDS-4 grouped catalog (disclosures and optional area row) without changing membership, labels, or predicates.
 - After the gate: type/composition primitives, then Product as the administrative reference family.
-- Record serif adopt/adjust/reject and a standing feature-led adoption rule at closeout.
+- Record serif adopt/adjust/reject and a standing feature-led adoption rule at closeout (**done** on the program branch; [uds-5.5-closeout-evidence.md](ux-design-system/uds-5.5-closeout-evidence.md)).
 
 **Deliverable:**
 

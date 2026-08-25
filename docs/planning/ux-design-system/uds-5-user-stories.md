@@ -1,6 +1,6 @@
 # UDS-5 user stories
 
-Status: **Proposed** (5.0–5.4B complete on `uds-5-administrative-composition`; 5.0 gate Passed; 5.5 outlined)
+Status: **Proposed** (5.0–5.5 complete on `uds-5-administrative-composition`; 5.0 gate Passed; serif adopted; standing adoption recorded)
 
 Thin stories mapped to GitHub issues [#44](https://github.com/BankEncore/ShelfSense-v1/issues/44)–[#50](https://github.com/BankEncore/ShelfSense-v1/issues/50). Do not file these as additional issues. Authority: [uds-5-plan.md](uds-5-plan.md).
 
@@ -142,10 +142,10 @@ As a reviewer, I need serif and composition decisions written down so later feat
 
 **Acceptance**
 
-- [ ] Serif adopt / adjust / reject with evidence
-- [ ] Matrix and conventions updated for the Product family and compact nav
-- [ ] Standing feature-led adoption rule in `ux-conventions.md` and `ux-adoption-template.md`
-- [ ] Print non-regression recorded
+- [x] Serif adopt / adjust / reject with evidence
+- [x] Matrix and conventions updated for the Product family and compact nav
+- [x] Standing feature-led adoption rule in `ux-conventions.md` and `ux-adoption-template.md`
+- [x] Print non-regression recorded
 
 ---
 
@@ -153,6 +153,6 @@ As a reviewer, I need serif and composition decisions written down so later feat
 
 ### US-UDS-5-R1 — Shells remain distinct
 
-- [ ] Administrative composition does not fold ops or Register into the admin shell
-- [ ] Printed receipt selectors remain frozen
-- [ ] UDS-7 sidebar/search is not scheduled
+- [x] Administrative composition does not fold ops or Register into the admin shell
+- [x] Printed receipt selectors remain frozen
+- [x] UDS-7 sidebar/search is not scheduled

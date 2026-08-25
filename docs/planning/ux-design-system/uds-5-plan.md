@@ -1,6 +1,6 @@
 # UDS-5 — Administrative composition
 
-Status: **Proposed** — UDS-5.0 gate **Passed**; UDS-5.1 primitives, UDS-5.2 compact nav, UDS-5.3 Product index/show, UDS-5.4A catalog search/form, and UDS-5.4B bibliographic review complete on the program branch.
+Status: **Proposed** — UDS-5.0 gate **Passed**; UDS-5.1–5.5 complete on the program branch (serif **adopted**; standing feature-led adoption recorded). Merge to `main` after review.
 
 Slice id remains **UDS-5**. Not a domain phase number. GitHub tracker: [milestone UDS-5](https://github.com/BankEncore/ShelfSense-v1/milestone/3) ([#44](https://github.com/BankEncore/ShelfSense-v1/issues/44)–[#50](https://github.com/BankEncore/ShelfSense-v1/issues/50)). Authority for later slices is this document; issues do not replace it.
 
@@ -24,8 +24,8 @@ main
        ├─ 5.2  compact nav presentation            (#46)  complete
        ├─ 5.3  Product index + details             (#47)  complete
        ├─ 5.4A catalog search + form               (#48)  complete
-       ├─ 5.4B bibliographic review layout         (#49)  this slice
-       └─ 5.5  evidence + closeout                 (#50)
+       ├─ 5.4B bibliographic review layout         (#49)  complete
+       └─ 5.5  evidence + closeout                 (#50)  this slice
             └─ PR → main
 ```
 
@@ -47,7 +47,7 @@ Every UDS-5 slice:
 
 ## Serif policy
 
-Warm Parchment **permits** a display-serif role for brand and top-level titles ([warm-parchment.md](warm-parchment.md)). UDS-5 tests whether to adopt it. Do not treat serif as already accepted. Apply serif only through `--font-serif` and role classes. Record adopt / adjust / reject in UDS-5.5.
+Warm Parchment **permits** a display-serif role for brand and top-level titles ([warm-parchment.md](warm-parchment.md)). **UDS-5.5 adopted** Source Serif 4 for brand, page title, and record title via `--font-serif` and role classes. Do not apply serif outside those roles. Evidence: [uds-5.5-closeout-evidence.md](uds-5.5-closeout-evidence.md).
 
 ## Slices
 
@@ -108,7 +108,7 @@ Comparison layout only. Freeze ApplyCandidate and provenance tests.
 
 ### UDS-5.5 — Evidence and closeout
 
-**Status:** Outlined. Tracker [#50](https://github.com/BankEncore/ShelfSense-v1/issues/50).
+**Status:** **Complete** on `uds-5-administrative-composition`. Tracker [#50](https://github.com/BankEncore/ShelfSense-v1/issues/50). Evidence: [uds-5.5-closeout-evidence.md](uds-5.5-closeout-evidence.md).
 
 Record serif adopt/adjust/reject; update matrix and conventions; add the standing feature-led adoption rule to [ux-conventions.md](../../ux-conventions.md) and [ux-adoption-template.md](ux-adoption-template.md). Print non-regression.
 
@@ -124,7 +124,7 @@ Expanding an allowlist requires updating this plan in a preceding or same-commit
 | **UDS-5.3** | UDS-5.1 primitives consumed on Product index/show; `.product-filters`; `.product-metrics`; `.product-panels`; `.product-variants`; `.data-table .cell-operational` | `admin/products/{index,show}.html.erb` only. Do not change ProductsController queries, catalog search, product form, or bibliographic review. | `admin/products/{index,show}.html.erb`. `test/integration/admin_product_composition_test.rb`; `test/system/admin_product_composition_test.rb` |
 | **UDS-5.4A** | UDS-5.1 primitives on catalog search and product form; `.catalog-search-query`; `.catalog-search-results`; `.product-form`; `.product-cover--thumb` | `admin/product_catalog_searches/**`; `admin/products/{new,edit,_form}.html.erb`. Do not change catalog-search params, ranking, ProductsController validation, or bibliographic review. | `admin/product_catalog_searches/new.html.erb`; `admin/products/{new,edit,_form}.html.erb`. `test/integration/admin_product_search_form_composition_test.rb`; `test/system/admin_product_search_form_composition_test.rb` |
 | **UDS-5.4B** | `.bibliographic-review`; `.bibliographic-review__field`; `.bibliographic-review__pair`; `.bibliographic-review__current`; `.bibliographic-review__proposed`; `.bibliographic-review__selected`; `.bibliographic-review__label`; UDS-5.1 form-section and `.admin-form-footer` consumed on the review surface | `admin/products/bibliographic_review.html.erb`; `admin/products/_bibliographic_review_field.html.erb`. Do not change ApplyCandidate, provenance writes, cover download, subject matching, lock_version handling, or ProductsController review-field construction. | same views. `test/integration/admin_bibliographic_review_composition_test.rb`; `test/system/admin_bibliographic_review_composition_test.rb` |
-| **UDS-5.5** | None except docs | Docs, matrix, conventions, adoption template | Evidence only |
+| **UDS-5.5** | None except docs | Docs, matrix, conventions, adoption template, closeout evidence. Do not change production templates, catalog membership, print, or Register. | [uds-5.5-closeout-evidence.md](uds-5.5-closeout-evidence.md); [ux-conventions.md](../../ux-conventions.md); [ux-adoption-template.md](ux-adoption-template.md); [warm-parchment.md](warm-parchment.md); [migration-matrix.md](migration-matrix.md) |
 
 5.1–5.5 file lists may be refined in a slice planning session **before** that slice is coded, by editing this table in the same change.
 
@@ -171,6 +171,7 @@ Existing domain/workflow tests stay unchanged and passing. 5.2 may update groupe
 
 - [uds-5-user-stories.md](uds-5-user-stories.md)
 - [uds-5.0-gate-evidence.md](uds-5.0-gate-evidence.md)
+- [uds-5.5-closeout-evidence.md](uds-5.5-closeout-evidence.md)
 - Fixture: `GET /admin/uds5_composition_prototype` (UDS-5.1)
 - [navigation-proposal.md](navigation-proposal.md)
 - [deferred-patterns.md](deferred-patterns.md)
