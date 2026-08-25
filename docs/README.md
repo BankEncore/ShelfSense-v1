@@ -44,12 +44,13 @@ This directory contains the project’s technical authority, development guidanc
 | [Phase 7.1 purchasing polish](planning/phase7.1-purchasing-polish/README.md) | Complete on `main` (7.1.1–7.1.3); 7.1.4 deferred |
 | [Phase 8 customer foundation](planning/phase8-customer-foundation/README.md) | Complete on `main` (PR #42); [ADR-023](adr/ADR-023-customer-merge.md) |
 | [Phase 9 catalog enrichment](planning/phase9-catalog-enrichment/README.md) | Implemented; [ADR-024](adr/ADR-024-bibliographic-data-authority.md) |
-| [Forward roadmap](planning/roadmap.md) | Canonical post–Phase 7 sequencing (Phases 7.1, 8–14, UDS, Terminal program) |
+| [Canonical roadmap](planning/roadmap.md) | Implemented milestones, forward phases 10–14, UDS, Terminal program |
+| [Planning packets](planning/README.md) | Phase and UX packet index |
 | [UX design system](planning/ux-design-system/README.md) | Warm Parchment UDS-1–3 operationally complete; UDS-4.0–4.2 on `main` |
 | [POS Phases 4–6 plan](planning/phase4-6-point-of-sale/spec.md) | Multi-phase POS sequencing (foundation → cash register → MVP); §6 deferred to the Phase 6 packet |
-| [UX conventions](ux-conventions.md) | Shared admin page anatomy, partials, currency boundaries, palette (Phase 2.2 implemented; Warm Parchment proposed), and Hotwire deferral |
+| [UX conventions](ux-conventions.md) | Shared admin page anatomy, partials, currency boundaries, and Warm Parchment tokens |
 | [Development guide](development.md) | Docker-only local setup, PostgreSQL configuration, application commands, and troubleshooting |
-| [Testing and CI](testing.md) | Active GitHub Actions checks and prerequisites for deferred checks |
+| [Testing and CI](testing.md) | Active GitHub Actions jobs, system tests, and UDS accessibility suites |
 | [GitHub work management](github-workflow.md) | Issues, PRs, milestones, labels, and release tagging |
 | [Project README](../README.md) | Project purpose, status, roadmap, architecture summary, and quick start |
 | [Contributor rules](../AGENTS.md) | Required practices for human contributors and coding agents |

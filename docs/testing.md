@@ -8,6 +8,7 @@ ShelfSense uses GitHub Actions to run the checks that the application currently 
 - Ruby style checks with RuboCop
 - The Rails test suite with PostgreSQL
 - Register workspace system tests with headless Chrome
+- UDS reference accessibility suites (`test/system/uds_*`) with axe-core
 
 ## System tests
 
@@ -25,6 +26,13 @@ CI runs system tests as a separate job after installing Chrome:
 
 ```sh
 bin/rails db:test:prepare test:system
+```
+
+A further job runs the UDS reference accessibility suites:
+
+```sh
+bin/rails db:test:prepare
+bin/rails test test/system/uds_*
 ```
 
 ## JavaScript dependency audit

@@ -15,20 +15,18 @@ Accepted ADRs are authoritative. Proposed ADRs are not settled policy. If a requ
 
 Do not infer ShelfSense requirements from ShelfStack or another earlier project. Similarity is useful background, not authority.
 
-## 2. Respect the current phase
+## 2. Respect approved scope
 
-Implement only the approved phase or task scope. Phase 1 is the operable foundation:
+Implement only the approved task, planning packet, or roadmap slice. The canonical roadmap records what is on `main`, what is proposed, and what is explicitly deferred; do not rely on a historical phase description in an older plan to determine current scope.
 
-- System settings
-- Stores
-- Users and server-side authentication sessions
-- Roles, permissions, role permissions, and scoped role assignments
-- Registers as durable logical POS checkout identities (table may still be named `workstations` until the pre-Phase-4 rename; see ADR-021)
-- Authentication and authorization
-- Append-only audit events
-- Safe bootstrap of the first organization configuration, store, system actor, and administrator
+Before implementation:
 
-Do not pull later-domain functionality into Phase 1 merely because the schema may eventually need it. In particular, defer POS transactions, business days, POS sessions, drawers, merchandise, inventory, customers, suppliers, purchasing, offline Terminal authentication, and synchronization unless the task explicitly advances that scope.
+1. Identify the governing planning packet and accepted ADRs.
+2. Distinguish implemented contracts from proposed direction and deferred features.
+3. Confirm the target branch and integration strategy in the current plan or PR.
+4. Treat unresolved policy as a blocker to the affected design, not permission to choose silently.
+
+Do not expand a narrow slice to include attractive adjacent work. In particular, do not pull stored value, cash movements, buyback, supplier returns, accounting export, customer CRM, or offline Terminal behavior into another phase unless its approved scope explicitly includes it.
 
 Build vertical slices that produce demonstrable behavior. Avoid migrations or generic CRUD screens that have no corresponding authorization, validation, audit, and test coverage.
 
@@ -169,23 +167,26 @@ At minimum, cover as applicable:
 
 Use deterministic clocks, identifiers, and test data when supported. Do not weaken production constraints merely to simplify fixtures.
 
-Run the smallest relevant test set during development and the full project validation required by CI before handoff.
+Run the smallest relevant test set during development and the full project validation required by CI before handoff. When a full run is impractical or blocked, report exactly what was and was not run.
 
 Local development is Docker-only. Do not require contributors to install Ruby, Rails, Bundler, or PostgreSQL on the host. Use the project helper for application commands:
 
 ```sh
 ./dev/rails-docker bin/rails test
+./dev/rails-docker bin/rails test:system
 ./dev/rails-docker bin/rubocop
 ./dev/rails-docker bin/brakeman --no-pager
 ./dev/rails-docker bin/bundler-audit
+./dev/rails-docker bin/importmap audit
 ./dev/rails-docker bin/rails db:prepare
+./dev/rails-docker bin/ci
 ```
 
 Build and initialize the environment with `docker compose build` and `docker compose run --rm web bin/setup --skip-server`. Run the application with `docker compose up`. The helper uses `docker compose exec` when `web` is running and `docker compose run --rm` otherwise.
 
 GitHub Actions is a separate controlled environment and may invoke the same committed `bin/` commands directly after setting up Ruby and PostgreSQL.
 
-System tests and JavaScript dependency auditing are intentionally deferred. Do not add either CI check until the prerequisites in `docs/testing.md` are satisfied.
+System tests, UDS accessibility suites, and JavaScript dependency auditing are active CI coverage. Add or update system tests when behavior depends on browser interaction, focus, keyboard operation, Turbo/Stimulus behavior, printing, dialogs, or layout contracts that request tests cannot prove. Follow `docs/testing.md` for the supported Docker/browser workflow.
 
 ## 12. Security and privacy
 
@@ -208,9 +209,9 @@ Create an ADR when a decision is cross-cutting, difficult to reverse, affects of
 
 An ADR should include status, context, decision, and consequences. Mark unresolved choices `Proposed`; do not describe them as accepted elsewhere.
 
-Keep README setup instructions executable and current. Development procedures belong in `docs/development.md`; CI coverage and deferred checks belong in `docs/testing.md`. Issue, PR, milestone, and release conventions belong in `docs/github-workflow.md`.
+Keep README setup instructions executable and current. Development procedures belong in `docs/development.md`; active CI coverage belongs in `docs/testing.md`. Issue, PR, milestone, and release conventions belong in `docs/github-workflow.md`.
 
-Use Rails-native patterns unless an accepted ADR or an established project pattern requires otherwise. Phase 5 Slice 2 uses Importmap + Turbo + Stimulus for the cashier Register workspace, with system/browser tests ([register-workspace.md](docs/planning/phase4-6-point-of-sale/phase5-cash-register/register-workspace.md)). Admin screens remain server-rendered Rails until a later decision. Do not add Hotwire to admin chrome as a side effect of POS work.
+Use Rails-native patterns unless an accepted ADR or an established project pattern requires otherwise. The Register workspace uses Importmap + Turbo + Stimulus with system/browser tests ([register-workspace.md](docs/planning/phase4-6-point-of-sale/phase5-cash-register/register-workspace.md)). Administrative screens remain server-rendered Rails; use Hotwire there only for a deliberate interaction that follows an established pattern, not as an incidental framework expansion.
 
 ## 14. Change discipline
 

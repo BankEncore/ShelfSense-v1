@@ -1,41 +1,36 @@
 # ShelfSense
 
-ShelfSense is an inventory, purchasing, customer-service, and point-of-sale system for independent bookstores. It is designed for one organization operating one or more stores, with a central organization server and store Registers. A future standalone Terminal (ADR-021) may continue ordinary checkout during temporary connectivity loss.
+ShelfSense is an inventory, purchasing, customer-service, and point-of-sale system for independent bookstores. Each installation serves one organization operating one or more stores. The current application is a central, online Rails system; standalone/offline Terminal operation is a future program governed by [ADR-018](docs/adr/ADR-018-pos-runtime-and-deployment.md) and [ADR-021](docs/adr/ADR-021-register-and-terminal-identity.md).
 
-Phases 0–8, Phase 6.1, and Phase 7.1 (slices 7.1.1–7.1.3) are implemented on `main`. UDS-1–3 are operationally complete (`verified-automated`); UDS-4.0–4.2 (grouped navigation and non-purchasing adoption) are on `main`. Phase 8 is the customer identity foundation (lookup, duplicate suggestions, merge). **Phase 9** (catalog and bibliographic enrichment) is implemented; Phase 10 (stored value) is unblocked but not the primary stream. See [the forward roadmap](docs/planning/roadmap.md).
+## Project status
 
-## Goals
+The operational foundation through **Phase 9** is implemented on `main`, including:
 
-ShelfSense is intended to provide a coherent operational system for:
+- Organization, stores, users, scoped authorization, and audit
+- Merchandise, identifiers, classification, pricing, and inventory valuation
+- Register sales, tenders, returns, post-void, session close, and receipt history
+- Suppliers, customer requests, reservations, purchase orders, receiving, and corrections
+- Customer identity, contact lookup, duplicate suggestions, and merge
+- Catalog and bibliographic enrichment with reviewed external-data apply
+- The Warm Parchment UX foundation, grouped administrative navigation, and ActionButtonHelper adoption on reference and non-purchasing screens
 
-- Books, music, video, games, periodicals, sidelines, café items, services, and other bookstore merchandise
-- New, used, remainder, promotional, and consignment inventory
-- Purchasing, receiving, supplier returns, customer orders, and reservations
-- Fast, keyboard-friendly point of sale with offline continuity
-- Sales, returns, tenders, stored value, buybacks, and cash accountability
-- Store-level inventory authority with organization-wide reporting
-- Exact financial calculations and reconstructable operational history
+Forward domain work is sequenced in the [canonical roadmap](docs/planning/roadmap.md). Phase 10 (stored value and its financial event contract) is proposed but is not identified as the primary stream; later phases cover cash accountability, used buyback, customer-service expansion, and financial/reporting closeout.
 
-ShelfSense is a single-tenant application: each installation serves one organization, while retaining explicit store scope wherever operationally meaningful.
+## Technology
 
-## Technology foundation
+- Ruby 3.4.9 and Rails 8.1
+- PostgreSQL 17
+- Puma and Propshaft
+- Importmap, Turbo, and Stimulus where interactive workflows require them
+- Solid Cache, Solid Queue, and Solid Cable
+- Minitest, Capybara/Selenium, axe-core, RuboCop, Brakeman, Bundler Audit, and Importmap Audit
+- GitHub Actions continuous integration
 
-The accepted application scaffold currently uses:
-
-- Ruby 3.4.9
-- Rails 8.1
-- PostgreSQL
-- Puma
-- Propshaft
-- Rails' database-backed Solid Cache, Solid Queue, and Solid Cable adapters
-- Minitest, RuboCop, Brakeman, and Bundler Audit
-- GitHub Actions for continuous integration
-
-The cashier Register workspace (Phase 5 Slice 2) uses Importmap + Turbo + Stimulus with system/browser tests. Admin screens remain server-rendered Rails. See [register-workspace.md](docs/planning/phase4-6-point-of-sale/phase5-cash-register/register-workspace.md) and [Testing and CI](docs/testing.md).
+ShelfSense favors server-rendered Rails. The Register workspace uses Hotwire; administrative surfaces use it only where an established interaction requires it.
 
 ## Quick start
 
-Local development is Docker-only. Install Docker Desktop and VS Code; Ruby, Rails, Bundler, PostgreSQL, gems, and command-line utilities run inside containers.
+Local development is Docker-only. Install Docker Desktop and Git; Ruby, Rails, Bundler, PostgreSQL, gems, and browser-test dependencies run in containers.
 
 ```sh
 docker compose build
@@ -43,9 +38,9 @@ docker compose run --rm web bin/setup --skip-server
 docker compose up
 ```
 
-Open <http://localhost:3000>. The Rails health endpoint is available at <http://localhost:3000/up>.
+Open <http://localhost:3000>. The health endpoint is <http://localhost:3000/up>.
 
-Use the project helper for application commands. It executes in the running `web` container when available and otherwise starts a temporary container:
+Use the project helper for application commands. It uses the running `web` container when available and otherwise starts a temporary one:
 
 ```sh
 ./dev/rails-docker bin/rails console
@@ -53,228 +48,72 @@ Use the project helper for application commands. It executes in the running `web
 ./dev/rails-docker bin/rails test
 ```
 
-See the [development guide](docs/development.md) for the complete Docker workflow, database behavior, validation commands, volume management, and troubleshooting.
+For bootstrap, database, environment, and troubleshooting instructions, see the [development guide](docs/development.md).
 
 ## Validation
 
-Run the same categories of checks enforced by CI:
+Run the complete local CI entry point:
+
+```sh
+./dev/rails-docker bin/ci
+```
+
+During development, run the smallest relevant test set first. The individual CI categories are:
 
 ```sh
 ./dev/rails-docker bin/rails test
+./dev/rails-docker bin/rails test:system
 ./dev/rails-docker bin/rubocop
 ./dev/rails-docker bin/brakeman --no-pager
 ./dev/rails-docker bin/bundler-audit
+./dev/rails-docker bin/importmap audit
 ```
 
-CI prepares its PostgreSQL test database before running the Rails suite. See [Testing and CI](docs/testing.md) for the active checks and the conditions for restoring system tests and JavaScript dependency auditing.
+See [Testing and CI](docs/testing.md) for browser-test behavior and the active GitHub Actions jobs.
 
 ## Architecture at a glance
 
-ShelfSense uses a central-server topology. The first POS client is Rails-native and online. Durable checkout identity is the **Register**; a concrete **Terminal** is deferred until standalone/offline POS (ADR-021).
+- ShelfSense is single-tenant and multi-store. Store scope remains explicit wherever operationally meaningful.
+- The central server owns master data, configuration, customer records, purchasing, and consolidated projections.
+- A **Register** is the durable logical checkout identity; a future **Terminal** is a concrete POS client or device.
+- Completed business facts are immutable. Corrections use reversals, compensating records, or explicit reconciliation.
+- Durable domain records use application-assigned UUIDv7 identifiers; human-facing document numbers remain separate.
+- Money is stored as integer minor units. Operational timestamps are UTC instants with explicit store business dates where required.
+- Retryable commands use idempotency keys and payload hashes. Asynchronous delivery uses a transactional outbox and idempotent consumers.
+- Authorization is additive and may be global or store-scoped; there is no administrator bypass around the ordinary permission engine.
 
-- The central server owns master data, configuration, users, permissions, purchasing, customer records, and consolidated projections.
-- A future Terminal caches the reference data required for checkout and originates completed POS operations for a Register.
-- Ordinary sales may later complete locally while disconnected and synchronize later.
-- Completed business facts remain immutable; corrections use reversals, compensating records, or explicit reconciliation.
-- UUIDv7 identifiers allow durable records to originate without a central sequence allocator.
-- Human-facing document numbers are separate from technical identifiers.
-- Transactional outboxes and idempotent consumers provide at-least-once delivery across asynchronous boundaries.
-
-Detailed architectural policy is recorded in the [Architecture Decision Records](docs/adr/README.md). Accepted ADRs govern implementation. Proposed ADRs identify unresolved policy and must not be treated as settled.
+Accepted [Architecture Decision Records](docs/adr/README.md) govern implementation. Proposed ADRs describe unresolved policy and are not settled decisions.
 
 ## Domain map
 
+Named domains for ownership. `buyback` and `reports` are reserved for later phases; they are not implemented on `main`.
+
 | Domain | Responsibility |
 |---|---|
-| `platform` | Core technical infrastructure and cross-domain system concerns |
-| `administration` | System configuration, stores, users, permissions, and operational setup |
+| `platform` | Cross-domain infrastructure, identity, audit, concurrency, and delivery |
+| `administration` | Organization configuration, stores, users, permissions, and operational setup |
 | `financial` | Financial classification, tax, accounting configuration, and financial records |
-| `customers` | Customer identities, relationships, exemptions, requests, and reservations |
-| `merchandise` | Products, variants, inventory units, classification, pricing, and inventory concepts |
-| `purchasing` | Suppliers, purchase orders, receiving, shipments, and returns to suppliers |
-| `pos` | Sales, returns, tenders, business days, sessions, and point-of-sale operation |
-| `buyback` | Acquisition of used merchandise from customers |
-| `reports` | Operational, financial, and analytical reporting |
-
-## Roadmap
-
-### Phase 0: Architecture and planning
-
-Status: complete.
-
-Phase 0 established deployment topology, data authority, offline behavior, identifiers, receipt numbering, value types, auditing, concurrency, idempotency, asynchronous delivery, naming, record lifecycle, immutability, and reconciliation policy.
-
-Two policies remain proposed and require later business decisions:
-
-- Offline returns
-- Business-day closure when a workstation has not reported
-
-### Phase 1: Operable foundation
-
-Status: operable foundation implemented (bootstrap, authentication, authorization, administration, audit).
-
-Phase 1 uses server-rendered Rails HTML. Turbo and Stimulus may be installed when a specific interaction requires them; no client-side application framework or JavaScript package-management strategy is required for early Phase 1 slices. Durable domain identifiers use Rails-generated UUIDv7 (`SecureRandom.uuid_v7`) while the project remains on PostgreSQL 17.
-
-Phase 1 implements only what is required to initialize, operate, and administer the application foundation:
-
-- `system_settings`
-- `stores`
-- `users`
-- `roles`
-- `permissions`
-- `role_permissions`
-- `role_assignments`
-- `registers`
-- `user_sessions`
-- `audit_events`
-- Authentication and authorization
-- Bootstrap of the organization, first store, protected system actor, and first administrator
-- Administration of essential configuration
-
-The Phase 1 deliverable is:
-
-> A user can sign in, access an authorized store, and manage essential system configuration according to globally or store-scoped permissions, with material actions recorded in the audit log.
-
-Phase 1 does not include business days, POS sessions, cash drawers, transactions, inventory, merchandise, customers, suppliers, offline workstation synchronization, or purchasing workflows.
-
-### Phase 2: Financial classification and merchandise foundation
-
-Status: implemented (GL/tax/departments, merchandise reference data, products with mandatory primary identifiers, variants with immutable `221` SKUs, identifier registry tombstones, lookup, and CSV import).
-
-Phase 2 extends Phase 1 patterns for organization-wide catalog master data:
-
-- Financial classifications: `gl_accounts`, `tax_classes`, `departments`
-- Merchandise reference: `merchandise_classes`, `merchandise_categories`, `merchandise_conditions`
-- Catalog: `products` (mandatory `primary_identifier`, enter-external or generate-`222` at create), `product_variants` (immutable generated `221` SKU), `identifier_registry`
-- Unified identifier lookup (`merchandise.lookup`) and minimal CSV import (`merchandise.import`)
-
-The Phase 2 deliverable is:
-
-> An authorized user can configure financial classifications, create a product with one or more sellable standard or used variants (each with an immutable `221` SKU), assign department/tax/class/price (and condition for used variants), and retrieve by product identifier, variant SKU, or variant industry identifier.
-
-Phase 2 does not include inventory, journal posting, tax calculation, suppliers/purchasing, POS, buyback, promotions, or bibliographic enrichment.
-
-### Phase 2.1: Merchandise correctness and operability
-
-Status: implemented (reference-data reactivation, immutable normalized codes, GL category↔type and buyback invariants, `default_supplier_returnable`, pricing-method-aware variant defaults, product category/list-price UX, CSV import template).
-
-Phase 2.1 is a focused patch between the Phase 2 merchandise foundation and Phase 3 inventory. It hardens merchandise contracts inventory will depend on without introducing inventory, purchasing, buyback, or POS workflows.
-
-The Phase 2.1 deliverable is:
-
-> An authorized administrator can reactivate core financial and merchandise reference data, create products and variants with complete fields and pricing-method-aware defaults, and use a documented CSV import template, with database-enforced merchandise and GL-account invariants.
-
-Authoritative plan: [phase-2.1-platform-and-merchandise-refinements.md](docs/planning/phase2.1-platform-merchandise-refinement/phase-2.1-platform-and-merchandise-refinements.md).
-
-### Phase 2.2: Administrative UX foundation
-
-Status: implemented (Propshaft design tokens and shell, shared admin partials/helpers, product reference flow with search/filter/pagination, currency form UX via `Money::ParseCents`, Stores and Merchandise Classes adoption).
-
-Phase 2.2 is an HTML/CSS-first presentation pass between merchandise foundation work and Phase 3 inventory. It does not install Hotwire and does not add inventory behavior.
-
-The Phase 2.2 deliverable is:
-
-> An authorized administrator can navigate a consistent administrative shell, manage products with searchable/filterable indexes and dollar-oriented price fields, and use the same presentation patterns on Stores and Merchandise Classes.
-
-Authoritative plan: [phase-2.2-ux-foundation.md](docs/planning/phase2.2-ux-foundation/phase-2.2-ux-foundation.md). Conventions: [UX conventions](docs/ux-conventions.md). Cross-phase visual system: [UX design system](docs/planning/ux-design-system/README.md) (Warm Parchment; **UDS-1 Implemented**—Phase 2.2 palette superseded for screen chrome; not a Phase 7 slice), including the [permission-aware administrative navigation proposal](docs/planning/ux-design-system/navigation-proposal.md), which still requires privileged and narrowly scoped prototypes before grouped-nav adoption.
-
-### Phase 3: Inventory foundation
-
-Status: implemented (physical and valuation ledgers, single-effect adjustments, moving-average and specific-identification costing, inventory units with `220` identifiers, exact reversal, reconciliation/rebuild, ADR-009/010 platform tables).
-
-Phase 3 establishes authoritative on-hand quantity and carrying value without purchasing, POS, reservations, or transfers. Later workflows must post through the inventory posting boundary.
-
-The Phase 3 deliverable is:
-
-> An authorized user can establish and adjust store/variant inventory, track individually identified units, reverse eligible errors without rewriting history, and reconcile rebuildable balance projections against immutable ledgers.
-
-Authoritative plan: [phase-3-inventory-foundation.md](docs/planning/phase3-inventory-foundation/phase-3-inventory-foundation.md). Contract: [inventory-posting-contract.md](docs/planning/phase3-inventory-foundation/inventory-posting-contract.md).
-
-### Phase 4: POS transaction and posting foundation
-
-Status: implemented (headless Cash sale, `CompletedPosOperation` v1, receipt identity, inventory posting, idempotent completion).
-
-Phase 4 proves that ShelfSense can construct, complete, and authoritatively post one deterministic Cash sale without a cashier UI.
-
-Authoritative plan: [phase4-plan.md](docs/planning/phase4-6-point-of-sale/phase4-point-of-sale/phase4-plan.md).
-
-### Phase 5: First operational cash register
-
-Status: implemented (headless cash/Z, Register workspace, receipt print, blind close, immutable Z).
-
-Phase 5 turns the Phase 4 completion path into a cashier-usable online Rails register. Opening float, session close snapshots, finalized Z facts, and the cashier Register workspace are implemented.
-
-Authoritative plan: [phase5-plan.md](docs/planning/phase4-6-point-of-sale/phase5-cash-register/phase5-plan.md). Schema: [phase5-schema.md](docs/planning/phase4-6-point-of-sale/phase5-cash-register/phase5-schema.md). Workspace contract: [register-workspace.md](docs/planning/phase4-6-point-of-sale/phase5-cash-register/register-workspace.md).
-
-### Phase 6: Operational POS MVP
-
-Status: slices 6.0–6.8 implemented (CompletedPosOperation v2, Used/non-inventory sales, mixed tenders, history/reprint, controlled pricing, linked and unlinked returns, mixed baskets, refunds, whole-transaction post-void, direction-aware Session/Z, cashier workflow, customer print, and closeout presentation).
-
-Phase 6 extends the Phase 5 Cash register with Used/non-inventory sales, mixed tenders, history/reprint, controlled pricing, returns, post-void, cashier workflow, and closeout presentation. Each slice merges independently to `main`.
-
-Authoritative plan: [phase6-plan.md](docs/planning/phase4-6-point-of-sale/phase6-pos-mvp/phase6-plan.md). Contract: [mvp-contract.md](docs/planning/phase4-6-point-of-sale/phase6-pos-mvp/mvp-contract.md). Workflow: [pos-workflow.md](docs/planning/phase4-6-point-of-sale/phase6-pos-mvp/pos-workflow.md). Closeout: [mvp-closeout.md](docs/planning/phase4-6-point-of-sale/phase6-pos-mvp/mvp-closeout.md). Returns: [returns.md](docs/planning/phase4-6-point-of-sale/phase6-pos-mvp/returns.md). Post-void: [post-void.md](docs/planning/phase4-6-point-of-sale/phase6-pos-mvp/post-void.md).
-
-### Phase 6.1: Merchandise classification and identifiers
-
-Status: implemented (merged to `main`).
-
-Phase 6.1 cut over classification and product identity before later domains consume the Phase 2 contracts. Data was disposable; the implementing migrations shipped the final schema. Departments remain reporting and GL posting owners (all classes in a department share those accounts); merchandise classes belong to one department and own policies plus variant defaults, including a live default tax class with optional variant override; variants persist inventory mode, pricing method, margin, and supplier returnability; products always receive generated `222` identifiers and may have a product-level industry GTIN; lookup codes are optional and may be shared; identifier matching uses any registry row (active or retired) before lookup codes; POS and inventory callers apply their own eligibility after a match.
-
-Authoritative packet: [Phase 6.1](docs/planning/phase6.1-merchandise-classification-and-identifiers/README.md).
-
-### Phase 7: Orders, customer requests, and receiving
-
-Status: application slices 7.1–7.7 complete on integration branch `phase-7-orders-and-receiving`. **Not implemented** on `main` — pending [manual test gate](docs/planning/phase7-orders-and-receiving/phase7-manual-test-gate.md), review, and final integration → `main` merge.
-
-Phase 7 adds suppliers, quantity-one customer requests with locate/reserve, stock and special orders, purchase orders, receiving, reservation hard-stops, Register pickup, and posted-receipt corrections. Application slices merge to the integration branch; Phase 7 is marked implemented only after the final integration → `main` merge.
-
-Authoritative packet: [Phase 7](docs/planning/phase7-orders-and-receiving/README.md).
-
-## Phase 1 authorization model
-
-Permissions are additive and supplied by roles:
-
-- A role assignment with no `store_id` is global.
-- A role assignment with a `store_id` applies only in that store.
-- A global assignment contributes authority in every active store.
-- Store-scoped authority never becomes organization-wide authority implicitly.
-- Organization-wide user, role, permission, store, and system-setting administration requires the applicable permission through a global assignment.
-- Administrators use the ordinary role-and-permission engine; there is no authorization bypass.
-- ShelfSense must always retain at least one active, sign-in-capable user with an effective global `system_administrator` assignment.
-
-Initial roles are expected to include `system_administrator`, `store_manager`, and `associate`. Permission keys are defined by application code; administrators compose roles from the available catalog rather than inventing new permission semantics in the UI.
-
-## Governing data conventions
-
-- Durable distributed business records use UUIDv7 primary keys.
-- Tables use plural `snake_case`; foreign keys use singular `_id` names.
-- Authoritative monetary values use signed integer minor units, normally `_cents`.
-- Conventional percentages use integer `_basis_points` when that precision is sufficient.
-- Calendar concepts use `date`; event instants use timezone-aware timestamps stored as UTC.
-- Store operational records also retain the applicable business date where required.
-- Mutable aggregate roots use an integer version for optimistic concurrency.
-- Retryable commands use scoped idempotency keys and payload hashes.
-- Effective configuration is superseded; completed facts are reversed or compensated, not edited.
-- Lifecycle-specific states such as inactive, revoked, expired, discontinued, or cancelled are preferred to generic soft deletion.
+| `customers` | Customer identity, contact, requests, reservations, and customer-owned relationships |
+| `merchandise` | Catalog, variants, classification, pricing, inventory units, and inventory |
+| `purchasing` | Suppliers, orders, purchase orders, receiving, and supplier-facing workflows |
+| `pos` | Sales, returns, tenders, sessions, business dates, and Register operation |
+| `buyback` | Acquisition and valuation of used merchandise from customers (Phase 12) |
+| `reports` | Operational, financial, and analytical reporting (Phase 14 closeout) |
 
 ## Documentation
 
-Start with the [documentation index](docs/README.md). Key references include:
+Start with the [documentation index](docs/README.md). The primary entry points are:
 
-- [Architecture Decision Records](docs/adr/README.md)
-- [Phase 1 plan](docs/planning/phase1-operational-foundation/phase1-plan.md), [schema](docs/planning/phase1-operational-foundation/phase1-schema.md), and [authorization contract](docs/planning/phase1-operational-foundation/phase1-authorization.md)
-- [Phase 2 plan](docs/planning/phase2-financial-classification-and-merchandise-foundation/phase2-plan.md), [schema](docs/planning/phase2-financial-classification-and-merchandise-foundation/phase-2-database-schema.md), and [authorization contract](docs/planning/phase2-financial-classification-and-merchandise-foundation/phase2-authorization.md)
-- [Phase 2.2 UX foundation](docs/planning/phase2.2-ux-foundation/phase-2.2-ux-foundation.md) and [UX conventions](docs/ux-conventions.md)
-- [UX design system](docs/planning/ux-design-system/README.md) (Warm Parchment; UDS-1 Implemented), [UDS-1 plan](docs/planning/ux-design-system/uds-1-plan.md), and [ADR-022](docs/adr/ADR-022-warm-parchment-visual-tokens.md)
-- [Forward roadmap](docs/planning/roadmap.md) (Phases 7.1, 8–14, UDS, Terminal program)
-- [Phase 4 POS plan](docs/planning/phase4-6-point-of-sale/phase4-point-of-sale/phase4-plan.md), [Phase 5 cash register plan](docs/planning/phase4-6-point-of-sale/phase5-cash-register/phase5-plan.md), [Phase 6 POS MVP plan](docs/planning/phase4-6-point-of-sale/phase6-pos-mvp/phase6-plan.md), [Phase 6.1 classification and identifiers](docs/planning/phase6.1-merchandise-classification-and-identifiers/README.md), [Phase 7 orders and receiving](docs/planning/phase7-orders-and-receiving/README.md), [Phase 7.1 purchasing closeout](docs/planning/phase7.1-purchasing-polish/README.md), [Phase 8 customer foundation](docs/planning/phase8-customer-foundation/README.md), and [Phase 9 catalog enrichment](docs/planning/phase9-catalog-enrichment/README.md)
-- [Development guide](docs/development.md)
-- [Testing and CI](docs/testing.md)
-- [GitHub work management](docs/github-workflow.md)
-- [Contributor and coding-agent rules](AGENTS.md)
+- [Canonical roadmap](docs/planning/roadmap.md) — implemented milestones, current sequencing, and explicit deferrals
+- [Architecture Decision Records](docs/adr/README.md) — accepted and proposed cross-cutting policy
+- [Development guide](docs/development.md) — Docker workflow, bootstrap, database operations, and troubleshooting
+- [Testing and CI](docs/testing.md) — active validation and system-test requirements
+- [UX design system](docs/planning/ux-design-system/README.md) and [UX conventions](docs/ux-conventions.md)
+- [GitHub work management](docs/github-workflow.md) — branch, PR, issue, milestone, and release conventions
+- [Contributor and coding-agent rules](AGENTS.md) — required implementation and review practices
 
-When implementation reveals a conflict with an accepted ADR, propose a new ADR that supersedes the old decision. Do not silently diverge in code.
+Phase planning packets remain the authority for their implemented workflows and contracts; the roadmap links the canonical packet for each milestone.
 
 ## Contributing
 
-Keep changes narrowly scoped, preserve established domain language, and update tests and documentation with behavior changes. Read [AGENTS.md](AGENTS.md) before modifying the project.
+Read [AGENTS.md](AGENTS.md) before changing the project. Keep changes narrowly scoped, preserve canonical domain language, and update tests and documentation whenever behavior, schema, permissions, or workflows change.

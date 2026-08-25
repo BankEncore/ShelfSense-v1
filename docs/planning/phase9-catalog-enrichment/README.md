@@ -6,7 +6,7 @@ Remediation: [phase9-remediation.md](phase9-remediation.md). Product forms: [pro
 
 | Document | Purpose |
 |---|---|
-| [phase9-plan.md](phase9-plan.md) | Goal, slices, deferrals, acceptance, UX adoption |
+| [phase9-plan.md](phase9-plan.md) | Original goal and slice map; shipped persistence is [phase9-remediation.md](phase9-remediation.md) |
 | [phase9-schema.md](phase9-schema.md) | Tables, columns, constraints, ISBNdb mapping |
 | [phase9-user-stories.md](phase9-user-stories.md) | GitHub-issue-ready stories |
 | [phase9-implementation-plan.md](phase9-implementation-plan.md) | Living slice status and locked decisions |

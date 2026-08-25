@@ -1,6 +1,6 @@
 # UX design system
 
-Status: **UDS-1 Implemented**; **UDS-2 Implemented** for reference screens; **UDS-3 Implemented** for Register visual refinement (basket hierarchy, shortcut groups, overlays) with ActionButtonHelper. Matrix rows remain **partial** until [accessibility-ergonomic-test-matrix.md](accessibility-ergonomic-test-matrix.md) evidence is attached. Phase 2.2 **architecture** remains; teal/plum palette superseded. Grouped admin navigation: UDS-4.0 gate **Passed**; **UDS-4.1 in progress**.
+Status: **UDS-1 Implemented**; **UDS-2 Implemented** for reference screens; **UDS-3 Implemented** for Register visual refinement (basket hierarchy, shortcut groups, overlays) with ActionButtonHelper. Matrix rows remain **partial** until [accessibility-ergonomic-test-matrix.md](accessibility-ergonomic-test-matrix.md) evidence is attached. Phase 2.2 **architecture** remains; teal/plum palette superseded. Grouped admin navigation: UDS-4.0 gate **Passed**; **UDS-4.1–4.2 complete on `main`**.
 
 This packet is the cross-phase authority for ShelfSense presentation: Warm Parchment visual direction, button and action semantics, administrative navigation grouping, surface contracts (Register basket vs history vs print), deferred interaction patterns, and an incremental adoption program.
 
@@ -31,9 +31,9 @@ Do not fold POS into a shared ops shell. Do not replace admin show pages with dr
 | [uds-2-plan.md](uds-2-plan.md) | UDS-2 representative screen convergence (Suppliers, Receiving, history, review dialogs) | Implemented (partial matrix; a11y evidence pending) |
 | [uds-2-user-stories.md](uds-2-user-stories.md) | Issue-ready backlog stories for UDS-2a–2d | Implemented |
 | [uds-3-plan.md](uds-3-plan.md) | UDS-3 Register visual refinement (basket hierarchy, shortcut groups, overlays) | Implemented (partial matrix; a11y evidence pending) |
-| [uds-4-plan.md](uds-4-plan.md) | UDS-4 grouped navigation and cross-cutting adoption; gated by [phase7.1-uds-coordination.md](../phase7.1-purchasing-polish/phase7.1-uds-coordination.md) | Proposed; **UDS-4.2 in progress** |
+| [uds-4-plan.md](uds-4-plan.md) | UDS-4 grouped navigation and cross-cutting adoption; gated by [phase7.1-uds-coordination.md](../phase7.1-purchasing-polish/phase7.1-uds-coordination.md) | **Complete** on `main` (UDS-4.0–4.2) |
 | [uds-4.0-gate-evidence.md](uds-4.0-gate-evidence.md) | Prototype gate checklist and evidence for Profiles A/B | **Passed** |
-| [uds-4.2-plan.md](uds-4.2-plan.md) | Non-purchasing ActionButtonHelper adoption and cross-links (4.2a–4.2d) | **In progress** |
+| [uds-4.2-plan.md](uds-4.2-plan.md) | Non-purchasing ActionButtonHelper adoption and cross-links (4.2a–4.2d) | **Complete** on `main` |
 | [uds-3-user-stories.md](uds-3-user-stories.md) | Issue-ready backlog stories for UDS-3a–3c | Implemented |
 | [accessibility-ergonomic-test-matrix.md](accessibility-ergonomic-test-matrix.md) | Manual a11y/ergonomic gate + timed cashier scenarios for UDS-2/UDS-3 | Proposed acceptance gate |
 | [warm-parchment.md](warm-parchment.md) | Tokens, typography, density, contrast (AA baseline) | Implemented (UDS-1) |
