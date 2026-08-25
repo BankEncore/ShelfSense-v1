@@ -285,7 +285,7 @@ Suspend / recall
 Open ring
 Transaction-wide discounts
 Promotions / coupons
-Stored Value / gift cards / store credit
+Stored Value / gift cards / store credit  # Phase 10 [phase10-stored-value](../../phase10-stored-value/README.md)
 Integrated Card processing
 Customer tax exemptions
 Paid-in / paid-out

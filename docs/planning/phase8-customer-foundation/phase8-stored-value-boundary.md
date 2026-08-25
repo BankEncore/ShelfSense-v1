@@ -1,8 +1,8 @@
 # Phase 8 — Stored-value identity boundary
 
-Status: **Proposed contract** for Phase 10. Phase 8 implements guards and canonical resolution only; no ledger.
+Status: **Specified in Phase 10.** Phase 8 implements guards and canonical resolution only; the ledger lives in [phase10-stored-value](../phase10-stored-value/README.md).
 
-Policy authority for merge: [ADR-023](../../adr/ADR-023-customer-merge.md).
+Policy authority for merge: [ADR-023](../../adr/ADR-023-customer-merge.md) §14.
 
 ## Phase 8 guarantees
 
@@ -10,12 +10,12 @@ Policy authority for merge: [ADR-023](../../adr/ADR-023-customer-merge.md).
 2. **Canonical customer** — `Customer#canonical` returns the survivor when `merged_into_customer_id` is set. After every successful merge, aliases point **directly** to a canonical survivor (at most one hop; chains are forbidden and flattened away).
 3. **Active eligibility** — new customer-owned financial relationships may only attach to an **active, canonical** customer (`active: true`, not merged).
 4. **Merge tombstone** — merged sources remain addressable for audit and old references; they do not accept new operational work.
-5. **Deactivation** — `active: false` blocks new requests and future financial account **creation**; it does not erase historical facts or future balance read models.
+5. **Deactivation** — `active: false` blocks new requests and future financial account **creation**; it does not erase historical facts. Phase 10 adds warn/block when a nonzero store/trade balance exists and requires reactivation before redemption.
 
-## Phase 10 responsibilities (explicitly not Phase 8)
+## Phase 10 responsibilities
 
-- Stored-value account creation, ledger entries, redemption, and POS tender integration.
-- **Financial merge semantics:** consolidating or transferring balances when customers merge must be implemented as an explicit financial-domain command (or an explicit call from `Customers::MergeCustomers`) with documented policy—not blind `customer_id` FK rewrites across financial tables, and not a plugin/callback registry.
+- Stored-value account creation, ledger entries, redemption, and POS tender/issuance integration.
+- **`Customers::MergeStoredValueAccounts`** invoked from `Customers::MergeCustomers` ([phase10-schema.md](../phase10-stored-value/phase10-schema.md)).
 - Stronger merge confirmation when balances are involved (irreversibility policy unchanged).
 - Online-authorized redemption ([ADR-005](../../adr/ADR-005-terminal-originated-operations.md), [ADR-014](../../adr/ADR-014-conflict-resolution.md)).
 

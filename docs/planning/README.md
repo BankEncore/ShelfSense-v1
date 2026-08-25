@@ -24,7 +24,13 @@ An early outline in this file numbered Phase 8 as buyback and Phase 9 as financi
 | [Phase 7 — Orders, requests, and receiving](phase7-orders-and-receiving/README.md) | Implemented on `main` |
 | [Phase 7.1 — Purchasing polish](phase7.1-purchasing-polish/README.md) | Complete on `main` (7.1.1–7.1.3; 7.1.4 deferred) |
 | [Phase 8 — Customer foundation](phase8-customer-foundation/README.md) | Complete on `main` |
-| [Phase 9 — Catalog enrichment](phase9-catalog-enrichment/README.md) | Implemented; persistence in [phase9-remediation.md](phase9-catalog-enrichment/phase9-remediation.md) |
+| [Phase 9 catalog enrichment](phase9-catalog-enrichment/README.md) | Implemented; persistence in [phase9-remediation.md](phase9-catalog-enrichment/phase9-remediation.md) |
+
+## Proposed domain packets
+
+| Packet | Status |
+|---|---|
+| [Phase 10 — Stored value](phase10-stored-value/README.md) | **Proposed**; [ADR-025](../adr/ADR-025-domain-owned-operational-ledgers.md), [ADR-026](../adr/ADR-026-gift-card-number-protection.md) |
 
 ## Cross-phase UX
 
@@ -42,4 +48,5 @@ Further screen migration belongs to the feature phase that materially changes th
 |---|---|
 | [Architecture Decision Records](../adr/README.md) | Accepted and proposed cross-cutting policy |
 | [UX conventions](../ux-conventions.md) | Shared admin page anatomy and money UX |
+| [Glossary](../glossary.md) | Canonical domain terms |
 | [Testing and CI](../testing.md) | Active GitHub Actions jobs and system-test workflow |

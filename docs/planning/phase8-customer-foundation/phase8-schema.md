@@ -70,8 +70,10 @@ Documentary checklist only — execution lives in explicit calls inside `Custome
 |---|---|
 | `customer_requests` (active statuses) | `Customers::ReassignActiveRequests` — `UPDATE customer_id` to survivor |
 | `customer_requests` (completed, cancelled) | Preserve original `customer_id`; resolve via `canonical` for display/grouping |
+| `stored_value_accounts` (store/trade credit) | `Customers::MergeStoredValueAccounts` — transfer via ledger operation; close source; do not rewrite `customer_id` on operations/entries ([phase10-schema.md](../phase10-stored-value/phase10-schema.md)) |
+| `gift_cards.customer_id` | Reassign optional association to survivor or clear; do not move the gift-card balance as customer-owned credit |
 
-Future phases append inventory rows and add explicit commands (`stored_value_accounts`, buyback seller records, etc.) — not a plugin registry.
+Future phases append inventory rows and add explicit commands (buyback seller records, etc.) — not a plugin registry.
 
 ## Not in Phase 8
 

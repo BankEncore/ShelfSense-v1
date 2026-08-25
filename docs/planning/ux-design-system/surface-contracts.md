@@ -56,6 +56,8 @@ Transaction history must display **snapshots and stored facts**. It must not rec
 - Register basket two-line layout must **not** reverse the print contract.
 - Warm Parchment is a **screen** system; print CSS remains its own target.
 
+Phase 10 stored-value issuance, redemption, remaining balance, cash-out, and unused-instrument return are additional print/history facts specified in [phase10-gift-card-numbering.md](../phase10-stored-value/phase10-gift-card-numbering.md) and [phase10-reporting-closeout.md](../phase10-stored-value/phase10-reporting-closeout.md). Masked identity only on ordinary reprints. Issuance is a distinct basket section, not a merchandise two-line.
+
 ## Summary
 
 | Surface | Density / layout | Description lines | Extra detail |

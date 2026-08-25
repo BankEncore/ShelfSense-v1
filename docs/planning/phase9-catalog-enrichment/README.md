@@ -1,6 +1,6 @@
 # Phase 9 — Catalog and bibliographic enrichment
 
-Status: **Implemented** (August 2026). After Phase 8 on `main`. Phase 10 may start in parallel but is not the primary stream.
+Status: **Implemented** (August 2026). After Phase 8 on `main`. [Phase 10 stored value](../phase10-stored-value/README.md) is proposed and may start in parallel but is not the primary stream.
 
 Remediation: [phase9-remediation.md](phase9-remediation.md). Product forms: [product-forms-seed.md](product-forms-seed.md).
 

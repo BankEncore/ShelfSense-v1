@@ -45,9 +45,9 @@ Use the canonical language established by ADR-011, ADR-021, and project document
 - `return_to_supplier`
 - `cancelled`, with two l's
 - `completed` unless `finalized` or `posted` is intentionally distinct
-- `reversal_of_id` and `reversed_by_id` for compensating relationships
+- `reversal_of_id` for compensating relationships (inverse association `reversed_by`; do not persist `reversed_by_id` — ADR-011)
 
-Tables are lowercase plural `snake_case`. Primary keys are `id`; foreign keys use singular `_id`. Add materially distinct terms to the glossary rather than creating local synonyms.
+Tables are lowercase plural `snake_case`. Primary keys are `id`; foreign keys use singular `_id`. Add materially distinct terms to the [glossary](docs/glossary.md) rather than creating local synonyms.
 
 ## 4. Preserve data authority and offline boundaries
 

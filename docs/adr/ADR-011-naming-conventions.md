@@ -24,7 +24,7 @@ Standardize these terms:
 - `inventory_balance` for the mutable inventory projection
 - `reserved`, not pending, for inventory commitment
 - `completed` unless finalized or posted represents a genuinely distinct state
-- `reversal_of_id` and `reversed_by_id` for compensating relationships
+- Compensating relationships store **`reversal_of_id`** on the reversing record (nullable self-FK; unique when present). The inverse is the association name **`reversed_by`** (for example `has_one :reversed_by_adjustment, foreign_key: :reversal_of_id`). Do **not** persist a second `reversed_by_id` column; dual stored directions can disagree. Inventory adjustments/ledger entries and POS `post_void_of_transaction_id` already follow this pattern.
 
 Prefer explicit foreign keys. Reserve polymorphic references mainly for audit and event subjects where the open-ended relationship is intentional.
 
@@ -32,5 +32,6 @@ Prefer explicit foreign keys. Reserve polymorphic references mainly for audit an
 
 - Schema and documentation have predictable vocabulary.
 - Existing inconsistent names should be migrated deliberately rather than perpetuated (including the pre-Phase-4 `workstations` → `registers` rename required by ADR-021).
-- New terms must be added to the project glossary when their distinction is material.
+- New terms must be added to the [project glossary](../glossary.md) when their distinction is material.
 - Register vs Terminal entity boundaries are defined in ADR-021, not only by this naming list.
+- Stored-value operations in Phase 10 store `reversal_of_id` only; see [ADR-025](ADR-025-domain-owned-operational-ledgers.md).

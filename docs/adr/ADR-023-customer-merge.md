@@ -142,8 +142,8 @@ The migration enforces what ordinary constraints can:
 
 ### 14. Financial and stored-value boundary
 
-- Phase 8 merge **does not** move stored-value balances; no stored-value tables exist yet.
-- When Phase 10 introduces customer-owned financial accounts, **balance consolidation or transfer on customer merge** is a separate financial-domain command or explicit reassignment call with explicit policy (survivor receives balance, zeroed source account, compensating ledger entries as required). It is not satisfied by rewriting `customer_id` on ledger rows alone ([ADR-013](ADR-013-append-only-facts.md), [ADR-014](ADR-014-conflict-resolution.md)).
+- Phase 8 merge does not move stored-value balances by rewriting `customer_id` on ledger rows ([ADR-013](ADR-013-append-only-facts.md), [ADR-014](ADR-014-conflict-resolution.md)).
+- Phase 10 implements **`Customers::MergeStoredValueAccounts`**, invoked from `Customers::MergeCustomers` while holding customer and account locks. Policy: survivor receives the balance through a transfer operation; the source account closes; ledger rows keep their original `customer_id`. Gift-card optional customer association is reassigned or cleared; the customer does not own the gift-card balance. See [phase10-plan.md](../planning/phase10-stored-value/phase10-plan.md) and the merge consumers checklist in [phase8-schema.md](../planning/phase8-customer-foundation/phase8-schema.md).
 - New financial relationships attach only to an **active, canonical** customer.
 - Stored-value redemption remains online-authorized until a later bounded offline decision ([ADR-005](ADR-005-terminal-originated-operations.md)).
 
@@ -167,13 +167,14 @@ The migration enforces what ordinary constraints can:
   - idempotent retry; repeated key with reversed source/survivor or changed reason is a payload mismatch;
   - audit creation with reassignment and alias-repoint counts.
 - Admin and request UIs must surface canonical customers in operational search and block creating requests against merged aliases.
-- Each new `customer_id` foreign key requires an explicit merge/reassignment decision and an explicit call in `Customers::MergeCustomers`; the inventory in [phase8-schema.md](../planning/phase8-customer-foundation/phase8-schema.md) is the living checklist until a glossary or data dictionary absorbs it.
+- Each new `customer_id` foreign key requires an explicit merge/reassignment decision and an explicit call in `Customers::MergeCustomers`; the inventory in [phase8-schema.md](../planning/phase8-customer-foundation/phase8-schema.md) is the living checklist; stored-value terms live in [docs/glossary.md](../glossary.md).
 - Reports and exports that group by customer should prefer canonical identity or document that historical completed/cancelled rows may cite tombstone UUIDs.
-- Phase 10 must supersede or extend the financial subsection of this ADR if balance transfer policy differs from the default described here.
+- Phase 10 specifies merge transfer in [phase10-schema.md](../planning/phase10-stored-value/phase10-schema.md); this subsection is the identity/policy pointer, not a second ledger design.
 
 ## Related documentation
 
 - [Phase 8 plan](../planning/phase8-customer-foundation/phase8-plan.md) — slices 8.3–8.4
 - [Phase 8 schema](../planning/phase8-customer-foundation/phase8-schema.md)
 - [Phase 8 stored-value boundary](../planning/phase8-customer-foundation/phase8-stored-value-boundary.md)
+- [Phase 10 packet](../planning/phase10-stored-value/README.md)
 - [Phase 7 spec §7.4](../planning/phase7-orders-and-receiving/phase7-spec.md) — minimal customer record and duplicate-warning intent

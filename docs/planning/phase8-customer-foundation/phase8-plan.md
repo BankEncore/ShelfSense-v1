@@ -115,7 +115,7 @@ Make customer identity reliable enough for **stored value** (Phase 10) and **buy
 
 ## Stored-value boundary
 
-Phase 8 does **not** create stored-value accounts. See [phase8-stored-value-boundary.md](phase8-stored-value-boundary.md).
+Phase 8 does **not** create stored-value accounts. See [phase8-stored-value-boundary.md](phase8-stored-value-boundary.md). The ledger is specified in [phase10-stored-value](../phase10-stored-value/README.md).
 
 ## ADR and documentation triggers
 
@@ -145,5 +145,5 @@ Phase 8 has shipped. [Phase 9](../roadmap.md#phase-9--catalog-and-bibliographic-
 2. Duplicate warnings appear on create/edit with explicit staff resolution.
 3. Authorized merge flattens existing aliases, reassigns **active** `customer_requests` only, preserves completed/cancelled FKs, tombstones source, audits counts, and leaves no chains.
 4. Inactive and merged customers cannot start new requests; operational lookup by former alias contact returns the survivor.
-5. Phase 10 identity contract documented and testable via `Customer#canonical` and active guards.
+5. Phase 10 identity contract documented and testable via `Customer#canonical` and active guards; ledger specified in [phase10-stored-value](../phase10-stored-value/README.md).
 6. No stored-value ledger tables introduced.

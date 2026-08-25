@@ -36,6 +36,8 @@ These ADRs capture the architecture decisions reached during the ShelfSense offl
 | [ADR-022](ADR-022-warm-parchment-visual-tokens.md) | Warm Parchment visual tokens (supersede Phase 2.2 palette) | Implemented |
 | [ADR-023](ADR-023-customer-merge.md) | Customer identity merge | Accepted |
 | [ADR-024](ADR-024-bibliographic-data-authority.md) | External bibliographic data is non-authoritative | Accepted |
+| [ADR-025](ADR-025-domain-owned-operational-ledgers.md) | Domain-owned operational ledgers (no universal financial-event table) | Accepted |
+| [ADR-026](ADR-026-gift-card-number-protection.md) | Gift-card number protection | Accepted |
 
 ## Governing principle
 

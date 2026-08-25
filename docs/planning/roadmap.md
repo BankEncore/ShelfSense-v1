@@ -190,62 +190,47 @@ The external lookup boundary returns **normalized candidate data**; the Product 
 
 > Staff can scan or search for a book ShelfSense has never carried, review trustworthy bibliographic data, match or create the correct product, and preserve locally curated information.
 
-## Phase 10 — Stored value and financial event contract
+## Phase 10 — Stored value
 
-**Status:** Proposed. **After Phase 8** (customer identity foundation).
+**Status:** Proposed. **After Phase 8** (customer identity foundation). Planning packet: [phase10-stored-value/](phase10-stored-value/README.md). Policy: [ADR-025](../adr/ADR-025-domain-owned-operational-ledgers.md), [ADR-026](../adr/ADR-026-gift-card-number-protection.md).
 
-Combines stored-value features with the narrow financial contract they require. ShelfSense already has mature posting systems (POS, inventory, tax); this phase does not introduce a broad abstract “financial foundation.”
-
-Stored-value redemption is **online-authorized** until a bounded offline mechanism exists ([ADR-005](../adr/ADR-005-terminal-originated-operations.md)).
+Stored-value redemption is **online-authorized** until a bounded offline mechanism exists ([ADR-005](../adr/ADR-005-terminal-originated-operations.md)). There is **no** universal operational financial-event table; each domain keeps its own immutable facts. Cross-domain accounting/export is Phase 14.
 
 ### Build on what exists
 
 - Integer-cent money contracts; tender types and mixed tender
 - Completed POS operations; refunds and post-voids
-- GL accounts and department mappings; immutable operational facts
-- Idempotency and reversal patterns; register session and business-date attribution
+- Immutable operational facts; idempotency and reversal patterns
+- Register session, expected cash, and business-date attribution
+- Canonical customer identity and merge ([ADR-023](../adr/ADR-023-customer-merge.md))
 
-### Slice 10.1 — Financial event / posting contract
+### Slice 10.1 — Stored-value core
 
-Define the common boundary needed by stored value, cash movements, and buyback:
+Accounts, operations, entries, posting service, projection verification, outbox messages.
 
-- Source transaction and source line; store and business date
-- Event classification; monetary amount and direction
-- Liability or tender classification; posted/reversed status
-- Idempotency key; reversal relationship; actor and occurrence time
-- Accounting export/posting status
+### Slice 10.2 — Customer store credit and trade credit
 
-This is a reconstructable operational financial subledger with a later GL export—not a general ledger.
+Distinct customer-owned liabilities; merge transfer command; manual adjust; deactivate-with-balance; customer activity.
 
-### Slice 10.2 — Customer account credit
+### Slice 10.3 — Gift-card programs and instruments
 
-- Customer-owned account; store credit and trade credit balances (shared infrastructure, distinguishable liabilities)
-- Issue, redeem, reverse; manual adjustment with elevated permission
-- Balance projection backed by an immutable ledger
-- Split tender; refund-to-credit policy; customer balance and activity display
+Bearer identity, numbering and encryption, scan routing, inquiry, suspend, replacement, optional customer association.
 
-### Slice 10.3 — Gift cards
+### Slice 10.4 — POS issuance, tenders, unused return, post-void
 
-Implement separately (different identity and ownership):
+First-class issuance (not a merchandise SKU); `stored_value` tenders; signed-net rewrite; unused-instrument return; post-void fail-closed.
 
-- Gift-card number and secure lookup; activation; reload where policy permits
-- Redemption; balance inquiry; replacement and transfer controls
-- Optional customer association; anonymous/bearer use; void and reversal
-- Liability and activity reporting
+### Slice 10.5 — Cash-out, closeout, print, nav
 
-### Slice 10.4 — POS and reconciliation integration
-
-- Accept stored value in the Register; return value according to refund policy
-- Include stored value in transaction history and in Z / store-day reconciliation
-- Prevent double redemption through locking and idempotency; handle transaction post-void correctly
+Gift-card cash-out vs expected cash; X/Z; receipt/print; administrative navigation.
 
 **Deliverable:**
 
-> ShelfSense can issue, redeem, reverse, and reconcile customer credit, trade credit, and gift cards without treating balances as editable customer fields.
+> ShelfSense can issue, activate, reload, redeem, reverse, and reconcile customer credit, trade credit, and gift cards without treating balances as editable fields and without a cross-domain financial-event subledger.
 
 ## Phase 11 — Cash accountability completion
 
-**Status:** Proposed. **After Phase 10** financial event contract.
+**Status:** Proposed. **After Phase 10** stored-value and Register integration.
 
 Phase 5 implemented the beginning and end of the register session. Phase 11 fills in accountable movement during the session and between cash locations.
 
@@ -274,7 +259,7 @@ Preserve the distinction between:
 
 ## Phase 12 — Used buyback
 
-**Status:** Proposed. **After Phase 8–9** (identity and catalog enrichment), **Phase 10** (trade credit / financial events), and **Phase 11** (cash payout).
+**Status:** Proposed. **After Phase 8–9** (identity and catalog enrichment), **Phase 10** (trade credit), and **Phase 11** (cash payout).
 
 Evaluation and intake slices (12.1–12.2) may start before payout infrastructure is complete; payout (12.3) requires Phases 10–11.
 
@@ -287,9 +272,9 @@ Evaluation and intake slices (12.1–12.2) may start before payout infrastructur
 | Assess sales history | Phase 6 POS transactions |
 | Create a unique used copy | Phase 3 inventory units |
 | Establish cost and valuation | Phase 3 valuation ledger |
-| Pay trade credit | Phase 10 stored value |
+| Pay trade credit | Phase 10 stored-value issue operation |
 | Pay cash | Phase 11 cash accountability |
-| Record financial consequences | Phase 10 financial event contract |
+| Record financial consequences | Buyback domain facts plus stored-value operations ([ADR-025](../adr/ADR-025-domain-owned-operational-ledgers.md)) |
 
 ### Slice 12.1 — Intake and seller workflow
 
@@ -301,7 +286,7 @@ Scan or search; condition triage; rejection reason; inventory and demand warning
 
 ### Slice 12.3 — Payout and inventory induction
 
-Cash, trade credit, or permitted split payout; cash-availability check; trade-credit issuance; buyback financial event; Used variant/unit creation or association; acquisition cost; condition, notes, and selling price; inventory posting; label generation.
+Cash, trade credit, or permitted split payout; cash-availability check; trade-credit issuance as a stored-value operation; buyback immutable facts; Used variant/unit creation or association; acquisition cost; condition, notes, and selling price; inventory posting; label generation.
 
 ### Slice 12.4 — Buying automation
 
@@ -332,13 +317,13 @@ Consolidates operational customer context—not a CRM:
 
 **Status:** Proposed. **Consolidates** operational sources after they are stable.
 
-Transactional domains own authoritative facts; reports consume projections. Phase 14 adds unified financial closeout and cross-domain reporting.
+Transactional domains own authoritative facts ([ADR-025](../adr/ADR-025-domain-owned-operational-ledgers.md)); reports consume projections. Phase 14 adds unified financial closeout and the versioned posting/export boundary across those sources.
 
 ### Build on what exists
 
 - GL accounts and department mappings; tax calculation; inventory valuation
 - POS transactions and tenders; session/Z facts; purchasing and receiving
-- Stored-value events; cash movements; buyback acquisition and payouts (Phases 10–12)
+- Stored-value operations and entries; cash movements; buyback acquisition and payouts (Phases 10–12)
 
 ### Add
 
@@ -391,8 +376,8 @@ The following remain out of scope until a planning packet and ADR review justify
 | UDS-5 — Administrative composition | **Complete** on `main` (PR #57; [uds-5-plan.md](ux-design-system/uds-5-plan.md)) |
 | Phase 8 — Customer foundation (MVP) | **Complete** on `main` (PR #42) |
 | Phase 9 — Catalog and bibliographic enrichment | **Implemented**; Phase 10 unblocked but not primary |
-| Phase 10 — Stored value and financial event contract | After Phase 8 (unblocked; not the primary stream) |
-| Phase 11 — Cash accountability completion | After Phase 10 |
+| Phase 10 — Stored value | After Phase 8 (unblocked; packet [phase10-stored-value](phase10-stored-value/README.md); not the primary stream) |
+| Phase 11 — Cash accountability completion | After Phase 10 stored-value and Register integration |
 | Phase 12 — Used buyback | After 8–11 (payout after 10–11) |
 | Phase 13 — Customer workspace | After activity sources exist |
 | Phase 14 — Financial posting and reporting | Consolidates operational domains |
@@ -406,7 +391,7 @@ The following remain out of scope until a planning packet and ADR review justify
 
 | Document | Relationship |
 |---|---|
-| [planning/README.md](README.md) | Planning packet index |
+| [Phase 10 stored value](phase10-stored-value/README.md) | Proposed stored-value packet; [ADR-025](../adr/ADR-025-domain-owned-operational-ledgers.md) |
 | [Phase planning packets](phase1-operational-foundation/phase1-plan.md) | Authoritative detail per implemented phase |
 | [Phase 7.1 purchasing closeout](phase7.1-purchasing-polish/README.md) | Phase 7 operability finish; [coordination with UDS-4](phase7.1-purchasing-polish/phase7.1-uds-coordination.md) |
 | [UDS-4 plan](ux-design-system/uds-4-plan.md) | Grouped navigation and cross-cutting adoption |

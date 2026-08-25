@@ -306,7 +306,7 @@ Idempotent completion retries must still produce only one completed set of tende
 ```text
 refund tenders and refund columns/flags     # 6.5 [returns.md](returns.md)
 signed-net = 0 / no-tender completion       # 6.4C
-Stored Value / gift cards / store credit
+Stored Value / gift cards / store credit   # Phase 10 [phase10-stored-value](../../phase10-stored-value/README.md)
 integrated Card processing
 original-tender refund policy
 paid-in / paid-out

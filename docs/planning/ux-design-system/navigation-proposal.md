@@ -151,3 +151,15 @@ Attach results and screenshots for both profiles to the implementation change. O
 This proposal does not select a permanent desktop geometry, create group landing pages, rename routes, alter the home page, persist expanded state, or define global search. A wrapping group strip, an in-flow “All areas” region, and optional accessible disclosures may be compared in the prototype, provided each honors the baseline and narrow-width rules above. Choosing a persistent sidebar or global search remains a separate architectural decision under [deferred-patterns.md](deferred-patterns.md).
 
 UDS-5.0 compared compact **presentations** of this inventory ([uds-5-plan.md](uds-5-plan.md)) without changing group membership, predicates, or destination labels. UDS-5.2 shipped the preferred `area_row` pattern into `_admin_primary_nav.html.erb`.
+
+## Proposed Phase 10 destinations
+
+Not in the UDS-4.1 production inventory until Phase 10.5 implementation updates `Admin::NavigationCatalog`. Do not add one-off header links.
+
+| Canonical group | Proposed label → destination | Visibility gate | Rationale |
+|---|---|---|---|
+| **Customers** | (customer show activity — not a new index destination) | `stored_value.view_activity` | Balances on existing customer record |
+| **POS operations** | Gift-card programs → `admin_gift_card_programs_path` | `gift_cards.manage_programs` | Program configuration |
+| **POS operations** | Gift cards → `admin_gift_cards_path` | `gift_cards.view` | Masked inquiry and operational administration |
+
+Exact path helpers are illustrative. Implementation must keep controllers as the authorization boundary.

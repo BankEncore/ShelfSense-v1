@@ -44,10 +44,12 @@ This directory contains the project’s technical authority, development guidanc
 | [Phase 7.1 purchasing polish](planning/phase7.1-purchasing-polish/README.md) | Complete on `main` (7.1.1–7.1.3); 7.1.4 deferred |
 | [Phase 8 customer foundation](planning/phase8-customer-foundation/README.md) | Complete on `main` (PR #42); [ADR-023](adr/ADR-023-customer-merge.md) |
 | [Phase 9 catalog enrichment](planning/phase9-catalog-enrichment/README.md) | Implemented; [ADR-024](adr/ADR-024-bibliographic-data-authority.md) |
+| [Phase 10 stored value](planning/phase10-stored-value/README.md) | Proposed; [ADR-025](adr/ADR-025-domain-owned-operational-ledgers.md), [ADR-026](adr/ADR-026-gift-card-number-protection.md) |
 | [Canonical roadmap](planning/roadmap.md) | Implemented milestones, forward phases 10–14, UDS, Terminal program |
 | [Planning packets](planning/README.md) | Phase and UX packet index |
 | [UX design system](planning/ux-design-system/README.md) | Warm Parchment UDS-1–3 operationally complete; UDS-4.0–4.2 and UDS-5 on `main` |
 | [POS Phases 4–6 plan](planning/phase4-6-point-of-sale/spec.md) | Multi-phase POS sequencing (foundation → cash register → MVP); §6 deferred to the Phase 6 packet |
+| [Glossary](glossary.md) | Canonical domain terms (stored value and project-wide) |
 | [UX conventions](ux-conventions.md) | Shared admin page anatomy, partials, currency boundaries, and Warm Parchment tokens |
 | [Development guide](development.md) | Docker-only local setup, PostgreSQL configuration, application commands, and troubleshooting |
 | [Testing and CI](testing.md) | Active GitHub Actions jobs, system tests, and UDS accessibility suites |
@@ -69,7 +71,7 @@ As implementation advances, this index should link the canonical documents for:
 - Operational workflows
 - Schema reference or data dictionary
 - Security and privacy
-- Glossary
+- [Glossary](glossary.md)
 - Roadmap and implementation status
 - Deployment and operations
 
