@@ -1,6 +1,6 @@
 # Administrative navigation grouping proposal
 
-Status: **Accepted inventory** for UDS-4.1 production chrome. UDS-4.0 gate **Passed** ([uds-4.0-gate-evidence.md](uds-4.0-gate-evidence.md)). Compact presentation: **UDS-5.2** (`area_row` on the existing catalog).
+Status: **Accepted inventory** for UDS-4.1 production chrome. UDS-4.0 gate **Passed** ([uds-4.0-gate-evidence.md](uds-4.0-gate-evidence.md)). Compact presentation: **UDS-5.2** (`area_row` on the existing catalog; at `max-width: 40rem`, one Areas disclosure plus the current destination).
 
 ## Purpose and boundaries
 

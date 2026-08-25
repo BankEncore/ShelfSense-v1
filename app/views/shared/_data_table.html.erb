@@ -1,6 +1,11 @@
 <%#
   locals:
-    headers: array of strings or { text:, class: }
+    headers: array of strings or {
+      text:,
+      class:        # compatibility alias applied to both th and td (e.g. numeric)
+      header_class: # th only
+      cell_class:   # td only (content roles: cell-primary / cell-secondary / cell-identifier)
+    }
     rows: array of arrays of cell content (HTML-safe ok)
     empty: optional HTML when no rows
 %>
@@ -13,7 +18,8 @@
         <tr>
           <% headers.each do |header| %>
             <% if header.is_a?(Hash) %>
-              <th class="<%= header[:class] %>"><%= header[:text] %></th>
+              <% header_class = [header[:header_class], header[:class]].compact_blank.join(" ") %>
+              <th class="<%= header_class %>"><%= header[:text] %></th>
             <% else %>
               <th><%= header %></th>
             <% end %>
@@ -25,8 +31,8 @@
           <tr>
             <% row.each_with_index do |cell, index| %>
               <% header = headers[index] %>
-              <% css = header.is_a?(Hash) ? header[:class] : nil %>
-              <td class="<%= css %>"><%= cell %></td>
+              <% cell_class = header.is_a?(Hash) ? [header[:cell_class], header[:class]].compact_blank.join(" ") : nil %>
+              <td class="<%= cell_class %>"><%= cell %></td>
             <% end %>
           </tr>
         <% end %>

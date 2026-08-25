@@ -6,29 +6,64 @@
         <%= link_to "Home", root_path, class: ("is-active" if controller.controller_path == "home") %>
       </div>
 
-      <% nav.groups.each do |group| %>
-        <% if group.current %>
-          <h2 id="nav-group-<%= group.key %>" class="app-nav-group__heading is-current-area" data-nav-group="<%= group.key %>">
-            <%= group.label %>
-            <span class="visually-hidden">Current area</span>
-          </h2>
-        <% else %>
-          <details class="app-nav-group">
-            <summary id="nav-group-<%= group.key %>" class="app-nav-group__heading" data-nav-group="<%= group.key %>">
+      <div class="app-nav__wide-groups">
+        <% nav.groups.each do |group| %>
+          <% if group.current %>
+            <h2 id="nav-group-<%= group.key %>" class="app-nav-group__heading is-current-area" data-nav-group="<%= group.key %>">
               <%= group.label %>
+              <span class="visually-hidden">Current area</span>
+            </h2>
+          <% else %>
+            <details class="app-nav-group">
+              <summary id="nav-group-<%= group.key %>" class="app-nav-group__heading" data-nav-group="<%= group.key %>">
+                <%= group.label %>
+              </summary>
+              <ul class="app-nav-group__list">
+                <% group.destinations.each do |destination| %>
+                  <li>
+                    <%= link_to destination.label, destination.path,
+                          class: ("is-active" if destination.current),
+                          "aria-current": (destination.current ? "page" : nil) %>
+                  </li>
+                <% end %>
+              </ul>
+            </details>
+          <% end %>
+        <% end %>
+      </div>
+
+      <% if nav.current_destination %>
+        <p class="app-nav__current-destination">
+          <%= link_to nav.current_destination.label, nav.current_destination.path,
+                class: "is-active",
+                "aria-current": "page" %>
+          <% if nav.current_group %>
+            <span class="visually-hidden">Current area: <%= nav.current_group.label %></span>
+          <% end %>
+        </p>
+      <% end %>
+
+      <details class="app-nav__areas">
+        <summary class="app-nav-group__heading">Areas</summary>
+        <% nav.groups.each do |group| %>
+          <details class="app-nav-group">
+            <summary id="nav-areas-<%= group.key %>" class="app-nav-group__heading<%= " is-current-area" if group.current %>" data-nav-group="<%= group.key %>">
+              <%= group.label %>
+              <% if group.current %>
+                <span class="visually-hidden">Current area</span>
+              <% end %>
             </summary>
             <ul class="app-nav-group__list">
               <% group.destinations.each do |destination| %>
                 <li>
                   <%= link_to destination.label, destination.path,
-                        class: ("is-active" if destination.current),
-                        "aria-current": (destination.current ? "page" : nil) %>
+                        class: ("is-active" if destination.current) %>
                 </li>
               <% end %>
             </ul>
           </details>
         <% end %>
-      <% end %>
+      </details>
 
       <div class="app-nav-utilities" aria-label="Session utilities">
         <% if nav.show_switch_store? %>

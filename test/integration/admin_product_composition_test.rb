@@ -34,6 +34,9 @@ class AdminProductCompositionTest < ActionDispatch::IntegrationTest
     assert_select "td.cell-primary a", text: "Example Book"
     assert_select "td.cell-identifier", text: @product.primary_identifier
     assert_select "td.cell-secondary", text: /Fiction/
+    assert_select "th.cell-primary", count: 0
+    assert_select "th.cell-identifier", count: 0
+    assert_select "th.cell-secondary", count: 0
     assert_select ".product-summary", count: 0
   end
 
@@ -59,6 +62,30 @@ class AdminProductCompositionTest < ActionDispatch::IntegrationTest
     assert_select ".product-variants td.cell-primary", text: @variant.name
     assert_select ".product-variants td.cell-identifier", text: @variant.sku
     assert_select ".product-variants td.cell-operational", minimum: 1
+    assert_select ".product-variants th.cell-operational", count: 0
+    assert_select ".product-variants th.cell-primary", count: 0
+  end
+
+  test "application css packages serif and keeps receipt mono distinct" do
+    css = Rails.root.join("app/assets/stylesheets/application.css").read
+    assert_match "Source Serif 4", css
+    assert_match "--font-serif", css
+    assert_match "--font-mono", css
+    assert_match "--font-receipt", css
+    assert_match "Inconsolata", css
+    refute_match "fonts.googleapis.com", css
+    refute_match "cdn.jsdelivr.net", css
+    assert_match %r{--font-receipt:\s*"Inconsolata"}, css
+    refute_match %r{--font-mono:[^;]*Inconsolata}, css
+  end
+
+  test "product family templates do not set font-family" do
+    Dir[Rails.root.join("app/views/admin/products/**/*.html.erb")].each do |path|
+      refute_match(/font-family/, File.read(path), "#{path} must not set font-family")
+    end
+    Dir[Rails.root.join("app/views/admin/product_catalog_searches/**/*.html.erb")].each do |path|
+      refute_match(/font-family/, File.read(path), "#{path} must not set font-family")
+    end
   end
 
   private

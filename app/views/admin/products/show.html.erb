@@ -278,18 +278,18 @@
          row
        } %>
     <% headers = [
-         { text: "Name", class: "cell-primary" },
-         { text: "SKU", class: "cell-identifier" },
-         { text: "Type", class: "cell-operational" },
-         { text: "Status", class: "cell-operational" },
-         { text: "Class", class: "cell-operational" },
-         { text: "Department", class: "cell-operational" },
-         { text: "Tax", class: "cell-operational" },
-         { text: "Condition", class: "cell-operational" },
-         { text: "Regular price", class: "numeric cell-operational" }
+         { text: "Name", cell_class: "cell-primary" },
+         { text: "SKU", cell_class: "cell-identifier" },
+         { text: "Type", cell_class: "cell-operational" },
+         { text: "Status", cell_class: "cell-operational" },
+         { text: "Class", cell_class: "cell-operational" },
+         { text: "Department", cell_class: "cell-operational" },
+         { text: "Tax", cell_class: "cell-operational" },
+         { text: "Condition", cell_class: "cell-operational" },
+         { text: "Regular price", class: "numeric", cell_class: "cell-operational" }
        ] %>
-    <% headers << { text: "On hand", class: "numeric cell-operational" } if @show_inventory %>
-    <% headers << { text: "Purchasing", class: "cell-operational" } if can_order || can_request %>
+    <% headers << { text: "On hand", class: "numeric", cell_class: "cell-operational" } if @show_inventory %>
+    <% headers << { text: "Purchasing", cell_class: "cell-operational" } if can_order || can_request %>
     <%= render "shared/data_table",
           headers: headers,
           rows: rows %>

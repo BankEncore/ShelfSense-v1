@@ -32,6 +32,9 @@ class AdminProductSearchFormCompositionTest < ActionDispatch::IntegrationTest
     assert_select "td.cell-primary", text: "The Left Hand of Darkness"
     assert_select "td.cell-identifier", text: FIXTURE_ISBN13
     assert_select "td.cell-secondary", text: /Ursula K. Le Guin/
+    assert_select "th.cell-primary", count: 0
+    assert_select "th.cell-identifier", count: 0
+    assert_select "th.cell-secondary", count: 0
     assert_match(/Use this book/, response.body)
   end
 

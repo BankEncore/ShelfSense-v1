@@ -85,6 +85,7 @@ As a staff user, I need the existing grouped destinations in compact header form
 - [x] Allowlist only: layout, `_admin_primary_nav.html.erb`, CSS, tests, docs
 - [x] Locked boundary in [uds-5-plan.md](uds-5-plan.md) is honored
 - [x] Every destination remains reachable with JavaScript disabled
+- [x] At 320 CSS px (WCAG 400% reflow width) the area catalog is one Areas disclosure, the current destination stays identifiable, and header height leaves page content visible
 - [x] Light chrome only
 - [x] Disposable 5.0 route retired when production presentation ships (or in 5.5 if expanded is kept)
 

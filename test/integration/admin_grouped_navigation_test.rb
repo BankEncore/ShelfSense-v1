@@ -27,14 +27,19 @@ class AdminGroupedNavigationTest < ActionDispatch::IntegrationTest
     assert_match(/aria-label="Primary"/, response.body)
     assert_match(/app-nav--grouped/, response.body)
     assert_select ".app-nav__strip"
+    assert_select ".app-nav__wide-groups"
+    assert_select ".app-nav__areas"
+    assert_select ".app-nav__current-destination a[aria-current=page]", text: "Products"
     assert_select ".app-nav__area-row a[aria-current=page]", text: "Products"
     assert_select ".app-nav-group__heading.is-current-area", text: /Merchandise/
-    assert_select ".app-nav--grouped details", minimum: 7
+    assert_select ".app-nav__wide-groups details", minimum: 7
     assert_select ".uds-5-nav-prototype", count: 0
     area_hrefs = destination_hrefs(response.body, ".app-nav__area-row a")
     assert_includes area_hrefs, admin_products_path
     assert_not_includes area_hrefs, admin_users_path
-    assert_includes destination_hrefs(response.body, ".app-nav--grouped details a"), admin_users_path
+    assert_includes destination_hrefs(response.body, ".app-nav__wide-groups details a"), admin_users_path
+    assert_includes destination_hrefs(response.body, ".app-nav__areas a"), admin_users_path
+    assert_includes destination_hrefs(response.body, ".app-nav__areas a"), admin_products_path
     %w[Merchandise Inventory Purchasing Customers POS\ operations Organization\ configuration Security Audit].each do |label|
       assert_match(/#{Regexp.escape(label)}/, response.body)
     end
@@ -166,6 +171,12 @@ class AdminGroupedNavigationTest < ActionDispatch::IntegrationTest
   test "retired 5.0 navigation prototype route is gone" do
     assert_raises(ActionController::RoutingError) do
       Rails.application.routes.recognize_path("/admin/uds5_navigation_prototype")
+    end
+  end
+
+  test "retired 5.1 composition prototype route is gone" do
+    assert_raises(ActionController::RoutingError) do
+      Rails.application.routes.recognize_path("/admin/uds5_composition_prototype")
     end
   end
 

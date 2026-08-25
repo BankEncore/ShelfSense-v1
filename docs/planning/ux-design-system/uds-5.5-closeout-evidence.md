@@ -12,8 +12,8 @@ Warm Parchment permitted a display-serif role for brand and top-level titles. UD
 
 | Bound | Evidence |
 |---|---|
-| Local packaging, no runtime CDN | `app/assets/fonts/source-serif-4-latin-{400,600}-normal.woff2`; [`admin_uds5_composition_prototype_test`](../../../test/integration/admin_uds5_composition_prototype_test.rb) asserts no Google Fonts / jsDelivr |
-| Role-only application | `.app-brand`, `.type-brand`, `.type-page-title`, `.type-record-title` use `font-family: var(--font-serif)`. Product templates must not set `font-family` (same fixture test) |
+| Local packaging, no runtime CDN | `app/assets/fonts/source-serif-4-latin-{400,600}-normal.woff2`; [`admin_product_composition_test`](../../../test/integration/admin_product_composition_test.rb) asserts no Google Fonts / jsDelivr |
+| Role-only application | `.app-brand`, `.type-brand`, `.type-page-title`, `.type-record-title` use `font-family: var(--font-serif)`. Product templates must not set `font-family` (same composition test) |
 | Product family titles | Index, show, catalog search, new/edit, and bibliographic review consume `.type-page-title` via `shared/page_header` |
 | Narrow / zoom | Composition system tests at 320 CSS px and 200% zoom keep titles visible ([`admin_product_composition_test`](../../../test/system/admin_product_composition_test.rb), search/form, bibliographic review) |
 | Receipt remains distinct | `--font-receipt` stays Inconsolata; print templates unchanged vs `main` (see print non-regression) |
@@ -25,7 +25,7 @@ Warm Parchment permitted a display-serif role for brand and top-level titles. UD
 | Surface | Slice | Commit |
 |---|---|---|
 | Packet + compact-nav gate | UDS-5.0 | `bb130c6` — [uds-5.0-gate-evidence.md](uds-5.0-gate-evidence.md) **Passed**; preferred pattern `area_row` |
-| Type and composition primitives | UDS-5.1 | `945dbd2` — disposable fixture `GET /admin/uds5_composition_prototype` (retained as a specimen; not a catalog destination) |
+| Type and composition primitives | UDS-5.1 | `945dbd2` — disposable fixture later **retired**; primitives covered by partial tests and Product surfaces |
 | Compact area-row production chrome | UDS-5.2 | `a06712f` — `Closes #46`; 5.0 prototype retired |
 | Product index and show | UDS-5.3 | `943695f` — `Closes #47` |
 | Catalog search and product form | UDS-5.4A | `a2e85e1` — `Closes #48` |
@@ -65,6 +65,13 @@ UDS-6 (staff history composition) and UDS-7 (sidebar / Cmd+K) stay parked. [defe
 
 ## Remaining on this branch
 
-- Disposable `GET /admin/uds5_composition_prototype` (UDS-5.1 specimen). Not a catalog destination. May be retired in a later docs/cleanup change; 5.5 allowlist is evidence and conventions only.
 - Merge to `main` after review (one PR for UDS-5).
 - Product family matrix rows stay **partial** / presentation-complete, not a conforming a11y gate.
+
+## Review remediation (PR #57)
+
+| Finding | Result |
+|---|---|
+| Narrow/zoom header as a full-height link wall | At `max-width: 40rem`, one **Areas** disclosure holds the catalog; the current destination stays visible. System tests assert header height vs viewport at 320 CSS px (WCAG 400% reflow width). |
+| Table content-role classes restyling `<th>` | `shared/_data_table` distinguishes `header_class` / `cell_class`; `class` remains a both-cell alias. Hierarchy CSS targets `td` only. |
+| Disposable 5.1 fixture in the production route set | Route, controller, view, and prototype tests removed. Primitive coverage remains on partial tests and Product surfaces. |

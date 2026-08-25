@@ -7,8 +7,6 @@ Rails.application.routes.draw do
   resource :store_selection, only: %i[new create]
 
   namespace :admin do
-    # Disposable UDS-5.1 composition fixture. Not a catalog destination. Retire in 5.3 or 5.5.
-    resource :uds5_composition_prototype, only: :show
     resource :system_settings, only: %i[show edit update]
     resources :stores
     resources :gl_accounts do

@@ -80,13 +80,13 @@ flowchart LR
 
 **Status:** **Complete** on `uds-5-administrative-composition`. Tracker [#45](https://github.com/BankEncore/ShelfSense-v1/issues/45). **No Product family composition** (that is 5.3 / 5.4). Production compact nav is unchanged until 5.2.
 
-Local Source Serif 4; `--font-serif` / `--font-mono`; role-based type; `.surface` means panel boundary (`.surface--flush` opts out of the padded compatibility default); extended page-header and form-section; metric strip; table-hierarchy utilities; admin-form sticky footer prototype. Serif only via tokens/role classes. Disposable fixture: `GET /admin/uds5_composition_prototype`.
+Local Source Serif 4; `--font-serif` / `--font-mono`; role-based type; `.surface` means panel boundary (`.surface--flush` opts out of the padded compatibility default); extended page-header and form-section; metric strip; table-hierarchy utilities; admin-form sticky footer prototype. Serif only via tokens/role classes. Disposable fixture `GET /admin/uds5_composition_prototype` **retired** after Product screens consumed the primitives.
 
 ### UDS-5.2 — Compact administrative navigation presentation
 
 **Status:** **Complete** on `uds-5-administrative-composition`. Tracker [#46](https://github.com/BankEncore/ShelfSense-v1/issues/46). Gate preferred pattern `area_row` shipped. Catalog membership, predicates, labels, and groups unchanged.
 
-Compact utility strip plus an in-flow row of the current group’s destinations. Non-current groups use native `<details>` so every destination remains in the DOM with JavaScript disabled. Light parchment chrome only. Disposable 5.0 prototype route retired.
+Compact utility strip plus an in-flow row of the current group’s destinations. Non-current groups use native `<details>` so every destination remains in the DOM with JavaScript disabled. At `max-width: 40rem` (including the WCAG 400% reflow width of 320 CSS px), the area catalog sits under one **Areas** disclosure and the current destination stays visible, so the header does not become a full-height link wall. Light parchment chrome only. Disposable 5.0 prototype route retired.
 
 ### UDS-5.3 — Product index and details composition
 
@@ -112,6 +112,16 @@ Comparison layout only. Freeze ApplyCandidate and provenance tests.
 
 Record serif adopt/adjust/reject; update matrix and conventions; add the standing feature-led adoption rule to [ux-conventions.md](../../ux-conventions.md) and [ux-adoption-template.md](ux-adoption-template.md). Print non-regression.
 
+### Review remediation (PR #57)
+
+Before merge, on this program branch:
+
+- Collapse the area catalog under one **Areas** disclosure at `max-width: 40rem`; keep the current destination visible; assert header height vs viewport
+- Distinguish `header_class` / `cell_class` on `shared/_data_table` so content-role classes do not restyle `<th>`
+- Retire `GET /admin/uds5_composition_prototype`
+
+Catalog membership, print, and Register remain unchanged.
+
 ## Change allowlists
 
 Expanding an allowlist requires updating this plan in a preceding or same-commit documentation change.
@@ -119,9 +129,9 @@ Expanding an allowlist requires updating this plan in a preceding or same-commit
 | Slice | Shared selectors | Helpers / partials / layouts | Reference views |
 |---|---|---|---|
 | **UDS-5.0** | New selectors under `.uds-5-nav-prototype` only. Do not change production `.app-nav*` rules. | Disposable `Admin::Uds5NavigationPrototypesController` and its views. `config/routes.rb` one GET. Do not change `application.html.erb`, `_admin_primary_nav.html.erb`, `Admin::NavigationCatalog`, or `Admin::NavigationViewModel` behavior. Prototype may pass existing `controller_path:` for area simulation. | None. Product templates are observation-only. Docs and mockup labels. `test/integration/admin_uds5_navigation_prototype_test.rb`; `test/system/admin_uds5_navigation_prototype_test.rb` |
-| **UDS-5.1** | `:root` `--font-serif` / `--font-mono`; Source Serif 4 `@font-face`; `.app-brand` serif via CSS only; `.type-*` role classes; `.surface` / `.surface--flush`; `.page-header*` extensions; `.form-section__head` / `__body` / `__grid`; `.form-field--span-2`; `.metric-strip*`; `.data-table .cell-primary` / `.cell-secondary` / `.cell-identifier`; `.admin-form-footer` | `shared/_page_header.html.erb`; `shared/_form_section.html.erb`; `app/assets/fonts/source-serif-4-latin-{400,600}-normal.woff2`; `application.css`; disposable `Admin::Uds5CompositionPrototypesController` and its view; `config/routes.rb` one GET. Do not change `application.html.erb` markup, `Admin::NavigationCatalog`, or Product family templates. | `GET /admin/uds5_composition_prototype`. Product index/show/form composition waits for 5.3 / 5.4. `test/integration/admin_uds5_composition_prototype_test.rb`; `test/system/admin_uds5_composition_prototype_test.rb`; `test/views/page_header_partial_test.rb`; `test/views/form_section_partial_test.rb` |
-| **UDS-5.2** | `.app-nav--grouped` compact column layout; `.app-nav__strip`; `.app-nav__area-row`; `details.app-nav-group`; `summary.app-nav-group__heading`; existing `.app-nav-group__heading` / `__list` / `.app-nav-utilities`. Remove `.uds-5-nav-prototype*` | `shared/_admin_primary_nav.html.erb`; `application.css`; `config/routes.rb` (drop 5.0 GET). Do not change `application.html.erb` markup, `Admin::NavigationCatalog`, or `Admin::NavigationViewModel` behavior. | None. Production header. `test/integration/admin_grouped_navigation_test.rb`; `test/system/admin_grouped_navigation_test.rb` |
-| **UDS-5.3** | UDS-5.1 primitives consumed on Product index/show; `.product-filters`; `.product-metrics`; `.product-panels`; `.product-variants`; `.data-table .cell-operational` | `admin/products/{index,show}.html.erb` only. Do not change ProductsController queries, catalog search, product form, or bibliographic review. | `admin/products/{index,show}.html.erb`. `test/integration/admin_product_composition_test.rb`; `test/system/admin_product_composition_test.rb` |
+| **UDS-5.1** | `:root` `--font-serif` / `--font-mono`; Source Serif 4 `@font-face`; `.app-brand` serif via CSS only; `.type-*` role classes; `.surface` / `.surface--flush`; `.page-header*` extensions; `.form-section__head` / `__body` / `__grid`; `.form-field--span-2`; `.metric-strip*`; `.data-table td.cell-primary` / `.cell-secondary` / `.cell-identifier`; `.admin-form-footer` | `shared/_page_header.html.erb`; `shared/_form_section.html.erb`; `app/assets/fonts/source-serif-4-latin-{400,600}-normal.woff2`; `application.css`. Historical disposable fixture **retired**. Do not change `application.html.erb` markup, `Admin::NavigationCatalog`, or Product family templates. | Product index/show/form composition waits for 5.3 / 5.4. Primitive coverage: `test/views/page_header_partial_test.rb`; `test/views/form_section_partial_test.rb`; `test/views/data_table_partial_test.rb`; Product composition tests |
+| **UDS-5.2** | `.app-nav--grouped` compact column layout; `.app-nav__strip`; `.app-nav__wide-groups`; `.app-nav__current-destination`; `.app-nav__areas`; `.app-nav__area-row`; `details.app-nav-group`; `summary.app-nav-group__heading`; existing `.app-nav-group__heading` / `__list` / `.app-nav-utilities`. Remove `.uds-5-nav-prototype*` | `shared/_admin_primary_nav.html.erb`; `application.css`; `config/routes.rb` (drop 5.0 GET). Do not change `application.html.erb` markup, `Admin::NavigationCatalog`, or `Admin::NavigationViewModel` behavior. | None. Production header. `test/integration/admin_grouped_navigation_test.rb`; `test/system/admin_grouped_navigation_test.rb` |
+| **UDS-5.3** | UDS-5.1 primitives consumed on Product index/show; `.product-filters`; `.product-metrics`; `.product-panels`; `.product-variants`; `.data-table td.cell-operational` | `admin/products/{index,show}.html.erb`; `shared/_data_table.html.erb` (`header_class` / `cell_class`; `class` remains a compatibility alias). Do not change ProductsController queries, catalog search, product form, or bibliographic review. | `admin/products/{index,show}.html.erb`. `test/integration/admin_product_composition_test.rb`; `test/system/admin_product_composition_test.rb`; `test/views/data_table_partial_test.rb` |
 | **UDS-5.4A** | UDS-5.1 primitives on catalog search and product form; `.catalog-search-query`; `.catalog-search-results`; `.product-form`; `.product-cover--thumb` | `admin/product_catalog_searches/**`; `admin/products/{new,edit,_form}.html.erb`. Do not change catalog-search params, ranking, ProductsController validation, or bibliographic review. | `admin/product_catalog_searches/new.html.erb`; `admin/products/{new,edit,_form}.html.erb`. `test/integration/admin_product_search_form_composition_test.rb`; `test/system/admin_product_search_form_composition_test.rb` |
 | **UDS-5.4B** | `.bibliographic-review`; `.bibliographic-review__field`; `.bibliographic-review__pair`; `.bibliographic-review__current`; `.bibliographic-review__proposed`; `.bibliographic-review__selected`; `.bibliographic-review__label`; UDS-5.1 form-section and `.admin-form-footer` consumed on the review surface | `admin/products/bibliographic_review.html.erb`; `admin/products/_bibliographic_review_field.html.erb`. Do not change ApplyCandidate, provenance writes, cover download, subject matching, lock_version handling, or ProductsController review-field construction. | same views. `test/integration/admin_bibliographic_review_composition_test.rb`; `test/system/admin_bibliographic_review_composition_test.rb` |
 | **UDS-5.5** | None except docs | Docs, matrix, conventions, adoption template, closeout evidence. Do not change production templates, catalog membership, print, or Register. | [uds-5.5-closeout-evidence.md](uds-5.5-closeout-evidence.md); [ux-conventions.md](../../ux-conventions.md); [ux-adoption-template.md](ux-adoption-template.md); [warm-parchment.md](warm-parchment.md); [migration-matrix.md](migration-matrix.md) |
@@ -153,9 +163,9 @@ Retire the route in 5.2 if compact nav ships, or in 5.5 if expanded nav is kept.
 
 Route: `GET /admin/uds5_composition_prototype` (signed-in; no extra permission). Not listed in `Admin::NavigationCatalog`.
 
-The fixture exercises: full page-header slots; omitted subtitle/status; type-role specimens; `.surface` vs `.surface--flush`; metric strip; form-section grid with a static invalid field; sticky `.admin-form-footer`; table cell-primary/secondary/identifier. No Stimulus/Hotwire. Do not apply these primitives to Product templates until 5.3 / 5.4.
+The fixture exercised: full page-header slots; omitted subtitle/status; type-role specimens; `.surface` vs `.surface--flush`; metric strip; form-section grid with a static invalid field; sticky `.admin-form-footer`; table cell-primary/secondary/identifier. No Stimulus/Hotwire. Do not apply these primitives to Product templates until 5.3 / 5.4.
 
-Retire the route in 5.3 once Product screens consume the primitives, or in 5.5.
+**Retired after Product consumption.** Primitive coverage lives in partial tests and Product reference surfaces. The route, controller, view, and prototype tests are gone.
 
 ## Gate pass / fail
 
@@ -172,7 +182,6 @@ Existing domain/workflow tests stay unchanged and passing. 5.2 may update groupe
 - [uds-5-user-stories.md](uds-5-user-stories.md)
 - [uds-5.0-gate-evidence.md](uds-5.0-gate-evidence.md)
 - [uds-5.5-closeout-evidence.md](uds-5.5-closeout-evidence.md)
-- Fixture: `GET /admin/uds5_composition_prototype` (UDS-5.1)
 - [navigation-proposal.md](navigation-proposal.md)
 - [deferred-patterns.md](deferred-patterns.md)
 - [warm-parchment.md](warm-parchment.md)

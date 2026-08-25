@@ -95,7 +95,7 @@ Apply type through role classes and tokens. Do not set `font-family` in Product 
 
 Serif is limited to brand, page title, and record title. Controls, navigation, tables, labels, badges, and ordinary body stay sans. **UDS-5.5 adopted** Source Serif 4 for those display roles ([uds-5.5-closeout-evidence.md](planning/ux-design-system/uds-5.5-closeout-evidence.md)).
 
-Composition utilities: `.metric-strip`, `.data-table .cell-primary` / `.cell-secondary` / `.cell-identifier` / `.cell-operational`, `.admin-form-footer` (admin forms; sticky). The Product family (index, show, catalog search, form, bibliographic review) consumes them. Compact grouped nav uses a utility strip plus the current-area row; other groups stay in native `<details>`.
+Composition utilities: `.metric-strip`, `.data-table td.cell-primary` / `.cell-secondary` / `.cell-identifier` / `.cell-operational`, `.admin-form-footer` (admin forms; sticky). The Product family (index, show, catalog search, form, bibliographic review) consumes them. Content-role table classes apply to `<td>` only (`cell_class`); table chrome stays sans. Compact grouped nav uses a utility strip plus the current-area row; other groups stay in native `<details>`. At `max-width: 40rem` the area catalog collapses under one Areas disclosure and the current destination remains visible.
 
 ## Feature-led adoption (UDS-5.5)
 
