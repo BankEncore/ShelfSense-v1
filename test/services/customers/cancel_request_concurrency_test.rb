@@ -231,21 +231,25 @@ class Customers::CancelRequestConcurrencyTest < ActiveSupport::TestCase
     threads.each { |thread| assert thread.join(30), "thread did not finish (possible deadlock)" }
     assert_no_lock_failures!(errors)
 
-    po.reload
     request.reload
+    persisted_po = PurchaseOrder.find_by(id: po.id)
     cancel_error = errors.compact.find { |e| e.is_a?(Customers::Error) && e.message == Customers::CancelRequest::SENT_PO_CONFLICT }
     if cancel_error
-      assert_equal "sent", po.status
+      assert_not_nil persisted_po, "sent PO must still exist when draft-order cancel loses to send"
+      assert_equal "sent", persisted_po.status
       assert_not request.cancelled?, "request should remain active when draft-order cancel loses to send"
       assert PurchaseOrderLine.find_by(order_id: request.orders.first.id).present?
+    elsif persisted_po.nil?
+      # Cancel won: the empty draft PO is hard-deleted (ADR-012). Send then fails to find it.
+      assert request.cancelled?, "expected cancel to finish and remove the empty draft PO when send lost"
     else
       assert request.cancelled?, "expected cancel to finish when no sent-PO conflict was raised"
       order = request.orders.first
-      if po.sent?
+      if persisted_po.sent?
         assert_nil order.reload.cancelled_at
         assert PurchaseOrderLine.find_by(order_id: order.id).present?
       else
-        assert_not_equal "sent", po.status
+        assert_not_equal "sent", persisted_po.status
       end
     end
   end
