@@ -1,0 +1,106 @@
+<%#
+  locals:
+    nav: (required) Admin::NavigationViewModel
+    variant: expanded | disclosures | area_row
+%>
+<nav class="uds-5-nav-prototype uds-5-nav-prototype--<%= variant %>"
+     aria-label="UDS-5 prototype primary"
+     data-uds5-variant="<%= variant %>">
+  <% case variant %>
+  <% when "expanded" %>
+    <div class="uds-5-nav-prototype__utilities">
+      <%= link_to "Home", root_path, class: "uds-5-nav-prototype__utility" %>
+    </div>
+
+    <% nav.groups.each do |group| %>
+      <section class="uds-5-nav-prototype__group<%= " is-current-area" if group.current %>" aria-labelledby="uds5-expanded-<%= group.key %>">
+        <h2 id="uds5-expanded-<%= group.key %>" class="uds-5-nav-prototype__heading" data-uds5-group="<%= group.key %>">
+          <%= group.label %>
+          <% if group.current %>
+            <span class="visually-hidden">Current area</span>
+          <% end %>
+        </h2>
+        <ul class="uds-5-nav-prototype__list">
+          <% group.destinations.each do |destination| %>
+            <li>
+              <%= link_to destination.label, destination.path,
+                    class: ["uds-5-nav-prototype__destination", ("is-active" if destination.current)],
+                    "aria-current": (destination.current ? "page" : nil) %>
+            </li>
+          <% end %>
+        </ul>
+      </section>
+    <% end %>
+
+    <%= render "admin/uds5_navigation_prototypes/session_utilities", nav: nav %>
+
+  <% when "disclosures" %>
+    <div class="uds-5-nav-prototype__utilities">
+      <%= link_to "Home", root_path, class: "uds-5-nav-prototype__utility" %>
+    </div>
+
+    <% nav.groups.each do |group| %>
+      <details class="uds-5-nav-prototype__group<%= " is-current-area" if group.current %>"
+               <%= "open" if group.current %>>
+        <summary class="uds-5-nav-prototype__heading" data-uds5-group="<%= group.key %>">
+          <%= group.label %>
+          <% if group.current %>
+            <span class="visually-hidden">Current area</span>
+          <% end %>
+        </summary>
+        <ul class="uds-5-nav-prototype__list">
+          <% group.destinations.each do |destination| %>
+            <li>
+              <%= link_to destination.label, destination.path,
+                    class: ["uds-5-nav-prototype__destination", ("is-active" if destination.current)],
+                    "aria-current": (destination.current ? "page" : nil) %>
+            </li>
+          <% end %>
+        </ul>
+      </details>
+    <% end %>
+
+    <%= render "admin/uds5_navigation_prototypes/session_utilities", nav: nav %>
+
+  <% when "area_row" %>
+    <div class="uds-5-nav-prototype__strip">
+      <div class="uds-5-nav-prototype__utilities">
+        <%= link_to "Home", root_path, class: "uds-5-nav-prototype__utility" %>
+      </div>
+
+      <% nav.groups.each do |group| %>
+        <% if group.current %>
+          <h2 class="uds-5-nav-prototype__heading is-current-area" data-uds5-group="<%= group.key %>">
+            <%= group.label %>
+            <span class="visually-hidden">Current area</span>
+          </h2>
+        <% else %>
+          <details class="uds-5-nav-prototype__group">
+            <summary class="uds-5-nav-prototype__heading" data-uds5-group="<%= group.key %>"><%= group.label %></summary>
+            <ul class="uds-5-nav-prototype__list">
+              <% group.destinations.each do |destination| %>
+                <li>
+                  <%= link_to destination.label, destination.path,
+                        class: ["uds-5-nav-prototype__destination", ("is-active" if destination.current)],
+                        "aria-current": (destination.current ? "page" : nil) %>
+                </li>
+              <% end %>
+            </ul>
+          </details>
+        <% end %>
+      <% end %>
+
+      <%= render "admin/uds5_navigation_prototypes/session_utilities", nav: nav %>
+    </div>
+
+    <% if nav.current_group %>
+      <div class="uds-5-nav-prototype__area-row" aria-label="<%= nav.current_group.label %> destinations">
+        <% nav.current_group.destinations.each do |destination| %>
+          <%= link_to destination.label, destination.path,
+                class: ["uds-5-nav-prototype__destination", ("is-active" if destination.current)],
+                "aria-current": (destination.current ? "page" : nil) %>
+        <% end %>
+      </div>
+    <% end %>
+  <% end %>
+</nav>

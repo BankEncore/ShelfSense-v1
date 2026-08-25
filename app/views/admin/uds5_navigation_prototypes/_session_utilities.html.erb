@@ -1,0 +1,7 @@
+<%# locals: nav: (required) Admin::NavigationViewModel %>
+<div class="uds-5-nav-prototype__utilities" aria-label="Session utilities">
+  <% if nav.show_switch_store? %>
+    <%= link_to "Switch store", new_store_selection_path(return_to: request.fullpath), class: "uds-5-nav-prototype__utility" %>
+  <% end %>
+  <%= button_to "Sign out", session_path, method: :delete, class: "btn btn--ghost" %>
+</div>

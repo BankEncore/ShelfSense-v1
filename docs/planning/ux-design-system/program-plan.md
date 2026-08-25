@@ -45,6 +45,7 @@ Objective migration states, the alias retirement register, and evidence columns 
 | **UDS-4.0** | None (complete; disposable prototype retired) | Gate evidence only — [uds-4.0-gate-evidence.md](uds-4.0-gate-evidence.md) | Historical; catalog reused by UDS-4.1 |
 | **UDS-4.1** | `.app-nav`, `.app-nav--grouped`, `.app-nav-group`, `.app-nav-group__heading`, `.app-nav-group__list`, `.app-nav-utilities`, `.visually-hidden` | `app/helpers/admin_navigation_helper.rb`; `app/services/admin/navigation_catalog.rb`; `app/services/admin/navigation_view_model.rb`; `app/views/shared/_admin_primary_nav.html.erb`; `app/views/layouts/application.html.erb` (grouped primary nav only—no domain screens) | `test/services/admin/navigation_view_model_test.rb`; `test/integration/admin_grouped_navigation_test.rb` |
 | **UDS-4.2** | UDS-1 primitives on allowlisted non–Phase-7.1 matrix rows only; `AdminCrossLinksHelper` | Shared partials; `app/helpers/admin_cross_links_helper.rb`; family templates listed in [uds-4.2-plan.md](uds-4.2-plan.md) | Matrix paths explicitly listed in PR (exclude `admin/orders/**`, `admin/purchase_orders/**`, `admin/purchase_receipts/**`, `admin/purchasing/**`, `ops/locations/**`, `ops/draft_pos/**`) |
+| **UDS-5.0** | New selectors under `.uds-5-nav-prototype` only | Disposable `Admin::Uds5NavigationPrototypesController` and views; `config/routes.rb` one GET. Must not change `application.html.erb`, `_admin_primary_nav.html.erb`, `Admin::NavigationCatalog`, or `Admin::NavigationViewModel` behavior | None; docs, mockup labels, `test/integration/admin_uds5_navigation_prototype_test.rb`, and `test/system/admin_uds5_navigation_prototype_test.rb`. Product templates observation-only |
 
 Ownership split: [phase7.1-uds-coordination.md](../phase7.1-purchasing-polish/phase7.1-uds-coordination.md) (Accepted August 2026). Phase 7.1 owns purchasing hub, purchasing admin indexes, and Location/Draft PO ops interaction closeout. UDS-4 owns grouped nav chrome and non-purchasing adoption. A needed change to one of these is a separate behavior slice, not incidental UDS work.
 
@@ -79,6 +80,7 @@ The following behavior suites are frozen expectations: a UDS change may add visu
 | Phase 7.1.3 | UDS-2 ops list (`purchasing_ops_workspace_test.rb`, `location_queue_buttons_test.rb`, receiving tests) | Location and Draft PO keyboard/dirty/focus interaction closeout per [phase7.1.3-ops-evidence.md](../phase7.1-purchasing-polish/phase7.1.3-ops-evidence.md) |
 | UDS-4.1 | UDS-1 list plus navigation helper/view tests added in PR | Navigation-proposal profiles A and B; JavaScript-disabled baseline; 320px and 200%/400% zoom reflow |
 | UDS-4.2 | UDS-1 list plus `test/helpers/admin_cross_links_helper_test.rb` and family integration tests named in each 4.2x PR | Touched admin family index/show/form; narrow-user cross-link absence; Chromium viewport spot-check |
+| UDS-5.0 | UDS-1 list plus `test/integration/admin_grouped_navigation_test.rb`; add prototype integration and system tests without rewriting catalog/view-model tests | Disposable prototype variants vs production destination set; JavaScript-disabled links present in HTML; 320px and 200%/400% zoom on `.uds-5-nav-prototype`; production header unchanged |
 
 Across all slices (including Phase 7.1 and UDS-4), `app/views/pos/receipts/_print.html.erb`, `.pos-receipt__print*`, service/controller/domain code (except Phase 7.1 read-only hub queries), Stimulus key bindings, Turbo target IDs, form actions/methods, and authorization conditions are locked unless the slice explicitly owns that behavior.
 
@@ -178,6 +180,20 @@ Validate with the [accessibility and ergonomic test matrix](accessibility-ergono
 
 **Deliverable:** grouped, permission-filtered admin navigation without JavaScript-only destinations; non-purchasing screens migrated per coordination table.
 
+### UDS-5 — Administrative composition
+
+**Implementation plan:** [uds-5-plan.md](uds-5-plan.md). Tracker: GitHub milestone UDS-5 ([#44](https://github.com/BankEncore/ShelfSense-v1/issues/44)–[#50](https://github.com/BankEncore/ShelfSense-v1/issues/50)).
+
+- **UDS-5.0** — Packet, mockup region labels, Product/header baselines, disposable compact-nav prototype gate **Passed**. **No production chrome change.**
+- **UDS-5.1** — Typography and composition primitives.
+- **UDS-5.2** — Compact presentation of the existing grouped catalog after the 5.0 gate (or keep expanded).
+- **UDS-5.3–5.4B** — Product index/details, catalog search/form, bibliographic review layout.
+- **UDS-5.5** — Evidence, serif decision, standing feature-led adoption rule.
+
+**Out of scope for UDS-5:** persistent sidebar, Cmd/Ctrl+K, NavigationCatalog/permission/route changes, Register, purchasing-ops, printed receipt, enrichment policy. Staff history composition is UDS-6 after 5.5.
+
+**Deliverable:** Product reference family and compact admin header use the composition grammar without changing catalog membership or domain behavior.
+
 ## After the foundation program
 
 - When a feature phase touches a screen, migrate that screen to accepted primitives per [phase7.1-uds-coordination.md](../phase7.1-purchasing-polish/phase7.1-uds-coordination.md) ownership (Phase 7.1 vs UDS-4).
@@ -186,6 +202,7 @@ Validate with the [accessibility and ergonomic test matrix](accessibility-ergono
 - Keep [migration-matrix.md](migration-matrix.md) current.
 - New interaction patterns in [deferred-patterns.md](deferred-patterns.md) require their own specifications.
 - **UDS-4** defers purchasing screens to Phase 7.1 per [phase7.1-uds-coordination.md](../phase7.1-purchasing-polish/phase7.1-uds-coordination.md); see [uds-4-plan.md](uds-4-plan.md).
+- **UDS-5** is the next UX program ([uds-5-plan.md](uds-5-plan.md)); do not pull UDS-6 history or UDS-7 sidebar/search into it.
 
 ## Explicitly deferred
 

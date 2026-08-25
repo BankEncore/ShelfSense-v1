@@ -229,14 +229,20 @@
 </head>
 <body>
   <aside class="authority-banner" aria-label="Artifact authority status">
-    <strong>Inspirational — not implementation authority.</strong>
-    <p>Governing Markdown contract: <a href="README.md">UX design system</a> (status: Proposed).</p>
+    <strong>Inspirational overall — not implementation authority.</strong>
+    <p>Governing packet: <a href="uds-5-plan.md">UDS-5 plan</a> (Proposed) and <a href="README.md">UX design system</a>.</p>
+    <p>Region labels (do not promote this mockup wholesale):</p>
+    <ul>
+      <li><strong>Inspirational / deferred (UDS-7):</strong> espresso sidebar, espresso topbar, Cmd/Ctrl+K global search.</li>
+      <li><strong>Proposed for UDS-5:</strong> serif brand/titles, identity header (eyebrow, title, subtitle, status, actions), metric strip, identity/publication panels, filter grouping, table hierarchy, sectioned form, sticky form footer.</li>
+      <li><strong>Rejected for UDS-5.2:</strong> dark utility-row chrome.</li>
+    </ul>
     <p>View switching and review-dialog open/close behavior are illustrative. Search, filters, pagination, navigation, forms, saves, exports, and other record actions are nonfunctional and do not enforce authorization or workflows.</p>
-    <p>The permanent espresso sidebar and Cmd/Ctrl+K global search shown here are <strong>deferred</strong> patterns—not binding. See <a href="deferred-patterns.md">deferred-patterns.md</a> and <a href="navigation-proposal.md">navigation-proposal.md</a>.</p>
     <p>Production implementations must use design tokens, Rails helpers/partials, authorization gates, and existing workflow controllers rather than copying this mockup markup verbatim.</p>
   </aside>
   <div class="shell">
-    <aside class="sidebar">
+    <!-- Inspirational/deferred (UDS-7): persistent espresso sidebar — not UDS-5 -->
+    <aside class="sidebar" data-uds-authority="inspirational-deferred" data-uds-region="sidebar">
       <div class="brand">
         <div class="brand-mark">S</div>
         <div class="brand-copy"><strong>ShelfSense</strong><small>Bookstore operations</small></div>
@@ -256,7 +262,8 @@
     </aside>
 
     <div class="workspace">
-      <header class="topbar">
+      <!-- Inspirational/deferred (UDS-7): espresso topbar + Cmd/Ctrl+K — not UDS-5 -->
+      <header class="topbar" data-uds-authority="inspirational-deferred" data-uds-region="espresso-topbar">
         <label class="global-search"><span class="glass">⌕</span><input aria-label="Global search mockup" placeholder="Search title, identifier, order…"><span class="key">Ctrl K</span></label>
         <div class="account"><div class="avatar">TS</div><div><strong>Admin User</strong><br><small>Downtown</small></div></div>
       </header>
@@ -272,12 +279,13 @@
       <main>
         <section class="view" id="view-products" hidden>
           <nav class="breadcrumbs" aria-label="Breadcrumb"><a href="#products">Home</a><span class="crumb-sep">›</span><span aria-current="page">Products</span></nav>
-          <header class="page-header">
+          <!-- Proposed (UDS-5): composed page header -->
+          <header class="page-header" data-uds-authority="proposed" data-uds-region="index-header">
             <div><div class="eyebrow">Merchandise</div><h1>Products</h1><p class="subtitle">Catalog products and their sellable variants</p></div>
             <div class="header-actions"><button class="btn btn--solid btn--brand" data-view="edit">New Product</button></div>
           </header>
 
-          <section class="surface filters" aria-label="Product filters">
+          <section class="surface filters" aria-label="Product filters" data-uds-authority="proposed" data-uds-region="filters">
             <label class="field"><span class="field-label">Search</span><input value="" placeholder="Name or identifier"></label>
             <label class="field"><span class="field-label">Status</span><select><option>Any status</option><option>Active</option><option>Draft</option></select></label>
             <label class="field"><span class="field-label">Category</span><select><option>Any category</option><option>Books › Fiction</option><option>Books › Nonfiction</option></select></label>
@@ -287,7 +295,8 @@
 
           <section class="surface section">
             <div class="section-head"><div><h2>Catalog</h2><p>184 products · current store inventory shown</p></div><button class="btn btn--outline btn--neutral btn--small">Export</button></div>
-            <div class="table-wrap">
+            <!-- Proposed (UDS-5): table hierarchy (primary vs secondary columns) -->
+            <div class="table-wrap" data-uds-authority="proposed" data-uds-region="index-table">
               <table>
                 <thead><tr><th>Product</th><th>Primary identifier</th><th>Category</th><th class="numeric">Variants</th><th class="numeric">List price</th><th>Status</th><th class="numeric">On hand</th></tr></thead>
                 <tbody>
@@ -304,7 +313,8 @@
 
         <section class="view" id="view-details">
           <nav class="breadcrumbs" aria-label="Breadcrumb"><a href="#products" data-view-link="products">Home</a><span class="crumb-sep">›</span><a href="#products" data-view-link="products">Products</a><span class="crumb-sep">›</span><span aria-current="page">The Left Hand of Darkness</span></nav>
-          <header class="page-header">
+          <!-- Proposed (UDS-5): identity header (eyebrow, serif title, subtitle, status, actions) -->
+          <header class="page-header" data-uds-authority="proposed" data-uds-region="identity-header">
             <div><div class="eyebrow">Product</div><h1>The Left Hand of Darkness</h1><p class="subtitle">Primary identifier <span class="identifier">2220000001846</span></p></div>
             <div class="header-actions">
               <span class="status status--active">Active</span>
@@ -315,7 +325,8 @@
             </div>
           </header>
 
-          <section class="surface summary-grid" aria-label="Product summary">
+          <!-- Proposed (UDS-5): metric strip -->
+          <section class="surface summary-grid" aria-label="Product summary" data-uds-authority="proposed" data-uds-region="metric-strip">
             <div class="summary-cell"><span class="label">Primary identifier</span><span class="value identifier">2220000001846</span><span class="note">ShelfSense assigned</span></div>
             <div class="summary-cell"><span class="label">List price</span><span class="value">$18.99</span><span class="note">Product reference</span></div>
             <div class="summary-cell"><span class="label">Variants</span><span class="value">3</span><span class="note">2 active · 1 draft</span></div>
@@ -323,7 +334,8 @@
           </section>
 
           <div class="two-col section">
-            <section class="surface">
+            <!-- Proposed (UDS-5): identity / publication panel. Cover remains a thumbnail in production. -->
+            <section class="surface" data-uds-authority="proposed" data-uds-region="identity-panel">
               <div class="section-head"><div><h2>Product details</h2><p>Identity, classification, and publication metadata</p></div></div>
               <div class="section-body">
                 <dl class="detail-grid">
@@ -354,7 +366,8 @@
 
           <section class="surface section">
             <div class="section-head"><div><h2>Variants</h2><p>Sellable forms and current-store availability</p></div><button class="btn btn--solid btn--brand btn--small">New Variant</button></div>
-            <div class="table-wrap">
+            <!-- Proposed (UDS-5): keep operational variant columns visually distinct from bibliographic identity -->
+            <div class="table-wrap" data-uds-authority="proposed" data-uds-region="variant-table">
               <table>
                 <thead><tr><th>Variant</th><th>SKU</th><th>Type</th><th>Status</th><th>Class</th><th>Department</th><th>Tax</th><th class="numeric">Price</th><th class="numeric">On hand</th><th>Actions</th></tr></thead>
                 <tbody>
@@ -378,9 +391,10 @@
 
         <section class="view" id="view-edit" hidden>
           <nav class="breadcrumbs" aria-label="Breadcrumb"><a href="#products" data-view-link="products">Home</a><span class="crumb-sep">›</span><a href="#products" data-view-link="products">Products</a><span class="crumb-sep">›</span><a href="#details" data-view-link="details">The Left Hand of Darkness</a><span class="crumb-sep">›</span><span aria-current="page">Edit</span></nav>
-          <header class="page-header"><div><div class="eyebrow">Product</div><h1>Edit Product</h1><p class="subtitle">The Left Hand of Darkness</p></div></header>
+          <header class="page-header" data-uds-authority="proposed" data-uds-region="form-header"><div><div class="eyebrow">Product</div><h1>Edit Product</h1><p class="subtitle">The Left Hand of Darkness</p></div></header>
 
-          <form class="surface form-card" onsubmit="event.preventDefault(); document.getElementById('savedToast').hidden=false">
+          <!-- Proposed (UDS-5): sectioned form, related-field grids, sticky admin-form actions -->
+          <form class="surface form-card" data-uds-authority="proposed" data-uds-region="product-form" onsubmit="event.preventDefault(); document.getElementById('savedToast').hidden=false">
             <section class="form-section">
               <div class="form-section-head"><h2>Identity</h2><p>ShelfSense assigns every product an immutable generated 222 primary identifier. Record the manufacturer GTIN and optional lookup code here.</p></div>
               <div class="form-grid">
@@ -411,7 +425,7 @@
               <label class="field" style="max-width:260px"><span class="field-label">Status</span><select><option selected>Active</option><option>Draft</option></select><span class="help">Use Discontinue on the product page to end future use.</span></label>
             </section>
             <div id="savedToast" hidden class="callout" style="margin:14px 18px"><strong>Mockup only</strong><p>The form demonstrates action hierarchy; no data was saved.</p></div>
-            <footer class="form-footer"><button type="button" class="btn btn--ghost btn--neutral" data-view="details">Cancel</button><button class="btn btn--solid btn--brand">Save Changes</button></footer>
+            <footer class="form-footer" data-uds-authority="proposed" data-uds-region="sticky-form-footer"><button type="button" class="btn btn--ghost btn--neutral" data-view="details">Cancel</button><button class="btn btn--solid btn--brand">Save Changes</button></footer>
           </form>
         </section>
 

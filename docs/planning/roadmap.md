@@ -76,6 +76,23 @@ Scope:
 
 UDS-4.0 gate passed; UDS-4.1 shipped grouped nav into `application.html.erb`; UDS-4.2 shipped non-purchasing ActionButtonHelper adoption.
 
+### UDS-5 — Administrative composition
+
+**Status:** **Proposed** — UDS-5.0 packet and compact-nav prototype gate **Passed** on `uds-5-administrative-composition` ([uds-5-plan.md](ux-design-system/uds-5-plan.md)). Production chrome is unchanged until UDS-5.2.
+
+Scope:
+
+- Establish UDS-5 authority and label inspirational mockup regions.
+- Prototype compact presentations of the **existing** UDS-4 grouped catalog (disclosures and optional area row) without changing membership, labels, or predicates.
+- After the gate: type/composition primitives, then Product as the administrative reference family.
+- Record serif adopt/adjust/reject and a standing feature-led adoption rule at closeout.
+
+**Deliverable:**
+
+> Authorized staff can scan Product reference screens and the administrative header for identity, status, and next action without a taller grouped-link wall, a persistent sidebar, or any change to catalog membership, permissions, or domain behavior.
+
+Persistent sidebar and global search remain parked ([#56](https://github.com/BankEncore/ShelfSense-v1/issues/56)). Staff history composition is UDS-6 after 5.5.
+
 ## Phase 7.1 — Purchasing workflow and presentation closeout
 
 **Status:** **Complete** — **7.1.1–7.1.3 on `main`** (PR #35, PR #40); **UDS-4.1/4.2 on `main`**; **7.1.4 deferred**.

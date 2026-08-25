@@ -149,3 +149,5 @@ Attach results and screenshots for both profiles to the implementation change. O
 ## Non-goals and open implementation choices
 
 This proposal does not select a permanent desktop geometry, create group landing pages, rename routes, alter the home page, persist expanded state, or define global search. A wrapping group strip, an in-flow “All areas” region, and optional accessible disclosures may be compared in the prototype, provided each honors the baseline and narrow-width rules above. Choosing a persistent sidebar or global search remains a separate architectural decision under [deferred-patterns.md](deferred-patterns.md).
+
+UDS-5.0 compares compact **presentations** of this inventory ([uds-5-plan.md](uds-5-plan.md)); it does not change group membership, predicates, or destination labels.
