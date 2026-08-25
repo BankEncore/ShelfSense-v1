@@ -32,7 +32,8 @@ module Products
     end
 
     def call
-      Product.transaction do
+      committed = false
+      product = Product.transaction do
         primary = allocate_222!
         industry = normalized_industry(primary)
         sources = provenance_document(industry)
@@ -90,12 +91,15 @@ module Products
 
         product
       end
+      committed = true
+      product
     rescue Identifiers::NormalizationError, Identifiers::Registry::ConflictError, Identifiers::Generator::ExhaustedError,
            ActiveRecord::RecordInvalid, ArgumentError, Bibliographic::FieldSources::Invalid,
            Bibliographic::ContributorRole::Unknown, Products::AssignSubjects::Error,
            Bibliographic::CoverDownloader::Error, Bibliographic::CoverPayload::Error => e
-      @attached_blob&.purge
       raise Error, e.message
+    ensure
+      @attached_blob&.purge unless committed
     end
 
     private

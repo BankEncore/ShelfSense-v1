@@ -156,4 +156,116 @@ class Bibliographic::CoverDownloaderTest < ActiveSupport::TestCase
     assert_not product.reload.cover_image.attached?
     assert_equal before, ActiveStorage::Blob.count
   end
+
+  test "cover blobs are purged when a later unexpected error rolls back update" do
+    actor = actor_user
+    product = Products::Create.call(
+      attributes: { name: "Cover audit rollback", status: "draft" },
+      actor: actor
+    )
+    before = ActiveStorage::Blob.count
+
+    stub_audit_recorder_failure do
+      assert_raises(RuntimeError) do
+        Products::Update.call(
+          product: product,
+          attributes: {
+            lock_version: product.lock_version,
+            cover_image: { io: StringIO.new(TINY_PNG), filename: "cover.png", content_type: "image/png" }
+          },
+          actor: actor
+        )
+      end
+    end
+
+    assert_not product.reload.cover_image.attached?
+    assert_equal before, ActiveStorage::Blob.count
+  end
+
+  test "aborts streaming downloads as soon as accumulated bytes exceed the limit" do
+    chunks = [ "a" * 100, "b" * 100, "c" * (Bibliographic::CoverDownloader::MAX_BYTES + 1), "d" * 100 ]
+    http = FakeStreamingHTTP.new(code: "200", headers: { "content-type" => "image/png" }, chunks: chunks)
+
+    error = assert_raises(Bibliographic::CoverDownloader::Error) do
+      stub_net_http(http) do
+        Bibliographic::CoverDownloader.call(
+          url: "https://images.isbndb.com/cover.png",
+          allowed_urls: [ "https://images.isbndb.com/cover.png" ],
+          resolver: ->(_host) { [ IPAddr.new("93.184.216.34") ] }
+        )
+      end
+    end
+
+    assert_match(/too large/i, error.message)
+    assert_equal 3, http.response.chunks_yielded
+  end
+
+  test "rejects an oversized content-length before reading the body" do
+    chunks = [ "x" * 50 ]
+    http = FakeStreamingHTTP.new(
+      code: "200",
+      headers: { "content-length" => (Bibliographic::CoverDownloader::MAX_BYTES + 1).to_s },
+      chunks: chunks
+    )
+
+    error = assert_raises(Bibliographic::CoverDownloader::Error) do
+      stub_net_http(http) do
+        Bibliographic::CoverDownloader.call(
+          url: "https://images.isbndb.com/cover.png",
+          allowed_urls: [ "https://images.isbndb.com/cover.png" ],
+          resolver: ->(_host) { [ IPAddr.new("93.184.216.34") ] }
+        )
+      end
+    end
+
+    assert_match(/too large/i, error.message)
+    assert_equal 0, http.response.chunks_yielded
+  end
+
+  class FakeStreamingHTTP
+    attr_reader :response
+
+    def initialize(code:, headers:, chunks:)
+      @response = FakeStreamingResponse.new(code: code, headers: headers, chunks: chunks)
+    end
+
+    def ipaddr=(_value); end
+    def use_ssl=(_value); end
+    def open_timeout=(_value); end
+    def read_timeout=(_value); end
+    def write_timeout=(_value); end
+
+    def request(_req)
+      raise "expected block-form Net::HTTP#request" unless block_given?
+
+      yield @response
+      @response
+    end
+  end
+
+  class FakeStreamingResponse
+    attr_reader :code, :chunks_yielded
+
+    def initialize(code:, headers:, chunks:)
+      @code = code
+      @headers = headers
+      @chunks = chunks
+      @chunks_yielded = 0
+    end
+
+    def each_header
+      @headers.each { |key, value| yield key, value }
+    end
+
+    def read_body
+      @chunks.each do |chunk|
+        @chunks_yielded += 1
+        yield chunk
+      end
+    end
+
+    def body
+      raise "response.body buffers the full payload; use read_body"
+    end
+  end
 end

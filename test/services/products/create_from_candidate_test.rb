@@ -93,4 +93,20 @@ class Products::CreateFromCandidateTest < ActiveSupport::TestCase
     refute_equal candidate.provider_key, product.primary_identifier
     assert AuditEvent.exists?(action: "products.enrich", subject_id: product.id)
   end
+
+  test "attaches a staff cover upload and records staff provenance" do
+    product = Products::CreateFromCandidate.call(
+      candidate: bibliographic_candidate,
+      actor: @actor,
+      attributes: {
+        cover_image: { io: StringIO.new(TINY_COVER_PNG), filename: "cover.png", content_type: "image/png" }
+      }
+    )
+
+    assert product.cover_image.attached?
+    assert_equal "image/png", product.cover_image.blob.content_type
+    assert_equal "staff", product.bibliographic_field_sources.dig("cover_image", "source")
+    assert_nil product.bibliographic_field_sources.dig("cover_image", "provider_key")
+    assert_equal "isbndb", product.bibliographic_field_sources.dig("name", "source")
+  end
 end

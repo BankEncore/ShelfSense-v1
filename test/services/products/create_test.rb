@@ -174,4 +174,24 @@ class Products::CreateTest < ActiveSupport::TestCase
     assert product.cover_image.attached?
     assert_equal "image/png", product.cover_image.blob.content_type
   end
+
+  test "cover blobs are purged when a later unexpected error rolls back create" do
+    before = ActiveStorage::Blob.count
+
+    stub_audit_recorder_failure do
+      assert_raises(RuntimeError) do
+        Products::Create.call(
+          attributes: {
+            name: "Audit fail cover",
+            status: "draft",
+            cover_image: { io: StringIO.new(TINY_COVER_PNG), filename: "cover.png", content_type: "image/png" }
+          },
+          actor: @actor
+        )
+      end
+    end
+
+    assert_nil Product.find_by(name: "Audit fail cover")
+    assert_equal before, ActiveStorage::Blob.count
+  end
 end

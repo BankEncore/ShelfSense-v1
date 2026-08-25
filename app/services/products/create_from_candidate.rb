@@ -38,6 +38,7 @@ module Products
         attributes: merged.merge(
           contribution_rows: contribution_rows,
           subject_rows: subject_rows,
+          cover_image: @overrides[:cover_image],
           bibliographic_provider: @candidate.provider,
           bibliographic_provider_key: isbn.presence,
           bibliographic_fetched_at: @candidate.fetched_at,
@@ -109,6 +110,10 @@ module Products
           provider_key: edited ? nil : (@candidate.provider_key || isbn),
           applied_at: applied_at
         }
+      end
+
+      if @overrides[:cover_image].present?
+        changes << { key: "cover_image", source: "staff", applied_at: applied_at }
       end
 
       Bibliographic::FieldSources.merge({}, changes, applied_at: applied_at)

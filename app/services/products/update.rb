@@ -36,7 +36,8 @@ module Products
     end
 
     def call
-      Product.transaction do
+      committed = false
+      product = Product.transaction do
         unless @lock_version.nil?
           expected = Integer(@lock_version)
           raise ActiveRecord::StaleObjectError.new(@product, "update") if expected != @product.lock_version
@@ -96,15 +97,15 @@ module Products
         )
         @product
       end
+      committed = true
+      product
     rescue Identifiers::AssignProductIndustry::Error, ActiveRecord::RecordInvalid, ArgumentError,
            Bibliographic::FieldSources::Invalid, Bibliographic::ContributorRole::Unknown,
            Products::AssignSubjects::Error, Bibliographic::CoverDownloader::Error,
            Bibliographic::CoverPayload::Error => e
-      @attached_blob&.purge
       raise Error, e.message
-    rescue ActiveRecord::StaleObjectError
-      @attached_blob&.purge
-      raise
+    ensure
+      @attached_blob&.purge unless committed
     end
 
     private

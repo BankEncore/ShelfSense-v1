@@ -95,7 +95,8 @@ module Admin
             actor: current_user,
             attributes: attrs.merge(
               contribution_rows: contribution_rows_from_params,
-              subject_rows: subject_rows_from_params
+              subject_rows: subject_rows_from_params,
+              cover_image: attrs[:cover_image]
             )
           )
         else

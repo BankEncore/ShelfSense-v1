@@ -27,6 +27,6 @@ Also deferred: second provider / ONIX, full BISAC universe, mapping subjects ont
 
 ## Status
 
-Reviewed apply compares typed HTML values (pages, money, series position, dates, identifiers) before recording staff provenance, and `blank: true` clears provenance when a selected field or collection is emptied. ISBN-less candidates store `isbndb:candidate:<candidate_id>` on field provenance only. Staff cover uploads use the same size/MIME/byte policy as provider downloads.
+Reviewed apply compares typed HTML values (pages, money, series position, dates, identifiers) before recording staff provenance, and `blank: true` clears provenance when a selected field or collection is emptied. ISBN-less candidates store `isbndb:candidate:<candidate_id>` on field provenance only. Staff cover uploads use the same size/MIME/byte policy as provider downloads, including on create-from-candidate. Provider downloads abort as soon as accumulated bytes exceed the limit. Newly uploaded cover blobs are purged if the create or update transaction rolls back.
 
 **Phase 9 implemented.** Product-form normalization, durable local covers, and subject classification shipped as closeout slices after reviewed apply.

@@ -145,19 +145,36 @@ module Bibliographic
       http.open_timeout = OPEN_TIMEOUT
       http.read_timeout = READ_TIMEOUT
       http.write_timeout = OPEN_TIMEOUT if http.respond_to?(:write_timeout=)
-      response = http.request(Net::HTTP::Get.new(uri))
-      body = response.body.to_s
-      raise Error, "cover is too large" if body.bytesize > MAX_BYTES
 
+      status = nil
       headers = {}
-      response.each_header { |key, value| headers[key] = value }
-      [ response.code, headers, body ]
+      body = nil
+      http.request(Net::HTTP::Get.new(uri)) do |response|
+        status = response.code
+        response.each_header { |key, value| headers[key] = value }
+        length = headers["content-length"] || headers["Content-Length"]
+        raise Error, "cover is too large" if length.present? && length.to_i > MAX_BYTES
+
+        body = read_limited_body(response)
+      end
+      [ status, headers, body ]
     rescue Error
       raise
     rescue Net::OpenTimeout, Net::ReadTimeout, Timeout::Error
       raise Error, "cover download timed out"
     rescue StandardError
       raise Error, "cover download failed"
+    end
+
+    def read_limited_body(response)
+      body = +""
+      response.read_body do |chunk|
+        next if chunk.blank?
+
+        body << chunk
+        raise Error, "cover is too large" if body.bytesize > MAX_BYTES
+      end
+      body
     end
 
     def filename_hint(uri)

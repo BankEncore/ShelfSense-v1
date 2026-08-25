@@ -228,6 +228,35 @@ class ProductCatalogEnrichmentTest < ActionDispatch::IntegrationTest
     assert_match(/\Aisbndb:candidate:/, created.bibliographic_field_sources.dig("name", "provider_key"))
   end
 
+  test "create-from-candidate keeps a staff-uploaded cover" do
+    sign_in_as("admin")
+
+    stub_bibliographic_provider(FakeIsbnDbProvider.new(candidates: [ bibliographic_candidate ])) do
+      post admin_product_catalog_searches_path, params: { catalog_search: { q: FIXTURE_ISBN13 } }
+      get new_admin_product_path, params: { isbn13: FIXTURE_ISBN13, lookup_key: "isbn:#{FIXTURE_ISBN13}" }
+
+      post admin_products_path, params: {
+        candidate_isbn13: FIXTURE_ISBN13,
+        candidate_lookup_key: "isbn:#{FIXTURE_ISBN13}",
+        product: {
+          name: "The Left Hand of Darkness",
+          status: "draft",
+          industry_identifier: FIXTURE_ISBN13,
+          cover_image: uploaded_cover_png
+        }
+      }
+      assert_response :redirect
+    end
+
+    created = Product.find_by!(industry_identifier: FIXTURE_ISBN13)
+    assert created.cover_image.attached?
+    assert_equal "staff", created.bibliographic_field_sources.dig("cover_image", "source")
+    follow_redirect!
+    assert_select "img.product-cover"
+  ensure
+    @cover_tempfile&.close!
+  end
+
   private
 
   def sign_in_as(username)
@@ -235,5 +264,14 @@ class ProductCatalogEnrichmentTest < ActionDispatch::IntegrationTest
     follow_redirect! while response.redirect?
     post session_path, params: { session: { username: username, password: "correct-horse-battery" } }
     follow_redirect! if response.redirect?
+  end
+
+  def uploaded_cover_png
+    @cover_tempfile = Tempfile.new([ "cover", ".png" ])
+    @cover_tempfile.binmode
+    @cover_tempfile.write(TINY_COVER_PNG)
+    @cover_tempfile.flush
+    @cover_tempfile.rewind
+    Rack::Test::UploadedFile.new(@cover_tempfile.path, "image/png")
   end
 end

@@ -4,6 +4,7 @@ module BibliographicFixtures
   module_function
 
   FIXTURE_ISBN13 = "9780441478125"
+  TINY_COVER_PNG = [ "89504e470d0a1a0a0000000d4948445200000001000000010802000000907753de0000000a49444154789c63f80f00000101000518d84e0000000049454e44ae426082" ].pack("H*")
 
   def bibliographic_candidate(**overrides)
     Bibliographic::Candidate.new(
@@ -124,5 +125,25 @@ module BibliographicFixtures
   ensure
     singleton.alias_method :call, :__original_call
     singleton.remove_method :__original_call
+  end
+
+  def stub_audit_recorder_failure(message = "audit exploded")
+    singleton = Audit::Recorder.singleton_class
+    singleton.alias_method :__original_record!, :record!
+    singleton.define_method(:record!) { |**_| raise RuntimeError, message }
+    yield
+  ensure
+    singleton.alias_method :record!, :__original_record!
+    singleton.remove_method :__original_record!
+  end
+
+  def stub_net_http(http)
+    singleton = Net::HTTP.singleton_class
+    singleton.alias_method :__original_new, :new
+    singleton.define_method(:new) { |*| http }
+    yield
+  ensure
+    singleton.alias_method :new, :__original_new
+    singleton.remove_method :__original_new
   end
 end
