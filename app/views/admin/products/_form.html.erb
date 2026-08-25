@@ -1,4 +1,4 @@
-<%= form_with model: [:admin, product], class: "form" do |form| %>
+<%= form_with model: [:admin, product], class: "form surface product-form" do |form| %>
   <%= render "shared/form_errors", record: product, attribute_ids: { list_price: "product_list_price" } %>
   <%= form.hidden_field :lock_version %>
   <% if local_assigns[:candidate] %>
@@ -13,14 +13,46 @@
     </div>
   <% end %>
 
-  <%= render layout: "shared/form_section", locals: { title: "Identity", help: "ShelfSense assigns every product an immutable generated 222 primary identifier. Record the manufacturer GTIN and an optional lookup code here." } do %>
+  <%= render layout: "shared/form_section", locals: { title: "Identity", help: "Name and descriptive fields for this catalog product.", grid: true } do %>
+    <div class="form-field form-field--span-2">
+      <%= form.label :name %>
+      <%= form.text_field :name, id: "product_name", required: true, "aria-describedby": product.errors[:name].any? ? "product_name_error" : nil %>
+      <% if product.errors[:name].any? %><span class="field-error" id="product_name_error"><%= product.errors[:name].to_sentence %></span><% end %>
+    </div>
+    <div class="form-field form-field--span-2">
+      <%= form.label :subtitle %>
+      <%= form.text_field :subtitle %>
+    </div>
+    <div class="form-field form-field--span-2">
+      <%= form.label :description %>
+      <%= form.text_area :description, rows: 4 %>
+    </div>
+    <div class="form-field">
+      <%= form.label :brand_name, local_assigns[:candidate] ? "Publisher" : product.brand_name_label %>
+      <%= form.text_field :brand_name %>
+    </div>
+    <div class="form-field">
+      <%= form.label :product_model, "Edition / model" %>
+      <%= form.text_field :product_model %>
+    </div>
+    <div class="form-field">
+      <%= form.label :variant_option_name_1, "Variant option name 1" %>
+      <%= form.text_field :variant_option_name_1 %>
+    </div>
+    <div class="form-field">
+      <%= form.label :variant_option_name_2, "Variant option name 2" %>
+      <%= form.text_field :variant_option_name_2 %>
+    </div>
+  <% end %>
+
+  <%= render layout: "shared/form_section", locals: { title: "Identifiers", help: "ShelfSense assigns every product an immutable generated 222 primary identifier. Record the manufacturer GTIN and an optional lookup code here.", grid: true } do %>
     <% if creating %>
-      <div class="form-field">
+      <div class="form-field form-field--span-2">
         <span class="muted">Primary identifier</span>
         <div>Generated on save (reserved <code>222</code> namespace)</div>
       </div>
     <% else %>
-      <div class="form-field">
+      <div class="form-field form-field--span-2">
         <span class="muted">Primary identifier</span>
         <div><code><%= product.primary_identifier %></code> (immutable)</div>
       </div>
@@ -41,47 +73,9 @@
       <span class="field-help" id="product_lookup_code_help">Optional shelf or search code, stored uppercase. Allowed characters: A–Z, 0–9, period, underscore, slash, and hyphen; no spaces; up to 64 characters. Lookup codes are not unique — if another product uses the same code, scan and add will ask the cashier to choose a product.</span>
       <% if product.errors[:lookup_code].any? %><span class="field-error"><%= product.errors[:lookup_code].to_sentence %></span><% end %>
     </div>
-
-    <div class="form-field">
-      <%= form.label :name %>
-      <%= form.text_field :name, id: "product_name", required: true, "aria-describedby": product.errors[:name].any? ? "product_name_error" : nil %>
-      <% if product.errors[:name].any? %><span class="field-error" id="product_name_error"><%= product.errors[:name].to_sentence %></span><% end %>
-    </div>
-    <div class="form-field">
-      <%= form.label :subtitle %>
-      <%= form.text_field :subtitle %>
-    </div>
-    <div class="form-field">
-      <%= form.label :description %>
-      <%= form.text_area :description, rows: 4 %>
-    </div>
-    <div class="form-field">
-      <%= form.label :brand_name, local_assigns[:candidate] ? "Publisher" : product.brand_name_label %>
-      <%= form.text_field :brand_name %>
-    </div>
-    <div class="form-field">
-      <%= form.label :product_model, "Edition / model" %>
-      <%= form.text_field :product_model %>
-    </div>
-    <div class="form-field">
-      <%= form.label :release_date %>
-      <%= form.date_field :release_date %>
-    </div>
-    <div class="form-field">
-      <%= form.check_box :release_date_approximate %>
-      <%= form.label :release_date_approximate, "Approximate date" %>
-    </div>
-    <div class="form-field">
-      <%= form.label :variant_option_name_1, "Variant option name 1" %>
-      <%= form.text_field :variant_option_name_1 %>
-    </div>
-    <div class="form-field">
-      <%= form.label :variant_option_name_2, "Variant option name 2" %>
-      <%= form.text_field :variant_option_name_2 %>
-    </div>
   <% end %>
 
-  <%= render layout: "shared/form_section", locals: { title: "Bibliographic details", help: "Optional bookstore metadata. Leave blank for sidelines and other non-book merchandise." } do %>
+  <%= render layout: "shared/form_section", locals: { title: "Publication", help: "Optional bookstore metadata. Leave blank for sidelines and other non-book merchandise.", grid: true } do %>
     <div class="form-field">
       <%= form.label :product_form_id, "Product form" %>
       <%= form.select :product_form_id, @product_forms || [], include_blank: "None" %>
@@ -106,11 +100,19 @@
       <%= form.label :series_position, "Series position" %>
       <%= form.number_field :series_position, step: 0.001 %>
     </div>
+    <div class="form-field">
+      <%= form.label :release_date %>
+      <%= form.date_field :release_date %>
+    </div>
+    <div class="form-field">
+      <%= form.check_box :release_date_approximate %>
+      <%= form.label :release_date_approximate, "Approximate date" %>
+    </div>
     <% contribution_rows = Array(product.contribution_rows.presence || product.product_contributions.map { |row|
          { "display_name" => row.display_name, "role" => row.role }
        }) %>
     <% contribution_rows += [ {} ] while contribution_rows.length < 3 %>
-    <fieldset class="form-field">
+    <fieldset class="form-field form-field--span-2">
       <legend>Contributors</legend>
       <% contribution_rows.each_with_index do |row, index| %>
         <% row = row.stringify_keys %>
@@ -125,7 +127,7 @@
          { "subject_heading_id" => row.subject_heading_id, "primary" => row.primary }
        }) %>
     <% subject_rows += [ {} ] while subject_rows.length < 3 %>
-    <fieldset class="form-field">
+    <fieldset class="form-field form-field--span-2">
       <legend>Subjects</legend>
       <p class="field-help">Product screens show heading names. At most one primary heading per scheme.</p>
       <% headings = Array(@subject_headings) %>
@@ -143,6 +145,9 @@
         </div>
       <% end %>
     </fieldset>
+  <% end %>
+
+  <%= render layout: "shared/form_section", locals: { title: "Cover", help: "Optional JPEG, PNG, GIF, or WebP. Displayed as a thumbnail on Product details." } do %>
     <div class="form-field">
       <%= form.label :cover_image, "Cover image" %>
       <% if product.cover_image.attached? %>
@@ -182,18 +187,18 @@
     </div>
   <% end %>
 
-  <div class="actions">
-    <%= action_submit(
-          form,
-          form.object.new_record? ? "Create Product" : "Save Product",
-          style: :solid,
-          intent: :brand
-        ) %>
+  <div class="admin-form-footer">
     <%= action_link_to(
           "Cancel",
           creating ? admin_products_path : admin_product_path(product),
           style: :ghost,
           intent: :neutral
+        ) %>
+    <%= action_submit(
+          form,
+          form.object.new_record? ? "Create Product" : "Save Product",
+          style: :solid,
+          intent: :brand
         ) %>
   </div>
 <% end %>

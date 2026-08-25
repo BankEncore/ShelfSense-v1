@@ -1,6 +1,6 @@
 # UDS-5 — Administrative composition
 
-Status: **Proposed** — UDS-5.0 gate **Passed**; UDS-5.1 primitives, UDS-5.2 compact nav, and UDS-5.3 Product index/show complete on the program branch.
+Status: **Proposed** — UDS-5.0 gate **Passed**; UDS-5.1 primitives, UDS-5.2 compact nav, UDS-5.3 Product index/show, and UDS-5.4A catalog search/form complete on the program branch.
 
 Slice id remains **UDS-5**. Not a domain phase number. GitHub tracker: [milestone UDS-5](https://github.com/BankEncore/ShelfSense-v1/milestone/3) ([#44](https://github.com/BankEncore/ShelfSense-v1/issues/44)–[#50](https://github.com/BankEncore/ShelfSense-v1/issues/50)). Authority for later slices is this document; issues do not replace it.
 
@@ -23,7 +23,7 @@ main
        ├─ 5.1  typography + primitives             (#45)  complete
        ├─ 5.2  compact nav presentation            (#46)  complete
        ├─ 5.3  Product index + details             (#47)  complete
-       ├─ 5.4A catalog search + form               (#48)
+       ├─ 5.4A catalog search + form               (#48)  this slice
        ├─ 5.4B bibliographic review layout         (#49)
        └─ 5.5  evidence + closeout                 (#50)
             └─ PR → main
@@ -92,11 +92,11 @@ Compact utility strip plus an in-flow row of the current group’s destinations.
 
 **Status:** **Complete** on `uds-5-administrative-composition`. Tracker [#47](https://github.com/BankEncore/ShelfSense-v1/issues/47).
 
-Index header/filters/table hierarchy; show identity header, metric strip, identity/publication panels. Operational variant columns stay distinct. No new audit queries. Cover remains a thumbnail. Catalog search, product form, and bibliographic review wait for 5.4.
+Index header/filters/table hierarchy; show identity header, metric strip, identity/publication panels. Operational variant columns stay distinct. No new audit queries. Cover remains a thumbnail. Catalog search and product form shipped in 5.4A; bibliographic review waits for 5.4B.
 
 ### UDS-5.4A — Product catalog search and form composition
 
-**Status:** Outlined. Tracker [#48](https://github.com/BankEncore/ShelfSense-v1/issues/48).
+**Status:** **Complete** on `uds-5-administrative-composition`. Tracker [#48](https://github.com/BankEncore/ShelfSense-v1/issues/48).
 
 Catalog search surface; sectioned product form; related-field grids; sticky admin-form actions. Behavior, params, and validation unchanged.
 
@@ -122,7 +122,7 @@ Expanding an allowlist requires updating this plan in a preceding or same-commit
 | **UDS-5.1** | `:root` `--font-serif` / `--font-mono`; Source Serif 4 `@font-face`; `.app-brand` serif via CSS only; `.type-*` role classes; `.surface` / `.surface--flush`; `.page-header*` extensions; `.form-section__head` / `__body` / `__grid`; `.form-field--span-2`; `.metric-strip*`; `.data-table .cell-primary` / `.cell-secondary` / `.cell-identifier`; `.admin-form-footer` | `shared/_page_header.html.erb`; `shared/_form_section.html.erb`; `app/assets/fonts/source-serif-4-latin-{400,600}-normal.woff2`; `application.css`; disposable `Admin::Uds5CompositionPrototypesController` and its view; `config/routes.rb` one GET. Do not change `application.html.erb` markup, `Admin::NavigationCatalog`, or Product family templates. | `GET /admin/uds5_composition_prototype`. Product index/show/form composition waits for 5.3 / 5.4. `test/integration/admin_uds5_composition_prototype_test.rb`; `test/system/admin_uds5_composition_prototype_test.rb`; `test/views/page_header_partial_test.rb`; `test/views/form_section_partial_test.rb` |
 | **UDS-5.2** | `.app-nav--grouped` compact column layout; `.app-nav__strip`; `.app-nav__area-row`; `details.app-nav-group`; `summary.app-nav-group__heading`; existing `.app-nav-group__heading` / `__list` / `.app-nav-utilities`. Remove `.uds-5-nav-prototype*` | `shared/_admin_primary_nav.html.erb`; `application.css`; `config/routes.rb` (drop 5.0 GET). Do not change `application.html.erb` markup, `Admin::NavigationCatalog`, or `Admin::NavigationViewModel` behavior. | None. Production header. `test/integration/admin_grouped_navigation_test.rb`; `test/system/admin_grouped_navigation_test.rb` |
 | **UDS-5.3** | UDS-5.1 primitives consumed on Product index/show; `.product-filters`; `.product-metrics`; `.product-panels`; `.product-variants`; `.data-table .cell-operational` | `admin/products/{index,show}.html.erb` only. Do not change ProductsController queries, catalog search, product form, or bibliographic review. | `admin/products/{index,show}.html.erb`. `test/integration/admin_product_composition_test.rb`; `test/system/admin_product_composition_test.rb` |
-| **UDS-5.4A** (draft) | UDS-5.1 primitives on search and form | Catalog search and product form templates | `admin/product_catalog_searches/**`; `admin/products/{new,edit,_form}.html.erb` |
+| **UDS-5.4A** | UDS-5.1 primitives on catalog search and product form; `.catalog-search-query`; `.catalog-search-results`; `.product-form`; `.product-cover--thumb` | `admin/product_catalog_searches/**`; `admin/products/{new,edit,_form}.html.erb`. Do not change catalog-search params, ranking, ProductsController validation, or bibliographic review. | `admin/product_catalog_searches/new.html.erb`; `admin/products/{new,edit,_form}.html.erb`. `test/integration/admin_product_search_form_composition_test.rb`; `test/system/admin_product_search_form_composition_test.rb` |
 | **UDS-5.4B** (draft) | Layout selectors scoped to bibliographic review | Review template only | `admin/products/bibliographic_review.html.erb` |
 | **UDS-5.5** | None except docs | Docs, matrix, conventions, adoption template | Evidence only |
 

@@ -8,7 +8,9 @@
 ] %>
 
 <%= render "shared/page_header",
+      eyebrow: "Product",
       title: "Edit product",
-      subtitle: @product.primary_identifier %>
+      subtitle: @product.name,
+      metadata: "Primary identifier #{@product.primary_identifier}" %>
 
 <%= render "form", product: @product, creating: false %>

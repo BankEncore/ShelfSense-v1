@@ -1112,6 +1112,47 @@ input[type="submit"]:disabled,
   border-radius: var(--radius);
 }
 
+.product-cover--thumb {
+  max-height: 120px;
+  max-width: 90px;
+}
+
+.catalog-search-query {
+  margin-bottom: var(--space-5);
+}
+
+.catalog-search-query .form {
+  max-width: none;
+}
+
+.catalog-search-query .form-field {
+  margin-bottom: var(--space-3);
+}
+
+.catalog-search-results {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.catalog-search-results > .section {
+  margin: 0;
+}
+
+.product-form > .form-section {
+  margin: 0;
+  padding-bottom: var(--space-5);
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.product-form > .form-section:last-of-type {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.product-form .form-section__grid > .form-field {
+  margin-bottom: 0;
+}
+
 .product-filters {
   margin-bottom: var(--space-5);
 }

@@ -1,0 +1,19 @@
+<%#
+  locals:
+    products:
+    industry: optional — include the industry identifier column
+%>
+<% rows = products.map { |product|
+     row = [
+       link_to(product.name, admin_product_path(product)),
+       product.primary_identifier
+     ]
+     row << (product.industry_identifier.presence || missing_value) if local_assigns[:industry]
+     row
+   } %>
+<% headers = [
+     { text: "Name", class: "cell-primary" },
+     { text: "Primary identifier", class: "cell-identifier" }
+   ] %>
+<% headers << { text: "Industry identifier", class: "cell-identifier" } if local_assigns[:industry] %>
+<%= render "shared/data_table", headers: headers, rows: rows %>
