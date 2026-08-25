@@ -1,15 +1,15 @@
 # Administrative UX conventions
 
-Status: Implemented (Phase 2.2 architecture; **Warm Parchment palette via UDS-1**).
+Status: Implemented (Phase 2.2 architecture; **Warm Parchment palette via UDS-1**). Administrative composition grammar for the Product family and compact grouped nav is recorded in [uds-5-plan.md](planning/ux-design-system/uds-5-plan.md) (complete on the program branch; Proposed until merge). Do not copy inspirational sidebar or Cmd/Ctrl+K chrome.
 
 Concise conventions for ShelfSense server-rendered admin screens. Prefer these patterns over inventing parallel markup or CSS.
 
 ## Page anatomy
 
-1. **Application shell** — brand, optional current-store label (only when authoritative `current_store` exists), permission-gated nav, flash.
+1. **Application shell** — brand, optional current-store label (only when authoritative `current_store` exists), compact grouped permission-gated nav (current-area row plus native `<details>` for other groups), flash.
 2. **Breadcrumbs** — caller-supplied crumb arrays via `shared/breadcrumbs`. Do not infer crumbs from controller or route names.
-3. **Page header** — title, optional subtitle, primary actions via `shared/page_header` / `shared/actions`.
-4. **Content** — one primary task or record view inside `.app-content`.
+3. **Page header** — optional eyebrow, title, optional subtitle, metadata, and status, with separately aligned actions via `shared/page_header`.
+4. **Content** — one primary task or record view inside `.app-content`. Panels use `.surface` (padded by default; `.surface--flush` for edge-to-edge contents such as tables).
 5. **Technical details** — UUIDs, lock versions, and similar via `shared/technical_details` (`<details>`), never as the first thing users see.
 
 ## Shared partials
@@ -17,14 +17,14 @@ Concise conventions for ShelfSense server-rendered admin screens. Prefer these p
 | Partial | Use when |
 |---|---|
 | `shared/flash` | Layout flash notices/alerts |
-| `shared/page_header` | Title + optional subtitle/actions |
+| `shared/page_header` | Optional eyebrow, title, optional subtitle/metadata/status, separately aligned actions |
 | `shared/breadcrumbs` | Explicit navigation trail |
 | `shared/actions` | Grouped action links/buttons |
 | `shared/status_badge` | Lifecycle/status chips (prefer helper wrappers) |
 | `shared/definition_list` | Show-page labeled fields |
 | `shared/data_table` | Semantic tables in a horizontally scrollable container |
 | `shared/empty_state` | Empty collections or empty filter results |
-| `shared/form_section` | Grouped form fields (`render layout:`) |
+| `shared/form_section` | Grouped form fields (`render layout:`); pass `grid: true` for related-field grids |
 | `shared/form_errors` | Error summary with links to fields |
 | `shared/currency_field` | Dollar-oriented money inputs |
 | `shared/technical_details` | Subordinate technical metadata |
@@ -79,13 +79,41 @@ Semantic families (`neutral`, `warning`, `danger`, `info`, `success`) each expos
 
 Action presentation (style / intent / size): use `ActionButtonHelper` per [button-action-semantics.md](planning/ux-design-system/button-action-semantics.md). Keep keyboard focus visible. Do not communicate meaning by color alone (pair badges with text labels).
 
+## Type roles (UDS-5.1)
+
+Apply type through role classes and tokens. Do not set `font-family` in Product (or other) templates.
+
+| Role | Class | Face |
+|---|---|---|
+| Brand | `.app-brand` (CSS only) / `.type-brand` | `--font-serif` |
+| Page title | `.type-page-title` | `--font-serif` |
+| Record title | `.type-record-title` | `--font-serif` |
+| Section title, eyebrow, subtitle, body, help, metadata | `.type-section-title` / `.type-eyebrow` / `.type-subtitle` / `.type-body` / `.type-help` / `.type-metadata` | `--font-sans` |
+| Identifier | `.type-identifier` | `--font-mono` |
+| Tabular numeric | `.type-tabular` | inherits face; `tabular-nums` |
+| Receipt / print | (POS print contract) | `--font-receipt` (Inconsolata) |
+
+Serif is limited to brand, page title, and record title. Controls, navigation, tables, labels, badges, and ordinary body stay sans. **UDS-5.5 adopted** Source Serif 4 for those display roles ([uds-5.5-closeout-evidence.md](planning/ux-design-system/uds-5.5-closeout-evidence.md)).
+
+Composition utilities: `.metric-strip`, `.data-table td.cell-primary` / `.cell-secondary` / `.cell-identifier` / `.cell-operational`, `.admin-form-footer` (admin forms; sticky). The Product family (index, show, catalog search, form, bibliographic review) consumes them. Content-role table classes apply to `<td>` only (`cell_class`); table chrome stays sans. Compact grouped nav uses a utility strip plus the current-area row; other groups stay in native `<details>`. At `max-width: 40rem` the area catalog collapses under one Areas disclosure and the current destination remains visible.
+
+## Feature-led adoption (UDS-5.5)
+
+- New screens use the current accepted primitives (Warm Parchment tokens, ActionButtonHelper, shared partials, type roles, composition utilities, and compact grouped admin nav).
+- Existing screens adopt those primitives when the feature that owns them is next in scope—not through a UDS sweep of neighboring templates.
+- Unrelated screens do not enter a feature PR automatically.
+- New interaction patterns still need their own specification ([deferred-patterns.md](planning/ux-design-system/deferred-patterns.md)).
+- Update [migration-matrix.md](planning/ux-design-system/migration-matrix.md) in the same change as the feature.
+
+Staff history composition is UDS-6. Persistent sidebar and Cmd/Ctrl+K remain parked (UDS-7).
+
 ## Design system evolution
 
 Phase 2.2 **architecture** (shells, shared partials, money UX, Hotwire boundaries) remains. The Phase 2.2 **teal/plum palette is superseded** for screen chrome by Warm Parchment (UDS-1). Printed receipt/report contracts stay locked separately.
 
 Authority:
 
-- [UX design system](planning/ux-design-system/README.md) — Warm Parchment, adoption program (UDS-0–UDS-3), migration matrix
+- [UX design system](planning/ux-design-system/README.md) — Warm Parchment, adoption program (UDS-0–UDS-5), migration matrix
 - [Warm Parchment](planning/ux-design-system/warm-parchment.md) — tokens, typography, density (WCAG AA baseline)
 - [Button and action semantics](planning/ux-design-system/button-action-semantics.md) — wording, intent, style, size, review dialogs
 - [UDS-1 implementation plan](planning/ux-design-system/uds-1-plan.md) — foundation delivery (complete through UDS-1d)

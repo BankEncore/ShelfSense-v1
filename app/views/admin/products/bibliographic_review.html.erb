@@ -8,62 +8,49 @@
 ] %>
 
 <%= render "shared/page_header",
+      eyebrow: "Product",
       title: "Review bibliographic data",
-      subtitle: "Choose which candidate values to apply. Unselected fields stay unchanged." %>
+      subtitle: "Choose which candidate values to apply. Unselected fields stay unchanged.",
+      metadata: "#{@product.name} · Primary identifier #{@product.primary_identifier}" %>
 
 <%= render "shared/form_errors", record: @product %>
 
-<%= form_with url: apply_bibliography_admin_product_path(@product), method: :post, class: "form bibliographic-review" do |form| %>
+<% review_families = [
+     { title: "Identity", help: "Name and descriptive values.", keys: %w[name subtitle description brand_name product_model] },
+     { title: "Identifiers", help: "Manufacturer identifier proposed by the candidate.", keys: %w[industry_identifier] },
+     { title: "Publication", help: "Bookstore metadata, contributors, and subjects.", keys: %w[imprint product_form language_code page_count series_name series_position release_date contributions subjects] },
+     { title: "Cover", help: "Cover remains a thumbnail on Product details after apply.", keys: %w[cover_image] },
+     { title: "Pricing", help: "Product-level list price. Variant prices are not rewritten.", keys: %w[list_price_cents] }
+   ] %>
+<% fields_by_key = @review_fields.index_by { |field| field[:key].to_s } %>
+<% assigned_keys = [] %>
+
+<%= form_with url: apply_bibliography_admin_product_path(@product), method: :post, class: "form surface bibliographic-review" do |form| %>
   <%= hidden_field_tag :candidate_id, @candidate.candidate_id %>
   <%= hidden_field_tag "product[lock_version]", @product.lock_version %>
 
-  <% @review_fields.each do |field| %>
-    <fieldset class="bibliographic-review__field" id="review-<%= field[:key] %>">
-      <legend><%= field[:label] %></legend>
-      <div class="bibliographic-review__pair">
-        <div class="bibliographic-review__current">
-          <span class="bibliographic-review__label" id="current-<%= field[:key] %>-label">Current</span>
-          <div id="current-<%= field[:key] %>"><%= field[:current].presence || "—" %></div>
-        </div>
-        <div class="bibliographic-review__proposed">
-          <span class="bibliographic-review__label" id="proposed-<%= field[:key] %>-label">Proposed</span>
-          <% if field[:key] == "contributions" %>
-            <% rows = @candidate.contribution_rows %>
-            <% rows += [ {} ] while rows.length < 2 %>
-            <% rows.each_with_index do |row, index| %>
-              <div class="form-field">
-                <%= text_field_tag "proposed_contribution_rows[#{index}][display_name]", row["display_name"],
-                      "aria-labelledby": "proposed-#{field[:key]}-label" %>
-                <%= select_tag "proposed_contribution_rows[#{index}][role]",
-                      options_for_select(ProductContribution::ROLES.map { |role| [ role.humanize, role ] }, row["role"] || "author") %>
-              </div>
-            <% end %>
-          <% elsif field[:key] == "product_form" %>
-            <%= select_tag "proposed[product_form]",
-                  options_for_select(ProductForm.assignable.admin_ordered.map { |form| [ form.name, form.code ] }, field[:proposed_code] || @candidate.product_form_code),
-                  include_blank: true,
-                  "aria-labelledby": "proposed-#{field[:key]}-label" %>
-          <% elsif field[:key] == "cover_image" %>
-            <div id="proposed-<%= field[:key] %>"><%= field[:proposed].presence || "—" %></div>
-          <% elsif field[:key] == "subjects" %>
-            <div id="proposed-<%= field[:key] %>"><%= field[:proposed].presence || "—" %></div>
-          <% else %>
-            <%= text_field_tag "proposed[#{field[:key]}]", field[:proposed],
-                  "aria-labelledby": "proposed-#{field[:key]}-label" %>
-          <% end %>
-        </div>
-      </div>
-      <div class="form-field">
-        <label>
-          <%= check_box_tag "selected_fields[]", field[:key], field[:default_apply], id: "apply-#{field[:key]}" %>
-          Apply proposed <%= field[:label].downcase %>
-        </label>
-      </div>
-    </fieldset>
+  <% review_families.each do |family| %>
+    <% family_fields = family[:keys].filter_map { |key| fields_by_key[key] } %>
+    <% next if family_fields.empty? %>
+    <% assigned_keys.concat(family_fields.map { |field| field[:key].to_s }) %>
+    <%= render layout: "shared/form_section", locals: { title: family[:title], help: family[:help] } do %>
+      <% family_fields.each do |field| %>
+        <%= render "bibliographic_review_field", field: field %>
+      <% end %>
+    <% end %>
   <% end %>
 
-  <div class="actions">
-    <%= action_submit(form, "Apply selected fields", style: :solid, intent: :brand) %>
+  <% leftover_fields = @review_fields.reject { |field| assigned_keys.include?(field[:key].to_s) } %>
+  <% if leftover_fields.any? %>
+    <%= render layout: "shared/form_section", locals: { title: "Other", help: "Fields not grouped with a family." } do %>
+      <% leftover_fields.each do |field| %>
+        <%= render "bibliographic_review_field", field: field %>
+      <% end %>
+    <% end %>
+  <% end %>
+
+  <div class="admin-form-footer">
     <%= action_link_to("Cancel", admin_product_path(@product), style: :ghost, intent: :neutral) %>
+    <%= action_submit(form, "Apply selected fields", style: :solid, intent: :brand) %>
   </div>
 <% end %>

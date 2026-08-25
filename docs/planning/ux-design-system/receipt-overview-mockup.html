@@ -220,15 +220,22 @@
 <body>
 
 <aside class="authority-banner" aria-label="Artifact authority status">
-  <strong>Inspirational — not implementation authority.</strong>
-  <p>Governing Markdown contract: <a href="surface-contracts.md">Surface contracts — basket, history, and print</a>.</p>
+  <strong>Inspirational overall — not implementation authority.</strong>
+  <p>Governing contracts: <a href="surface-contracts.md">surface-contracts.md</a> (history still Proposed) and <a href="uds-5-plan.md">UDS-5 plan</a> (this layout is <strong>not</strong> UDS-5).</p>
+  <p>Region labels:</p>
+  <ul>
+    <li><strong>Proposed for UDS-6:</strong> composed history header, directional sales/returns/net/tenders summary, semantic line grid, explicit Line details disclosure, tender list.</li>
+    <li><strong>Unchanged prominence:</strong> Reprint Receipt, Return Items, Post-Void.</li>
+    <li><strong>Locked / out of scope:</strong> printed receipt geometry and selectors. Do not restyle <code>completed_transactions/show</code>.</li>
+    <li><strong>Not this mockup’s Enter-on-row:</strong> Line details must be an explicit disclosure in UDS-6.</li>
+  </ul>
   <p>All actions and links (including Reprint Receipt, Return Items, Post-Void, and receipt references) are nonfunctional; expanded <strong>Line details</strong> are illustrative static content (not <code>audit_events</code>).</p>
   <p>Production implementations must use design tokens, Rails helpers/partials, authorization gates, and existing workflow controllers rather than copying this mockup markup verbatim.</p>
 </aside>
 
 <div class="container">
-  <!-- Top Action Bar -->
-  <div class="header-bar">
+  <!-- Proposed (UDS-6): composed header + controlled actions. Not UDS-5. -->
+  <div class="header-bar" data-uds-authority="proposed-uds-6" data-uds-region="history-header">
     <div class="header-title">
       <h1>Inspirational receipt overview · S001-R01-T0000019</h1>
       <div class="header-meta">2026-08-22 12:50 &bull; Register 01 &bull; Cashier: Admin User</div>
@@ -240,8 +247,8 @@
     </div>
   </div>
 
-  <!-- 3-Column Top Summary Card -->
-  <div class="summary-card">
+  <!-- Proposed (UDS-6): directional summary from stored facts -->
+  <div class="summary-card" data-uds-authority="proposed-uds-6" data-uds-region="directional-summary">
     <div class="badge-change">Change Due: $4.80</div>
 
     <div class="summary-col">
@@ -271,8 +278,8 @@
     </div>
   </div>
 
-  <!-- Itemized Data Grid -->
-  <table class="data-table">
+  <!-- Proposed (UDS-6): one semantic grid; Line details must be explicit disclosure, not Enter-on-row -->
+  <table class="data-table" data-uds-authority="proposed-uds-6" data-uds-region="line-grid">
     <thead>
       <tr>
         <th style="width: 50px;">Line</th>

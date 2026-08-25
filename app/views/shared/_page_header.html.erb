@@ -1,15 +1,29 @@
 <%#
   locals:
     title: (required)
+    eyebrow: optional
     subtitle: optional
+    metadata: optional
+    status: optional HTML
     actions: optional HTML
 %>
 <header class="page-header">
-  <h1 class="page-header__title"><%= title %></h1>
-  <% if local_assigns[:subtitle].present? %>
-    <p class="page-header__subtitle"><%= subtitle %></p>
-  <% end %>
+  <div class="page-header__main">
+    <% if local_assigns[:eyebrow].present? %>
+      <p class="page-header__eyebrow type-eyebrow"><%= eyebrow %></p>
+    <% end %>
+    <h1 class="page-header__title type-page-title"><%= title %></h1>
+    <% if local_assigns[:subtitle].present? %>
+      <p class="page-header__subtitle type-subtitle"><%= subtitle %></p>
+    <% end %>
+    <% if local_assigns[:metadata].present? %>
+      <p class="page-header__metadata type-metadata"><%= metadata %></p>
+    <% end %>
+    <% if local_assigns[:status].present? %>
+      <div class="page-header__status"><%= status %></div>
+    <% end %>
+  </div>
   <% if local_assigns[:actions].present? %>
-    <div class="actions"><%= actions %></div>
+    <div class="page-header__actions actions"><%= actions %></div>
   <% end %>
 </header>

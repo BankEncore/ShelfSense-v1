@@ -1,11 +1,15 @@
 <%#
   locals:
-    title:, help: optional
+    title:, help: optional, grid: optional
 %>
 <section class="section form-section">
-  <h2 class="section__title"><%= title %></h2>
-  <% if local_assigns[:help].present? %>
-    <p class="section__help"><%= help %></p>
-  <% end %>
-  <%= yield %>
+  <div class="form-section__head">
+    <h2 class="section__title type-section-title"><%= title %></h2>
+    <% if local_assigns[:help].present? %>
+      <p class="section__help type-help"><%= help %></p>
+    <% end %>
+  </div>
+  <div class="form-section__body<%= " form-section__grid" if local_assigns[:grid] %>">
+    <%= yield %>
+  </div>
 </section>

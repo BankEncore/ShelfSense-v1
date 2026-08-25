@@ -1,6 +1,6 @@
 # Phase 9 — Implementation plan
 
-Status: **Complete** (catalog enrichment on this branch; packet accepted August 2026).
+Status: **Complete** on `main` (August 2026).
 
 Authority: [phase9-plan.md](phase9-plan.md), [phase9-schema.md](phase9-schema.md), [ADR-024](../../adr/ADR-024-bibliographic-data-authority.md).
 

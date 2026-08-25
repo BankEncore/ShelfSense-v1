@@ -1,6 +1,6 @@
 # Administrative navigation grouping proposal
 
-Status: **Accepted inventory** for UDS-4.1 production chrome. UDS-4.0 gate **Passed** ([uds-4.0-gate-evidence.md](uds-4.0-gate-evidence.md)).
+Status: **Accepted inventory** for UDS-4.1 production chrome. UDS-4.0 gate **Passed** ([uds-4.0-gate-evidence.md](uds-4.0-gate-evidence.md)). Compact presentation: **UDS-5.2** (`area_row` on the existing catalog; at `max-width: 40rem`, one Areas disclosure plus the current destination).
 
 ## Purpose and boundaries
 
@@ -149,3 +149,5 @@ Attach results and screenshots for both profiles to the implementation change. O
 ## Non-goals and open implementation choices
 
 This proposal does not select a permanent desktop geometry, create group landing pages, rename routes, alter the home page, persist expanded state, or define global search. A wrapping group strip, an in-flow “All areas” region, and optional accessible disclosures may be compared in the prototype, provided each honors the baseline and narrow-width rules above. Choosing a persistent sidebar or global search remains a separate architectural decision under [deferred-patterns.md](deferred-patterns.md).
+
+UDS-5.0 compared compact **presentations** of this inventory ([uds-5-plan.md](uds-5-plan.md)) without changing group membership, predicates, or destination labels. UDS-5.2 shipped the preferred `area_row` pattern into `_admin_primary_nav.html.erb`.

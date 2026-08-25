@@ -6,6 +6,7 @@
 ] %>
 
 <%= render "shared/page_header",
+      eyebrow: "Merchandise",
       title: "Products",
       subtitle: "Catalog products and their sellable variants",
       actions: (
@@ -14,25 +15,27 @@
         end
       ) %>
 
-<%= form_with url: admin_products_path, method: :get, local: true, class: "filters" do |form| %>
-  <div class="form-field form-field--grow">
-    <%= label_tag :q, "Search" %>
-    <%= text_field_tag :q, @index.q, placeholder: "Name, ISBN, or contributor" %>
-  </div>
-  <div class="form-field">
-    <%= label_tag :status, "Status" %>
-    <%= select_tag :status,
-          options_for_select([["Any status", ""]] + Product::STATUSES.map { |s| [s.humanize, s] }, @index.status) %>
-  </div>
-  <div class="form-field">
-    <%= label_tag :merchandise_category_id, "Category" %>
-    <%= select_tag :merchandise_category_id,
-          options_for_select([["Any category", ""]] + MerchandiseCategory.options_for_select(@merchandise_categories), @index.merchandise_category_id) %>
-  </div>
-  <div class="form-field">
-    <%= action_submit(form, "Apply", style: :solid, intent: :brand) %>
-  </div>
-<% end %>
+<section class="surface product-filters" aria-label="Product filters">
+  <%= form_with url: admin_products_path, method: :get, local: true, class: "filters" do |form| %>
+    <div class="form-field form-field--grow">
+      <%= label_tag :q, "Search" %>
+      <%= text_field_tag :q, @index.q, placeholder: "Name, ISBN, or contributor" %>
+    </div>
+    <div class="form-field">
+      <%= label_tag :status, "Status" %>
+      <%= select_tag :status,
+            options_for_select([["Any status", ""]] + Product::STATUSES.map { |s| [s.humanize, s] }, @index.status) %>
+    </div>
+    <div class="form-field">
+      <%= label_tag :merchandise_category_id, "Category" %>
+      <%= select_tag :merchandise_category_id,
+            options_for_select([["Any category", ""]] + MerchandiseCategory.options_for_select(@merchandise_categories), @index.merchandise_category_id) %>
+    </div>
+    <div class="form-field">
+      <%= action_submit(form, "Apply", style: :solid, intent: :brand) %>
+    </div>
+  <% end %>
+</section>
 
 <% if @products.empty? && !@index.filtered %>
   <%= render "shared/empty_state",
@@ -61,17 +64,19 @@
        row
      } %>
   <% headers = [
-       "Name",
-       "Primary identifier",
-       "Category",
+       { text: "Name", cell_class: "cell-primary" },
+       { text: "Primary identifier", cell_class: "cell-identifier" },
+       { text: "Category", cell_class: "cell-secondary" },
        { text: "Variants", class: "numeric" },
        { text: "List price", class: "numeric" },
        "Status"
      ] %>
   <% headers << { text: "On hand", class: "numeric" } if @show_inventory %>
-  <%= render "shared/data_table",
-        headers: headers,
-        rows: rows %>
+  <section class="surface surface--flush" aria-label="Catalog">
+    <%= render "shared/data_table",
+          headers: headers,
+          rows: rows %>
+  </section>
 
   <div class="pagination">
     <span class="muted">

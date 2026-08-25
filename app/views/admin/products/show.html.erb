@@ -7,7 +7,6 @@
 ] %>
 
 <% actions = [] %>
-<% actions << status_badge(@product.status, scheme: :product_variant) %>
 <% if effective_permissions.include?("products.update") %>
   <% actions << action_link_to("Edit", edit_admin_product_path(@product), style: :outline, intent: :neutral) %>
 <% end %>
@@ -51,12 +50,11 @@
 <% end %>
 
 <% contributor_credits = product_contributor_credits(@product) %>
-<% subtitle_parts = [] %>
-<% if contributor_credits.any? %>
-  <% subtitle_parts << tag.span(contributor_credits.join(", "), class: "product-identity__contributors") %>
-<% end %>
-<% subtitle_parts << "Primary identifier #{@product.primary_identifier}" %>
+<% subtitle = if contributor_credits.any?
+     tag.span(contributor_credits.join(", "), class: "product-identity__contributors")
+   end %>
 <% cover_url = @product.cover_image.attached? ? url_for(@product.cover_image) : https_image_url(@product.try(:cover_image_url)) %>
+<% cover_present = cover_url.present? %>
 <% identity_rows = compact_definition_rows([
      ["Industry identifier (GTIN / ISBN / UPC)", @product.industry_identifier],
      ["Lookup code", (
@@ -106,81 +104,95 @@
   <% end %>
   <div class="product-identity__heading">
     <%= render "shared/page_header",
+          eyebrow: "Product",
           title: @product.name,
-          subtitle: safe_join(subtitle_parts, tag.br),
+          subtitle: subtitle,
+          metadata: "Primary identifier #{@product.primary_identifier}",
+          status: status_badge(@product.status, scheme: :product_variant),
           actions: safe_join(actions, " ") %>
   </div>
 </div>
 
-<section class="surface product-summary" aria-label="Product summary">
-  <div class="product-summary__cell">
-    <span class="product-summary__label">Primary identifier</span>
-    <span class="product-summary__value"><%= @product.primary_identifier %></span>
+<div class="metric-strip surface surface--flush product-metrics" role="group" aria-label="Product summary">
+  <div class="metric-strip__cell">
+    <span class="metric-strip__label type-eyebrow">List price</span>
+    <span class="metric-strip__value type-tabular"><%= format_money_cents(@product.list_price_cents) %></span>
+    <span class="metric-strip__note type-metadata">Product reference</span>
   </div>
-  <div class="product-summary__cell">
-    <span class="product-summary__label">List price</span>
-    <span class="product-summary__value"><%= format_money_cents(@product.list_price_cents) %></span>
-  </div>
-  <div class="product-summary__cell">
-    <span class="product-summary__label">Variants</span>
-    <span class="product-summary__value"><%= @product_variants.size %></span>
+  <div class="metric-strip__cell">
+    <span class="metric-strip__label type-eyebrow">Variants</span>
+    <span class="metric-strip__value type-tabular"><%= @product_variants.size %></span>
     <% if variant_note %>
-      <span class="product-summary__note"><%= variant_note %></span>
+      <span class="metric-strip__note type-metadata"><%= variant_note %></span>
     <% end %>
   </div>
+  <div class="metric-strip__cell">
+    <span class="metric-strip__label type-eyebrow">Identifier</span>
+    <span class="metric-strip__value type-identifier"><%= @product.primary_identifier %></span>
+    <span class="metric-strip__note type-metadata">ShelfSense assigned</span>
+  </div>
+  <div class="metric-strip__cell">
+    <span class="metric-strip__label type-eyebrow">Cover</span>
+    <span class="metric-strip__value"><%= cover_present ? "Present" : "Missing" %></span>
+    <span class="metric-strip__note type-metadata">Thumbnail only</span>
+  </div>
   <% if @show_inventory %>
-    <div class="product-summary__cell">
-      <span class="product-summary__label">On hand</span>
-      <span class="product-summary__value"><%= @product_on_hand_total %></span>
+    <div class="metric-strip__cell">
+      <span class="metric-strip__label type-eyebrow">On hand</span>
+      <span class="metric-strip__value type-tabular"><%= @product_on_hand_total %></span>
       <% if current_store.present? %>
-        <span class="product-summary__note"><%= current_store.name %></span>
+        <span class="metric-strip__note type-metadata"><%= current_store.name %></span>
       <% end %>
     </div>
   <% end %>
-</section>
+</div>
 
 <div class="product-columns">
-  <section class="section surface">
-    <h2 class="section__title">Identity</h2>
-    <% if identity_rows.any? %>
-      <%= render "shared/definition_list", rows: identity_rows %>
-    <% end %>
+  <div class="product-panels">
+    <section class="section surface">
+      <h2 class="section__title type-section-title">Identity</h2>
+      <% if identity_rows.any? %>
+        <%= render "shared/definition_list", rows: identity_rows %>
+      <% end %>
+    </section>
 
     <% if publication_rows.any? || @product.bibliographic_provider.present? %>
-      <h2 class="section__title">Publication</h2>
-      <% if publication_rows.any? %>
-        <%= render "shared/definition_list", rows: publication_rows %>
-      <% end %>
-      <% if @product.bibliographic_provider.present? %>
-        <p class="product-provenance muted">
-          <%= @product.bibliographic_provider %>
-          · <%= @product.bibliographic_provider_key %>
-          <% if @product.bibliographic_fetched_at.present? %>
-            · fetched <%= format_timestamp(@product.bibliographic_fetched_at) %>
-          <% end %>
-        </p>
-      <% end %>
+      <section class="section surface">
+        <h2 class="section__title type-section-title">Publication</h2>
+        <% if publication_rows.any? %>
+          <%= render "shared/definition_list", rows: publication_rows %>
+        <% end %>
+        <% if @product.bibliographic_provider.present? %>
+          <p class="product-provenance muted">
+            <%= @product.bibliographic_provider %>
+            · <%= @product.bibliographic_provider_key %>
+            <% if @product.bibliographic_fetched_at.present? %>
+              · fetched <%= format_timestamp(@product.bibliographic_fetched_at) %>
+            <% end %>
+          </p>
+        <% end %>
+      </section>
     <% end %>
 
     <% if @product.description.present? %>
-      <div class="product-description">
-        <h3 class="section__title">Description</h3>
+      <section class="section surface">
+        <h2 class="section__title type-section-title">Description</h2>
         <%= simple_format(@product.description) %>
-      </div>
+      </section>
     <% end %>
 
     <% if can_refresh %>
-      <div class="product-refresh">
-        <h3 class="section__title">Refresh bibliographic data</h3>
+      <section class="section surface">
+        <h2 class="section__title type-section-title">Refresh bibliographic data</h2>
         <p class="muted">Fetch a candidate and review each field before applying. Nothing is overwritten until you confirm.</p>
         <%= form_with url: refresh_bibliography_admin_product_path(@product), method: :post, class: "form" do |form| %>
           <div class="actions">
             <%= action_submit(form, "Review bibliographic update", style: :outline, intent: :neutral) %>
           </div>
         <% end %>
-      </div>
+      </section>
     <% end %>
-  </section>
+  </div>
 
   <% if @recent_audit_events.present? %>
     <aside class="section surface">
@@ -202,9 +214,9 @@
   <% end %>
 </div>
 
-<section class="section surface">
+<section class="section surface product-variants">
   <div class="product-section-head">
-    <h2 class="section__title">Variants</h2>
+    <h2 class="section__title type-section-title">Variants</h2>
     <% if effective_permissions.include?("product_variants.create") %>
       <div class="actions">
         <%= action_link_to(
@@ -216,6 +228,7 @@
       </div>
     <% end %>
   </div>
+  <p class="section__help type-help">Name and SKU identify the variant. Type, class, department, tax, condition, price, and purchasing stay operational columns.</p>
 
   <% if @product_variants.empty? %>
     <%= render "shared/empty_state",
@@ -265,11 +278,18 @@
          row
        } %>
     <% headers = [
-         "Name", "SKU", "Type", "Status", "Class", "Department", "Tax", "Condition",
-         { text: "Regular price", class: "numeric" }
+         { text: "Name", cell_class: "cell-primary" },
+         { text: "SKU", cell_class: "cell-identifier" },
+         { text: "Type", cell_class: "cell-operational" },
+         { text: "Status", cell_class: "cell-operational" },
+         { text: "Class", cell_class: "cell-operational" },
+         { text: "Department", cell_class: "cell-operational" },
+         { text: "Tax", cell_class: "cell-operational" },
+         { text: "Condition", cell_class: "cell-operational" },
+         { text: "Regular price", class: "numeric", cell_class: "cell-operational" }
        ] %>
-    <% headers << { text: "On hand", class: "numeric" } if @show_inventory %>
-    <% headers << "Purchasing" if can_order || can_request %>
+    <% headers << { text: "On hand", class: "numeric", cell_class: "cell-operational" } if @show_inventory %>
+    <% headers << { text: "Purchasing", cell_class: "cell-operational" } if can_order || can_request %>
     <%= render "shared/data_table",
           headers: headers,
           rows: rows %>

@@ -151,7 +151,7 @@ Run the other checks enforced by CI:
 ./dev/rails-docker bin/bundler-audit
 ```
 
-GitHub Actions uses its own Ruby runner and PostgreSQL service, then invokes the same committed `bin/` commands directly. See [Testing and CI](testing.md) for active and deferred checks.
+GitHub Actions uses its own Ruby runner and PostgreSQL service, then invokes the same committed `bin/` commands directly. See [Testing and CI](testing.md) for the active jobs.
 
 ## Rebuild and dependency changes
 

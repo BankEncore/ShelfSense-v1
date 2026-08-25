@@ -20,7 +20,7 @@ Prefer linking to existing docs over copying them into issues or PRs:
 | [docs/adr/](adr/README.md) | Accepted and proposed architecture decisions |
 | [docs/planning/](planning/README.md) | Phase plans, schema, authorization contracts |
 | [docs/development.md](development.md) | Docker workflow and local commands |
-| [docs/testing.md](testing.md) | CI coverage and deferred checks |
+| [docs/testing.md](testing.md) | Active CI coverage and system-test workflow |
 | [AGENTS.md](../AGENTS.md) | Contributor and coding-agent rules |
 
 Update applicable docs in the same PR as the behavior change (or in a prerequisite docs PR).

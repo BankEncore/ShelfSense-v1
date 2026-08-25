@@ -1,6 +1,6 @@
 # ShelfSense roadmap
 
-Status: **canonical forward-looking roadmap** (August 2026). Supersedes the preliminary Phase 8–9 outline in [planning/README.md](README.md) §3 and the boundary sections of [preliminary-roadmap.md](../drafts/preliminary-roadmap.md) for **domain sequencing**. The Terminal productization track in `preliminary-roadmap.md` remains a separate ADR-018 program (see [Terminal program](#terminal-program-adr-018) below).
+Status: **canonical roadmap** (August 2026). This file is the authority for **domain sequencing**. An early planning outline that numbered Phase 8 as buyback and Phase 9 as financial posting is superseded. The Terminal productization track in [preliminary-roadmap.md](../drafts/preliminary-roadmap.md) remains a separate ADR-018 program (see [Terminal program](#terminal-program-adr-018) below).
 
 The root [README.md](../../README.md) carries a compact status summary and links here for detail.
 
@@ -32,19 +32,23 @@ Each operational phase should ship the **minimum reports** needed to reconcile i
 | Phase 6 — Operational POS MVP | Implemented | Mixed tenders, Used sales, returns, refunds, post-void, history ([phase6-plan.md](phase4-6-point-of-sale/phase6-pos-mvp/phase6-plan.md)) |
 | Phase 6.1 — Classification and identifiers | Implemented | Department/class policy, sticky variant defaults, product identity ([README](phase6.1-merchandise-classification-and-identifiers/README.md)) |
 | Phase 7 — Orders, requests, and receiving | Implemented | Customers (minimal), requests, reservations, suppliers, POs, receiving, Register pickup ([README](phase7-orders-and-receiving/README.md)) |
+| Phase 7.1 — Purchasing polish | Implemented | Work hub, admin purchasing presentation, ops closeout; 7.1.4 deferred ([README](phase7.1-purchasing-polish/README.md)) |
+| Phase 8 — Customer foundation | Implemented | Identity, contact lookup, duplicate suggestions, merge ([README](phase8-customer-foundation/README.md)) |
+| Phase 9 — Catalog enrichment | Implemented | Reviewed ISBNdb apply, contributions, local covers, subjects ([README](phase9-catalog-enrichment/README.md), [ADR-024](../adr/ADR-024-bibliographic-data-authority.md)) |
 | UDS-1 — Warm Parchment tokens and primitives | Implemented | Tokens, `ActionButtonHelper`, shared CSS ([uds-1-plan.md](ux-design-system/uds-1-plan.md), [ADR-022](../adr/ADR-022-warm-parchment-visual-tokens.md)) |
 | UDS-2 — Reference screen convergence | Implemented | Suppliers, Receiving, transaction history, review dialogs ([uds-2-plan.md](ux-design-system/uds-2-plan.md)) |
 | UDS-3 — Register visual refinement | Implemented | Basket hierarchy, shortcut groups, overlays ([uds-3-plan.md](ux-design-system/uds-3-plan.md)) |
+| UDS-4.0–4.2 — Navigation and adoption | Implemented | Grouped admin nav; non-purchasing ActionButtonHelper adoption ([uds-4-plan.md](ux-design-system/uds-4-plan.md)) |
 
 Several roadmap goals are **not greenfield**. The forward phases below describe **completion and extension** of capabilities that already exist in part:
 
 | Area | Already on `main` |
 |---|---|
-| Customers | Basic identity, lookup, requests, reservations, special-order fulfillment, Register pickup, admin screens |
+| Customers | Identity, contact lookup, duplicate suggestions, merge, requests, reservations, Register pickup |
 | Register / POS | Session opening, cash sales, mixed tenders, returns, blind close, Z reporting, transaction history |
 | Financial | GL classifications, tax calculation, inventory valuation, immutable POS facts |
-| Product / catalog | Strong identifiers, classification, pricing, Used units, unified lookup, CSV import |
-| Layout / UX | Warm Parchment tokens and action semantics on reference surfaces; broad screen migration remains |
+| Product / catalog | Strong identifiers, classification, pricing, Used units, unified lookup, CSV import, bibliographic facts, local covers, subjects, reviewed ISBNdb apply |
+| Layout / UX | Warm Parchment tokens, grouped navigation, ActionButtonHelper on reference and non-purchasing screens; remaining migration belongs to the feature phase that changes the screen |
 | Buyback (inventory side) | Individually tracked Used units and valuation ledger as the acquisition destination |
 
 ## Cross-phase UX program
@@ -55,7 +59,7 @@ UDS-1 through UDS-3 code is merged. Reference surfaces reached **`verified-autom
 
 ### UDS-4 — Information architecture and adoption
 
-**Status:** Proposed overall; **UDS-4.0–4.2 on `main`** ([uds-4.2-plan.md](ux-design-system/uds-4.2-plan.md)). Coordination **Accepted** ([phase7.1-uds-coordination.md](phase7.1-purchasing-polish/phase7.1-uds-coordination.md)).
+**Status:** **UDS-4.0–4.2 complete on `main`** ([uds-4-plan.md](ux-design-system/uds-4-plan.md)). Coordination **Accepted** ([phase7.1-uds-coordination.md](phase7.1-purchasing-polish/phase7.1-uds-coordination.md)). Further screen migration belongs to the feature phase that materially changes the screen.
 
 Continue the cross-phase [UX design system](ux-design-system/README.md). Authoritative slice plan: [uds-4-plan.md](ux-design-system/uds-4-plan.md).
 
@@ -70,7 +74,24 @@ Scope:
 
 > Authorized staff can reach operational destinations through grouped, permission-filtered navigation without relying on a flat link list, JavaScript-only access, or hidden authorization boundaries.
 
-UDS-4.0 gate passed; UDS-4.1 ships grouped nav into `application.html.erb`.
+UDS-4.0 gate passed; UDS-4.1 shipped grouped nav into `application.html.erb`; UDS-4.2 shipped non-purchasing ActionButtonHelper adoption.
+
+### UDS-5 — Administrative composition
+
+**Status:** **Proposed** — UDS-5.0–5.5 complete on `uds-5-administrative-composition` (5.0 gate **Passed**; serif **adopted**). Merge to `main` after review ([uds-5-plan.md](ux-design-system/uds-5-plan.md), [uds-5.5-closeout-evidence.md](ux-design-system/uds-5.5-closeout-evidence.md)).
+
+Scope:
+
+- Establish UDS-5 authority and label inspirational mockup regions.
+- Prototype compact presentations of the **existing** UDS-4 grouped catalog (disclosures and optional area row) without changing membership, labels, or predicates.
+- After the gate: type/composition primitives, then Product as the administrative reference family.
+- Record serif adopt/adjust/reject and a standing feature-led adoption rule at closeout (**done** on the program branch; [uds-5.5-closeout-evidence.md](ux-design-system/uds-5.5-closeout-evidence.md)).
+
+**Deliverable:**
+
+> Authorized staff can scan Product reference screens and the administrative header for identity, status, and next action without a taller grouped-link wall, a persistent sidebar, or any change to catalog membership, permissions, or domain behavior.
+
+Persistent sidebar and global search remain parked ([#56](https://github.com/BankEncore/ShelfSense-v1/issues/56)). Staff history composition is UDS-6 after 5.5.
 
 ## Phase 7.1 — Purchasing workflow and presentation closeout
 
@@ -78,7 +99,7 @@ UDS-4.0 gate passed; UDS-4.1 ships grouped nav into `application.html.erb`.
 
 Authoritative packet: [Phase 7.1](phase7.1-purchasing-polish/README.md).
 
-Phase 7 shipped the bookstore-operable purchasing and customer-request path. Phase 7.1 closes **Phase 7 operability** (work hub, admin purchasing presentation, and ops interaction closeout in **7.1.3**)—not supplier returns, request expiration, or the AP/accounting interface. Forward domains (stored value, buyback, customer expansion, bibliographic enrichment, register cash) proceed separately; UDS grouped navigation is a parallel UDS program.
+Phase 7 shipped the bookstore-operable purchasing and customer-request path. Phase 7.1 closes **Phase 7 operability** (work hub, admin purchasing presentation, and ops interaction closeout in **7.1.3**)—not supplier returns, request expiration, or the AP/accounting interface. Forward domains (stored value, buyback, customer expansion, register cash) proceed separately; UDS grouped navigation is a parallel UDS program.
 
 ### Slices (summary)
 
@@ -103,7 +124,7 @@ Coordination with UDS-4: [phase7.1-uds-coordination.md](phase7.1-purchasing-poli
 
 ## Phase 8 — Customer foundation (MVP)
 
-**Status:** **Complete** on `main` (PR #42, merge `b5ed590`). Planning packet: [phase8-customer-foundation/](phase8-customer-foundation/README.md). Phase 9 is the next domain phase (it could have run in parallel; it did not need to).
+**Status:** **Complete** on `main` (PR #42, merge `b5ed590`). Planning packet: [phase8-customer-foundation/](phase8-customer-foundation/README.md). Phase 9 catalog enrichment is implemented; Phase 10 is proposed but is not the primary stream.
 
 Phase 7 created the minimum customer record required for requests. Phase 8 concentrates on **reliable identification**, **essential contact methods**, **duplicate prevention and safe merge**, and **minimal lifecycle governance**—not CRM, marketing, multiple contacts, or stored-value ledger design.
 
@@ -340,7 +361,7 @@ Phase 7 deferred **AP, purchase journals, landed cost, and supplier returns**; P
 
 **Status:** Proposed. **Separate program track**—not renumbered into Phases 8–14.
 
-The Rails-native Register on `main` is the current POS client. A future **Terminal** is a concrete offline-capable client for a Register ([ADR-021](../adr/ADR-021-register-and-terminal-identity.md)). Productization scope (runtime, synchronization, installers, hardware certification) is described in [preliminary-roadmap.md](../drafts/preliminary-roadmap.md) and governed by [ADR-018](../adr/ADR-018-pos-workstation-architecture.md).
+The Rails-native Register on `main` is the current POS client. A future **Terminal** is a concrete offline-capable client for a Register ([ADR-021](../adr/ADR-021-register-and-terminal-identity.md)). Productization scope (runtime, synchronization, installers, hardware certification) is described in [preliminary-roadmap.md](../drafts/preliminary-roadmap.md) and governed by [ADR-018](../adr/ADR-018-pos-runtime-and-deployment.md).
 
 This program depends on stable POS, inventory, and completion contracts. It does not reopen transaction architecture established in Phases 4–6. Sequencing relative to Phases 8–14 is a deployment and connectivity decision, not a prerequisite for online bookstore operations on the Rails Register.
 
@@ -384,7 +405,7 @@ The following remain out of scope until a planning packet and ADR review justify
 
 | Document | Relationship |
 |---|---|
-| [planning/README.md](README.md) | Domain ownership and dependency guidance; §3 phase outline superseded by this file for forward sequencing |
+| [planning/README.md](README.md) | Planning packet index |
 | [Phase planning packets](phase1-operational-foundation/phase1-plan.md) | Authoritative detail per implemented phase |
 | [Phase 7.1 purchasing closeout](phase7.1-purchasing-polish/README.md) | Phase 7 operability finish; [coordination with UDS-4](phase7.1-purchasing-polish/phase7.1-uds-coordination.md) |
 | [UDS-4 plan](ux-design-system/uds-4-plan.md) | Grouped navigation and cross-cutting adoption |

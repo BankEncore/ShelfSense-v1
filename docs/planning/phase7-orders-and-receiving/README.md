@@ -1,6 +1,6 @@
 # Phase 7 — Orders, customer requests, and receiving
 
-Status: **application slices 7.1–7.7 complete** on integration branch `phase-7-orders-and-receiving`. **Not implemented on `main`.** Pending [manual test gate](phase7-manual-test-gate.md), review, and final integration → `main` merge.
+Status: **Implemented** on `main`. Application slices 7.1–7.7 shipped; see [roadmap.md](../roadmap.md).
 
 | Document | Purpose |
 |---|---|

@@ -1,35 +1,88 @@
 <% nav = admin_navigation %>
 <% if nav %>
   <nav class="app-nav app-nav--grouped" aria-label="Primary">
-    <div class="app-nav-utilities">
-      <%= link_to "Home", root_path, class: ("is-active" if controller.controller_path == "home") %>
-    </div>
+    <div class="app-nav__strip">
+      <div class="app-nav-utilities">
+        <%= link_to "Home", root_path, class: ("is-active" if controller.controller_path == "home") %>
+      </div>
 
-    <% nav.groups.each do |group| %>
-      <section class="app-nav-group<%= " is-current-area" if group.current %>" aria-labelledby="nav-group-<%= group.key %>">
-        <h2 id="nav-group-<%= group.key %>" class="app-nav-group__heading">
-          <%= group.label %>
+      <div class="app-nav__wide-groups">
+        <% nav.groups.each do |group| %>
           <% if group.current %>
-            <span class="visually-hidden">Current area</span>
+            <h2 id="nav-group-<%= group.key %>" class="app-nav-group__heading is-current-area" data-nav-group="<%= group.key %>">
+              <%= group.label %>
+              <span class="visually-hidden">Current area</span>
+            </h2>
+          <% else %>
+            <details class="app-nav-group">
+              <summary id="nav-group-<%= group.key %>" class="app-nav-group__heading" data-nav-group="<%= group.key %>">
+                <%= group.label %>
+              </summary>
+              <ul class="app-nav-group__list">
+                <% group.destinations.each do |destination| %>
+                  <li>
+                    <%= link_to destination.label, destination.path,
+                          class: ("is-active" if destination.current),
+                          "aria-current": (destination.current ? "page" : nil) %>
+                  </li>
+                <% end %>
+              </ul>
+            </details>
           <% end %>
-        </h2>
-        <ul class="app-nav-group__list">
-          <% group.destinations.each do |destination| %>
-            <li>
-              <%= link_to destination.label, destination.path,
-                    class: ("is-active" if destination.current),
-                    "aria-current": (destination.current ? "page" : nil) %>
-            </li>
-          <% end %>
-        </ul>
-      </section>
-    <% end %>
+        <% end %>
+      </div>
 
-    <div class="app-nav-utilities" aria-label="Session utilities">
-      <% if nav.show_switch_store? %>
-        <%= link_to "Switch store", new_store_selection_path(return_to: request.fullpath) %>
+      <% if nav.current_destination %>
+        <p class="app-nav__current-destination">
+          <%= link_to nav.current_destination.label, nav.current_destination.path,
+                class: "is-active",
+                "aria-current": "page" %>
+          <% if nav.current_group %>
+            <span class="visually-hidden">Current area: <%= nav.current_group.label %></span>
+          <% end %>
+        </p>
       <% end %>
-      <%= button_to "Sign out", session_path, method: :delete, class: "btn btn--ghost" %>
+
+      <details class="app-nav__areas">
+        <summary class="app-nav-group__heading">Areas</summary>
+        <% nav.groups.each do |group| %>
+          <details class="app-nav-group">
+            <summary id="nav-areas-<%= group.key %>" class="app-nav-group__heading<%= " is-current-area" if group.current %>" data-nav-group="<%= group.key %>">
+              <%= group.label %>
+              <% if group.current %>
+                <span class="visually-hidden">Current area</span>
+              <% end %>
+            </summary>
+            <ul class="app-nav-group__list">
+              <% group.destinations.each do |destination| %>
+                <li>
+                  <%= link_to destination.label, destination.path,
+                        class: ("is-active" if destination.current) %>
+                </li>
+              <% end %>
+            </ul>
+          </details>
+        <% end %>
+      </details>
+
+      <div class="app-nav-utilities" aria-label="Session utilities">
+        <% if nav.show_switch_store? %>
+          <%= link_to "Switch store", new_store_selection_path(return_to: request.fullpath) %>
+        <% end %>
+        <%= button_to "Sign out", session_path, method: :delete, class: "btn btn--ghost" %>
+      </div>
     </div>
+
+    <% if nav.current_group %>
+      <ul class="app-nav__area-row" aria-label="<%= nav.current_group.label %> destinations">
+        <% nav.current_group.destinations.each do |destination| %>
+          <li>
+            <%= link_to destination.label, destination.path,
+                  class: ("is-active" if destination.current),
+                  "aria-current": (destination.current ? "page" : nil) %>
+          </li>
+        <% end %>
+      </ul>
+    <% end %>
   </nav>
 <% end %>
