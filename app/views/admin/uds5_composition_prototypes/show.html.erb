@@ -1,0 +1,88 @@
+<% content_for :title, "UDS-5.1 composition prototype" %>
+
+<div class="uds-5-composition-prototype">
+  <div data-uds5-header="full">
+    <%= render "shared/page_header",
+          eyebrow: "Merchandise",
+          title: "The Left Hand of Darkness and Other Very Long Catalog Titles That Must Wrap",
+          subtitle: "Catalog products and their sellable variants",
+          metadata: "Primary identifier 2220000001846",
+          status: status_badge("active", scheme: :product_variant),
+          actions: action_link_to("New product", new_admin_product_catalog_search_path, style: :solid, intent: :brand) %>
+  </div>
+
+  <p class="type-help">Disposable fixture for UDS-5.1 primitives. Product family composition waits for UDS-5.3. Production templates must not set <code>font-family</code>.</p>
+
+  <section class="surface" aria-label="Type roles">
+    <h2 class="section__title type-section-title">Type roles</h2>
+    <p class="type-brand">Brand wordmark role</p>
+    <p class="type-record-title">Record title role</p>
+    <p class="type-body">Body copy stays sans-serif with a role-specific line height.</p>
+    <p class="type-identifier">2220000001846</p>
+    <p class="type-tabular">$18.99</p>
+    <p class="type-metadata">Fetched 2026-08-22 11:42</p>
+  </section>
+
+  <div data-uds5-header="minimal">
+    <%= render "shared/page_header", title: "Missing optional slots" %>
+  </div>
+
+  <div class="metric-strip surface surface--flush" role="group" aria-label="Example metrics">
+    <div class="metric-strip__cell">
+      <span class="metric-strip__label type-eyebrow">List price</span>
+      <span class="metric-strip__value type-tabular">$18.99</span>
+      <span class="metric-strip__note type-metadata">Product reference</span>
+    </div>
+    <div class="metric-strip__cell">
+      <span class="metric-strip__label type-eyebrow">Variants</span>
+      <span class="metric-strip__value type-tabular">3</span>
+      <span class="metric-strip__note type-metadata">2 active · 1 draft</span>
+    </div>
+    <div class="metric-strip__cell">
+      <span class="metric-strip__label type-eyebrow">Identifier</span>
+      <span class="metric-strip__value type-identifier">2220000001846</span>
+      <span class="metric-strip__note type-metadata">ShelfSense assigned</span>
+    </div>
+  </div>
+
+  <%= form_with url: admin_uds5_composition_prototype_path, method: :get, local: true, class: "form surface", html: { novalidate: true } do |form| %>
+    <%= render layout: "shared/form_section", locals: { title: "Identity", help: "Related fields use the optional grid. Validation styling is static on this fixture.", grid: true } do %>
+      <div class="form-field form-field--span-2">
+        <%= label_tag :uds5_name, "Name" %>
+        <%= text_field_tag :uds5_name, "", required: true, "aria-invalid": true, "aria-describedby": "uds5_name_error" %>
+        <span class="field-error" id="uds5_name_error">Name can’t be blank</span>
+      </div>
+      <div class="form-field">
+        <%= label_tag :uds5_subtitle, "Subtitle" %>
+        <%= text_field_tag :uds5_subtitle, "A Novel" %>
+      </div>
+      <div class="form-field">
+        <%= label_tag :uds5_brand, "Publisher" %>
+        <%= text_field_tag :uds5_brand, "Ace Books" %>
+      </div>
+    <% end %>
+    <div class="admin-form-footer">
+      <%= action_link_to("Cancel", admin_products_path, style: :ghost, intent: :neutral) %>
+      <%= action_submit(form, "Save changes", style: :solid, intent: :brand) %>
+    </div>
+  <% end %>
+
+  <section class="surface surface--flush" aria-label="Table hierarchy">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Product</th>
+          <th>Primary identifier</th>
+          <th class="numeric">List price</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="cell-primary">The Left Hand of Darkness<span class="cell-secondary"> Ursula K. Le Guin</span></td>
+          <td class="cell-identifier">2220000001846</td>
+          <td class="numeric type-tabular">$18.99</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+</div>

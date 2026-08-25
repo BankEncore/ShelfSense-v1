@@ -1,6 +1,6 @@
 # UDS-5 user stories
 
-Status: **Proposed** (5.0 complete on `uds-5-administrative-composition`; gate Passed; later slices outlined)
+Status: **Proposed** (5.0–5.1 complete on `uds-5-administrative-composition`; 5.0 gate Passed; later slices outlined)
 
 Thin stories mapped to GitHub issues [#44](https://github.com/BankEncore/ShelfSense-v1/issues/44)–[#50](https://github.com/BankEncore/ShelfSense-v1/issues/50). Do not file these as additional issues. Authority: [uds-5-plan.md](uds-5-plan.md).
 
@@ -64,12 +64,12 @@ As an implementer, I need reusable type and composition primitives so Product sl
 
 **Acceptance**
 
-- [ ] Local Source Serif 4 (no CDN); `--font-serif` and `--font-mono`; `--font-receipt` remains distinct
-- [ ] Role-based type with per-role line height
-- [ ] Serif limited to approved display roles via tokens/role classes
-- [ ] `.surface` has one documented meaning plus a compatibility modifier
-- [ ] Page-header, form-section, metric-strip, table-hierarchy, and admin-form footer prototype as listed in [#45](https://github.com/BankEncore/ShelfSense-v1/issues/45)
-- [ ] Existing domain/workflow tests unchanged and passing
+- [x] Local Source Serif 4 (no CDN); `--font-serif` and `--font-mono`; `--font-receipt` remains distinct
+- [x] Role-based type with per-role line height
+- [x] Serif limited to approved display roles via tokens/role classes
+- [x] `.surface` has one documented meaning plus a compatibility modifier
+- [x] Page-header, form-section, metric-strip, table-hierarchy, and admin-form footer prototype as listed in [#45](https://github.com/BankEncore/ShelfSense-v1/issues/45)
+- [x] Existing domain/workflow tests unchanged and passing
 
 ---
 

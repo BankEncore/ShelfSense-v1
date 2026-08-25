@@ -149,8 +149,8 @@ UDS-1 replaced hard-coded cool-slate / translucent dialog literals in `applicati
 | Role | Guidance |
 |---|---|
 | Primary sans | Data grids, forms, navigation, tabular UI. **Implemented (UDS-1c):** locally packaged Source Sans 3 (latin 400/700) with system fallbacks. |
-| Serif (optional) | Brand wordmark and top-level page titles only—not table cells. |
-| Mono | ISBN-13, transaction references, barcodes. Prefer packaged mono or existing receipt mono (`Inconsolata` / `--font-receipt`). |
+| Serif (optional) | Brand wordmark and top-level page titles only—not table cells, controls, navigation, labels, badges, or ordinary body. **Packaged (UDS-5.1):** Source Serif 4 (latin 400/600) via `--font-serif` and role classes. Adopt / adjust / reject in UDS-5.5. |
+| Mono | Identifiers use `--font-mono` (system stack, UDS-5.1). Printed receipt/report remains `--font-receipt` (`Inconsolata`). |
 
 Do not load fonts from a CDN at runtime. Use `font-variant-numeric: tabular-nums` for money, quantities, and aligned numeric columns.
 

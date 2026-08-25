@@ -8,8 +8,8 @@ Concise conventions for ShelfSense server-rendered admin screens. Prefer these p
 
 1. **Application shell** — brand, optional current-store label (only when authoritative `current_store` exists), permission-gated nav, flash.
 2. **Breadcrumbs** — caller-supplied crumb arrays via `shared/breadcrumbs`. Do not infer crumbs from controller or route names.
-3. **Page header** — title, optional subtitle, primary actions via `shared/page_header` / `shared/actions`.
-4. **Content** — one primary task or record view inside `.app-content`.
+3. **Page header** — optional eyebrow, title, optional subtitle, metadata, and status, with separately aligned actions via `shared/page_header`.
+4. **Content** — one primary task or record view inside `.app-content`. Panels use `.surface` (padded by default; `.surface--flush` for edge-to-edge contents such as tables).
 5. **Technical details** — UUIDs, lock versions, and similar via `shared/technical_details` (`<details>`), never as the first thing users see.
 
 ## Shared partials
@@ -17,14 +17,14 @@ Concise conventions for ShelfSense server-rendered admin screens. Prefer these p
 | Partial | Use when |
 |---|---|
 | `shared/flash` | Layout flash notices/alerts |
-| `shared/page_header` | Title + optional subtitle/actions |
+| `shared/page_header` | Optional eyebrow, title, optional subtitle/metadata/status, separately aligned actions |
 | `shared/breadcrumbs` | Explicit navigation trail |
 | `shared/actions` | Grouped action links/buttons |
 | `shared/status_badge` | Lifecycle/status chips (prefer helper wrappers) |
 | `shared/definition_list` | Show-page labeled fields |
 | `shared/data_table` | Semantic tables in a horizontally scrollable container |
 | `shared/empty_state` | Empty collections or empty filter results |
-| `shared/form_section` | Grouped form fields (`render layout:`) |
+| `shared/form_section` | Grouped form fields (`render layout:`); pass `grid: true` for related-field grids |
 | `shared/form_errors` | Error summary with links to fields |
 | `shared/currency_field` | Dollar-oriented money inputs |
 | `shared/technical_details` | Subordinate technical metadata |
@@ -78,6 +78,24 @@ Foundation tokens (abbreviated):
 Semantic families (`neutral`, `warning`, `danger`, `info`, `success`) each expose foreground, border, fill, and solid states—see the packet. Temporary Phase 2.2 aliases (`--color-background`, `--color-action`, etc.) remain only while call sites migrate; do not invent new uses of the legacy names.
 
 Action presentation (style / intent / size): use `ActionButtonHelper` per [button-action-semantics.md](planning/ux-design-system/button-action-semantics.md). Keep keyboard focus visible. Do not communicate meaning by color alone (pair badges with text labels).
+
+## Type roles (UDS-5.1)
+
+Apply type through role classes and tokens. Do not set `font-family` in Product (or other) templates.
+
+| Role | Class | Face |
+|---|---|---|
+| Brand | `.app-brand` (CSS only) / `.type-brand` | `--font-serif` |
+| Page title | `.type-page-title` | `--font-serif` |
+| Record title | `.type-record-title` | `--font-serif` |
+| Section title, eyebrow, subtitle, body, help, metadata | `.type-section-title` / `.type-eyebrow` / `.type-subtitle` / `.type-body` / `.type-help` / `.type-metadata` | `--font-sans` |
+| Identifier | `.type-identifier` | `--font-mono` |
+| Tabular numeric | `.type-tabular` | inherits face; `tabular-nums` |
+| Receipt / print | (POS print contract) | `--font-receipt` (Inconsolata) |
+
+Serif is limited to brand, page title, and record title. Controls, navigation, tables, labels, badges, and ordinary body stay sans. Adopt / adjust / reject serif in UDS-5.5.
+
+Composition utilities: `.metric-strip`, `.data-table .cell-primary` / `.cell-secondary` / `.cell-identifier`, `.admin-form-footer` (admin forms; sticky). Exercise them on the disposable fixture until Product slices adopt them.
 
 ## Design system evolution
 

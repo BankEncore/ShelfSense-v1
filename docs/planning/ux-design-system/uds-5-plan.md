@@ -1,6 +1,6 @@
 # UDS-5 — Administrative composition
 
-Status: **Proposed** — packet and compact-nav prototype gate are UDS-5.0. Production chrome is unchanged until UDS-5.2.
+Status: **Proposed** — UDS-5.0 gate **Passed**; UDS-5.1 primitives complete on the program branch. Production compact-nav chrome is unchanged until UDS-5.2.
 
 Slice id remains **UDS-5**. Not a domain phase number. GitHub tracker: [milestone UDS-5](https://github.com/BankEncore/ShelfSense-v1/milestone/3) ([#44](https://github.com/BankEncore/ShelfSense-v1/issues/44)–[#50](https://github.com/BankEncore/ShelfSense-v1/issues/50)). Authority for later slices is this document; issues do not replace it.
 
@@ -19,8 +19,8 @@ Program branch: `uds-5-administrative-composition` from `main`. Slices land sequ
 ```text
 main
   └─ uds-5-administrative-composition
-       ├─ 5.0  packet, mockup labels, nav gate     (#44)  this slice
-       ├─ 5.1  typography + primitives             (#45)
+       ├─ 5.0  packet, mockup labels, nav gate     (#44)  complete
+       ├─ 5.1  typography + primitives             (#45)  this slice
        ├─ 5.2  compact nav presentation            (#46)  only if 5.0 gate passes
        ├─ 5.3  Product index + details             (#47)
        ├─ 5.4A catalog search + form               (#48)
@@ -78,9 +78,9 @@ flowchart LR
 
 ### UDS-5.1 — Typography and composition primitives
 
-**Status:** Outlined. Plan in detail after 5.0 lands. Tracker [#45](https://github.com/BankEncore/ShelfSense-v1/issues/45).
+**Status:** **Complete** on `uds-5-administrative-composition`. Tracker [#45](https://github.com/BankEncore/ShelfSense-v1/issues/45). **No Product family composition** (that is 5.3 / 5.4). Production compact nav is unchanged until 5.2.
 
-Local Source Serif 4; `--font-serif` / `--font-mono`; role-based type; one documented `.surface` meaning; extend page-header and form-section; metric strip; table-hierarchy utilities; admin-form footer prototype. Serif only via tokens/role classes.
+Local Source Serif 4; `--font-serif` / `--font-mono`; role-based type; `.surface` means panel boundary (`.surface--flush` opts out of the padded compatibility default); extended page-header and form-section; metric strip; table-hierarchy utilities; admin-form sticky footer prototype. Serif only via tokens/role classes. Disposable fixture: `GET /admin/uds5_composition_prototype`.
 
 ### UDS-5.2 — Compact administrative navigation presentation
 
@@ -119,7 +119,7 @@ Expanding an allowlist requires updating this plan in a preceding or same-commit
 | Slice | Shared selectors | Helpers / partials / layouts | Reference views |
 |---|---|---|---|
 | **UDS-5.0** | New selectors under `.uds-5-nav-prototype` only. Do not change production `.app-nav*` rules. | Disposable `Admin::Uds5NavigationPrototypesController` and its views. `config/routes.rb` one GET. Do not change `application.html.erb`, `_admin_primary_nav.html.erb`, `Admin::NavigationCatalog`, or `Admin::NavigationViewModel` behavior. Prototype may pass existing `controller_path:` for area simulation. | None. Product templates are observation-only. Docs and mockup labels. `test/integration/admin_uds5_navigation_prototype_test.rb`; `test/system/admin_uds5_navigation_prototype_test.rb` |
-| **UDS-5.1** (draft) | `:root` font tokens; heading/brand/record-title role classes; `.surface` meaning plus compatibility modifier; page-header extensions; form-section; metric-strip; table-hierarchy; admin-form footer prototype | `shared/_page_header.html.erb`; `shared/_form_section.html.erb`; font packaging under Propshaft | One named fixture or reference surface to exercise primitives. Product family composition waits for 5.3 |
+| **UDS-5.1** | `:root` `--font-serif` / `--font-mono`; Source Serif 4 `@font-face`; `.app-brand` serif via CSS only; `.type-*` role classes; `.surface` / `.surface--flush`; `.page-header*` extensions; `.form-section__head` / `__body` / `__grid`; `.form-field--span-2`; `.metric-strip*`; `.data-table .cell-primary` / `.cell-secondary` / `.cell-identifier`; `.admin-form-footer` | `shared/_page_header.html.erb`; `shared/_form_section.html.erb`; `app/assets/fonts/source-serif-4-latin-{400,600}-normal.woff2`; `application.css`; disposable `Admin::Uds5CompositionPrototypesController` and its view; `config/routes.rb` one GET. Do not change `application.html.erb` markup, `Admin::NavigationCatalog`, or Product family templates. | `GET /admin/uds5_composition_prototype`. Product index/show/form composition waits for 5.3 / 5.4. `test/integration/admin_uds5_composition_prototype_test.rb`; `test/system/admin_uds5_composition_prototype_test.rb`; `test/views/page_header_partial_test.rb`; `test/views/form_section_partial_test.rb` |
 | **UDS-5.2** (draft) | Compact grouped-nav selectors named in the 5.2 slice plan | `application.html.erb`; `_admin_primary_nav.html.erb`; CSS; tests; docs. **Locked boundary above.** | None |
 | **UDS-5.3** (draft) | UDS-5.1 primitives on Product index/show | Product index/show templates and partials they already render | `admin/products/{index,show}.html.erb` |
 | **UDS-5.4A** (draft) | UDS-5.1 primitives on search and form | Catalog search and product form templates | `admin/product_catalog_searches/**`; `admin/products/{new,edit,_form}.html.erb` |
@@ -147,6 +147,14 @@ No Stimulus/Hotwire on the prototype. Light parchment chrome only. Measure `.uds
 
 Retire the route in 5.2 if compact nav ships, or in 5.5 if expanded nav is kept.
 
+## Prototype contract (5.1)
+
+Route: `GET /admin/uds5_composition_prototype` (signed-in; no extra permission). Not listed in `Admin::NavigationCatalog`.
+
+The fixture exercises: full page-header slots; omitted subtitle/status; type-role specimens; `.surface` vs `.surface--flush`; metric strip; form-section grid with a static invalid field; sticky `.admin-form-footer`; table cell-primary/secondary/identifier. No Stimulus/Hotwire. Do not apply these primitives to Product templates until 5.3 / 5.4.
+
+Retire the route in 5.3 once Product screens consume the primitives, or in 5.5.
+
 ## Gate pass / fail
 
 **Pass:** at least one compact variant preserves UDS-4.1 visibility and current-area semantics, keeps every destination reachable with no JS, and is clearly shorter than expanded at 1440×900 without failing 320px or 200%/400% zoom.
@@ -155,12 +163,13 @@ Retire the route in 5.2 if compact nav ships, or in 5.5 if expanded nav is kept.
 
 ## Frozen tests
 
-Existing domain/workflow tests stay unchanged and passing. 5.0 may add prototype integration coverage. Do not rewrite `navigation_view_model_test` or catalog tests. Do not relax ApplyCandidate / provenance / concurrency tests in any UDS-5 slice.
+Existing domain/workflow tests stay unchanged and passing. 5.0 and 5.1 may add disposable-fixture coverage. Do not rewrite `navigation_view_model_test` or catalog tests. Do not relax ApplyCandidate / provenance / concurrency tests in any UDS-5 slice.
 
 ## Related documents
 
 - [uds-5-user-stories.md](uds-5-user-stories.md)
 - [uds-5.0-gate-evidence.md](uds-5.0-gate-evidence.md)
+- Fixture: `GET /admin/uds5_composition_prototype` (UDS-5.1)
 - [navigation-proposal.md](navigation-proposal.md)
 - [deferred-patterns.md](deferred-patterns.md)
 - [warm-parchment.md](warm-parchment.md)

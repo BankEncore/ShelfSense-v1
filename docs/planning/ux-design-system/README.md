@@ -1,6 +1,6 @@
 # UX design system
 
-Status: **UDS-1 Implemented**; **UDS-2 Implemented** for reference screens; **UDS-3 Implemented** for Register visual refinement (basket hierarchy, shortcut groups, overlays) with ActionButtonHelper. Matrix rows remain **partial** until [accessibility-ergonomic-test-matrix.md](accessibility-ergonomic-test-matrix.md) evidence is attached. Phase 2.2 **architecture** remains; teal/plum palette superseded. Grouped admin navigation: UDS-4.0 gate **Passed**; **UDS-4.1–4.2 complete on `main`**. **UDS-5 Proposed** — administrative composition packet and compact-nav prototype gate **Passed** ([uds-5-plan.md](uds-5-plan.md)); production chrome unchanged until UDS-5.2.
+Status: **UDS-1 Implemented**; **UDS-2 Implemented** for reference screens; **UDS-3 Implemented** for Register visual refinement (basket hierarchy, shortcut groups, overlays) with ActionButtonHelper. Matrix rows remain **partial** until [accessibility-ergonomic-test-matrix.md](accessibility-ergonomic-test-matrix.md) evidence is attached. Phase 2.2 **architecture** remains; teal/plum palette superseded. Grouped admin navigation: UDS-4.0 gate **Passed**; **UDS-4.1–4.2 complete on `main`**. **UDS-5 Proposed** — administrative composition packet and compact-nav prototype gate **Passed**; UDS-5.1 primitives complete on the program branch ([uds-5-plan.md](uds-5-plan.md)); production compact-nav chrome unchanged until UDS-5.2.
 
 This packet is the cross-phase authority for ShelfSense presentation: Warm Parchment visual direction, button and action semantics, administrative navigation grouping, surface contracts (Register basket vs history vs print), deferred interaction patterns, and an incremental adoption program.
 
@@ -34,7 +34,7 @@ Do not fold POS into a shared ops shell. Do not replace admin show pages with dr
 | [uds-4-plan.md](uds-4-plan.md) | UDS-4 grouped navigation and cross-cutting adoption; gated by [phase7.1-uds-coordination.md](../phase7.1-purchasing-polish/phase7.1-uds-coordination.md) | **Complete** on `main` (UDS-4.0–4.2) |
 | [uds-4.0-gate-evidence.md](uds-4.0-gate-evidence.md) | Prototype gate checklist and evidence for Profiles A/B | **Passed** |
 | [uds-4.2-plan.md](uds-4.2-plan.md) | Non-purchasing ActionButtonHelper adoption and cross-links (4.2a–4.2d) | **Complete** on `main` |
-| [uds-5-plan.md](uds-5-plan.md) | UDS-5 administrative composition (grammar, compact nav presentation, Product reference family) | **Proposed** (5.0 complete; gate Passed) |
+| [uds-5-plan.md](uds-5-plan.md) | UDS-5 administrative composition (grammar, compact nav presentation, Product reference family) | **Proposed** (5.0–5.1 complete; 5.0 gate Passed) |
 | [uds-5-user-stories.md](uds-5-user-stories.md) | Stories for UDS-5.0–5.5 mapped to GitHub issues #44–#50 | Proposed |
 | [uds-5.0-gate-evidence.md](uds-5.0-gate-evidence.md) | Compact-nav prototype gate checklist and Product/header baselines | **Passed** |
 | [uds-3-user-stories.md](uds-3-user-stories.md) | Issue-ready backlog stories for UDS-3a–3c | Implemented |

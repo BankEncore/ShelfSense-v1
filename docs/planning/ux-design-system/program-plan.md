@@ -185,7 +185,7 @@ Validate with the [accessibility and ergonomic test matrix](accessibility-ergono
 **Implementation plan:** [uds-5-plan.md](uds-5-plan.md). Tracker: GitHub milestone UDS-5 ([#44](https://github.com/BankEncore/ShelfSense-v1/issues/44)–[#50](https://github.com/BankEncore/ShelfSense-v1/issues/50)).
 
 - **UDS-5.0** — Packet, mockup region labels, Product/header baselines, disposable compact-nav prototype gate **Passed**. **No production chrome change.**
-- **UDS-5.1** — Typography and composition primitives.
+- **UDS-5.1** — Typography and composition primitives **complete** on the program branch (local Source Serif 4, type roles, page-header/form-section extensions, metric strip, table hierarchy, admin-form footer). Product family composition waits for 5.3. Fixture: `GET /admin/uds5_composition_prototype`.
 - **UDS-5.2** — Compact presentation of the existing grouped catalog after the 5.0 gate (or keep expanded).
 - **UDS-5.3–5.4B** — Product index/details, catalog search/form, bibliographic review layout.
 - **UDS-5.5** — Evidence, serif decision, standing feature-led adoption rule.

@@ -7,8 +7,9 @@ Rails.application.routes.draw do
   resource :store_selection, only: %i[new create]
 
   namespace :admin do
-    # Disposable UDS-5.0 compact-nav prototype. Not a catalog destination. Retire in 5.2 or 5.5.
+    # Disposable UDS-5 prototypes. Not catalog destinations. Retire in 5.2 or 5.5.
     resource :uds5_navigation_prototype, only: :show
+    resource :uds5_composition_prototype, only: :show
     resource :system_settings, only: %i[show edit update]
     resources :stores
     resources :gl_accounts do
