@@ -47,6 +47,8 @@ namespace :shelfsense do
 
     before = Role.find_by(key: "system_administrator")&.permissions&.pluck(:key) || []
     Authorization::PermissionCatalog.seed!(granted_by: granted_by)
+    ProductForms::Catalog.seed!
+    SubjectSchemes::Catalog.seed!
     after = Role.find_by!(key: "system_administrator").permissions.pluck(:key)
 
     added = after - before

@@ -295,7 +295,7 @@ Stores shared catalog identity and descriptive information. A product may exist 
 | name | varchar | null: false | Title or product name |
 | subtitle | varchar | | Optional subtitle or secondary name |
 | description | text | | |
-| brand_name | varchar | | Publisher, brand, manufacturer, or equivalent free-text name |
+| brand_name | varchar | | Publisher, brand, or manufacturer free-text name |
 | product_model | varchar | | Optional model, edition, series, or format designation (column is `product_model` to avoid Active Record's `model_name`) |
 | merchandise_category_id | uuid | FK: `merchandise_categories`; nullable | Descriptive classification |
 | list_price_cents | bigint | nullable; check `>= 0` | Publisher or manufacturer list price |
@@ -306,6 +306,8 @@ Stores shared catalog identity and descriptive information. A product may exist 
 | lock_version | integer | null: false; default `0` | Optimistic concurrency |
 | created_at | timestamptz | null: false | |
 | updated_at | timestamptz | null: false | |
+
+Bibliographic publisher/brand text lives on `products.brand_name`. Contributors, local covers, product forms, subject headings, and provenance are defined in [Phase 9 schema](../../phase9-catalog-enrichment/phase9-schema.md) and [phase9-remediation.md](../../phase9-catalog-enrichment/phase9-remediation.md).
 
 ### Primary identifier rules
 

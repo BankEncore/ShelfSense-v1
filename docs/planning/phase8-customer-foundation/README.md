@@ -1,6 +1,6 @@
 # Phase 8 — Customer foundation (MVP)
 
-Status: **Complete** on `main` (August 2026, PR #42, merge `b5ed590`). May run in parallel with [Phase 9](../roadmap.md#phase-9--catalog-and-bibliographic-enrichment).
+Status: **Complete** on `main` (August 2026, PR #42, merge `b5ed590`). [Phase 9](../roadmap.md#phase-9--catalog-and-bibliographic-enrichment) is the next domain phase.
 
 | Document | Purpose |
 |---|---|

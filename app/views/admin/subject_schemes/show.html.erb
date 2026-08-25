@@ -1,0 +1,50 @@
+<% content_for :title, @subject_scheme.name %>
+
+<%= render "shared/breadcrumbs", crumbs: [
+  { name: "Home", path: root_path },
+  { name: "Subject schemes", path: admin_subject_schemes_path },
+  { name: @subject_scheme.name }
+] %>
+
+<% actions = [configuration_status_badge(@subject_scheme.active?)] %>
+<% if effective_permissions.include?("subject_schemes.update") %>
+  <% actions << action_link_to("Edit scheme", edit_admin_subject_scheme_path(@subject_scheme), style: :outline, intent: :neutral) %>
+<% end %>
+<% if effective_permissions.include?("subject_headings.create") %>
+  <% actions << action_link_to("New heading", new_admin_subject_scheme_subject_heading_path(@subject_scheme), style: :solid, intent: :brand) %>
+  <% actions << action_link_to("Import headings", import_admin_subject_scheme_subject_headings_path(@subject_scheme), style: :outline, intent: :neutral) %>
+<% end %>
+
+<%= render "shared/page_header",
+      title: @subject_scheme.name,
+      subtitle: @subject_scheme.key,
+      actions: safe_join(actions, " ") %>
+
+<section class="section surface">
+  <%= form_with url: admin_subject_scheme_path(@subject_scheme), method: :get, local: true, class: "filters" do |form| %>
+    <div class="form-field form-field--grow">
+      <%= label_tag :q, "Search headings" %>
+      <%= search_field_tag :q, params[:q], id: "heading_q", "aria-describedby": "heading_q_help" %>
+      <span class="field-help" id="heading_q_help">Search by heading name or code.</span>
+    </div>
+    <div class="form-field">
+      <%= action_submit(form, "Search", style: :outline, intent: :neutral) %>
+    </div>
+  <% end %>
+</section>
+
+<% if @subject_headings.empty? %>
+  <%= render "shared/empty_state", title: "No headings", body: "Create or import headings for this scheme." %>
+<% else %>
+  <% rows = @subject_headings.map { |heading|
+       [
+         link_to(heading.admin_label, admin_subject_scheme_subject_heading_path(@subject_scheme, heading)),
+         heading.code,
+         heading.display_order,
+         configuration_status_badge(heading.active?)
+       ]
+     } %>
+  <%= render "shared/data_table",
+        headers: ["Name", "Code", "Display order", "Status"],
+        rows: rows %>
+<% end %>

@@ -41,9 +41,11 @@ This directory contains the project’s technical authority, development guidanc
 | [Phase 6 receipt presentation](planning/phase4-6-point-of-sale/phase6-pos-mvp/receipt-presentation.md) | Customer print/reprint layout (implemented in 6.8) |
 | [Phase 6.1 classification and identifiers](planning/phase6.1-merchandise-classification-and-identifiers/README.md) | Implemented classification cutover, live tax inheritance, product industry GTIN, lookup codes, and POS/inventory targeting (disposable-data cutover on `main`) |
 | [Phase 7 orders and receiving](planning/phase7-orders-and-receiving/README.md) | Implemented on `main` (orders, requests, receiving, Register pickup) |
-| [Phase 7.1 purchasing polish](planning/phase7.1-purchasing-polish/README.md) | Proposed; coordination Accepted — purchasing ergonomics slices |
-| [Forward roadmap](planning/roadmap.md) | Canonical post–Phase 7 sequencing (Phases 7.1, 8–14, UDS-4, Terminal program) |
-| [UX design system](planning/ux-design-system/README.md) | Warm Parchment UDS-1–3 implemented; UDS-4 proposed ([uds-4-plan.md](planning/ux-design-system/uds-4-plan.md)) |
+| [Phase 7.1 purchasing polish](planning/phase7.1-purchasing-polish/README.md) | Complete on `main` (7.1.1–7.1.3); 7.1.4 deferred |
+| [Phase 8 customer foundation](planning/phase8-customer-foundation/README.md) | Complete on `main` (PR #42); [ADR-023](adr/ADR-023-customer-merge.md) |
+| [Phase 9 catalog enrichment](planning/phase9-catalog-enrichment/README.md) | Implemented; [ADR-024](adr/ADR-024-bibliographic-data-authority.md) |
+| [Forward roadmap](planning/roadmap.md) | Canonical post–Phase 7 sequencing (Phases 7.1, 8–14, UDS, Terminal program) |
+| [UX design system](planning/ux-design-system/README.md) | Warm Parchment UDS-1–3 operationally complete; UDS-4.0–4.2 on `main` |
 | [POS Phases 4–6 plan](planning/phase4-6-point-of-sale/spec.md) | Multi-phase POS sequencing (foundation → cash register → MVP); §6 deferred to the Phase 6 packet |
 | [UX conventions](ux-conventions.md) | Shared admin page anatomy, partials, currency boundaries, palette (Phase 2.2 implemented; Warm Parchment proposed), and Hotwire deferral |
 | [Development guide](development.md) | Docker-only local setup, PostgreSQL configuration, application commands, and troubleshooting |

@@ -88,6 +88,8 @@ The PostgreSQL image applies `POSTGRES_USER`, `POSTGRES_PASSWORD`, and `POSTGRES
 
 Do not commit production credentials. Production values must come from the deployment environment. The ERB in `config/database.yml` must not use strict `ENV.fetch` calls without defaults for production-only variables, because Rails evaluates the entire file before selecting an environment; strict production lookups would also break development and CI startup.
 
+Optional catalog enrichment (Phase 9) reads `ISBNDB_API_KEY` from the environment. Leave it unset in CI; tests stub the HTTP client. For local live lookups, copy `.env.example` to `.env` (gitignored) and set the key. Docker Compose interpolates it into the `web` service. Recreate that service after changing `.env` (`docker compose up -d --force-recreate web`). Never commit the key, a filled `.env`, or `compose.override.yml`; never log the key or store it in audit events.
+
 ## Identifiers and migrations
 
 Phase 1 domain tables use UUID primary keys without a PostgreSQL default. Rails assigns RFC 9562 UUIDv7 values in a shared `before_validation` callback (`SecureRandom.uuid_v7`) when `id` is blank. Prefer the migration helper:

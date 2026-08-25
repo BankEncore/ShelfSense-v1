@@ -1,0 +1,277 @@
+# frozen_string_literal: true
+
+require "test_helper"
+
+class ProductCatalogEnrichmentTest < ActionDispatch::IntegrationTest
+  setup do
+    @bootstrap = bootstrap!
+    @admin = @bootstrap[:administrator]
+    @store = @bootstrap[:store]
+    @associate = User.create!(
+      username: "associate",
+      display_name: "Associate User",
+      password: "correct-horse-battery",
+      password_confirmation: "correct-horse-battery"
+    )
+    RoleAssignment.create!(
+      user: @associate,
+      role: Role.find_by!(key: "associate"),
+      store: @store,
+      assigned_by: @admin,
+      effective_at: Time.current
+    )
+  end
+
+  test "catalog search uses an existing product instead of creating a duplicate" do
+    product = Products::Create.call(
+      attributes: { name: "Already Carried", status: "draft" },
+      actor: @admin,
+      industry_identifier: FIXTURE_ISBN13
+    )
+    sign_in_as("admin")
+
+    stub_bibliographic_provider(FakeIsbnDbProvider.new(candidates: [ bibliographic_candidate ])) do
+      post admin_product_catalog_searches_path, params: { catalog_search: { q: FIXTURE_ISBN13 } }
+      assert_redirected_to admin_product_path(product)
+    end
+  end
+
+  test "unknown ISBN lists candidates and create-from-candidate reserves the industry identifier" do
+    sign_in_as("admin")
+    provider = FakeIsbnDbProvider.new(candidates: [ bibliographic_candidate ])
+
+    stub_bibliographic_provider(provider) do
+      get new_admin_product_catalog_search_path
+      assert_response :success
+
+      post admin_product_catalog_searches_path, params: { catalog_search: { q: FIXTURE_ISBN13 } }
+      assert_response :success
+      assert_match(/The Left Hand of Darkness/, response.body)
+      assert_match(/Use this book/, response.body)
+
+      get new_admin_product_path, params: { isbn13: FIXTURE_ISBN13, lookup_key: "isbn:#{FIXTURE_ISBN13}" }
+      assert_response :success
+      assert_match(/The Left Hand of Darkness/, response.body)
+      assert_select "input#product_industry_identifier[value=?]", FIXTURE_ISBN13
+
+      post admin_products_path, params: {
+        candidate_isbn13: FIXTURE_ISBN13,
+        candidate_lookup_key: "isbn:#{FIXTURE_ISBN13}",
+        product: {
+          name: "The Left Hand of Darkness",
+          status: "draft",
+          industry_identifier: FIXTURE_ISBN13,
+          publisher_name: "Ace",
+          list_price: "16.99",
+          cover_image_url: "https://images.isbndb.com/covers/81/25/9780441478125.jpg",
+          contribution_rows: [ { display_name: "Ursula K. Le Guin", role: "author" } ]
+        }
+      }
+      assert_response :redirect
+    end
+
+    created = Product.find_by!(industry_identifier: FIXTURE_ISBN13)
+    assert created.primary_identifier.start_with?("222")
+    assert_equal "Ace", created.brand_name
+    follow_redirect!
+    assert_equal 1, created.product_contributions.count
+    assert_equal "Ursula K. Le Guin", created.product_contributions.first.display_name
+    assert_select ".product-identity__contributors", text: /Ursula K. Le Guin/
+    assert_select "img.product-cover", count: 0
+    assert_select "dt", text: "Imprint", count: 0
+    assert_select "dt", text: "Series", count: 0
+    assert_match(/isbndb/, response.body)
+
+    event = AuditEvent.where(action: "products.enrich", subject_id: created.id).last
+    payload = [ event.after_values, event.before_values, event.metadata ].to_json
+    assert_no_match(/ISBNDB_API_KEY|test-key|image_original|other_isbns/, payload)
+  end
+
+  test "refresh opens review and does not apply until selected fields are submitted" do
+    product = Products::CreateFromCandidate.call(
+      candidate: bibliographic_candidate,
+      actor: @admin,
+      attributes: { name: "Staff title", list_price_cents: 2500 }
+    )
+    assert_equal "staff", product.bibliographic_field_sources.dig("name", "source")
+    assert_equal "staff", product.bibliographic_field_sources.dig("list_price_cents", "source")
+    lock_before = product.lock_version
+
+    sign_in_as("admin")
+    stub_bibliographic_provider(FakeIsbnDbProvider.new(candidates: [ bibliographic_candidate ])) do
+      get admin_product_path(product)
+      assert_response :success
+      assert_match(/Refresh bibliographic data/, response.body)
+
+      post refresh_bibliography_admin_product_path(product)
+      assert_response :redirect
+      follow_redirect!
+      assert_match(/Review bibliographic data/, response.body)
+    end
+
+    product.reload
+    assert_equal "Staff title", product.name
+    assert_equal 2500, product.list_price_cents
+    assert_equal lock_before, product.lock_version
+    assert_nil AuditEvent.find_by(action: "products.refresh", subject_id: product.id)
+  end
+
+  test "associates cannot search the catalog or refresh bibliography" do
+    product = Products::Create.call(
+      attributes: { name: "Viewable", status: "draft" },
+      actor: @admin,
+      industry_identifier: FIXTURE_ISBN13
+    )
+    sign_in_as("associate")
+
+    get new_admin_product_catalog_search_path
+    assert_redirected_to root_path
+
+    post admin_product_catalog_searches_path, params: { catalog_search: { q: FIXTURE_ISBN13 } }
+    assert_redirected_to root_path
+
+    post refresh_bibliography_admin_product_path(product)
+    assert_redirected_to root_path
+    assert_equal "denied", AuditEvent.where(action: "authorization.denied").order(:created_at).last.outcome
+    assert_nil AuditEvent.find_by(action: "products.refresh", subject_id: product.id)
+  end
+
+  test "POS does not auto-create from an unknown ISBN" do
+    result = Pos::ResolveMerchandiseForSale.call(store: @store, identifier: FIXTURE_ISBN13)
+    assert_equal :unavailable, result.outcome
+    assert_nil Product.find_by(industry_identifier: FIXTURE_ISBN13)
+  end
+
+  test "product index finds a contributor and the show page lists provenance" do
+    product = Products::CreateFromCandidate.call(candidate: bibliographic_candidate, actor: @admin)
+    sign_in_as("admin")
+
+    get admin_products_path, params: { q: "Le Guin" }
+    assert_response :success
+    assert_match(/The Left Hand of Darkness/, response.body)
+
+    get admin_product_path(product)
+    assert_response :success
+    assert_match(/Ace/, response.body)
+    assert_select ".product-identity__contributors", text: /Ursula K. Le Guin/
+    assert_match(/isbndb/, response.body)
+    assert_match(/Refresh bibliographic data/, response.body)
+  end
+
+  test "create-from-candidate keeps candidate contributors when submitted rows are blank" do
+    sign_in_as("admin")
+    stub_bibliographic_provider(FakeIsbnDbProvider.new(candidates: [ bibliographic_candidate ])) do
+      post admin_product_catalog_searches_path, params: { catalog_search: { q: FIXTURE_ISBN13 } }
+      get new_admin_product_path, params: { isbn13: FIXTURE_ISBN13, lookup_key: "isbn:#{FIXTURE_ISBN13}" }
+
+      post admin_products_path, params: {
+        candidate_isbn13: FIXTURE_ISBN13,
+        candidate_lookup_key: "isbn:#{FIXTURE_ISBN13}",
+        product: {
+          name: "The Left Hand of Darkness",
+          status: "draft",
+          industry_identifier: FIXTURE_ISBN13,
+          contribution_rows: {
+            "0" => { display_name: "", role: "author" },
+            "1" => { display_name: "", role: "author" },
+            "2" => { display_name: "", role: "illustrator" }
+          }
+        }
+      }
+      assert_response :redirect
+    end
+
+    created = Product.find_by!(industry_identifier: FIXTURE_ISBN13)
+    assert_equal [ "Ursula K. Le Guin" ], created.product_contributions.map(&:display_name)
+  end
+
+  test "sideline product show omits contributor subtitle and publication" do
+    product = Products::Create.call(
+      attributes: { name: "Ceramic Mug", status: "draft", brand_name: "ShelfSense" },
+      actor: @admin
+    )
+    sign_in_as("admin")
+
+    get admin_product_path(product)
+    assert_response :success
+    assert_match(/Ceramic Mug/, response.body)
+    assert_select ".product-identity__contributors", count: 0
+    assert_select "h2", text: "Publication", count: 0
+    assert_select "img.product-cover", count: 0
+    assert_select "dt", text: "Publisher / brand / manufacturer"
+    assert_select "dd", text: "ShelfSense"
+  end
+
+  test "ISBN-less candidate create uses a provenance-only provider key" do
+    candidate = bibliographic_candidate(isbn13: nil, provider_key: nil, title: "Unnumbered Atlas")
+    sign_in_as("admin")
+
+    stub_bibliographic_provider(FakeIsbnDbProvider.new(candidates: [ candidate ])) do
+      post admin_product_catalog_searches_path, params: { catalog_search: { q: "Unnumbered Atlas" } }
+      assert_response :success
+      assert_match(/Use this book/, response.body)
+
+      get new_admin_product_path, params: { candidate_id: candidate.candidate_id }
+      assert_response :success
+
+      post admin_products_path, params: {
+        candidate_id: candidate.candidate_id,
+        product: { name: "Unnumbered Atlas", status: "draft" }
+      }
+      assert_response :redirect
+    end
+
+    created = Product.find_by!(name: "Unnumbered Atlas")
+    assert_nil created.industry_identifier
+    assert_nil created.bibliographic_provider_key
+    assert_equal "isbndb", created.bibliographic_field_sources.dig("name", "source")
+    assert_match(/\Aisbndb:candidate:/, created.bibliographic_field_sources.dig("name", "provider_key"))
+  end
+
+  test "create-from-candidate keeps a staff-uploaded cover" do
+    sign_in_as("admin")
+
+    stub_bibliographic_provider(FakeIsbnDbProvider.new(candidates: [ bibliographic_candidate ])) do
+      post admin_product_catalog_searches_path, params: { catalog_search: { q: FIXTURE_ISBN13 } }
+      get new_admin_product_path, params: { isbn13: FIXTURE_ISBN13, lookup_key: "isbn:#{FIXTURE_ISBN13}" }
+
+      post admin_products_path, params: {
+        candidate_isbn13: FIXTURE_ISBN13,
+        candidate_lookup_key: "isbn:#{FIXTURE_ISBN13}",
+        product: {
+          name: "The Left Hand of Darkness",
+          status: "draft",
+          industry_identifier: FIXTURE_ISBN13,
+          cover_image: uploaded_cover_png
+        }
+      }
+      assert_response :redirect
+    end
+
+    created = Product.find_by!(industry_identifier: FIXTURE_ISBN13)
+    assert created.cover_image.attached?
+    assert_equal "staff", created.bibliographic_field_sources.dig("cover_image", "source")
+    follow_redirect!
+    assert_select "img.product-cover"
+  ensure
+    @cover_tempfile&.close!
+  end
+
+  private
+
+  def sign_in_as(username)
+    delete session_path
+    follow_redirect! while response.redirect?
+    post session_path, params: { session: { username: username, password: "correct-horse-battery" } }
+    follow_redirect! if response.redirect?
+  end
+
+  def uploaded_cover_png
+    @cover_tempfile = Tempfile.new([ "cover", ".png" ])
+    @cover_tempfile.binmode
+    @cover_tempfile.write(TINY_COVER_PNG)
+    @cover_tempfile.flush
+    @cover_tempfile.rewind
+    Rack::Test::UploadedFile.new(@cover_tempfile.path, "image/png")
+  end
+end

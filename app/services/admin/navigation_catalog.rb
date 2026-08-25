@@ -50,7 +50,9 @@ module Admin
               dest(:merchandise_classes, "Merchandise classes", :admin_merchandise_classes_path, permission: "merchandise_classes.view", controllers: %w[admin/merchandise_classes]),
               dest(:merchandise_categories, "Categories", :admin_merchandise_categories_path, permission: "merchandise_categories.view", controllers: %w[admin/merchandise_categories]),
               dest(:merchandise_conditions, "Conditions", :admin_merchandise_conditions_path, permission: "merchandise_conditions.view", controllers: %w[admin/merchandise_conditions]),
-              dest(:products, "Products", :admin_products_path, permission: "products.view", controllers: %w[admin/products admin/product_variants admin/supplier_variant_sources admin/store_supplier_source_preferences]),
+              dest(:product_forms, "Product forms", :admin_product_forms_path, permission: "product_forms.view", controllers: %w[admin/product_forms]),
+              dest(:subject_schemes, "Subject schemes", :admin_subject_schemes_path, permission: "subject_schemes.view", controllers: %w[admin/subject_schemes admin/subject_headings]),
+              dest(:products, "Products", :admin_products_path, permission: "products.view", controllers: %w[admin/products admin/product_variants admin/supplier_variant_sources admin/store_supplier_source_preferences admin/product_catalog_searches]),
               dest(:merchandise_lookup, "Lookup", :new_admin_merchandise_lookup_path, permission: "merchandise.lookup", controllers: %w[admin/merchandise_lookups]),
               dest(:merchandise_import, "Import", :new_admin_merchandise_import_path, permission: "merchandise.import", controllers: %w[admin/merchandise_imports])
             ]

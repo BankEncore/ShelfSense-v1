@@ -103,7 +103,7 @@ Coordination with UDS-4: [phase7.1-uds-coordination.md](phase7.1-purchasing-poli
 
 ## Phase 8 — Customer foundation (MVP)
 
-**Status:** **Complete** on `main` (PR #42, merge `b5ed590`). **May have run in parallel with Phase 9.** Planning packet: [phase8-customer-foundation/](phase8-customer-foundation/README.md).
+**Status:** **Complete** on `main` (PR #42, merge `b5ed590`). Planning packet: [phase8-customer-foundation/](phase8-customer-foundation/README.md). Phase 9 is the next domain phase (it could have run in parallel; it did not need to).
 
 Phase 7 created the minimum customer record required for requests. Phase 8 concentrates on **reliable identification**, **essential contact methods**, **duplicate prevention and safe merge**, and **minimal lifecycle governance**—not CRM, marketing, multiple contacts, or stored-value ledger design.
 
@@ -142,9 +142,9 @@ Phase 8 does not create stored-value accounts. It documents the identity contrac
 
 ## Phase 9 — Catalog and bibliographic enrichment
 
-**Status:** Proposed. **May run in parallel with Phase 8.**
+**Status:** Implemented. Planning packet: [phase9-catalog-enrichment/](phase9-catalog-enrichment/README.md). Policy: [ADR-024](../adr/ADR-024-bibliographic-data-authority.md). Phase 10 is unblocked by customer identity but is not the primary stream.
 
-Extends Phases 2 and 6.1; does not replace the product model.
+Extends Phases 2 and 6.1; does not replace the product model. Policy: [ADR-024](../adr/ADR-024-bibliographic-data-authority.md).
 
 ### Build on what exists
 
@@ -155,13 +155,13 @@ Extends Phases 2 and 6.1; does not replace the product model.
 
 ### Add
 
-- Contributors and contribution roles; publisher and imprint
-- Publication date, edition, binding/format, language, page count, series
-- Descriptions and cover references; additional industry identifiers where justified
-- External bibliographic providers
+- Contributor display names and roles; publisher/brand on `brand_name`; imprint
+- Publication date (with approximate flag), edition display text, product form, language, page count, series
+- Descriptions and local cover images; additional industry identifiers where justified
+- External bibliographic providers with reviewed apply
 - Search-result matching against existing products; candidate-product creation from external data
-- Field provenance and last-refresh information; staff-controlled overwrite and conflict rules
-- Background enrichment without silently changing curated data
+- Field provenance; staff-controlled selected-field apply
+- Subject schemes and headings without remapping merchandise categories
 
 The external lookup boundary returns **normalized candidate data**; the Product aggregate remains authoritative.
 
@@ -367,9 +367,9 @@ The following remain out of scope until a planning packet and ADR review justify
 | UDS-1–3 — Warm Parchment foundation | **Operationally complete** (`verified-automated`); see [uds-foundation-closeout-evidence.md](ux-design-system/uds-foundation-closeout-evidence.md) |
 | Phase 7.1 — Purchasing workflow closeout | **Complete** on `main` ([packet](phase7.1-purchasing-polish/README.md)) |
 | UDS-4 — Navigation and information architecture | **UDS-4.0–4.2 on `main`** ([uds-4-plan.md](ux-design-system/uds-4-plan.md)) |
-| Phase 8 — Customer foundation (MVP) | **Complete** on `main` (PR #42); parallel with 9 |
-| Phase 9 — Catalog and bibliographic enrichment | Next; parallel with 8 |
-| Phase 10 — Stored value and financial event contract | After Phase 8 |
+| Phase 8 — Customer foundation (MVP) | **Complete** on `main` (PR #42) |
+| Phase 9 — Catalog and bibliographic enrichment | **Implemented**; Phase 10 unblocked but not primary |
+| Phase 10 — Stored value and financial event contract | After Phase 8 (unblocked; not the primary stream) |
 | Phase 11 — Cash accountability completion | After Phase 10 |
 | Phase 12 — Used buyback | After 8–11 (payout after 10–11) |
 | Phase 13 — Customer workspace | After activity sources exist |

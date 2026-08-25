@@ -121,8 +121,20 @@ module Authorization
       { key: "purchase_receipts.compensate", group_key: "purchase_receipts", name: "Authorize compensating adjustments when exact receipt reversal is unsafe", scope_type: "either" }
     ].freeze
 
+    PHASE9_PERMISSIONS = [
+      { key: "product_forms.view", group_key: "product_forms", name: "View product forms", scope_type: "either" },
+      { key: "product_forms.update", group_key: "product_forms", name: "Update product forms", scope_type: "global" },
+      { key: "product_forms.deactivate", group_key: "product_forms", name: "Deactivate product forms", scope_type: "global" },
+      { key: "subject_schemes.view", group_key: "subject_schemes", name: "View subject schemes", scope_type: "either" },
+      { key: "subject_schemes.update", group_key: "subject_schemes", name: "Update subject schemes", scope_type: "global" },
+      { key: "subject_headings.view", group_key: "subject_headings", name: "View subject headings", scope_type: "either" },
+      { key: "subject_headings.create", group_key: "subject_headings", name: "Create subject headings", scope_type: "global" },
+      { key: "subject_headings.update", group_key: "subject_headings", name: "Update subject headings", scope_type: "global" },
+      { key: "subject_headings.deactivate", group_key: "subject_headings", name: "Deactivate subject headings", scope_type: "global" }
+    ].freeze
+
     PERMISSIONS = (
-      PHASE1_PERMISSIONS + PHASE2_PERMISSIONS + PHASE3_PERMISSIONS + PHASE4_PERMISSIONS + PHASE7_PERMISSIONS
+      PHASE1_PERMISSIONS + PHASE2_PERMISSIONS + PHASE3_PERMISSIONS + PHASE4_PERMISSIONS + PHASE7_PERMISSIONS + PHASE9_PERMISSIONS
     ).freeze
 
     STORE_MANAGER_PHASE2_VIEWS = %w[
@@ -135,6 +147,12 @@ module Authorization
       products.view
       product_variants.view
       merchandise.lookup
+    ].freeze
+
+    STORE_MANAGER_PHASE9_VIEWS = %w[
+      product_forms.view
+      subject_schemes.view
+      subject_headings.view
     ].freeze
 
     STORE_MANAGER_PHASE3 = %w[
@@ -201,7 +219,7 @@ module Authorization
           registers.manage
           registers.deactivate
           audit_events.view
-        ] + STORE_MANAGER_PHASE2_VIEWS + STORE_MANAGER_PHASE3 + STORE_MANAGER_PHASE4 + STORE_MANAGER_PHASE7
+        ] + STORE_MANAGER_PHASE2_VIEWS + STORE_MANAGER_PHASE3 + STORE_MANAGER_PHASE4 + STORE_MANAGER_PHASE7 + STORE_MANAGER_PHASE9_VIEWS
       },
       {
         key: "associate",
@@ -212,6 +230,9 @@ module Authorization
           merchandise.lookup
           products.view
           product_variants.view
+          product_forms.view
+          subject_schemes.view
+          subject_headings.view
           inventory.view
           suppliers.view
           customers.view

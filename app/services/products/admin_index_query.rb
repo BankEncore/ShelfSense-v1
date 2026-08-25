@@ -30,12 +30,12 @@ module Products
         relation = relation.where(merchandise_category_id: @merchandise_category_id)
       end
 
-      total_count = relation.except(:order, :select).count
+      total_count = relation.except(:order, :select).reselect("products.id").distinct.count
       total_pages = [ (total_count.to_f / PER_PAGE).ceil, 1 ].max
       page = parse_page(total_pages)
       offset = (page - 1) * PER_PAGE
 
-      records = relation.order(name: :asc, id: :asc).offset(offset).limit(PER_PAGE)
+      records = relation.select("products.*").distinct.order("products.name ASC, products.id ASC").offset(offset).limit(PER_PAGE)
 
       Result.new(
         records: records,
@@ -70,17 +70,23 @@ module Products
 
       name_pattern = "%#{escape_like(@q)}%"
       identifier_digits = @q.gsub(/[\s-]/, "")
+      relation = relation.left_joins(:product_contributions)
+
+      conditions = [
+        "products.name ILIKE :name ESCAPE '\\'",
+        "products.subtitle ILIKE :name ESCAPE '\\'",
+        "product_contributions.display_name ILIKE :name ESCAPE '\\'"
+      ]
+      binds = { name: name_pattern }
 
       if identifier_digits.match?(/\A\d+\z/)
-        relation.where(
-          "products.name ILIKE :name ESCAPE '\\' OR products.primary_identifier = :exact OR products.primary_identifier LIKE :prefix ESCAPE '\\'",
-          name: name_pattern,
-          exact: identifier_digits,
-          prefix: "#{escape_like(identifier_digits)}%"
-        )
-      else
-        relation.where("products.name ILIKE :name ESCAPE '\\'", name: name_pattern)
+        conditions << "products.primary_identifier = :exact OR products.primary_identifier LIKE :prefix ESCAPE '\\'"
+        conditions << "products.industry_identifier = :exact OR products.industry_identifier LIKE :prefix ESCAPE '\\'"
+        binds[:exact] = identifier_digits
+        binds[:prefix] = "#{escape_like(identifier_digits)}%"
       end
+
+      relation.where(conditions.join(" OR "), binds).distinct
     end
 
     def escape_like(value)

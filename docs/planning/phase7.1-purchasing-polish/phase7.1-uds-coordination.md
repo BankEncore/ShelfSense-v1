@@ -44,7 +44,7 @@ Each row must remain stable after acceptance. Change ownership only through an e
 ### Resolved decisions (August 2026)
 
 1. **Hub route** — **`GET /admin/purchasing`** (`Admin::PurchasingController#show`). Orders index remains order history only.
-2. **7.1.3 vs UDS-4.1** — **7.1.1 → 7.1.2 → UDS-4.0 → UDS-4.1 → 7.1.3**. Ops closeout does not share a PR with grouped nav; 7.1.3 may parallel UDS-4.2. **7.1.3 is unblocked** with UDS-4.1 on `main`.
+2. **7.1.3 vs UDS-4.1** — **7.1.1 → 7.1.2 → UDS-4.0 → UDS-4.1 → 7.1.3**. Ops closeout does not share a PR with grouped nav; 7.1.3 may parallel UDS-4.2. **7.1.3 is complete** on `main` (PR #40).
 3. **Roadmap nav vocabulary** — [roadmap.md](../roadmap.md) UDS-4 section points here and [navigation-proposal.md](../ux-design-system/navigation-proposal.md); aspirational group names deferred until destinations exist.
 
 ## Cross-link conventions

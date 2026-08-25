@@ -52,4 +52,30 @@ class Products::AdminIndexQueryTest < ActiveSupport::TestCase
     high = Products::AdminIndexQuery.call(page: 999)
     assert_equal 1, high.page
   end
+
+  test "searches subtitle, industry identifier, and contributor name" do
+    book = Products::Create.call(
+      attributes: {
+        name: "Named Work",
+        subtitle: "A Quiet Subtitle",
+        status: "draft",
+        contribution_rows: [
+          { "display_name" => "N. K. Jemisin", "role" => "author" },
+          { "display_name" => "N. K. Jemisin", "role" => "illustrator" }
+        ]
+      },
+      actor: @actor,
+      industry_identifier: FIXTURE_ISBN13
+    )
+
+    by_subtitle = Products::AdminIndexQuery.call(q: "Quiet Subtitle")
+    assert_equal [ book.id ], by_subtitle.records.map(&:id)
+
+    by_isbn = Products::AdminIndexQuery.call(q: FIXTURE_ISBN13)
+    assert_includes by_isbn.records.map(&:id), book.id
+
+    by_contributor = Products::AdminIndexQuery.call(q: "Jemisin")
+    assert_equal [ book.id ], by_contributor.records.map(&:id)
+    assert_equal 1, by_contributor.total_count
+  end
 end

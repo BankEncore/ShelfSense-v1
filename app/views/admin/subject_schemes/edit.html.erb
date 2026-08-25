@@ -1,0 +1,39 @@
+<% content_for :title, "Edit subject scheme" %>
+
+<%= render "shared/breadcrumbs", crumbs: [
+  { name: "Home", path: root_path },
+  { name: "Subject schemes", path: admin_subject_schemes_path },
+  { name: @subject_scheme.name, path: admin_subject_scheme_path(@subject_scheme) },
+  { name: "Edit" }
+] %>
+
+<%= render "shared/page_header", title: "Edit subject scheme", subtitle: @subject_scheme.key %>
+
+<%= form_with model: [:admin, @subject_scheme], class: "form" do |form| %>
+  <%= render "shared/form_errors", record: @subject_scheme %>
+  <%= form.hidden_field :lock_version %>
+
+  <%= render layout: "shared/form_section", locals: { title: "Identity" } do %>
+    <div class="form-field">
+      <span class="muted">Key</span>
+      <div><code><%= @subject_scheme.key %></code> (immutable)</div>
+    </div>
+    <div class="form-field">
+      <%= form.label :name %>
+      <%= form.text_field :name, required: true %>
+    </div>
+    <div class="form-field">
+      <%= form.label :scheme_version, "Scheme version" %>
+      <%= form.text_field :scheme_version %>
+    </div>
+    <div class="form-field">
+      <%= form.check_box :active %>
+      <%= form.label :active, "Active" %>
+    </div>
+  <% end %>
+
+  <div class="actions">
+    <%= action_submit(form, "Save subject scheme", style: :solid, intent: :brand) %>
+    <%= action_link_to("Cancel", admin_subject_scheme_path(@subject_scheme), style: :ghost, intent: :neutral) %>
+  </div>
+<% end %>

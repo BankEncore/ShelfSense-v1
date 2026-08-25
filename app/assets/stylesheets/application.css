@@ -828,6 +828,137 @@ input[type="submit"]:disabled,
   font-size: 0.9375rem;
 }
 
+.product-identity {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-5);
+  align-items: flex-start;
+  margin-bottom: var(--space-5);
+}
+
+.product-identity .page-header {
+  margin-bottom: 0;
+}
+
+.product-identity__contributors {
+  color: var(--color-text-primary);
+  font-size: 1.05rem;
+}
+
+.product-cover {
+  display: block;
+  max-height: 160px;
+  width: auto;
+  max-width: 120px;
+  object-fit: contain;
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius);
+}
+
+.product-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+}
+
+.product-summary__cell {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.product-summary__label {
+  color: var(--color-text-secondary);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.product-summary__value {
+  font-size: 1.125rem;
+  font-weight: 650;
+  word-break: break-word;
+}
+
+.product-summary__note {
+  color: var(--color-text-muted);
+  font-size: 0.8125rem;
+}
+
+.product-columns {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-5);
+  align-items: start;
+}
+
+@media (min-width: 56rem) {
+  .product-columns:has(> :nth-child(2)) {
+    grid-template-columns: minmax(0, 2fr) minmax(16rem, 1fr);
+  }
+}
+
+.product-description,
+.product-refresh {
+  margin-top: var(--space-4);
+}
+
+.product-provenance {
+  margin-top: var(--space-3);
+  font-size: 0.875rem;
+}
+
+.product-refresh {
+  padding: var(--space-4);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius);
+  background: var(--color-bg-subtle);
+}
+
+.bibliographic-review__field {
+  margin-bottom: var(--space-4);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius);
+}
+
+.bibliographic-review__pair {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+@media (min-width: 48rem) {
+  .bibliographic-review__pair {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.bibliographic-review__label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: var(--space-1);
+}
+
+.product-section-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.product-section-head .section__title {
+  margin: 0;
+}
+
+.product-section-head .actions {
+  margin: 0;
+}
+
 .form {
   max-width: var(--form-max);
 }

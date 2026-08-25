@@ -35,6 +35,7 @@ These ADRs capture the architecture decisions reached during the ShelfSense offl
 | [ADR-021](ADR-021-register-and-terminal-identity.md) | Register and Terminal identities | Accepted |
 | [ADR-022](ADR-022-warm-parchment-visual-tokens.md) | Warm Parchment visual tokens (supersede Phase 2.2 palette) | Implemented |
 | [ADR-023](ADR-023-customer-merge.md) | Customer identity merge | Accepted |
+| [ADR-024](ADR-024-bibliographic-data-authority.md) | External bibliographic data is non-authoritative | Accepted |
 
 ## Governing principle
 

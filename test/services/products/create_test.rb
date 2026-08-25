@@ -128,5 +128,70 @@ class Products::CreateTest < ActiveSupport::TestCase
     assert_equal product.industry_identifier, event.after_values["industry_identifier"]
     assert_equal "AUD-1", event.after_values["lookup_code"]
     assert_not event.after_values.key?("identifier_source")
+    assert_not AuditEvent.exists?(action: "products.enrich", subject_id: product.id)
+  end
+
+  test "persists optional bibliographic facts without requiring them" do
+    product = Products::Create.call(
+      attributes: {
+        name: "Bibliographic Book",
+        status: "draft",
+        brand_name: "Tor",
+        contribution_rows: [ { "display_name" => "N. K. Jemisin", "role" => "author" } ]
+      },
+      actor: @actor
+    )
+
+    assert_equal "Tor", product.brand_name
+    assert_equal "N. K. Jemisin", product.product_contributions.first.display_name
+  end
+
+  test "staff cover uploads are validated from bytes and purged on create rollback" do
+    png = [ "89504e470d0a1a0a0000000d4948445200000001000000010802000000907753de0000000a49444154789c63f80f00000101000518d84e0000000049454e44ae426082" ].pack("H*")
+    before = ActiveStorage::Blob.count
+
+    error = assert_raises(Products::Create::Error) do
+      Products::Create.call(
+        attributes: {
+          name: "Bad cover",
+          status: "draft",
+          cover_image: { io: StringIO.new("<script>nope</script>"), filename: "cover.png", content_type: "image/png" }
+        },
+        actor: @actor
+      )
+    end
+    assert_match(/accepted image/i, error.message)
+    assert_equal before, ActiveStorage::Blob.count
+
+    product = Products::Create.call(
+      attributes: {
+        name: "Good cover",
+        status: "draft",
+        cover_image: { io: StringIO.new(png), filename: "cover.png", content_type: "image/png" }
+      },
+      actor: @actor
+    )
+    assert product.cover_image.attached?
+    assert_equal "image/png", product.cover_image.blob.content_type
+  end
+
+  test "cover blobs are purged when a later unexpected error rolls back create" do
+    before = ActiveStorage::Blob.count
+
+    stub_audit_recorder_failure do
+      assert_raises(RuntimeError) do
+        Products::Create.call(
+          attributes: {
+            name: "Audit fail cover",
+            status: "draft",
+            cover_image: { io: StringIO.new(TINY_COVER_PNG), filename: "cover.png", content_type: "image/png" }
+          },
+          actor: @actor
+        )
+      end
+    end
+
+    assert_nil Product.find_by(name: "Audit fail cover")
+    assert_equal before, ActiveStorage::Blob.count
   end
 end

@@ -1,0 +1,24 @@
+<%= form_with model: [:admin, product_form], class: "form" do |form| %>
+  <%= render "shared/form_errors", record: product_form %>
+  <%= form.hidden_field :lock_version %>
+
+  <%= render layout: "shared/form_section", locals: { title: "Identity" } do %>
+    <div class="form-field">
+      <span class="muted">Code</span>
+      <div><code><%= product_form.code %></code> (immutable)</div>
+    </div>
+    <div class="form-field">
+      <%= form.label :name %>
+      <%= form.text_field :name, required: true %>
+    </div>
+    <div class="form-field">
+      <%= form.label :display_order %>
+      <%= form.number_field :display_order, required: true %>
+    </div>
+  <% end %>
+
+  <div class="actions">
+    <%= action_submit(form, "Save product form", style: :solid, intent: :brand) %>
+    <%= action_link_to("Cancel", admin_product_form_path(product_form), style: :ghost, intent: :neutral) %>
+  </div>
+<% end %>

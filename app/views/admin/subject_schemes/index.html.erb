@@ -1,0 +1,22 @@
+<% content_for :title, "Subject schemes" %>
+
+<%= render "shared/breadcrumbs", crumbs: [
+  { name: "Home", path: root_path },
+  { name: "Subject schemes" }
+] %>
+
+<%= render "shared/page_header",
+      title: "Subject schemes",
+      subtitle: "Scheme keys are seeded. Staff maintain names, activity, and headings." %>
+
+<% rows = @subject_schemes.map { |scheme|
+     [
+       link_to(scheme.admin_label, admin_subject_scheme_path(scheme)),
+       scheme.key,
+       scheme.scheme_version,
+       configuration_status_badge(scheme.active?)
+     ]
+   } %>
+<%= render "shared/data_table",
+      headers: ["Name", "Key", "Version", "Status"],
+      rows: rows %>

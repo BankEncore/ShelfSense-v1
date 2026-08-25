@@ -3,6 +3,7 @@ require_relative "../config/environment"
 require "rails/test_help"
 require_relative "support/phase2_fixtures"
 require_relative "support/pos_fixtures"
+require_relative "support/bibliographic_fixtures"
 
 module ActiveSupport
   class TestCase
@@ -14,5 +15,6 @@ module ActiveSupport
 
     include Phase2Fixtures
     include PosFixtures
+    include BibliographicFixtures
   end
 end
