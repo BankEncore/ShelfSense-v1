@@ -59,7 +59,8 @@ correction relationships
 
 ```text
 schema_version: 1   # envelopes already written (Phase 4/5)
-schema_version: 2   # all new completions once 6.1 ships v2 construction
+schema_version: 2   # 6.1 commercial expansion (stored envelopes remain valid)
+schema_version: 3   # all new completions once 10.4 ships stored-value issuance on signed-net
 ```
 
 Existing stored envelopes stay v1. Material semantic changes (sign rules, tax rate scale, identity fields) already required a new version in v1; v2 is that additive commercial expansion.

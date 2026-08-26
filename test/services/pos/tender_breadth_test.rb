@@ -25,8 +25,8 @@ class PosTenderBreadthTest < ActiveSupport::TestCase
   end
 
   test "seeded identities are protected Cash Card and Check" do
-    assert_equal %w[card cash check], TenderType.order(:code).pluck(:code)
-    assert TenderType.where(system_protected: true).where(code: %w[cash card check]).count == 3
+    assert_equal %w[card cash check gift_card store_credit trade_credit], TenderType.order(:code).pluck(:code)
+    assert TenderType.where(system_protected: true).where(code: %w[cash card check gift_card store_credit trade_credit]).count == 6
     assert_equal "omitted", @cash.external_reference_policy
     assert_equal "optional", @card.external_reference_policy
   end

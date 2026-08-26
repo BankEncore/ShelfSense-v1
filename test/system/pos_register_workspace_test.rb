@@ -211,12 +211,15 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     refute_match(/rgba\(\s*0,\s*0,\s*0,\s*0\s*\)/, background)
   end
 
-  test "f6 and f7 open controlled-action overlays and f5 is unbound" do
+  test "f5 opens stored-value tenders and f6 and f7 open controlled-action overlays" do
     open_register
     add_current_sku
 
     send_keys :f5
-    assert_no_selector "#pos_control_overlay", visible: true
+    assert_selector "#pos_other_overlay", visible: true
+    assert_selector "#pos_other_overlay li", text: "Gift card"
+    send_keys :escape
+    assert_no_selector "#pos_other_overlay", visible: true
 
     send_keys :f6
     assert_selector "#pos_control_overlay", visible: true
@@ -677,6 +680,19 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
   end
 
   private
+
+  test "gift-card shaped scan does not add merchandise" do
+    GiftCards::Programs.seed!
+    program = GiftCardProgram.find_by!(code: "generated")
+    number = GiftCards::Number.generate(program)
+
+    open_register
+    field = find("#pos-command-field")
+    field.fill_in with: number
+    field.send_keys :enter
+    assert_text(/gift card not on file/i, wait: 10)
+    assert_no_selector "tbody tr"
+  end
 
   def sign_in_admin
     visit new_session_path

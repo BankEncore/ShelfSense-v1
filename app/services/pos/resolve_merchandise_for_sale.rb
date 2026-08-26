@@ -12,6 +12,8 @@ module Pos
       :units,
       :product,
       :products,
+      :gift_card,
+      :gift_card_program,
       :message,
       keyword_init: true
     )
@@ -44,6 +46,10 @@ module Pos
     private
 
     def resolve_identifier
+      if GiftCards::Number.matches_active_program?(@identifier)
+        return resolve_gift_card
+      end
+
       result = Identifiers::Lookup.call(@identifier)
       case result.status
       when :not_found, :retired
@@ -61,6 +67,17 @@ module Pos
       else
         unavailable("merchandise not found")
       end
+    end
+
+    def resolve_gift_card
+      program = GiftCards::Lookup.program_for(@identifier)
+      card = GiftCards::Lookup.by_number(@identifier)
+      Result.new(
+        outcome: :gift_card,
+        gift_card: card,
+        gift_card_program: program,
+        message: card ? nil : "gift card not on file"
+      )
     end
 
     # POS eligibility for a matched product identity: the matcher intentionally does

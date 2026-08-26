@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_26_030000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_26_040000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -757,6 +757,58 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_030000) do
     t.check_constraint "status::text = ANY (ARRAY['open'::character varying::text, 'closed'::character varying::text])", name: "pos_sessions_status_valid"
   end
 
+  create_table "pos_stored_value_issuances", id: :uuid, default: nil, force: :cascade do |t|
+    t.bigint "amount_cents", null: false
+    t.timestamptz "created_at", null: false
+    t.uuid "gift_card_id"
+    t.uuid "gift_card_program_id"
+    t.integer "issuance_number", null: false
+    t.string "issuance_type", null: false
+    t.string "masked_card_snapshot"
+    t.string "number_authority", null: false
+    t.text "pending_card_number"
+    t.string "pending_card_number_digest"
+    t.string "pending_card_number_last_four"
+    t.string "pending_card_number_prefix"
+    t.uuid "pos_transaction_id", null: false
+    t.uuid "post_void_source_issuance_id"
+    t.uuid "stored_value_operation_id"
+    t.timestamptz "updated_at", null: false
+    t.index ["gift_card_id"], name: "index_pos_stored_value_issuances_on_gift_card_id"
+    t.index ["gift_card_program_id"], name: "index_pos_stored_value_issuances_on_gift_card_program_id"
+    t.index ["pending_card_number_digest"], name: "index_pos_sv_issuances_on_pending_digest", unique: true, where: "(pending_card_number_digest IS NOT NULL)"
+    t.index ["pos_transaction_id", "issuance_number"], name: "index_pos_sv_issuances_on_txn_and_number", unique: true
+    t.index ["post_void_source_issuance_id"], name: "idx_on_post_void_source_issuance_id_8d6ed268d9"
+    t.index ["stored_value_operation_id"], name: "index_pos_sv_issuances_on_operation", unique: true, where: "(stored_value_operation_id IS NOT NULL)"
+    t.check_constraint "amount_cents > 0", name: "pos_sv_issuances_amount_positive"
+    t.check_constraint "issuance_type::text <> 'reload'::text OR gift_card_id IS NOT NULL", name: "pos_sv_issuances_reload_has_card"
+    t.check_constraint "issuance_type::text = ANY (ARRAY['activation'::character varying, 'reload'::character varying]::text[])", name: "pos_sv_issuances_type_valid"
+    t.check_constraint "number_authority::text = ANY (ARRAY['system_generated'::character varying, 'manual_external'::character varying]::text[])", name: "pos_sv_issuances_authority_valid"
+  end
+
+  create_table "pos_stored_value_tender_details", id: :uuid, default: nil, force: :cascade do |t|
+    t.timestamptz "created_at", null: false
+    t.string "destination_mode", null: false
+    t.uuid "gift_card_id"
+    t.uuid "gift_card_program_id"
+    t.string "masked_card_snapshot"
+    t.text "pending_card_number"
+    t.string "pending_card_number_digest"
+    t.string "pending_card_number_last_four"
+    t.string "pending_card_number_prefix"
+    t.uuid "pos_tender_id", null: false
+    t.uuid "stored_value_account_id"
+    t.uuid "stored_value_operation_id"
+    t.timestamptz "updated_at", null: false
+    t.index ["gift_card_id"], name: "index_pos_stored_value_tender_details_on_gift_card_id"
+    t.index ["gift_card_program_id"], name: "index_pos_stored_value_tender_details_on_gift_card_program_id"
+    t.index ["pending_card_number_digest"], name: "index_pos_sv_tender_details_on_pending_digest", unique: true, where: "(pending_card_number_digest IS NOT NULL)"
+    t.index ["pos_tender_id"], name: "index_pos_stored_value_tender_details_on_pos_tender_id", unique: true
+    t.index ["stored_value_account_id"], name: "idx_on_stored_value_account_id_33336ce9b4"
+    t.index ["stored_value_operation_id"], name: "index_pos_sv_tender_details_on_operation", unique: true, where: "(stored_value_operation_id IS NOT NULL)"
+    t.check_constraint "destination_mode::text = ANY (ARRAY['existing_account'::character varying, 'customer_store_credit'::character varying, 'new_gift_card'::character varying]::text[])", name: "pos_sv_tender_details_mode_valid"
+  end
+
   create_table "pos_tenders", id: :uuid, default: nil, force: :cascade do |t|
     t.bigint "amount_cents", null: false
     t.bigint "amount_presented_cents"
@@ -779,8 +831,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_030000) do
     t.index ["post_void_source_tender_id"], name: "index_pos_tenders_one_post_void_source", unique: true, where: "(post_void_source_tender_id IS NOT NULL)"
     t.index ["tender_type_id"], name: "index_pos_tenders_on_tender_type_id"
     t.check_constraint "amount_cents >= 0", name: "pos_tenders_amount_nonnegative"
-    t.check_constraint "behavioral_category::text = 'cash'::text AND direction::text = 'payment'::text AND amount_presented_cents IS NOT NULL AND change_cents IS NOT NULL AND amount_presented_cents >= 0 AND change_cents >= 0 AND amount_presented_cents = (amount_cents + change_cents) OR behavioral_category::text = 'cash'::text AND direction::text = 'refund'::text AND amount_presented_cents IS NULL AND change_cents IS NULL OR (behavioral_category::text = ANY (ARRAY['card'::character varying::text, 'check'::character varying::text, 'other'::character varying::text])) AND amount_presented_cents IS NULL AND change_cents IS NULL", name: "pos_tenders_cash_presented_matches"
-    t.check_constraint "behavioral_category::text = ANY (ARRAY['cash'::character varying::text, 'card'::character varying::text, 'check'::character varying::text, 'other'::character varying::text])", name: "pos_tenders_category_valid"
+    t.check_constraint "behavioral_category::text = 'cash'::text AND direction::text = 'payment'::text AND amount_presented_cents IS NOT NULL AND change_cents IS NOT NULL AND amount_presented_cents >= 0 AND change_cents >= 0 AND amount_presented_cents = (amount_cents + change_cents) OR behavioral_category::text = 'cash'::text AND direction::text = 'refund'::text AND amount_presented_cents IS NULL AND change_cents IS NULL OR (behavioral_category::text = ANY (ARRAY['card'::character varying, 'check'::character varying, 'other'::character varying, 'stored_value'::character varying]::text[])) AND amount_presented_cents IS NULL AND change_cents IS NULL", name: "pos_tenders_cash_presented_matches"
+    t.check_constraint "behavioral_category::text = ANY (ARRAY['cash'::character varying, 'card'::character varying, 'check'::character varying, 'other'::character varying, 'stored_value'::character varying]::text[])", name: "pos_tenders_category_valid"
     t.check_constraint "direction::text = ANY (ARRAY['payment'::character varying::text, 'refund'::character varying::text])", name: "pos_tenders_direction_valid"
     t.check_constraint "post_void_source_tender_id IS NULL OR post_void_source_tender_id <> id", name: "pos_tenders_post_void_source_not_self"
     t.check_constraint "tender_number >= 1", name: "pos_tenders_number_positive"
@@ -847,6 +899,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_030000) do
     t.timestamptz "completed_at"
     t.timestamptz "created_at", null: false
     t.string "currency_code", limit: 3, null: false
+    t.uuid "customer_id"
     t.bigint "discount_cents", default: 0, null: false
     t.integer "lock_version", default: 0, null: false
     t.timestamptz "occurred_at"
@@ -864,12 +917,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_030000) do
     t.string "status", null: false
     t.uuid "store_id", null: false
     t.integer "store_number_snapshot"
+    t.bigint "stored_value_issuance_cents", default: 0, null: false
     t.bigint "subtotal_cents", default: 0, null: false
     t.bigint "tax_cents", default: 0, null: false
     t.bigint "total_cents", default: 0, null: false
     t.string "transaction_reference"
     t.timestamptz "updated_at", null: false
     t.index ["cashier_user_id"], name: "index_pos_transactions_on_cashier_user_id"
+    t.index ["customer_id"], name: "index_pos_transactions_on_customer_id"
     t.index ["pos_session_id"], name: "index_pos_transactions_on_pos_session_id"
     t.index ["pos_session_id"], name: "index_pos_transactions_one_working_per_session", unique: true, where: "((status)::text = 'working'::text)"
     t.index ["post_void_of_transaction_id"], name: "index_pos_transactions_one_post_void_per_source", unique: true, where: "(post_void_of_transaction_id IS NOT NULL)"
@@ -883,7 +938,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_030000) do
     t.check_constraint "post_void_of_transaction_id IS NULL OR post_void_of_transaction_id <> id", name: "pos_transactions_post_void_not_self"
     t.check_constraint "return_subtotal_cents >= 0 AND return_discount_cents >= 0 AND return_tax_cents >= 0 AND return_total_cents >= 0", name: "pos_transactions_return_totals_nonnegative"
     t.check_constraint "return_total_cents = (return_subtotal_cents - return_discount_cents + return_tax_cents)", name: "pos_transactions_return_total_matches_components"
-    t.check_constraint "signed_net_cents = (subtotal_cents - discount_cents + tax_cents - return_total_cents)", name: "pos_transactions_signed_net_matches_components"
+    t.check_constraint "signed_net_cents = (subtotal_cents - discount_cents + tax_cents + stored_value_issuance_cents - return_total_cents)", name: "pos_transactions_signed_net_matches_components"
     t.check_constraint "status::text = 'working'::text AND receipt_sequence IS NULL AND store_number_snapshot IS NULL AND register_number_snapshot IS NULL AND occurred_at IS NULL AND business_date IS NULL AND completed_at IS NULL AND cancelled_at IS NULL OR status::text = 'completed'::text AND receipt_sequence IS NOT NULL AND store_number_snapshot IS NOT NULL AND register_number_snapshot IS NOT NULL AND occurred_at IS NOT NULL AND business_date IS NOT NULL AND completed_at IS NOT NULL AND cancelled_at IS NULL OR status::text = 'cancelled'::text AND receipt_sequence IS NULL AND store_number_snapshot IS NULL AND register_number_snapshot IS NULL AND occurred_at IS NULL AND business_date IS NULL AND completed_at IS NULL AND cancelled_at IS NOT NULL", name: "pos_transactions_status_null_rules"
     t.check_constraint "status::text = ANY (ARRAY['working'::character varying::text, 'completed'::character varying::text, 'cancelled'::character varying::text])", name: "pos_transactions_status_valid"
     t.check_constraint "total_cents = abs(signed_net_cents)", name: "pos_transactions_total_matches_abs_signed_net"
@@ -1525,17 +1580,22 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_030000) do
 
   create_table "tender_types", id: :uuid, default: nil, force: :cascade do |t|
     t.boolean "active", default: true, null: false
+    t.boolean "allows_generic_refund_destination", default: false, null: false
+    t.boolean "allows_original_tender_refund", default: false, null: false
     t.boolean "allows_refund", default: false, null: false
+    t.boolean "allows_refund_instrument_replacement", default: false, null: false
     t.string "behavioral_category", null: false
     t.string "code", null: false
     t.timestamptz "created_at", null: false
     t.string "external_reference_policy", null: false
     t.integer "lock_version", default: 0, null: false
     t.string "name", null: false
+    t.string "stored_value_account_type"
     t.boolean "system_protected", default: false, null: false
     t.timestamptz "updated_at", null: false
     t.index ["code"], name: "index_tender_types_on_code", unique: true
-    t.check_constraint "behavioral_category::text = ANY (ARRAY['cash'::character varying::text, 'card'::character varying::text, 'check'::character varying::text, 'other'::character varying::text])", name: "tender_types_category_valid"
+    t.check_constraint "behavioral_category::text = 'stored_value'::text AND (stored_value_account_type::text = ANY (ARRAY['store_credit'::character varying, 'trade_credit'::character varying, 'gift_card'::character varying]::text[])) OR behavioral_category::text <> 'stored_value'::text AND stored_value_account_type IS NULL", name: "tender_types_sv_account_type_matches"
+    t.check_constraint "behavioral_category::text = ANY (ARRAY['cash'::character varying, 'card'::character varying, 'check'::character varying, 'other'::character varying, 'stored_value'::character varying]::text[])", name: "tender_types_category_valid"
     t.check_constraint "code::text <> 'cash'::text OR allows_refund = true", name: "tender_types_cash_allows_refund"
     t.check_constraint "external_reference_policy::text = ANY (ARRAY['omitted'::character varying::text, 'optional'::character varying::text, 'required'::character varying::text])", name: "tender_types_reference_policy_valid"
   end
@@ -1665,6 +1725,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_030000) do
   add_foreign_key "pos_sessions", "registers"
   add_foreign_key "pos_sessions", "stores"
   add_foreign_key "pos_sessions", "users", column: "cashier_user_id"
+  add_foreign_key "pos_stored_value_issuances", "gift_card_programs"
+  add_foreign_key "pos_stored_value_issuances", "gift_cards"
+  add_foreign_key "pos_stored_value_issuances", "pos_stored_value_issuances", column: "post_void_source_issuance_id"
+  add_foreign_key "pos_stored_value_issuances", "pos_transactions"
+  add_foreign_key "pos_stored_value_issuances", "stored_value_operations"
+  add_foreign_key "pos_stored_value_tender_details", "gift_card_programs"
+  add_foreign_key "pos_stored_value_tender_details", "gift_cards"
+  add_foreign_key "pos_stored_value_tender_details", "pos_tenders"
+  add_foreign_key "pos_stored_value_tender_details", "stored_value_accounts"
+  add_foreign_key "pos_stored_value_tender_details", "stored_value_operations"
   add_foreign_key "pos_tenders", "pos_tenders", column: "post_void_source_tender_id", on_delete: :restrict
   add_foreign_key "pos_tenders", "pos_transactions"
   add_foreign_key "pos_tenders", "tender_types", on_delete: :restrict
@@ -1676,6 +1746,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_030000) do
   add_foreign_key "pos_transaction_lines", "product_variants"
   add_foreign_key "pos_transaction_lines", "tax_classes"
   add_foreign_key "pos_transaction_lines", "tax_classes", column: "default_tax_class_id"
+  add_foreign_key "pos_transactions", "customers"
   add_foreign_key "pos_transactions", "pos_reporting_periods", column: "reporting_period_id"
   add_foreign_key "pos_transactions", "pos_sessions"
   add_foreign_key "pos_transactions", "pos_transactions", column: "post_void_of_transaction_id", on_delete: :restrict

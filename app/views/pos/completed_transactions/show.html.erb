@@ -15,6 +15,24 @@
     <p class="pos-receipt__ref"><%= @transaction.transaction_reference %></p>
     <%= render "pos/receipts/post_void_banner", transaction: @transaction, linked: true %>
 
+    <% credentials = Pos::FirstPrint.call(@transaction) %>
+    <% if credentials.any? %>
+      <section class="pos-first-print" data-controller="pos-receipt">
+        <h2>Gift card credentials</h2>
+        <p>Print these numbers now. Ordinary receipts stay masked.</p>
+        <ul>
+          <% credentials.each do |credential| %>
+            <li>
+              <%= credential.kind.humanize %>
+              · <%= credential.program_name %>
+              · <%= format_money_cents(credential.amount_cents) %>
+              · <%= credential.number %>
+            </li>
+          <% end %>
+        </ul>
+      </section>
+    <% end %>
+
     <dl class="pos-receipt__totals">
       <%= render "pos/receipts/directional_totals", transaction: @transaction %>
       <% @tenders.each do |tender| %>

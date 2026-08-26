@@ -6,10 +6,10 @@ module Pos
       new(**attrs).call
     end
 
-    def initialize(session:, actor:, currency_code: "USD")
+    def initialize(session:, actor:, currency_code: nil)
       @session = session
       @actor = actor
-      @currency_code = currency_code
+      @currency_code = currency_code.presence || SystemSettings.current.base_currency_code
     end
 
     def call

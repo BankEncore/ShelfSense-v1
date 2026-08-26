@@ -19,6 +19,7 @@ module Pos
       Pos::Support.authorize!(@actor, @transaction.store)
       Pos::Support.require_active_context!(@transaction.store, @transaction.register)
       Pos::Support.require_transaction_cashier!(@actor, @transaction)
+      raise Pos::Error, "use stored-value tender for stored value" if @tender_type.stored_value?
       raise Pos::Error, "tender is not available" unless @tender_type.active?
       raise Pos::Error, "tender does not allow refunds" unless @tender_type.allows_refund?
       raise Pos::Error, "amount must be positive" unless @amount_cents.positive?
@@ -31,7 +32,7 @@ module Pos
 
       PosTransaction.transaction do
         transaction = Pos::Support.lock_working_transaction!(@transaction, @expected_lock_version)
-        raise Pos::Error, "transaction has no merchandise" if transaction.pos_transaction_lines.none?
+        Pos::Support.require_commercial_content!(transaction)
         raise Pos::Error, "transaction does not require a refund" if transaction.signed_net_cents >= 0
         unless Pos::Support.settlement_direction(transaction) == :refund
           raise Pos::Error, "transaction does not require a refund"

@@ -21,7 +21,7 @@ module Pos
 
       PosTransaction.transaction do
         transaction = Pos::Support.lock_working_transaction!(@transaction, @expected_lock_version)
-        raise Pos::Error, "transaction has no merchandise" if transaction.pos_transaction_lines.none?
+        Pos::Support.require_commercial_content!(transaction)
 
         cash_type = Pos::Support.cash_tender_type
         raise Pos::Error, "Cash is not available" unless cash_type.active?

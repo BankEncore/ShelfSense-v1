@@ -277,7 +277,7 @@ class PosCompleteTransactionTest < ActiveSupport::TestCase
 
   test "headless vertical slice matches Phase 4 acceptance" do
     envelope = Pos::CompleteTransaction.call(**complete_args).operation.envelope
-    assert_equal 2, envelope.fetch("schema_version")
+    assert_equal 3, envelope.fetch("schema_version")
     assert_equal envelope.fetch("transaction").fetch("total_cents"), envelope.fetch("transaction").fetch("signed_net_cents")
     assert_equal 0, envelope.fetch("transaction").fetch("return_subtotal_cents")
     assert_equal 0, envelope.fetch("transaction").fetch("return_discount_cents")

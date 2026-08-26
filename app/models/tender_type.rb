@@ -4,9 +4,10 @@ class TenderType < ApplicationRecord
   include UuidV7PrimaryKey
   include HasMachineCode
 
-  CATEGORIES = %w[cash card check other].freeze
+  CATEGORIES = %w[cash card check stored_value other].freeze
   REFERENCE_POLICIES = %w[omitted optional required].freeze
-  SYSTEM_CODES = %w[cash card check].freeze
+  SYSTEM_CODES = %w[cash card check store_credit trade_credit gift_card].freeze
+  STORED_VALUE_ACCOUNT_TYPES = %w[store_credit trade_credit gift_card].freeze
 
   has_many :pos_tenders, foreign_key: :tender_type_id, inverse_of: :configured_tender_type, dependent: :restrict_with_exception
 
@@ -14,7 +15,9 @@ class TenderType < ApplicationRecord
   validates :code, uniqueness: true, format: { with: Codes::Normalizer::FORMAT }
   validates :behavioral_category, inclusion: { in: CATEGORIES }
   validates :external_reference_policy, inclusion: { in: REFERENCE_POLICIES }
+  validates :stored_value_account_type, inclusion: { in: STORED_VALUE_ACCOUNT_TYPES }, allow_nil: true
   validate :protected_identity_rules
+  validate :stored_value_account_type_matches_category
   validate :unprotected_category_is_other
   validate :cash_keeps_omitted_reference
   validate :cash_keeps_allows_refund
@@ -25,7 +28,7 @@ class TenderType < ApplicationRecord
   scope :admin_ordered, -> { order(:behavioral_category, :code) }
   scope :cashier_selectable, -> {
     active.order(
-      Arel.sql("CASE behavioral_category WHEN 'cash' THEN 0 WHEN 'card' THEN 1 WHEN 'check' THEN 2 ELSE 3 END"),
+      Arel.sql("CASE behavioral_category WHEN 'cash' THEN 0 WHEN 'card' THEN 1 WHEN 'check' THEN 2 WHEN 'stored_value' THEN 3 ELSE 4 END"),
       :code
     )
   }
@@ -37,6 +40,10 @@ class TenderType < ApplicationRecord
 
   def cash?
     behavioral_category == "cash"
+  end
+
+  def stored_value?
+    behavioral_category == "stored_value"
   end
 
   def other?
@@ -66,7 +73,11 @@ class TenderType < ApplicationRecord
       name: name,
       category: behavioral_category,
       reference_policy: external_reference_policy,
-      allows_refund: allows_refund
+      allows_refund: allows_refund,
+      stored_value_account_type: stored_value_account_type,
+      allows_original_tender_refund: allows_original_tender_refund,
+      allows_generic_refund_destination: allows_generic_refund_destination,
+      allows_refund_instrument_replacement: allows_refund_instrument_replacement
     }
   end
 
@@ -88,6 +99,9 @@ class TenderType < ApplicationRecord
     end
     if will_save_change_to_code? && persisted?
       errors.add(:code, "cannot be changed for a system identity")
+    end
+    if stored_value? && will_save_change_to_stored_value_account_type? && persisted?
+      errors.add(:stored_value_account_type, "cannot be changed for a system identity")
     end
     if cash? && will_save_change_to_active? && !active?
       errors.add(:active, "cannot deactivate Cash")
@@ -120,5 +134,13 @@ class TenderType < ApplicationRecord
     return if allows_refund
 
     errors.add(:allows_refund, "must remain true for Cash")
+  end
+
+  def stored_value_account_type_matches_category
+    if stored_value?
+      errors.add(:stored_value_account_type, "is required for stored-value tenders") if stored_value_account_type.blank?
+    elsif stored_value_account_type.present?
+      errors.add(:stored_value_account_type, "must be blank unless stored value")
+    end
   end
 end

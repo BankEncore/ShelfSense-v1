@@ -8,11 +8,13 @@ class PosTransaction < ApplicationRecord
   belongs_to :pos_session
   belongs_to :reporting_period, class_name: "PosReportingPeriod"
   belongs_to :cashier_user, class_name: "User"
+  belongs_to :customer, optional: true
   belongs_to :post_void_of, class_name: "PosTransaction", foreign_key: :post_void_of_transaction_id, optional: true
   has_one :post_void, class_name: "PosTransaction", foreign_key: :post_void_of_transaction_id, dependent: :restrict_with_exception
   has_many :pos_transaction_lines, -> { order(:line_number) }, dependent: :destroy
   has_many :pos_controlled_actions, dependent: :destroy
   has_many :pos_tenders, -> { ordered }, dependent: :destroy
+  has_many :pos_stored_value_issuances, -> { ordered }, dependent: :destroy
   has_many :pos_operations, dependent: :restrict_with_exception
 
   validates :status, :currency_code, presence: true

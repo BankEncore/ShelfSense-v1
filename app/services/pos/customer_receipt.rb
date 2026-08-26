@@ -124,6 +124,7 @@ module Pos
 
     def show_detail_totals?
       @transaction.discount_cents.positive? || @transaction.return_total_cents.positive? ||
+        @transaction.stored_value_issuance_cents.to_i != 0 ||
         @transaction.pos_transaction_lines.any?(&:return?)
     end
 
@@ -216,7 +217,30 @@ module Pos
     end
 
     def customer_lines
-      @transaction.pos_transaction_lines.map { |line| build_line(line) }
+      @transaction.pos_transaction_lines.map { |line| build_line(line) } + issuance_lines
+    end
+
+    def issuance_lines
+      @transaction.pos_stored_value_issuances.ordered.map do |issuance|
+        label = issuance.activation? ? "Gift card activation" : "Gift card reload"
+        masked = issuance.masked_card_snapshot
+        Line.new(
+          kind_banner: nil,
+          identifier: masked.to_s,
+          condition: nil,
+          description: [ label, issuance.gift_card_program&.name, masked ].compact.join(" · "),
+          amount_cents: issuance.post_void_generated? ? -issuance.amount_cents : issuance.amount_cents,
+          tax_indicators: "",
+          quantity: 1,
+          unit_price_cents: issuance.amount_cents,
+          show_unit_price: false,
+          extended_price_cents: issuance.amount_cents,
+          discount_cents: 0,
+          discount_label: nil,
+          original_reference: nil,
+          unlinked: false
+        )
+      end
     end
 
     def build_line(line)
@@ -300,7 +324,7 @@ module Pos
         raise Pos::Error, "receipt tax components do not equal persisted tax"
       end
 
-      computed = subtotal_cents + total_tax_cents
+      computed = subtotal_cents + total_tax_cents + @transaction.stored_value_issuance_cents.to_i
       return if computed == signed_net_cents
 
       raise Pos::Error, "receipt total does not equal signed_net_cents"

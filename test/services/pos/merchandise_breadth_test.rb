@@ -123,7 +123,7 @@ class PosMerchandiseBreadthTest < ActiveSupport::TestCase
     unit_line = transaction.pos_transaction_lines.find_by!(inventory_unit_id: @unit.id)
     service_line = transaction.pos_transaction_lines.find_by!(product_variant_id: @non_inventory.id)
 
-    assert_equal 2, envelope.fetch("schema_version")
+    assert_equal 3, envelope.fetch("schema_version")
     assert_equal transaction.total_cents, envelope.fetch("transaction").fetch("signed_net_cents")
     assert_equal @unit.id.to_s, envelope.fetch("lines").find { |line| line["inventory_unit_id"] }.fetch("inventory_unit_id")
     refute envelope.fetch("lines").find { |line| line["product_variant_id"] == @standard.id }.key?("inventory_unit_id")

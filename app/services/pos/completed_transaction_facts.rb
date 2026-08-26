@@ -45,8 +45,8 @@ module Pos
       raise Pos::Error, "completed envelope is missing register number" unless positive_integer?(receipt["register_number"])
       raise Pos::Error, "completed envelope fact_type is invalid" unless @envelope.dig("operation", "fact_type") == PosOperation::FACT_TYPE
       version = @envelope.fetch("schema_version")
-      raise Pos::Error, "completed envelope schema_version is invalid" unless [ 1, 2 ].include?(version)
-      return unless version == 2
+      raise Pos::Error, "completed envelope schema_version is invalid" unless [ 1, 2, 3 ].include?(version)
+      return unless version >= 2
 
       signed_net = @envelope.fetch("transaction")["signed_net_cents"]
       raise Pos::Error, "completed envelope is missing signed_net_cents" unless signed_net.is_a?(Integer)
@@ -57,6 +57,7 @@ module Pos
       verify_controlled_actions!
       verify_line_pricing_keys!
       verify_unlinked_return_facts!
+      verify_issuances! if version >= 3
     end
 
     private
@@ -132,7 +133,8 @@ module Pos
       end
 
       sale_total = subtotal - discount + tax
-      unless signed_net == sale_total - return_total
+      issuance = schema_version >= 3 ? optional_integer!(transaction, "stored_value_issuance_cents") : 0
+      unless signed_net == sale_total + issuance - return_total
         raise Pos::Error, "completed envelope signed_net_cents is invalid"
       end
       unless total == signed_net.abs
@@ -318,6 +320,26 @@ module Pos
         elsif targeting.any? { |action| action["action"] == "unlinked_return" }
           raise Pos::Error, "completed envelope cannot include unlinked_return action"
         end
+      end
+    end
+
+    def schema_version
+      @envelope.fetch("schema_version")
+    end
+
+    def verify_issuances!
+      transaction = @envelope.fetch("transaction")
+      raise Pos::Error, "completed envelope is missing stored_value_issuance_cents" unless transaction["stored_value_issuance_cents"].is_a?(Integer)
+
+      issuances = @envelope["issuances"]
+      return if issuances.nil?
+      raise Pos::Error, "completed envelope issuances are invalid" unless issuances.is_a?(Array)
+
+      issuances.each do |issuance|
+        raise Pos::Error, "completed envelope issuance is invalid" unless issuance.is_a?(Hash)
+        raise Pos::Error, "completed envelope is missing issuance type" if issuance["issuance_type"].blank?
+        raise Pos::Error, "completed envelope is missing issuance amount" unless issuance["amount_cents"].is_a?(Integer)
+        raise Pos::Error, "completed envelope cannot include a gift-card number" if issuance.key?("number") || issuance.key?("pending_card_number")
       end
     end
 
