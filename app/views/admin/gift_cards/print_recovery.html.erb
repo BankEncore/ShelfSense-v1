@@ -1,0 +1,27 @@
+<% content_for :title, "Recover gift-card print" %>
+<%= render "shared/breadcrumbs", crumbs: [
+  { name: "Home", path: root_path },
+  { name: "Gift cards", path: admin_gift_cards_path },
+  { name: @gift_card.masked_number, path: admin_gift_card_path(@gift_card) },
+  { name: "Print recovery" }
+] %>
+<%= render "shared/page_header", title: "Recover print for #{@gift_card.masked_number}" %>
+<p>Exceptional recovery of a system-generated credential. Ordinary receipts stay masked. This is not a general reveal screen.</p>
+<% if @recovered_number.present? %>
+  <section class="pos-first-print">
+    <h2>Recovered number</h2>
+    <p><%= @recovered_number %></p>
+    <p class="muted">Print now. This page is the only delivery of the full number.</p>
+  </section>
+<% else %>
+  <%= form_with url: print_recovery_admin_gift_card_path(@gift_card), method: :post, class: "form" do |form| %>
+    <div class="form-field">
+      <%= label_tag :reason, "Reason" %>
+      <%= text_field_tag :reason, params[:reason], required: true, autocomplete: "off" %>
+    </div>
+    <div class="actions">
+      <%= action_submit(form, "Recover print", style: :solid, intent: :brand) %>
+      <%= action_link_to("Cancel", admin_gift_card_path(@gift_card), style: :ghost, intent: :neutral) %>
+    </div>
+  <% end %>
+<% end %>

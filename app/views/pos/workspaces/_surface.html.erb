@@ -69,6 +69,7 @@
      data-register-workspace-settlement-value="<%= settlement_direction %>"
      data-register-workspace-refund-remaining-value="<%= remaining_refund_cents %>"
      data-register-workspace-payment-remaining-value="<%= remaining_payment_cents %>"
+     data-register-workspace-cash-out-allowed-value="<%= effective_permissions.include?("gift_cards.cash_out") ? "true" : "false" %>"
      data-register-workspace-transactions-url-value="<%= pos_transactions_path %>"
      data-register-workspace-policies-value="<%= h((@control_policies || {}).to_json) %>"
      data-register-workspace-reasons-value="<%= h(Pos::ControlledActionReasons::CATALOGS.to_json) %>"
@@ -390,6 +391,12 @@
               data: { action: "register-workspace#openOverlay", register_workspace_target: "cancelButton" } %>
       </div>
     </div>
+
+    <% if effective_permissions.include?("gift_cards.cash_out") %>
+      <%= form_with url: lookup_pos_cash_outs_path, method: :post, local: true, html: { class: "pos-hidden", data: { register_workspace_target: "cashOutForm" } } do %>
+        <%= hidden_field_tag :card_number, nil, data: { register_workspace_target: "cashOutCardInput" } %>
+      <% end %>
+    <% end %>
 
     <%= form_with url: pos_register_merchandise_path(register_scope), method: :post, html: { class: "pos-hidden", data: { register_workspace_target: "merchandiseForm", turbo: true } } do %>
       <%= hidden_field_tag :register_id, @register.id %>

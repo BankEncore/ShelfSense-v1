@@ -21,10 +21,25 @@ module Pos
     end
 
     def groups
-      [ sales_group, returns_group, post_void_group, net_group, tenders_group, cash_group ]
+      [ sales_group, stored_value_group, returns_group, post_void_group, net_group, tenders_group, cash_group ]
     end
 
     private
+
+    def stored_value_group
+      Group.new(title: "Stored value", rows: [
+        money_row("Gift-card issuance", @totals.stored_value_issuance_cents),
+        money_row("Store-credit payments", @totals.store_credit_payment_cents),
+        money_row("Trade-credit payments", @totals.trade_credit_payment_cents),
+        money_row("Gift-card payments", @totals.gift_card_payment_cents),
+        money_row("Refund to original gift card", @totals.gift_card_existing_refund_cents),
+        money_row("Refund to new gift card", @totals.gift_card_new_refund_cents),
+        money_row("Refund to store credit", @totals.store_credit_refund_destination_cents),
+        count_row("Gift-card cash-outs", @totals.gift_card_cash_out_count),
+        money_row("Gift-card cash-outs", @totals.gift_card_cash_out_cents),
+        money_row("Gift-card cash-out reversals", @totals.gift_card_cash_out_reversal_cents)
+      ])
+    end
 
     def sales_group
       Group.new(title: "Sales", rows: [
@@ -81,6 +96,8 @@ module Pos
           money_row("Opening float", @session.opening_float_cents),
           money_row("Cash payments", @totals.cash_payment_cents),
           money_row("Cash refunds", @totals.cash_refund_cents),
+          money_row("Gift-card cash-outs", @totals.gift_card_cash_out_cents),
+          money_row("Gift-card cash-out reversals", @totals.gift_card_cash_out_reversal_cents),
           signed_row("Expected Cash", @totals.expected_cash_cents)
         ]
       when :session
@@ -88,6 +105,8 @@ module Pos
           money_row("Opening float", @session.opening_float_cents),
           money_row("Cash payments", @totals.cash_payment_cents),
           money_row("Cash refunds", @totals.cash_refund_cents),
+          money_row("Gift-card cash-outs", @totals.gift_card_cash_out_cents),
+          money_row("Gift-card cash-out reversals", @totals.gift_card_cash_out_reversal_cents),
           signed_row("Expected closing Cash", @session.closing_expected_cash_cents),
           money_row("Counted Cash", @session.closing_count_cents),
           signed_row("Variance", @session.closing_variance_cents)
@@ -98,6 +117,8 @@ module Pos
           money_row("Opening floats total", @totals.opening_float_cents_sum),
           money_row("Cash payments", @totals.cash_payment_cents),
           money_row("Cash refunds", @totals.cash_refund_cents),
+          money_row("Gift-card cash-outs", @totals.gift_card_cash_out_cents),
+          money_row("Gift-card cash-out reversals", @totals.gift_card_cash_out_reversal_cents),
           signed_row("Expected closing Cash", @totals.closing_expected_cash_cents_sum),
           money_row("Counted closing Cash", @totals.closing_count_cents_sum),
           signed_row("Closing variance", @totals.closing_variance_cents_sum)

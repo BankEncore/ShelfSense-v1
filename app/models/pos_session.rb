@@ -8,6 +8,7 @@ class PosSession < ApplicationRecord
   belongs_to :reporting_period, class_name: "PosReportingPeriod"
   belongs_to :cashier_user, class_name: "User"
   has_many :pos_transactions, dependent: :restrict_with_exception
+  has_many :gift_card_cash_outs, dependent: :restrict_with_exception
 
   validates :status, :opened_at, presence: true
   validates :status, inclusion: { in: STATUSES }

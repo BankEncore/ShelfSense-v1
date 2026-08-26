@@ -121,6 +121,9 @@
           <% end %>
         <% end %>
       <% end %>
+      <% receipt.remaining_balance_notes.each do |note| %>
+        <div><dt><%= note.label %> <%= note.masked_card %></dt><dd><%= pos_print_amount(note.balance_cents) %></dd></div>
+      <% end %>
     </dl>
 
     <% unless receipt.post_void_reversal? %>

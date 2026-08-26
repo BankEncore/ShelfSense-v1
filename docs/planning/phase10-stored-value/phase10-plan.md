@@ -1,6 +1,6 @@
 # Phase 10 — Stored value plan
 
-Status: **Proposed**.
+Status: **Proposed**. Implementation slices 10.1–10.5 land on `main`; the Phase 10 milestone stays open until the [manual test plan](phase10-manual-test-plan.md) is executed.
 
 ## Goal
 

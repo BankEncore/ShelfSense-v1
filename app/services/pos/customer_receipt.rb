@@ -12,12 +12,13 @@ module Pos
     )
     TaxGroup = Struct.new(:letter, :name, :rate_percent, :basis_cents, :tax_cents, keyword_init: true)
     TenderLine = Struct.new(:label, :amount_cents, :presented_cents, :change_cents, keyword_init: true)
+    RemainingBalanceNote = Struct.new(:label, :masked_card, :balance_cents, keyword_init: true)
 
     def self.build(transaction)
       new(transaction).tap(&:prepare!)
     end
 
-    attr_reader :transaction, :error, :lines, :tax_groups, :tenders
+    attr_reader :transaction, :error, :lines, :tax_groups, :tenders, :remaining_balance_notes
 
     def initialize(transaction)
       @transaction = transaction
@@ -26,6 +27,7 @@ module Pos
       @lines = []
       @tax_groups = []
       @tenders = []
+      @remaining_balance_notes = []
       @indicator_by_key = {}
     end
 
@@ -38,6 +40,7 @@ module Pos
       assign_tax_groups!
       @lines = customer_lines
       @tenders = customer_tenders
+      @remaining_balance_notes = remaining_balance_notes_for_print
       verify_total!
       self
     end
@@ -316,6 +319,32 @@ module Pos
 
     def pos_cash_payment?(tender)
       tender.cash? && tender.direction == "payment"
+    end
+
+    def remaining_balance_notes_for_print
+      notes = []
+      @transaction.pos_stored_value_issuances.ordered.each do |issuance|
+        card = issuance.gift_card
+        next unless card
+
+        notes << RemainingBalanceNote.new(
+          label: "Remaining balance",
+          masked_card: issuance.masked_card_snapshot.presence || card.masked_number,
+          balance_cents: card.balance_cents
+        )
+      end
+      @transaction.pos_tenders.ordered.each do |tender|
+        detail = tender.stored_value_tender_detail
+        card = detail&.gift_card
+        next unless card
+
+        notes << RemainingBalanceNote.new(
+          label: "Remaining balance",
+          masked_card: detail.masked_card_snapshot.presence || card.masked_number,
+          balance_cents: card.balance_cents
+        )
+      end
+      notes
     end
 
     def verify_total!

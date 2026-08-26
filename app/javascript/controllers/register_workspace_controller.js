@@ -29,6 +29,8 @@ export default class extends Controller {
     "giftCardNumberField",
     "cardNumberInput",
     "issuanceCardNumber",
+    "cashOutForm",
+    "cashOutCardInput",
     "destinationModeInput",
     "referenceLabel",
     "removeTenderInput",
@@ -174,7 +176,8 @@ export default class extends Controller {
     settlement: String,
     refundRemaining: Number,
     paymentRemaining: Number,
-    transactionsUrl: String
+    transactionsUrl: String,
+    cashOutAllowed: Boolean
   }
 
   connect() {
@@ -1537,6 +1540,13 @@ export default class extends Controller {
         this.prefillRemaining()
         this.enableReadyActions()
         return
+      }
+      if (this.cashOutAllowedValue && !this.hasCommercialContent() && this.remainingCents() === 0) {
+        if (this.hasCashOutFormTarget && this.hasCashOutCardInputTarget) {
+          this.cashOutCardInputTarget.value = scanned
+          this.cashOutFormTarget.requestSubmit()
+          return
+        }
       }
       this.showFeedback(result.masked_number ? `Gift card ${result.masked_number}` : "Gift card on file")
       this.enableReadyActions()

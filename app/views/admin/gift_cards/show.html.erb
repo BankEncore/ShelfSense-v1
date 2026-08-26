@@ -17,6 +17,9 @@
 <% if !@gift_card.replaced? && !@gift_card.closed? && effective_permissions.include?("gift_cards.associate_customer") %>
   <% actions << action_link_to("Associate customer", associate_admin_gift_card_path(@gift_card), style: :outline, intent: :neutral) %>
 <% end %>
+<% if @gift_card.gift_card_program.system_generated? && effective_permissions.include?("gift_cards.view") %>
+  <% actions << action_link_to("Recover print", print_recovery_admin_gift_card_path(@gift_card), style: :outline, intent: :neutral) %>
+<% end %>
 <% if !@gift_card.replaced? && !@gift_card.closed? && effective_permissions.include?("stored_value.adjust") %>
   <% actions << action_link_to("Adjust", new_admin_gift_card_stored_value_adjustment_path(@gift_card), style: :outline, intent: :neutral) %>
 <% end %>

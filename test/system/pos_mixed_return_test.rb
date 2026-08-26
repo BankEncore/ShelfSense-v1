@@ -103,6 +103,9 @@ class PosMixedReturnTest < ApplicationSystemTestCase
     assert_selector "tr.is-selected[data-direction='return']"
     send_keys :f5
     assert_no_selector "#pos_control_overlay", visible: true
+    assert_selector "#pos_other_overlay", visible: true
+    send_keys :escape
+    assert_no_selector "#pos_other_overlay", visible: true
     send_keys :f6
     assert_no_selector "#pos_control_overlay", visible: true
     send_keys :f7

@@ -121,7 +121,57 @@ module Pos
     def expected_cash_cents
       return @session.closing_expected_cash_cents if @session.closed?
 
-      @session.opening_float_cents + cash_payment_cents - cash_refund_cents
+      @session.opening_float_cents + cash_payment_cents - cash_refund_cents -
+        gift_card_cash_out_cents + gift_card_cash_out_reversal_cents
+    end
+
+    def stored_value_issuance_cents
+      commercial_transactions.sum(:stored_value_issuance_cents)
+    end
+
+    def stored_value_payment_cents
+      category_payment_cents("stored_value")
+    end
+
+    def stored_value_refund_cents
+      category_refund_cents("stored_value")
+    end
+
+    def gift_card_cash_out_cents
+      GiftCardCashOut.originals.where(pos_session_id: @session.id).sum(:amount_cents)
+    end
+
+    def gift_card_cash_out_reversal_cents
+      GiftCardCashOut.reversals.where(pos_session_id: @session.id).sum(:amount_cents)
+    end
+
+    def gift_card_cash_out_count
+      GiftCardCashOut.originals.where(pos_session_id: @session.id).count
+    end
+
+    def store_credit_payment_cents
+      type_tender_cents("store_credit", "payment")
+    end
+
+    def trade_credit_payment_cents
+      type_tender_cents("trade_credit", "payment")
+    end
+
+    def gift_card_payment_cents
+      type_tender_cents("gift_card", "payment")
+    end
+
+    def gift_card_existing_refund_cents
+      refund_destination_cents("existing_account", tender_type: "gift_card")
+    end
+
+    def gift_card_new_refund_cents
+      refund_destination_cents("new_gift_card")
+    end
+
+    def store_credit_refund_destination_cents
+      refund_destination_cents("customer_store_credit") +
+        refund_destination_cents("existing_account", tender_type: "store_credit")
     end
 
     def closing_count_cents
@@ -147,6 +197,22 @@ module Pos
                .where(pos_transactions: { pos_session_id: @session.id, status: "completed" })
                .where(behavioral_category: category, direction: direction)
                .sum(:amount_cents)
+    end
+
+    def type_tender_cents(tender_type, direction)
+      PosTender.joins(:pos_transaction)
+               .where(pos_transactions: { pos_session_id: @session.id, status: "completed" })
+               .where(tender_type: tender_type, direction: direction)
+               .sum(:amount_cents)
+    end
+
+    def refund_destination_cents(destination_mode, tender_type: nil)
+      relation = PosTender.joins(:pos_transaction, :stored_value_tender_detail)
+                          .where(pos_transactions: { pos_session_id: @session.id, status: "completed" })
+                          .where(direction: "refund")
+                          .where(pos_stored_value_tender_details: { destination_mode: destination_mode })
+      relation = relation.where(tender_type: tender_type) if tender_type
+      relation.sum(:amount_cents)
     end
 
     def completed_transactions

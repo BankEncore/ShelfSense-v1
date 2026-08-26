@@ -1,0 +1,22 @@
+<% content_for :title, "Stored-value reporting" %>
+<%= render "shared/breadcrumbs", crumbs: [
+  { name: "Home", path: root_path },
+  { name: "Stored-value reporting" }
+] %>
+<%= render "shared/page_header", title: "Stored-value reporting" %>
+<h2 class="section__title">Outstanding liability</h2>
+<p class="muted">Open account balances by type. Store is attribution of activity only; these totals are organization-wide.</p>
+<%= render "shared/data_table",
+      headers: ["Account type", "Open accounts", "Balance"],
+      rows: @liability_rows.map { |type, count, cents| [ type, count, format_money_cents(cents) ] } %>
+<h2 class="section__title">Recent gift-card cash-outs</h2>
+<% cash_out_rows = @cash_outs.map { |cash_out|
+     [
+       cash_out.gift_card.masked_number,
+       format_money_cents(cash_out.amount_cents),
+       cash_out.register.admin_label,
+       cash_out.business_date.iso8601,
+       cash_out.reversal? ? "Reversal" : (cash_out.reversed? ? "Reversed" : "Posted")
+     ]
+   } %>
+<%= render "shared/data_table", headers: ["Card", "Amount", "Register", "Business date", "Status"], rows: cash_out_rows %>

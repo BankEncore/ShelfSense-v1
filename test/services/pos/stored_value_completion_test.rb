@@ -65,7 +65,11 @@ class PosStoredValueCompletionTest < ActiveSupport::TestCase
     assert_equal 1, credentials.size
     assert_equal card.number, credentials.first.number
     Pos::CompletedTransactionFacts.new(result.operation.envelope).verify!
-    assert_equal result.transaction.signed_net_cents, Pos::CustomerReceipt.build(result.transaction).signed_net_cents
+    receipt = Pos::CustomerReceipt.build(result.transaction)
+    assert_equal result.transaction.signed_net_cents, receipt.signed_net_cents
+    note = receipt.remaining_balance_notes.sole
+    assert_equal card.masked_number, note.masked_card
+    assert_equal 2500, note.balance_cents
   end
 
   test "gift-card redeem posts a negative redeem and rejects same-ticket issuance" do
