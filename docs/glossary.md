@@ -26,17 +26,22 @@ This file starts with stored-value vocabulary for [Phase 10](planning/phase10-st
 | **Stored-value account** | Authoritative balance container. `balance_cents` is a locked projection over entries. |
 | **Stored-value operation** | One completed stored-value business action (issue, activate, reload, redeem, refund, cash-out, transfer, adjust, reverse). Immutable. |
 | **Stored-value entry** | One signed balance change on one account inside an operation. Append-only. |
-| **Store credit** | Customer-owned retail-credit liability. Organization-wide balance; activity attributed to a store. Ordinary refund-to-credit destination. |
-| **Trade credit** | Customer-owned buyback-related liability, distinct from store credit. Manual issue in Phase 10; buyback issue in Phase 12. Not created by retail refunds. Cash-out prohibited. |
+| **Store credit** | Customer-owned retail-credit liability. Organization-wide balance; activity attributed to a store. Ordinary account-bound refund destination. |
+| **Trade credit** | Customer-owned buyback-related liability, distinct from store credit. Manual issue in Phase 10; buyback issue in Phase 12. Not created by retail refunds as a generic destination. Cash-out prohibited. |
 | **Gift card** | Bearer stored-value **instrument** with its own account. Optional customer association is not ownership. |
 | **Gift-card program** | Number namespace and operating policy (prefix, length, reload, cash-out). |
 | **Gift-card instrument** | The `gift_cards` row: digest, encrypted number, status, program, 1:1 account. |
 | **Gift-card activation** | POS **issuance** that creates the instrument and liability when the customer pays. Not a tender and not a merchandise line. |
 | **Reload** | POS issuance that adds value to an existing active gift card. |
 | **Redemption** | POS **tender** that spends stored value against amount due. |
+| **Original-instrument refund** | Refund of gift-card-funded value onto the presented matching original (or verified replacement) card. |
+| **Refund gift card** | New bearer instrument created only for value originally paid by gift card when the original instrument is unavailable. Receives the current refund amount only; does not replace or drain the original card. |
 | **Cash-out** | Controlled Register payout of a gift card’s full eligible remaining balance. Not a generic paid-out; not a tender. |
-| **Transfer** | Ledger move of a balance (customer merge, or gift-card replacement). Not discretionary customer-to-customer transfer. |
-| **Tender versus issuance** | A tender settles what the customer owes or is owed. An issuance is customer-paid sale of gift-card liability and increases amount due. Refund-to-credit is a tender, not an issuance. |
-| **Unused-instrument return** | Reverse an unused gift-card issuance and refund tenders. Not a merchandise return. |
+| **Transfer** | Atomic, net-zero movement between same-type stored-value accounts. Includes customer merge, administrative transfer, and account consolidation. Cross-type movement is conversion, not transfer. |
+| **Account consolidation** | Full-balance same-type transfer that closes the source account. |
+| **Manual adjustment** | Controlled credit or debit of an eligible account through a reason catalog. Never a balance-field edit, POS refund, or transfer. |
+| **Stored-value conversion** | Moving value from one account type to another (store credit ↔ trade credit ↔ gift card). Explicitly prohibited in Phase 10. |
+| **Credential print recovery** | Narrowly authorized service that decrypts a stored number for a reasoned reprint. Not a general reveal screen. |
+| **Tender versus issuance** | A tender settles what the customer owes or is owed. An issuance is customer-paid sale of gift-card liability and increases amount due. Refunds (including new refund cards) are tenders, not issuance. |
 
-Phase 10 contracts: [phase10-plan.md](planning/phase10-stored-value/phase10-plan.md).
+Phase 10 contracts: [phase10-plan.md](planning/phase10-stored-value/phase10-plan.md). Unused-instrument return is deferred and is not a Phase 10 glossary term.

@@ -210,15 +210,15 @@ Accounts, operations, entries, posting service, projection verification, outbox 
 
 ### Slice 10.2 — Customer store credit and trade credit
 
-Distinct customer-owned liabilities; merge transfer command; manual adjust; deactivate-with-balance; customer activity.
+Distinct customer-owned liabilities; administrative same-type transfers; account consolidation; merge transfer command; manual adjustment across eligible account types; deactivate-with-balance; customer activity.
 
 ### Slice 10.3 — Gift-card programs and instruments
 
-Bearer identity, numbering and encryption, scan routing, inquiry, suspend, replacement, optional customer association.
+Bearer identity, numbering and Rails encryption, scan routing, inquiry, suspend, replacement, optional customer association.
 
-### Slice 10.4 — POS issuance, tenders, unused return, post-void
+### Slice 10.4 — POS issuance, tenders, refund destinations, post-void
 
-First-class issuance (not a merchandise SKU); `stored_value` tenders; signed-net rewrite; unused-instrument return; post-void fail-closed.
+First-class issuance (not a merchandise SKU); `stored_value` tenders; signed-net rewrite; gift-card refund destinations; original-instrument verification; new refund gift-card creation; post-void fail-closed.
 
 ### Slice 10.5 — Cash-out, closeout, print, nav
 
@@ -226,7 +226,7 @@ Gift-card cash-out vs expected cash; X/Z; receipt/print; administrative navigati
 
 **Deliverable:**
 
-> ShelfSense can issue, activate, reload, redeem, reverse, and reconcile customer credit, trade credit, and gift cards without treating balances as editable fields and without a cross-domain financial-event subledger.
+> ShelfSense can issue, activate, reload, redeem, refund, transfer, consolidate, manually adjust, reverse, cash out, and reconcile store credit, trade credit, and gift cards without editable balances or a cross-domain financial-event subledger.
 
 ## Phase 11 — Cash accountability completion
 
