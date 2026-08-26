@@ -8,10 +8,17 @@ class CashCount < ApplicationRecord
   belongs_to :cash_location, optional: true
   belongs_to :superseded_count, class_name: "CashCount", optional: true
   has_many :cash_count_denomination_lines, dependent: :restrict_with_exception
+  has_one :cash_deposit, dependent: :restrict_with_exception
 
   validates :purpose, presence: true, inclusion: { in: PURPOSES }
   validates :status, presence: true, inclusion: { in: STATUSES }
   validates :total_cents, numericality: { only_integer: true, greater_than_or_equal_to: 0 }
+  validates :expected_cents_snapshot, :location_lock_version_snapshot, :business_date,
+            presence: true, if: :location_snapshot_required?
+
+  def location_snapshot_required?
+    purpose.in?(%w[safe_reconciliation deposit])
+  end
 
   def readonly?
     super || persisted?

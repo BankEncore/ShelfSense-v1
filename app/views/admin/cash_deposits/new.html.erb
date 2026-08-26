@@ -1,0 +1,30 @@
+<% content_for :title, "Prepare deposit" %>
+<%= render "shared/page_header", title: "Prepare deposit" %>
+
+<p>Move counted cash from the store safe to deposit in transit. Bank confirmation is not part of this step. The deposit-in-transit balance is cumulative ledger cash, not cash still in the store.</p>
+
+<% if @feedback.present? %>
+  <p role="alert"><%= @feedback %></p>
+<% end %>
+
+<% if @can_view_expected %>
+  <p>Safe expected when this count started: <%= format_money_cents(@count.expected_cents_snapshot) %></p>
+<% else %>
+  <p>This is a blind count of the deposit. Expected safe cash is hidden until you submit.</p>
+<% end %>
+
+<%= form_with url: admin_cash_deposits_path, method: :post, class: "form" do %>
+  <%= hidden_field_tag :cash_count_id, @count.id %>
+  <%= hidden_field_tag :source_id, params[:source_id].presence || SecureRandom.uuid_v7 %>
+  <%= hidden_field_tag :idempotency_key, params[:idempotency_key].presence || SecureRandom.uuid_v7 %>
+  <div class="form-field">
+    <%= label_tag :amount, "Deposit amount" %>
+    <%= text_field_tag :amount, params[:amount], required: true, inputmode: "decimal", autocomplete: "off" %>
+  </div>
+  <div class="form-field">
+    <%= label_tag :bag_reference, "Bag or reference (optional)" %>
+    <%= text_field_tag :bag_reference, params[:bag_reference], autocomplete: "off" %>
+  </div>
+  <%= submit_tag "Prepare deposit", class: "btn" %>
+  <%= link_to "Deposits", admin_cash_deposits_path, class: "btn btn--ghost" %>
+<% end %>

@@ -1,6 +1,6 @@
 # Phase 11 — Schema contract
 
-Status: **11.1–11.2 tables implemented** on the Phase 11 integration branch. 11.3 deposit source row is reserved. PostgreSQL is authoritative. UUIDv7 via `create_uuid_table` / application-assigned ids ([AGENTS.md](../../../AGENTS.md) §10).
+Status: **11.1–11.3 tables implemented** on the Phase 11 integration branch. PostgreSQL is authoritative. UUIDv7 via `create_uuid_table` / application-assigned ids ([AGENTS.md](../../../AGENTS.md) §10).
 
 Companions: [phase11-plan.md](phase11-plan.md), [phase11-session-lifecycle.md](phase11-session-lifecycle.md), [phase5-schema.md](../phase4-6-point-of-sale/phase5-cash-register/phase5-schema.md).
 
@@ -134,6 +134,7 @@ Immutable observations. They do not change expected cash until a reconciliation 
 |---|---|---|
 | `purpose` | string | `session_open`, `session_close`, `safe_reconciliation`, `deposit`, `safe_initialization` |
 | `total_cents` | bigint | ≥ 0; authoritative |
+| `business_date` | date, nullable | Required for `safe_reconciliation` and `deposit`; store-day status uses this date, never `created_at` |
 | `expected_cents_snapshot` | bigint, nullable | Required for `safe_reconciliation` and `deposit` (the location being counted): expected balance when the count **started** |
 | `location_lock_version_snapshot` | integer, nullable | Required with `expected_cents_snapshot`: that location’s `lock_version` at count start |
 | `pos_session_id` / `cash_location_id` | uuid, nullable | As applicable |

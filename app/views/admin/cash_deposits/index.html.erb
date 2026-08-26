@@ -1,0 +1,21 @@
+<% content_for :title, "Deposits" %>
+<%= render "shared/page_header",
+      title: "Deposits",
+      actions: action_link_to("Prepare deposit", new_admin_cash_deposit_path, style: :solid, intent: :brand) %>
+
+<p>Deposit in transit (cumulative ledger): <%= format_money_cents(@dit.expected_balance_cents) %>. This total is not treated as cash still physically in the store.</p>
+
+<% rows = @deposits.map { |deposit|
+     [
+       deposit.business_date.iso8601,
+       deposit.deposit_number,
+       format_money_cents(deposit.total_cents),
+       deposit.bag_reference.presence || "—",
+       deposit.prepared_by.display_name,
+       deposit.reversed? ? "Reversed" : "In transit",
+       link_to("View", admin_cash_deposit_path(deposit))
+     ]
+   } %>
+<%= render "shared/data_table",
+      headers: ["Business date", "Number", "Amount", "Reference", "Prepared by", "Status", ""],
+      rows: rows %>

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_26_200000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_26_220000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -132,6 +132,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_200000) do
   end
 
   create_table "cash_counts", id: :uuid, default: nil, force: :cascade do |t|
+    t.date "business_date"
     t.uuid "cash_location_id"
     t.timestamptz "created_at", null: false
     t.bigint "expected_cents_snapshot"
@@ -141,11 +142,32 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_200000) do
     t.string "status", null: false
     t.uuid "superseded_count_id"
     t.bigint "total_cents", null: false
+    t.index ["cash_location_id", "purpose", "business_date"], name: "index_cash_counts_on_location_purpose_date"
     t.index ["cash_location_id"], name: "index_cash_counts_on_cash_location_id"
     t.index ["pos_session_id"], name: "index_cash_counts_on_pos_session_id"
     t.check_constraint "purpose::text = ANY (ARRAY['session_open'::character varying, 'session_close'::character varying, 'safe_reconciliation'::character varying, 'deposit'::character varying, 'safe_initialization'::character varying]::text[])", name: "cash_counts_purpose_valid"
     t.check_constraint "status::text = ANY (ARRAY['discarded'::character varying, 'accepted'::character varying]::text[])", name: "cash_counts_status_valid"
     t.check_constraint "total_cents >= 0", name: "cash_counts_total_nonnegative"
+  end
+
+  create_table "cash_deposits", id: :uuid, default: nil, force: :cascade do |t|
+    t.uuid "approved_by_id"
+    t.string "bag_reference"
+    t.date "business_date", null: false
+    t.uuid "cash_count_id", null: false
+    t.uuid "cash_operation_id", null: false
+    t.timestamptz "created_at", null: false
+    t.integer "deposit_number", null: false
+    t.uuid "prepared_by_id", null: false
+    t.uuid "store_id", null: false
+    t.bigint "total_cents", null: false
+    t.timestamptz "updated_at", null: false
+    t.index ["cash_count_id"], name: "index_cash_deposits_on_cash_count_id"
+    t.index ["cash_operation_id"], name: "index_cash_deposits_on_cash_operation_id", unique: true
+    t.index ["store_id", "business_date", "deposit_number"], name: "index_cash_deposits_on_store_date_number", unique: true
+    t.index ["store_id"], name: "index_cash_deposits_on_store_id"
+    t.check_constraint "deposit_number > 0", name: "cash_deposits_number_positive"
+    t.check_constraint "total_cents > 0", name: "cash_deposits_total_positive"
   end
 
   create_table "cash_entries", id: :uuid, default: nil, force: :cascade do |t|
@@ -1901,6 +1923,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_200000) do
   add_foreign_key "cash_counts", "cash_counts", column: "superseded_count_id"
   add_foreign_key "cash_counts", "cash_locations"
   add_foreign_key "cash_counts", "pos_sessions"
+  add_foreign_key "cash_deposits", "cash_counts"
+  add_foreign_key "cash_deposits", "cash_operations"
+  add_foreign_key "cash_deposits", "stores"
+  add_foreign_key "cash_deposits", "users", column: "approved_by_id"
+  add_foreign_key "cash_deposits", "users", column: "prepared_by_id"
   add_foreign_key "cash_entries", "cash_entries", column: "reversal_of_id"
   add_foreign_key "cash_entries", "cash_locations"
   add_foreign_key "cash_entries", "cash_operations"
