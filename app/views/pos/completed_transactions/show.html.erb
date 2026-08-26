@@ -13,13 +13,16 @@
 
     <h1 tabindex="-1" autofocus>Transaction complete</h1>
     <p class="pos-receipt__ref"><%= @transaction.transaction_reference %></p>
+    <% if @transaction.customer %>
+      <p class="pos-customer">Customer · <%= @transaction.customer.display_name %></p>
+    <% end %>
     <%= render "pos/receipts/post_void_banner", transaction: @transaction, linked: true %>
 
-    <% credentials = Pos::FirstPrint.call(@transaction) %>
+    <% credentials = Array(@gift_card_credentials) %>
     <% if credentials.any? %>
-      <section class="pos-first-print" data-controller="pos-receipt">
+      <section class="pos-first-print">
         <h2>Gift card credentials</h2>
-        <p>Print these numbers now. Ordinary receipts stay masked.</p>
+        <p>Print the gift card now. Ordinary receipts stay masked.</p>
         <ul>
           <% credentials.each do |credential| %>
             <li>
@@ -80,6 +83,7 @@
   </div>
 
   <%= render "pos/receipts/print", transaction: @transaction, tenders: @tenders, reprint: false %>
+  <%= render "pos/receipts/gift_card_voucher", credentials: @gift_card_credentials %>
 
   <div class="pos-receipt__actions pos-no-print">
     <% receipt = Pos::CustomerReceipt.build(@transaction) %>
@@ -87,6 +91,9 @@
       <%= action_button("Print receipt", style: :solid, intent: :brand, data: { action: "pos-receipt#print" }) %>
     <% else %>
       <p class="pos-enter__alert" role="alert"><%= receipt.error %></p>
+    <% end %>
+    <% if Array(@gift_card_credentials).any? %>
+      <%= action_button("Print gift card", style: :solid, intent: :brand, data: { action: "pos-receipt#printVoucher" }) %>
     <% end %>
     <%= action_link_to("Transactions", pos_transactions_path, style: :outline, intent: :neutral) %>
     <span class="pos-receipt__new">

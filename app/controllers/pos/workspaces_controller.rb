@@ -388,12 +388,25 @@ module Pos
 
     def attach_customer
       rescue_workspace(error_mode: "sale_entry") do
-        customer = Customer.find(params.require(:customer_id))
+        customer = Customer.find_by(id: params.require(:customer_id))
         Pos::AttachCustomer.call(
           transaction: @transaction,
           actor: current_user,
           expected_lock_version: expected_lock_version,
           customer: customer
+        )
+        @transaction.reload
+        @ui_mode = "sale_entry"
+        respond_workspace
+      end
+    end
+
+    def detach_customer
+      rescue_workspace(error_mode: "sale_entry") do
+        Pos::DetachCustomer.call(
+          transaction: @transaction,
+          actor: current_user,
+          expected_lock_version: expected_lock_version
         )
         @transaction.reload
         @ui_mode = "sale_entry"

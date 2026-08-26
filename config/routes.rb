@@ -127,6 +127,7 @@ Rails.application.routes.draw do
         post :reinstate
         get :replace
         post :replace, action: :create_replacement
+        get :credential
         get :associate
         patch :associate, action: :update_association
         get :print_recovery
@@ -222,6 +223,7 @@ Rails.application.routes.draw do
     post "register/stored_value_issuance", to: "workspaces#stored_value_issuance"
     post "register/remove_stored_value_issuance", to: "workspaces#remove_stored_value_issuance"
     post "register/attach_customer", to: "workspaces#attach_customer"
+    post "register/detach_customer", to: "workspaces#detach_customer"
     get "register/customer_search", to: "workspaces#customer_search", as: :register_customer_search
     post "register/remove_tender", to: "workspaces#remove_tender"
     post "register/continue", to: "workspaces#continue"

@@ -679,6 +679,20 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     assert_selector "#pos_return_chooser", visible: true
   end
 
+  test "cashier attaches a customer from operational search overlay" do
+    Customer.create!(display_name: "Overlay Customer", email: "overlay.customer@example.com")
+    open_register
+    click_on "Attach customer"
+    assert_selector "#pos_customer_overlay", visible: true
+    field = find("[data-register-workspace-target='customerQueryField']")
+    field.fill_in with: "Overlay Customer"
+    field.send_keys :enter
+    assert_selector "#pos_customer_overlay li", text: "Overlay Customer", wait: 10
+    field.send_keys :enter
+    assert_no_selector "#pos_customer_overlay", visible: true, wait: 10
+    assert_text "Customer · Overlay Customer"
+  end
+
   private
 
   test "gift-card shaped scan does not add merchandise" do

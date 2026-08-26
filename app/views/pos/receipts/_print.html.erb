@@ -33,6 +33,9 @@
       <p><%= receipt.completed_at_label %></p>
       <p class="pos-receipt__print-header"><%= receipt.identity_header %></p>
       <p>Cashier: <%= receipt.cashier_name %></p>
+      <% if receipt.customer_name.present? %>
+        <p>Customer: <%= receipt.customer_name %></p>
+      <% end %>
     </div>
 
     <div class="pos-receipt__print-lines">

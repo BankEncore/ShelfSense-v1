@@ -2,31 +2,61 @@
 
 module Admin
   class GiftCardsController < BaseController
-    before_action -> { require_permission!("gift_cards.view") }, only: %i[index show inquiry resolve_inquiry print_recovery create_print_recovery]
+    before_action -> { require_permission!("gift_cards.view") }, only: %i[index show inquiry resolve_inquiry]
+    before_action -> { require_permission!("gift_cards.recover_print") }, only: %i[print_recovery create_print_recovery]
     before_action -> { require_permission!("gift_cards.suspend") }, only: %i[suspend reinstate]
-    before_action -> { require_permission!("gift_cards.replace") }, only: %i[replace create_replacement]
+    before_action -> { require_permission!("gift_cards.replace") }, only: %i[replace create_replacement credential]
     before_action -> { require_permission!("gift_cards.associate_customer") }, only: %i[associate update_association]
-    before_action :set_gift_card, only: %i[show suspend reinstate replace create_replacement associate update_association print_recovery create_print_recovery]
+    before_action :set_gift_card, only: %i[show suspend reinstate replace create_replacement associate update_association print_recovery create_print_recovery credential]
 
     def index
       @gift_cards = GiftCard.includes(:gift_card_program, :stored_value_account, :customer).admin_ordered.limit(100)
     end
 
-    def show; end
+    def show
+      @activity = StoredValue::AccountActivity.call(account: @gift_card.stored_value_account, page: params[:page])
+    end
 
     def inquiry; end
 
     def resolve_inquiry
-      card = GiftCards::Resolver.call(raw_number: params[:card_number], actor: current_user, store: current_store)
-      Audit::Recorder.record!(
-        action: "gift_cards.inquiry",
-        outcome: "succeeded",
-        actor_user: current_user,
-        store: current_store,
-        subject: card,
-        after_values: { number_last_four: card.number_last_four, status: card.status }
+      if params[:card_number].present?
+        card = GiftCards::Resolver.call(raw_number: params[:card_number], actor: current_user, store: current_store)
+        Audit::Recorder.record!(
+          action: "gift_cards.inquiry",
+          outcome: "succeeded",
+          actor_user: current_user,
+          store: current_store,
+          subject: card,
+          after_values: { number_last_four: card.number_last_four, status: card.status }
+        )
+        redirect_to admin_gift_card_path(card)
+        return
+      end
+
+      if params[:number_prefix].blank? && params[:number_last_four].blank?
+        flash.now[:alert] = "Enter a card number or prefix and last four."
+        render :inquiry, status: :unprocessable_entity
+        return
+      end
+
+      result = GiftCards::AdminInquiry.call(
+        prefix: params[:number_prefix],
+        last_four: params[:number_last_four],
+        actor: current_user,
+        store: current_store
       )
-      redirect_to admin_gift_card_path(card)
+      case result.status
+      when :found
+        redirect_to admin_gift_card_path(result.card)
+      when :ambiguous
+        @candidates = result.candidates
+        flash.now[:alert] = "Several cards share that prefix and last four. Choose a masked candidate."
+        render :inquiry, status: :unprocessable_entity
+      else
+        flash.now[:alert] = GiftCards::GENERIC_INQUIRY_FAILURE
+        render :inquiry, status: :unprocessable_entity
+      end
     rescue GiftCards::Error => e
       flash.now[:alert] = e.message
       render :inquiry, status: :unprocessable_entity
@@ -70,7 +100,12 @@ module Admin
         number: params[:card_number],
         notes: params[:notes]
       )
-      redirect_to admin_gift_card_path(replacement.replacement_gift_card), notice: "Gift card replaced."
+      new_card = replacement.replacement_gift_card
+      if new_card.gift_card_program.system_generated?
+        redirect_to credential_admin_gift_card_path(new_card), notice: "Gift card replaced. Print the new credential once."
+      else
+        redirect_to admin_gift_card_path(new_card), notice: "Gift card replaced."
+      end
     rescue GiftCards::Error, StoredValue::Error => e
       flash.now[:alert] = e.message
       render :replace, status: :unprocessable_entity
@@ -81,6 +116,11 @@ module Admin
     end
 
     def print_recovery; end
+
+    def credential
+      @gift_card_credentials = GiftCards::ReplacementFirstPrint.call(@gift_card)
+      redirect_to admin_gift_card_path(@gift_card) if @gift_card_credentials.empty?
+    end
 
     def create_print_recovery
       @recovered_number = GiftCards::PrintRecovery.call(

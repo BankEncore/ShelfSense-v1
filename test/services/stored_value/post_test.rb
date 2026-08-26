@@ -140,6 +140,27 @@ module StoredValue
       assert_equal 7, @account.reload.balance_cents
     end
 
+    test "gift-card credits cannot exceed the program maximum while the account is locked" do
+      GiftCards::Programs.seed!
+      program = GiftCardProgram.find_by!(code: "generated")
+      program.update!(maximum_balance_cents: 1000)
+      card = GiftCards::ProvisionInstrument.call(program: program, store: @store)
+      GiftCards::Fund.call(gift_card: card, amount_cents: 800, store: @store, performed_by: @actor)
+
+      error = assert_raises(StoredValue::Error) do
+        StoredValue::Post.call(
+          operation_type: "reload",
+          store: @store,
+          performed_by: @actor,
+          source_id: SecureRandom.uuid_v7,
+          idempotency_key: SecureRandom.uuid_v7,
+          entries: [ { account: card.stored_value_account, amount_cents: 300 } ]
+        )
+      end
+      assert_match(/maximum balance/, error.message)
+      assert_equal 800, card.stored_value_account.reload.balance_cents
+    end
+
     test "seeded phase 10 permissions grant store managers but not associates the exceptional keys" do
       Authorization::PermissionCatalog.seed!(granted_by: @actor)
       manager = Role.find_by!(key: "store_manager")
@@ -153,6 +174,9 @@ module StoredValue
       assert_not associate.permissions.exists?(key: "stored_value.adjust")
       assert admin.permissions.exists?(key: "gift_cards.manage_programs")
       assert_not Permission.exists?(key: "gift_cards.reveal_number")
+      assert Permission.exists?(key: "gift_cards.recover_print")
+      assert manager.permissions.exists?(key: "gift_cards.recover_print")
+      assert_not associate.permissions.exists?(key: "gift_cards.recover_print")
     end
 
     test "currency is snapshotted from system settings and is not caller-selectable" do

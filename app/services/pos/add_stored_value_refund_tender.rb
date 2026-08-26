@@ -46,6 +46,7 @@ module Pos
         raise Pos::Error, "amount is greater than remaining refund" if @amount_cents > remaining
 
         detail_attrs = build_detail_attrs!(transaction)
+        assert_refund_capacity!(transaction, detail_attrs)
         tender = transaction.pos_tenders.new(
           direction: "refund",
           tender_number: Pos::Support.next_tender_number(transaction),
@@ -87,6 +88,7 @@ module Pos
         unless original_gift_card_accounts(transaction).include?(card.stored_value_account_id)
           raise Pos::Error, "presented gift card does not match the original tender"
         end
+        assert_gift_card_credit_within_maximum!(card)
         { destination_mode: "existing_account", stored_value_account: card.stored_value_account, gift_card: card, masked_card_snapshot: card.masked_number }
       when "trade_credit"
         raise Pos::Error, "trade credit is not a generic refund destination" unless @tender_type.allows_original_tender_refund?
@@ -127,6 +129,9 @@ module Pos
       program = @gift_card_program || GiftCards::Lookup.program_for(@card_number)
       raise Pos::Error, "gift-card program is required" if program.blank?
       raise Pos::Error, "gift-card program is not active" unless program.active?
+      if program.maximum_balance_cents.present? && @amount_cents > program.maximum_balance_cents
+        raise Pos::Error, "credit would exceed the program maximum balance"
+      end
 
       attrs = { destination_mode: "new_gift_card", gift_card_program: program }
       if program.manual_external?
@@ -144,6 +149,31 @@ module Pos
         raise Pos::Error, "system-generated refund cards cannot take a card number"
       end
       attrs
+    end
+
+    def assert_refund_capacity!(transaction, detail_attrs)
+      remaining = Pos::StoredValueRefundCapacity.remaining_cents(
+        transaction: transaction,
+        tender_type: @tender_type,
+        destination_mode: @destination_mode,
+        account_id: detail_attrs[:stored_value_account]&.id || detail_attrs[:stored_value_account_id]
+      )
+      return if remaining.nil?
+
+      kind = @tender_type.stored_value_account_type == "trade_credit" ? "trade-credit-funded" : "gift-card-funded"
+      if remaining <= 0
+        raise Pos::Error, "#{@destination_mode == 'new_gift_card' ? 'new gift card' : @tender_type.name.downcase} cannot receive this refund"
+      end
+      raise Pos::Error, "refund exceeds remaining #{kind} amount" if @amount_cents > remaining
+    end
+
+    def assert_gift_card_credit_within_maximum!(card)
+      GiftCards::MaximumBalance.assert!(
+        account: card.stored_value_account,
+        next_balance_cents: card.stored_value_account.balance_cents + @amount_cents
+      )
+    rescue StoredValue::Error => e
+      raise Pos::Error, e.message
     end
 
     def original_gift_card_funded?(transaction)

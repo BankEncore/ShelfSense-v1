@@ -97,6 +97,10 @@ module Pos
       Pos::Code128.svg(compact_reference)
     end
 
+    def customer_name
+      @transaction.customer&.display_name
+    end
+
     def cashier_name
       @transaction.cashier_name_snapshot.presence || "Not captured"
     end

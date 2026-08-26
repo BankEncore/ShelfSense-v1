@@ -197,6 +197,29 @@ class GiftCardsCashOutTest < ActiveSupport::TestCase
     assert_equal card.number_last_four, event.after_values["number_last_four"]
   end
 
+  test "print recovery requires recover_print and not merely view" do
+    card = funded_card(200)
+    associate = pos_transacting_user(store: @store, assigned_by: @actor, username: "gc_associate")
+    error = assert_raises(GiftCards::Error) do
+      GiftCards::PrintRecovery.call(
+        gift_card: card,
+        actor: associate,
+        store: @store,
+        reason: "printer jammed"
+      )
+    end
+    assert_match(/not authorized/, error.message)
+
+    manager = create_store_manager("gc_print_mgr")
+    recovered = GiftCards::PrintRecovery.call(
+      gift_card: card,
+      actor: manager,
+      store: @store,
+      reason: "printer jammed"
+    )
+    assert_equal card.number, recovered
+  end
+
   private
 
   def funded_card(amount_cents)

@@ -1,6 +1,6 @@
 # Phase 10 — Gift-card numbering and scan routing
 
-Status: **Proposed**. Policy: [ADR-026](../../adr/ADR-026-gift-card-number-protection.md).
+Status: **Proposed**. Policy: [ADR-026](../../adr/ADR-026-gift-card-number-protection.md), [ADR-027](../../adr/ADR-027-admin-gift-card-prefix-last-four-inquiry.md).
 
 ### Actually locked
 
@@ -8,13 +8,13 @@ Status: **Proposed**. Policy: [ADR-026](../../adr/ADR-026-gift-card-number-prote
 20-digit dedicated namespace; not identifier_registry
 PPP + body + Luhn check digit
 system_generated vs manual_external programs
-exact digest lookup; throttle; generic failure
+exact digest lookup for operational use; admin history may use prefix+last-four ([ADR-027](../../adr/ADR-027-admin-gift-card-prefix-last-four-inquiry.md)); throttle; generic failure
 GiftCard encrypts :number using default nondeterministic Active Record Encryption
 PosStoredValueIssuance encrypts :pending_card_number
 PosStoredValueTenderDetail encrypts :pending_card_number
 HMAC digest remains the exact lookup and uniqueness key
 generate at completion; no reservation table
-ordinary reprint masked; no general reveal permission
+ordinary reprint masked; dedicated credential voucher for first print and system-generated replacement; no general reveal permission
 scan: gift-card shape before merchandise lookup (Register integration is 10.4; 10.3 uses the resolver for admin inquiry only)
 ```
 
@@ -53,9 +53,9 @@ Unknown numbers cannot be redeemed, reloaded, inquired, replaced, or cashed out.
 | Prefix, last four | Fixtures with production keys or plaintext production-like numbers |
 | Pending working numbers via `encrypts :pending_card_number` | Ciphertext in exception messages; custom `encryption_key_id` columns |
 
-Lookup: compute digest of normalized input; equality on `number_digest`. Repeated encrypted writes must not rely on ciphertext equality. Active Record Encryption keys use the standard Rails credentials/environment mechanism. HMAC secret is separate. Docker/CI uses documented test keys.
+Operational lookup: compute digest of normalized input; equality on `number_digest`. Repeated encrypted writes must not rely on ciphertext equality. Active Record Encryption keys use the standard Rails credentials/environment mechanism. HMAC secret is separate. Docker/CI uses documented test keys. Admin history inquiry may also match `number_prefix` + `number_last_four` ([ADR-027](../../adr/ADR-027-admin-gift-card-prefix-last-four-inquiry.md)); that path is not used for POS redeem, reload, cash-out, or original-card refund.
 
-Number identity on `gift_cards` is immutable after insert.
+Number identity on `gift_cards` is immutable after insert, including the encrypted `number` attribute. Normalized number, digest, prefix, and last four must agree.
 
 ## 4. Generation timing and pending identity
 
@@ -67,13 +67,19 @@ If the number must be printed **before** payment, that is out of Phase 10 (would
 
 ## 5. Print and recovery
 
+The **credential voucher** is a distinct 80mm print from the customer receipt. Ordinary **Print receipt** (including history reprint) stays masked. Explicit **Print gift card** prints the decrypted number only when first-print delivery has not yet been recorded: undelivered completed POS activation or new refund card, complete-retry before delivery, system-generated replacement of a card, or `gift_cards.recover_print`. Reloads of an existing number do not first-print. Manual/external replacements that already have a physical number do not need generated-credential print.
+
+On-screen completed-transaction copy may list undelivered credentials. The voucher HTML is **not** inside `.pos-receipt__screen` (print CSS hides that block). After delivery, **Print gift card** is gone; recover-print is the exceptional path.
+
 | Channel | Full number |
 |---|---|
-| Controlled first print | Yes |
-| Idempotent retry of same completion | Yes |
-| Ordinary reprint / history / envelope | No |
-| Controlled print-recovery service | Only with reason and appropriate authority |
-| Replacement | Print new credential; do not reveal old |
+| Credential voucher (undelivered first print) | Yes |
+| Idempotent retry of same completion before delivery is recorded | Yes |
+| Ordinary Print receipt / later completed-transaction view / history / envelope | No |
+| Controlled print-recovery service (`gift_cards.recover_print` + reason) | Only with reason and appropriate authority |
+| System-generated replacement | Print new credential voucher once; do not reveal old |
+
+First-print delivery is mutable processing state (`pos_gift_card_credential_deliveries`), not an edit of the completed POS fact. POS completions key delivery by transaction. System-generated replacements key delivery by the new gift card. The first successful first-print call records delivery. After that, print recovery or another replacement is the path to a credential.
 
 Print failure after commit does not reopen the transaction ([receipt-presentation.md](../phase4-6-point-of-sale/phase6-pos-mvp/receipt-presentation.md)). Recovery is the print-recovery service or replacement—not a general reveal screen and not unused-instrument return (deferred).
 
@@ -81,7 +87,7 @@ Audit records card identity by ID and last four only.
 
 ## 6. Inquiry and abuse
 
-Exact match only. Generic failure (do not distinguish missing vs suspended unless the operator already has `gift_cards.view` and a successful digest hit). Throttle and audit repeated failures **without** storing the submitted number.
+Operational lookup is exact digest only. Admin/management inquiry may use prefix + last four per [ADR-027](../../adr/ADR-027-admin-gift-card-prefix-last-four-inquiry.md). Generic failure (do not distinguish missing vs suspended unless the operator already has `gift_cards.view` and a successful digest hit). Ambiguous prefix + last-four matches show a short masked candidate list. Throttle and audit repeated failures **without** storing the submitted number. Successful and ambiguous admin inquiries audit IDs and last four only.
 
 No PIN in Phase 10.
 

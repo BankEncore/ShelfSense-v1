@@ -8,11 +8,25 @@
 <%= render "shared/page_header", title: "Recover print for #{@gift_card.masked_number}" %>
 <p>Exceptional recovery of a system-generated credential. Ordinary receipts stay masked. This is not a general reveal screen.</p>
 <% if @recovered_number.present? %>
-  <section class="pos-first-print">
-    <h2>Recovered number</h2>
-    <p><%= @recovered_number %></p>
-    <p class="muted">Print now. This page is the only delivery of the full number.</p>
-  </section>
+  <% recovered = [Pos::FirstPrint::Credential.new(
+       kind: "print_recovery",
+       masked_number: @gift_card.masked_number,
+       number: @recovered_number,
+       amount_cents: @gift_card.balance_cents,
+       program_name: @gift_card.gift_card_program.name
+     )] %>
+  <main class="pos-receipt" data-controller="pos-receipt">
+    <section class="pos-first-print pos-receipt__screen">
+      <h2>Recovered number</h2>
+      <p><%= @recovered_number %></p>
+      <p class="muted">Print the gift card now. This page is the only delivery of the full number.</p>
+    </section>
+    <%= render "pos/receipts/gift_card_voucher", credentials: recovered %>
+    <div class="actions pos-no-print">
+      <%= action_button("Print gift card", style: :solid, intent: :brand, data: { action: "pos-receipt#printVoucher" }) %>
+      <%= action_link_to("Gift card", admin_gift_card_path(@gift_card), style: :outline, intent: :neutral) %>
+    </div>
+  </main>
 <% else %>
   <%= form_with url: print_recovery_admin_gift_card_path(@gift_card), method: :post, class: "form" do |form| %>
     <div class="form-field">

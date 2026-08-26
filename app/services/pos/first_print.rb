@@ -14,8 +14,30 @@ module Pos
 
     def call
       credentials = []
+      PosTransaction.transaction do
+        PosTransaction.lock.find(@transaction.id)
+        if PosGiftCardCredentialDelivery.exists?(pos_transaction_id: @transaction.id)
+          return []
+        end
+
+        credentials = decrypt_undelivered_credentials
+        if credentials.any?
+          PosGiftCardCredentialDelivery.create!(
+            pos_transaction: @transaction,
+            delivered_at: Time.current
+          )
+        end
+      end
+      credentials
+    end
+
+    private
+
+    def decrypt_undelivered_credentials
+      credentials = []
       @transaction.pos_stored_value_issuances.ordered.each do |issuance|
-        next unless issuance.system_generated?
+        next unless issuance.activation? && issuance.system_generated?
+
         card = issuance.gift_card
         next if card.blank?
 

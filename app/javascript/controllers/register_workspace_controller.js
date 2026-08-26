@@ -123,6 +123,13 @@ export default class extends Controller {
     "pickupQueryLabel",
     "pickupForm",
     "pickupRequestInput",
+    "attachCustomerButton",
+    "attachCustomerForm",
+    "attachCustomerIdInput",
+    "customerOverlay",
+    "customerList",
+    "customerQueryField",
+    "customerQueryLabel",
     "productOverlay",
     "productList",
     "variantOverlay",
@@ -171,6 +178,7 @@ export default class extends Controller {
     resolveUrl: String,
     searchUrl: String,
     pickupSearchUrl: String,
+    customerSearchUrl: String,
     pickupAllowed: Boolean,
     openPriceUrl: String,
     settlement: String,
@@ -199,6 +207,9 @@ export default class extends Controller {
     }
     this.enableReadyActions()
     this.restoreFocus()
+    if (this.hasFeedbackTarget && /customer is required/i.test(this.feedbackTarget.textContent || "")) {
+      this.openCustomerOverlay()
+    }
   }
 
   disconnect() {
@@ -277,6 +288,11 @@ export default class extends Controller {
 
     if (this.pickupOverlayOpen()) {
       this.onPickupOverlayKeydown(event, key)
+      return
+    }
+
+    if (this.customerOverlayOpen()) {
+      this.onCustomerOverlayKeydown(event, key)
       return
     }
 
@@ -1079,6 +1095,90 @@ export default class extends Controller {
     if (!this.hasPickupFormTarget || !this.hasPickupRequestInputTarget) return
     this.pickupRequestInputTarget.value = selected.dataset.requestId
     this.pickupFormTarget.requestSubmit()
+  }
+
+  openCustomerOverlay() {
+    if (!this.hasCustomerOverlayTarget) return
+    this.customerResultsReady = false
+    if (this.hasCustomerQueryFieldTarget) this.customerQueryFieldTarget.value = ""
+    if (this.hasCustomerListTarget) this.customerListTarget.replaceChildren()
+    if (this.hasCustomerQueryLabelTarget) this.customerQueryLabelTarget.textContent = ""
+    this.showOverlay(this.customerOverlayTarget, this.hasCustomerQueryFieldTarget && this.customerQueryFieldTarget)
+  }
+
+  closeCustomerOverlay() {
+    this.hideOverlay(this.hasCustomerOverlayTarget && this.customerOverlayTarget)
+  }
+
+  onCustomerOverlayKeydown(event, key) {
+    if (key === "Escape") {
+      event.preventDefault()
+      this.closeCustomerOverlay()
+      return
+    }
+    if (key === "ArrowUp" || key === "ArrowDown") {
+      event.preventDefault()
+      this.movePickerList(this.customerListTarget, key === "ArrowUp" ? -1 : 1)
+      return
+    }
+    if (key !== "Enter") return
+    event.preventDefault()
+    const inField = event.target === this.customerQueryFieldTarget
+    if (inField && !this.customerResultsReady) {
+      this.runCustomerSearch()
+      return
+    }
+    if (inField && this.customerListTarget.querySelectorAll("li").length === 0) {
+      this.runCustomerSearch()
+      return
+    }
+    this.selectHighlightedCustomer()
+  }
+
+  async runCustomerSearch() {
+    const query = this.hasCustomerQueryFieldTarget ? this.customerQueryFieldTarget.value.trim() : ""
+    if (!query) {
+      this.renderCustomerResults([])
+      if (this.hasCustomerQueryLabelTarget) this.customerQueryLabelTarget.textContent = "Enter a search."
+      return
+    }
+    const url = new URL(this.customerSearchUrlValue, window.location.origin)
+    url.searchParams.set("q", query)
+    try {
+      const response = await fetch(url, { headers: { Accept: "application/json" } })
+      const payload = await response.json()
+      if (!response.ok) throw new Error(payload.error || "customer search failed")
+      this.renderCustomerResults(payload.results || [])
+    } catch (_error) {
+      this.renderCustomerResults([])
+      if (this.hasCustomerQueryLabelTarget) this.customerQueryLabelTarget.textContent = "Search failed."
+    }
+  }
+
+  renderCustomerResults(rows) {
+    if (!this.hasCustomerListTarget) return
+    this.customerListTarget.replaceChildren()
+    this.customerResultsReady = true
+    if (this.hasCustomerQueryLabelTarget) {
+      this.customerQueryLabelTarget.textContent = rows.length === 0 ? "No matching customers." : ""
+    }
+    rows.forEach((row, index) => {
+      const item = document.createElement("li")
+      item.setAttribute("role", "option")
+      item.className = index === 0 ? "is-selected" : ""
+      item.dataset.customerId = row.id
+      item.textContent = row.label
+      this.customerListTarget.append(item)
+    })
+  }
+
+  selectHighlightedCustomer() {
+    const selected = this.hasCustomerListTarget && this.customerListTarget.querySelector("li.is-selected")
+    if (!selected) return
+    this.closeCustomerOverlay()
+    if (!this.hasAttachCustomerFormTarget || !this.hasAttachCustomerIdInputTarget) return
+    this.attachCustomerIdInputTarget.value = selected.dataset.customerId
+    this.attachCustomerFormTarget.requestSubmit()
   }
 
   openProductPicker(products) {
@@ -2013,6 +2113,7 @@ export default class extends Controller {
       this.hasOtherOverlayTarget && this.otherOverlayTarget,
       this.hasSearchOverlayTarget && this.searchOverlayTarget,
       this.hasPickupOverlayTarget && this.pickupOverlayTarget,
+      this.hasCustomerOverlayTarget && this.customerOverlayTarget,
       this.hasOverlayTarget && this.overlayTarget
     ]
     return overlays.find((el) => el && !el.hidden) || null
@@ -2115,6 +2216,10 @@ export default class extends Controller {
 
   pickupOverlayOpen() {
     return this.hasPickupOverlayTarget && !this.pickupOverlayTarget.hidden
+  }
+
+  customerOverlayOpen() {
+    return this.hasCustomerOverlayTarget && !this.customerOverlayTarget.hidden
   }
 
   productOverlayOpen() {

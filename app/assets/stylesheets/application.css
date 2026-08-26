@@ -1579,6 +1579,20 @@ input[type="submit"]:disabled,
   margin-top: var(--space-3);
 }
 
+.pos-customer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+.pos-customer__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+
 .pos-issuance-form,
 .pos-customer-form {
   display: flex;
@@ -2181,6 +2195,19 @@ input[type="submit"]:disabled,
     display: block !important;
   }
 
+  body:not(.is-printing-voucher) .pos-gift-card-voucher {
+    display: none !important;
+  }
+
+  body.is-printing-voucher .pos-receipt__print,
+  body.is-printing-voucher .pos-report-print {
+    display: none !important;
+  }
+
+  body.is-printing-voucher .pos-gift-card-voucher {
+    display: block !important;
+  }
+
   .pos-body,
   .pos-receipt,
   .pos-report-print {
@@ -2200,6 +2227,26 @@ input[type="submit"]:disabled,
     font-variant-numeric: tabular-nums;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
+  }
+
+  .pos-gift-card-voucher {
+    font-family: var(--font-receipt);
+    font-weight: 700;
+    color: #000;
+    font-size: 11pt;
+    line-height: 1.25;
+    text-align: center;
+  }
+
+  .pos-gift-card-voucher__title {
+    font-size: 14pt;
+    letter-spacing: 0.08em;
+  }
+
+  .pos-gift-card-voucher__number {
+    font-size: 13pt;
+    word-break: break-all;
+    margin: 8px 0;
   }
 
   .pos-receipt__print p,

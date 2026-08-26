@@ -22,27 +22,31 @@ module Pos
         "stored_value_issuance_cents" => transaction.stored_value_issuance_cents.to_i,
         "customer_id" => transaction.customer_id&.to_s,
         "issuances" => transaction.pos_stored_value_issuances.ordered.map { |issuance|
-          {
+          payload_issuance = {
             "issuance_id" => issuance.id.to_s,
             "issuance_type" => issuance.issuance_type,
             "amount_cents" => issuance.amount_cents,
             "gift_card_program_id" => issuance.gift_card_program_id&.to_s,
-            "gift_card_id" => issuance.gift_card_id&.to_s,
             "number_authority" => issuance.number_authority
           }
+          payload_issuance["gift_card_id"] = issuance.gift_card_id.to_s if issuance.reload_issuance? && issuance.gift_card_id.present?
+          payload_issuance
         },
         "stored_value_tenders" => transaction.pos_tenders.ordered.select(&:stored_value?).map { |tender|
           detail = tender.stored_value_tender_detail
-          {
+          payload_tender = {
             "tender_id" => tender.id.to_s,
             "tender_type" => tender.tender_type,
             "direction" => tender.direction,
             "amount_cents" => tender.amount_cents,
             "destination_mode" => detail&.destination_mode,
             "stored_value_account_id" => detail&.stored_value_account_id&.to_s,
-            "gift_card_id" => detail&.gift_card_id&.to_s,
             "gift_card_program_id" => detail&.gift_card_program_id&.to_s
           }
+          if detail&.existing_account? && detail.gift_card_id.present?
+            payload_tender["gift_card_id"] = detail.gift_card_id.to_s
+          end
+          payload_tender
         }
       }
       payload = payload.compact
@@ -206,6 +210,9 @@ module Pos
 
       originals = PosTransactionLine.lock.where(id: original_ids).order(:id).to_a
       raise Pos::Error, "original sale line is missing" if originals.size != original_ids.size
+
+      original_transaction_ids = originals.map(&:pos_transaction_id).uniq.sort
+      PosTransaction.where(id: original_transaction_ids).lock.order(:id).to_a
 
       originals.each do |original|
         remaining = Pos::Returnability.remaining_quantity(original)

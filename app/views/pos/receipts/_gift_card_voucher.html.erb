@@ -1,0 +1,17 @@
+<%#
+  locals: credentials:
+%>
+<% credentials = Array(local_assigns[:credentials]) %>
+<% if credentials.any? %>
+  <section class="pos-gift-card-voucher pos-print-only" aria-hidden="true">
+    <% credentials.each do |credential| %>
+      <div class="pos-gift-card-voucher__card">
+        <p class="pos-gift-card-voucher__title">GIFT CARD</p>
+        <p><%= credential.program_name %></p>
+        <p><%= format_money_cents(credential.amount_cents) %></p>
+        <p class="pos-gift-card-voucher__number"><%= credential.number %></p>
+        <p class="pos-gift-card-voucher__kind"><%= credential.kind.to_s.humanize %></p>
+      </div>
+    <% end %>
+  </section>
+<% end %>

@@ -1,0 +1,43 @@
+<%#
+  locals: activity:, show_card: false, page_param: :page, page_path:
+%>
+<% activity = local_assigns.fetch(:activity) %>
+<% show_card = local_assigns.fetch(:show_card, false) %>
+<% page_path = local_assigns.fetch(:page_path) %>
+<% if activity.total_count.zero? %>
+  <%= render "shared/empty_state", title: "No stored-value activity", body: "Posted operations for this account will appear here." %>
+<% else %>
+  <% headers = ["Business date", "Store", "Operation", "Amount", "Balance after", "Actor / reason", "POS"] %>
+  <% headers.insert(3, "Card") if show_card %>
+  <% rows = activity.entries.map { |entry|
+       operation = entry.stored_value_operation
+       pos_transaction = activity.pos_transactions_by_operation_id[operation.id]
+       reason = [operation.reason_name_snapshot.presence || operation.reason_code.presence, operation.performed_by&.display_name].compact.join(" · ")
+       row = [
+         operation.business_date.iso8601,
+         operation.store.admin_label,
+         operation.operation_type.humanize,
+         format_signed_money_cents(entry.amount_cents),
+         format_money_cents(entry.balance_after_cents),
+         reason.presence || missing_value,
+         (pos_transaction_cross_link(pos_transaction, label: pos_transaction.transaction_reference) if pos_transaction)
+       ]
+       if show_card
+         card = activity.account.gift_card
+         row.insert(3, card&.masked_number || missing_value)
+       end
+       row
+     } %>
+  <%= render "shared/data_table", headers: headers, rows: rows %>
+  <% if activity.total_pages > 1 %>
+    <nav class="pagination" aria-label="Stored-value activity pages">
+      <span class="muted">Page <%= activity.page %> of <%= activity.total_pages %> · <%= activity.total_count %> total</span>
+      <% if activity.page > 1 %>
+        <%= action_link_to("Previous", page_path.call(activity.page - 1), style: :ghost, intent: :neutral) %>
+      <% end %>
+      <% if activity.page < activity.total_pages %>
+        <%= action_link_to("Next", page_path.call(activity.page + 1), style: :ghost, intent: :neutral) %>
+      <% end %>
+    </nav>
+  <% end %>
+<% end %>

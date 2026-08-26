@@ -17,7 +17,7 @@
 <% if !@gift_card.replaced? && !@gift_card.closed? && effective_permissions.include?("gift_cards.associate_customer") %>
   <% actions << action_link_to("Associate customer", associate_admin_gift_card_path(@gift_card), style: :outline, intent: :neutral) %>
 <% end %>
-<% if @gift_card.gift_card_program.system_generated? && effective_permissions.include?("gift_cards.view") %>
+<% if @gift_card.gift_card_program.system_generated? && effective_permissions.include?("gift_cards.recover_print") %>
   <% actions << action_link_to("Recover print", print_recovery_admin_gift_card_path(@gift_card), style: :outline, intent: :neutral) %>
 <% end %>
 <% if !@gift_card.replaced? && !@gift_card.closed? && effective_permissions.include?("stored_value.adjust") %>
@@ -31,3 +31,11 @@
       ["Customer", (@gift_card.customer ? link_to(@gift_card.customer.admin_label, admin_customer_path(@gift_card.customer)) : "None")],
       ["Activated store", @gift_card.activated_store.admin_label]
     ] %>
+
+<section class="section">
+  <h2 class="section__title">Account activity</h2>
+  <%= render "admin/stored_value/account_activity",
+        activity: @activity,
+        show_card: true,
+        page_path: ->(page) { admin_gift_card_path(@gift_card, page: page) } %>
+</section>

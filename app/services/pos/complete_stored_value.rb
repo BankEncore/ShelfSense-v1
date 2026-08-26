@@ -20,6 +20,7 @@ module Pos
       end
 
       require_customer!(tenders)
+      Pos::StoredValueRefundCapacity.assert_working_allocation!(@transaction)
       issuances.each { |issuance| post_issuance!(issuance) }
       tenders.each { |tender| post_tender!(tender) }
     rescue StoredValue::Error, GiftCards::Error => e

@@ -207,7 +207,7 @@ Seed at least one `system_generated` and one `manual_external` program with non-
 encrypts :number
 ```
 
-Default nondeterministic Active Record Encryption. No caller-selected encryption scheme. No custom per-row key ID. HMAC secret is separate from Active Record Encryption keys. Number identity is immutable after insert.
+Default nondeterministic Active Record Encryption. No caller-selected encryption scheme. No custom per-row key ID. HMAC secret is separate from Active Record Encryption keys. Number identity is immutable after insert, including the encrypted `number` attribute. Digest, prefix, and last four must agree with the normalized number.
 
 Do not persist plaintext numbers in logs or public columns. Lifecycle starts at `active` when activation or refund-card creation completes. No preregistration table. No working-transaction reservation table in Phase 10.
 
@@ -371,6 +371,22 @@ Rules:
 - Trade credit as a **generic** refund destination is prohibited (original-tender refund to the original trade account remains allowed).
 - Completed detail retains account/card and masked snapshots.
 - New refund card does not increase `stored_value_issuance_cents`.
+
+### 11.6 `pos_gift_card_credential_deliveries`
+
+Mutable first-print delivery state, kept off the commercially immutable `pos_transactions` row ([ADR-013](../../adr/ADR-013-append-only-facts.md)).
+
+| Column | Type | Contract |
+|---|---|---|
+| `id` | uuid | UUIDv7 PK |
+| `pos_transaction_id` | uuid, nullable | Unique when present; POS first-print subject |
+| `gift_card_id` | uuid, nullable | Unique when present; system-generated replacement first-print subject |
+| `delivered_at` | timestamptz | Required; set when first print discloses a generated credential |
+| timestamps | timestamptz | Required |
+
+Exactly one of `pos_transaction_id` or `gift_card_id` is set. Presence means later views for that subject stay masked. Idempotent complete-retry may still first-print until the POS transaction delivery row exists. Replacement vouchers stamp the new gift card, not a second reveal of the old number.
+
+Composite index on `gift_cards (number_prefix, number_last_four)` supports admin history inquiry ([ADR-027](../../adr/ADR-027-admin-gift-card-prefix-last-four-inquiry.md)). It is not unique.
 
 ## 12. Outbox
 
