@@ -15,6 +15,7 @@ GitHub-issue-ready stories. Keep 10.4 issuance and signed-net in the same implem
 - Tables and checks in [phase10-schema.md](phase10-schema.md) §§1–3
 - `balance_cents` rejected on generic update
 - `reversal_of_id` unique when present; no `reversed_by_id` column
+- Source rows hold `stored_value_operation_id`; operations do not hold source FKs
 
 ### US-10.1.2 — Posting service
 
@@ -50,13 +51,17 @@ GitHub-issue-ready stories. Keep 10.4 issuance and signed-net in the same implem
 ### US-10.2.2 — Manual adjust
 
 **As** staff with `stored_value.adjust`  
-**I want** explicit add/remove credit actions  
+**I want** explicit add/remove credit actions on store credit, trade credit, and eligible gift cards  
 **So that** I never edit a balance field.
 
 **Acceptance:**
 
-- Debits always second-user; credits above threshold second-user
+- Explicit credit/debit direction; positive magnitude
+- Reason catalog; no `opening_balance` ordinary reason
+- Debits always second-user; credits at/above threshold second-user
 - Performer cannot self-approve
+- Program maximum and lifecycle checks (active allowed; suspended elevated; replaced/closed blocked)
+- Reverse rather than edit
 - Reason snapshot + audit without secrets
 
 ### US-10.2.3 — Merge transfer
@@ -67,10 +72,11 @@ GitHub-issue-ready stories. Keep 10.4 issuance and signed-net in the same implem
 
 **Acceptance:**
 
-- Matrix in [phase10-plan.md](phase10-plan.md) / schema §5
+- Matrix in [phase10-schema.md](phase10-schema.md) §6
 - Ledger `customer_id` unchanged
 - Concurrent redeem serialized with merge locks
 - Gift-card `customer_id` association reassigned; value not transferred as customer-owned credit
+- Zero-balance source accounts close; no survivor account created for zero
 
 ### US-10.2.4 — Deactivate with balance
 
@@ -90,19 +96,42 @@ GitHub-issue-ready stories. Keep 10.4 issuance and signed-net in the same implem
 **I want** balances and recent operations on customer show  
 **So that** I can explain the account without seeing gift-card full numbers.
 
+### US-10.2.6 — Transfer customer credit
+
+**As** authorized staff with `stored_value.transfer`  
+**I want** to move some or all store/trade credit to another same-type account  
+**So that** misapplied and customer-authorized balances can be corrected without editing history.
+
+**Acceptance:**
+
+- Same type and currency
+- Paired net-zero entries
+- Second user; performer cannot self-approve
+- Partial or full
+- Account consolidation closes source
+- Cross-type conversion blocked
+- Reversal blocked after downstream spend
+- Policy: [phase10-account-transfers-and-adjustments.md](phase10-account-transfers-and-adjustments.md)
+
 ## 10.3 — Gift-card identity
 
 ### US-10.3.1 — Programs
 
 **As** a global administrator  
-**I want** gift-card programs with prefix, length, and cash-out policy  
+**I want** gift-card programs with prefix, length, cash-out policy, and `cash_out_approval_required`  
 **So that** scan namespaces do not collide.
 
 ### US-10.3.2 — Secure instrument
 
 **As** the system  
-**I want** digest + encrypted number + last four  
-**So that** lookup is exact and reprints stay masked by default ([ADR-026](../../adr/ADR-026-gift-card-number-protection.md)).
+**I want** gift-card numbers stored with Rails Active Record Encryption plus an HMAC digest  
+**So that** lookup is exact and only prefix and last four appear outside controlled print services ([ADR-026](../../adr/ADR-026-gift-card-number-protection.md)).
+
+**Acceptance:**
+
+- `encrypts :number`; no custom `encryption_key_id`
+- Digest uniqueness and exact lookup
+- No general reveal permission or reveal screen
 
 ### US-10.3.3 — Inquiry, suspend, replace, associate
 
@@ -122,12 +151,16 @@ GitHub-issue-ready stories. Keep 10.4 issuance and signed-net in the same implem
 
 - [phase10-pos-issuance-and-tenders.md](phase10-pos-issuance-and-tenders.md)
 - DB signed-net identity includes `stored_value_issuance_cents`
-- Envelope golden files updated; Core FKs present
+- Envelope golden files updated; Core FKs on source rows
+- Working manual activation uses encrypted pending identity; `gift_card_id` null until complete
+- Controlled first print after generated-card activation and generated refund cards; complete-retry reprints that outcome; ordinary receipts stay masked
+- Register gift-card scan routing (sale, activation, reload, redeem, refund)
+- Every new POS transaction snapshots `system_settings.base_currency_code`
 
 ### US-10.4.2 — Stored-value tenders
 
 **As** a cashier  
-**I want** system-protected store-credit, trade-credit, and gift-card tenders  
+**I want** system-protected store-credit, trade-credit, and gift-card tenders with destination details  
 **So that** redemption settles amount due against an authoritative balance.
 
 **Acceptance:**
@@ -135,37 +168,44 @@ GitHub-issue-ready stories. Keep 10.4 issuance and signed-net in the same implem
 - Customer required and revalidated for store/trade
 - Multiple SV tenders allowed; lock UUID order
 - Same-transaction activate/reload + redeem forbidden
+- One detail row per stored-value tender
 
-### US-10.4.3 — Refund-to-credit
-
-**As** a cashier  
-**I want** to refund remaining value to store credit  
-**So that** retail returns do not issue trade credit or a new gift card.
-
-### US-10.4.4 — Unused-instrument return
+### US-10.4.3 — Gift-card refund destinations
 
 **As** a cashier  
-**I want** to return an unused activated (or unused reloaded increment) gift card  
-**So that** the customer can receive a refund without a merchandise return or post-void.
+**I want** to refund gift-card-funded value to the presented original card, a new refund card, or store credit  
+**So that** the customer is not forced to create a profile when the original card is missing, and trade credit is never a generic destination.
 
 **Acceptance:**
 
-- [phase10-refund-post-void.md](phase10-refund-post-void.md) unused definition
-- Reverse issuance + refund tenders atomically
+- Presented matching original card
+- New generated or manual refund card (not paid issuance; does not increase `stored_value_issuance_cents`)
+- Customer store credit when a canonical active customer is attached
+- No trade credit as generic destination
+- Value originally paid from trade credit returns to that same trade-credit account
+- Missing original card handled without requiring customer creation
+- Complete-retry of a new refund card creates only one instrument/liability
+- [phase10-refund-post-void.md](phase10-refund-post-void.md)
 
-### US-10.4.5 — Post-void fail-closed
+### US-10.4.4 — Post-void fail-closed
 
 **As** a cashier attempting post-void  
 **I want** a block with downstream stored-value lineage when issued value was spent  
 **So that** no partial post-void occurs.
 
-## 10.5 — Cash-out, closeout, print, nav
+## 10.5 — Cash-out, closeout, recovery print, reporting nav
 
 ### US-10.5.1 — Gift-card cash-out
 
 **As** a store manager with `gift_cards.cash_out`  
 **I want** to pay the full eligible remaining balance from an open Register session  
 **So that** cash-out is not a generic paid-out.
+
+**Acceptance:**
+
+- Reversal requires confirmation that cash physically returned to an open Register session
+- The reversing session receives the positive expected-cash effect
+- Bookkeeping-only reversal is prohibited
 
 ### US-10.5.2 — Expected cash and Z
 
@@ -178,18 +218,22 @@ GitHub-issue-ready stories. Keep 10.4 issuance and signed-net in the same implem
 - Surfaces in [phase10-reporting-closeout.md](phase10-reporting-closeout.md)
 - Closed-session snapshots immutable
 
-### US-10.5.3 — Print and reveal
-
-**As** a cashier  
-**I want** the first activation print to show the generated number, and ordinary reprints to stay masked  
-**So that** complete-retry can print without putting the secret in the public envelope.
-
-**As** a global administrator with `gift_cards.reveal_number`  
-**I want** an audited exception path to recover the credential  
-**So that** a failed physical card can be reprinted without logging the number in audit payloads.
-
-### US-10.5.4 — Admin navigation
+### US-10.5.3 — Exceptional print recovery
 
 **As** authorized staff  
-**I want** gift-card program and operational destinations in the navigation catalog  
-**So that** there are no one-off header links.
+**I want** controlled print recovery of a generated credential with a reason  
+**So that** a failed first print can be recovered without a general reveal screen.
+
+First print of generated activation and refund cards ships in 10.4. This slice adds exceptional recovery, cash-out receipts, and X/Z print polish.
+
+### US-10.5.4 — Cash-out and reporting navigation
+
+**As** authorized staff  
+**I want** cash-out and reporting destinations that first exist in this slice  
+**So that** the catalog stays complete.
+
+10.2 and 10.3 already add their administrative destinations. This slice performs the final navigation audit.
+
+## Deferred policy
+
+Unused-instrument return (cash/card refund of an unused activated gift card that is neither merchandise return nor post-void) is a later POS policy slice. Research remains in git history of this packet; do not implement it in Phase 10.

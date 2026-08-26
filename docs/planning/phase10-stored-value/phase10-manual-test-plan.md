@@ -17,14 +17,18 @@ Do not treat this as a substitute for CI.
 9. Attempt reload + redeem in one ticket — blocked.
 10. Two Registers race the last cent on one card — one succeeds.
 
-## 2. Refunds, unused return, post-void
+## 2. Refunds and post-void
 
-1. Return merchandise; allocate remainder to store credit; customer required; trade credit not offered.
-2. Unused-instrument return of a never-spent activation; cash refund; card cannot redeem afterward.
-3. Attempt unused return after a redeem — blocked.
-4. Post-void a pure cash sale (existing) — still works.
-5. Post-void a ticket that activated a card later redeemed — blocked; no partial void; lineage visible.
-6. Post-void a ticket whose only SV effect is unused-return — follow fail-closed rules if already returned.
+1. Original gift card present and matching — refund original; remaining on that card increases.
+2. Wrong gift card presented — blocked; masked history is not sufficient.
+3. Original gift card unavailable → new generated refund card; first print shows full number; not an issuance; `stored_value_issuance_cents` unchanged.
+4. Original unavailable → manually numbered refund card.
+5. Original unavailable → customer store credit (customer required).
+6. New refund card complete retry creates only one instrument/liability.
+7. Trade credit is not offered as a generic destination.
+8. Trade-credit original-tender portion may return to the original trade account.
+9. Post-void a pure cash sale (existing) — still works.
+10. Post-void a ticket that activated a card later redeemed — blocked; no partial void; lineage visible; card need not be presented.
 
 ## 3. Cash-out and closeout
 
@@ -33,19 +37,48 @@ Do not treat this as a substitute for CI.
 3. Close session; reopen view; expected cash frozen.
 4. Reverse/post-void eligible cash-out; expected cash restores.
 5. `required_on_request_when_eligible` does not auto-payout without cashier confirmation.
+6. `cash_out_approval_required` requires second user.
 
-## 4. Admin, merge, security
+## 4. Transfers
+
+1. Partial same-type transfer.
+2. Full transfer.
+3. Account consolidation closes source.
+4. Customer merge transfer; zero-balance source accounts close without creating a survivor account.
+5. Cross-type transfer blocked.
+6. Reversal after destination spend blocked.
+7. Concurrent destination redemption/transfer serialized.
+
+## 5. Adjustments
+
+1. Customer-service credit.
+2. Debit with second user.
+3. Threshold credit approval.
+4. Self-approval blocked.
+5. Active gift-card adjustment.
+6. Suspended gift-card elevated adjustment.
+7. Replaced/closed gift-card adjustment blocked.
+8. Adjustment reversal after spend blocked.
+
+## 6. Encryption and print
+
+1. Database stores ciphertext, not the normalized number.
+2. Digest lookup succeeds.
+3. Repeated encrypted writes do not rely on ciphertext equality.
+4. Logs/audit/outbox/envelope omit full number.
+5. Ordinary reprint masked.
+6. Controlled retry prints original credential.
+7. Print recovery requires reason and authority; no general reveal screen.
+
+## 7. Admin, merge, security
 
 1. Customer show balances require `stored_value.view_activity`.
-2. Manual debit requires second user; self-approve fails.
-3. Deactivate customer with nonzero store credit — warn/block.
-4. Merge two customers with store credit — one survivor balance; source closed; activity lineage; concurrent redeem does not skip the transfer.
-5. Gift-card association follows merge; balance stays on the instrument.
-6. Failed inquiry throttle; lists never show full numbers.
-7. Reveal requires global permission; audit has last four only.
-8. Lookup code colliding with program prefix cannot be saved.
+2. Deactivate customer with nonzero store credit — warn/block.
+3. Gift-card association follows merge; balance stays on the instrument.
+4. Failed inquiry throttle; lists never show full numbers.
+5. Lookup code colliding with program prefix cannot be saved.
 
-## 5. Navigation and UDS
+## 8. Navigation and UDS
 
 1. Gift-card programs appear in `Admin::NavigationCatalog` for authorized users only.
 2. New admin screens use current composition primitives.
