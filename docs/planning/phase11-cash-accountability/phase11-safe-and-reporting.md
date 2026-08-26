@@ -49,7 +49,7 @@ Deposit counts against the safe use the same snapshot/revalidation contract.
 
 Independent of whether every session balanced. Do not distribute a safe over/short onto `PosSession` rows.
 
-Nonzero accepted variance posts `reconcile` on the safe location (`cash.reconcile_safe`; material uses `cash.approve_variance` with `direct` / `approval_required` as in [phase11-authorization.md](phase11-authorization.md)). That rebases `expected_balance_cents` so the same difference does not recur.
+Nonzero accepted variance posts `reconcile` on the safe location (`cash.reconcile_safe`). **Any nonzero** over/short requires a managed reason code. Free-text note and material-approval bands use the same organization/store variance settings as session close ([phase11-schema.md](phase11-schema.md) §8). Material uses `cash.approve_variance` with `direct` / `approval_required` as in [phase11-authorization.md](phase11-authorization.md). That rebases `expected_balance_cents` so the same difference does not recur.
 
 Zero variance: accept the count, no `cash_reconciliations` row. Store-day **safe reconciled** is derived from an accepted `cash_counts` with `purpose = safe_reconciliation` for that store and business date, **whether variance was zero or nonzero**—not from existence of a reconciliation row.
 

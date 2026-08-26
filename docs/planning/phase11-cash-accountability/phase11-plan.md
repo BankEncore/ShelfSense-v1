@@ -120,7 +120,8 @@ There is **no** 11.4 integration slice. Gift-card cash-out belongs in 11.1. Phas
 | Money | Integer cents; organization base currency |
 | Negative session cash | Prohibited after 11.1 (intentional migration from today’s $0-float refund/cash-out) |
 | Negative location cash | Prohibited on safe and deposit-in-transit |
-| Approval | Cannot authorize a negative expected balance. Phase 6 `direct` / `approval_required`; dedicated approve keys; org defaults with store override; never `approved_by = performed_by` |
+| Approval | Cannot authorize a negative expected balance. Phase 6 `direct` / `approval_required` except safe init (always a distinct approver). Dedicated approve keys. Org configurable defaults with store override; never `approved_by = performed_by` |
+| Variance bands | Inclusive `>=` on `abs(variance)`. Nonzero always needs a reason code. Seeded defaults: note $1.00, approval $10.00. Same settings for session and safe |
 | Open | Requires initialized safe. Positive float posts a balanced safe→session transfer; zero float keeps snapshot 0 and creates no movement |
 | Reverse | New `reverse` operation + inverse entries; original source row unchanged; no fabricated inverse business event |
 | Safe recon concurrency | Snapshot expected + `lock_version` at count start; revalidate on submit; activity may continue during the count |

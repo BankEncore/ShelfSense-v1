@@ -19,7 +19,7 @@ every POS complete still needs an open session
 
 Each store has one `cash_locations` row with `location_type = safe`. Until `initialize_safe` succeeds, `OpenSession` fails.
 
-Initialization is **one-time**: counted total (denomination lines optional), effective business date, notes, `cash_operations.operation_type = initialize_safe`. Not a paid-in. Outcome is `direct` or `approval_required` per [phase11-authorization.md](phase11-authorization.md) (`cash.initialize_safe` / `cash.approve_initialize_safe`). It **cannot** be reversed through `Cash::Reverse`. A second initialize is rejected. Mistakes after init are corrected with `cash.reconcile_safe`.
+Initialization is **one-time**: counted total (denomination lines optional), effective business date, notes, `cash_operations.operation_type = initialize_safe`. Not a paid-in. Always `approval_required`: a distinct user with `cash.approve_initialize_safe` authenticates, regardless of amount and even if the performer also holds that key. It **cannot** be reversed through `Cash::Reverse`. A second initialize is rejected. Mistakes after init are corrected with `cash.reconcile_safe`.
 
 The screen is usable **without** an open POS session. Production rollout is a coordinated maintenance window: migrate (uninitialized locations) → initialize every active store → then cashiers open. Do not infer a safe balance from historical close snapshots. Detail: [phase11-implementation-plan.md](phase11-implementation-plan.md) **Production cutover**.
 
@@ -86,14 +86,12 @@ Sequence:
 2. Compute expected cash (formula above, still open).
 3. Accept closing count total (optional denominations). Ordinary staff are blind until submit. `cash.view_expected_before_count` may reveal expected.
 4. Persist `closing_expected_cash_cents`, `closing_count_cents`, `closing_variance_cents` with the **existing** CHECK (`variance = count − expected`).
-5. If variance ≠ 0: post `reconcile` (session over/short), reason/note/approval per thresholds. This aligns session expected with counted **after** the snapshot is stored.
+5. If variance ≠ 0: post `reconcile` (session over/short). **Any nonzero** over/short requires a managed reason code. A free-text note is required when `abs(variance) >=` the effective note threshold. Material variance (`abs(variance) >=` the effective approval threshold) uses `cash.approve_variance`: `direct` when the closer also holds that key; otherwise a different authorized approver authenticates. Never persist `approved_by_id = performed_by_id`. This aligns session expected with counted **after** the snapshot is stored.
 6. Post `cash_transfers.transfer_type = session_close` for the **counted** amount: session → safe. Mid-shift `drop` remains 11.2.
 7. Set `closed_by_user_id`, `closed_at`, `status = closed`.
 8. Session location balance is zero. Closed `SessionTotals` still return the **snapshots**, not zero expected.
 
-Example: expected $500, counted $480 → snapshot expected 500, count 480, variance −20; short $20; transfer $480 to safe.
-
-Material variance uses `cash.approve_variance`: `direct` when the closer also holds that key; otherwise a different authorized approver authenticates for this close. Never persist `approved_by_id = performed_by_id`.
+Example: expected $500, counted $480 → snapshot expected 500, count 480, variance −20; short $20; transfer $480 to safe. With seeded defaults that $20 is material (reason code + note + approval unless the closer is `direct`). A $0.50 short needs a reason code only; a $1.00 short also needs a free-text note.
 
 ## 5. Manager-assisted close
 
@@ -129,4 +127,4 @@ Do not replace Z with store-day finalization. Multiple sessions per period remai
 - Concurrent refunds/cash-outs cannot both spend the last cent.
 - Manager close vs cashier close audit fields.
 - Zero-float open creates no transfer row.
-- Safe init is available without an open session; second init rejected.
+- Safe init is available without an open session; always a distinct approver; second init rejected.

@@ -120,7 +120,7 @@ Zero variance does not create a reconciliation row.
 
 ### 4.4 `cash_safe_initializations`
 
-One row per store safe: unique `cash_location_id`. Count, notes, `cash_operation_id`. Typed as initialization, not paid-in. **Not** reversible through `Cash::Reverse`. A second initialize is rejected. Mistakes after init are corrected with `cash.reconcile_safe`.
+One row per store safe: unique `cash_location_id`. Count, notes, `cash_operation_id`. Typed as initialization, not paid-in. **Not** reversible through `Cash::Reverse`. A second initialize is rejected. Mistakes after init are corrected with `cash.reconcile_safe`. `approved_by_id` is **required** and must differ from `performed_by_id` (always `approval_required`).
 
 ### 4.5 `cash_deposits`
 
@@ -144,7 +144,7 @@ Optional `cash_count_denomination_lines` (`quantity`, `denomination_cents`). Whe
 
 ## 6. `cash_activity_reasons`
 
-Stable catalog: `code`, `name`, `operation_kind` (`paid_in`, `paid_out`, `over`, `short`, `reverse`), `notes_required`, `active`. Facts snapshot `reason_code` / `reason_name_snapshot`. No GL mapping columns.
+Stable catalog: `code`, `name`, `operation_kind` (`paid_in`, `paid_out`, `over`, `short`, `reverse`), `notes_required`, `active`. Facts snapshot `reason_code` / `reason_name_snapshot`. No GL mapping columns. Nonzero over/short always selects an `over` or `short` reason; the variance **note** threshold is a separate required free-text field, not a substitute for the reason catalog.
 
 ## 7. `pos_sessions` additions
 
@@ -159,15 +159,28 @@ Do not add a live `expected_cash_cents` column on the session. Do not add `statu
 
 ## 8. Thresholds (`system_settings` and `stores`)
 
-Organization defaults on `system_settings` (integer cents, `>= 0`):
+Organization **configurable defaults** on `system_settings` (integer cents, `>= 0`). These are settings, not permanent policy constants. Administrators with `system_settings.manage` may change them. Store overrides on `stores` remain nullable; **null inherits the organization value.** Effective threshold at a store is `COALESCE(store.column, system_settings.column)`.
 
-| Column | Default | Meaning |
+Compare **inclusively** (`>=`). Variance uses the **absolute** amount (`abs(counted − expected)`). Paid-out uses the paid-out amount. The same variance settings apply to **session close and safe reconciliation** in MVP.
+
+| Column | Seeded default | Meaning |
 |---|---|---|
-| `cash_variance_note_threshold_cents` | `0` | Absolute variance at or above this requires a reason/note (`0` = any nonzero) |
-| `cash_variance_approval_threshold_cents` | `5000` | Absolute variance at or above this is material (`approval_required` unless the performer is `direct`) |
-| `cash_paid_out_approval_threshold_cents` | `5000` | Paid-out amount at or above this uses `cash.approve_paid_out` unless the performer is `direct` |
+| `cash_variance_note_threshold_cents` | `100` ($1.00) | Absolute variance at or above this requires an additional free-text note |
+| `cash_variance_approval_threshold_cents` | `1000` ($10.00) | Absolute variance at or above this is material (`approval_required` unless the performer is `direct` via `cash.approve_variance`) |
+| `cash_paid_out_approval_threshold_cents` | `5000` ($50.00) | Paid-out amount at or above this uses `cash.approve_paid_out` unless the performer is `direct` |
 
-Store overrides on `stores` (nullable). **Null means inherit the organization value.** Effective threshold at a store is `COALESCE(store.column, system_settings.column)`.
+**Nonzero over/short** (session or safe) always requires a managed `cash_activity_reasons` code (`over` / `short`). That is independent of the note threshold. Zero variance needs neither reason nor note.
+
+The table below illustrates **seeded** defaults. Live policy uses the effective store/org values.
+
+| `abs(variance_cents)` | Reason code | Free-text note | Second-user approval |
+|---|---|---|---|
+| `0` | No | No | No |
+| `1`–`99` | Yes | No (unless the reason itself requires notes) | No |
+| `100`–`999` | Yes | Yes (`>=` note threshold) | No |
+| `>= 1000` | Yes | Yes | Yes (`>=` approval threshold), unless `direct` |
+
+Safe **initialization** does not use these variance thresholds. It always requires a distinct approver (see [phase11-authorization.md](phase11-authorization.md)).
 
 Paid-in has no amount threshold in MVP. Preferred retained-till cash is out of MVP (available cash = expected session cash).
 

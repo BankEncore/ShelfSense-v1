@@ -7,7 +7,7 @@ Do not treat this as a substitute for CI.
 ## 1. Cutover and open
 
 1. New store: Register enter fails until the safe is initialized.
-2. Initialize the safe **without** an open POS session. A store manager who holds both initialize and approve keys completes **direct** (no second user). A performer without `cash.approve_initialize_safe` needs a different approver. Expected safe cash equals the count.
+2. Initialize the safe **without** an open POS session. Always a distinct second user with `cash.approve_initialize_safe` — even when the performer also holds that key. Self-approval is rejected. Expected safe cash equals the count.
 3. Second initialize rejected. Ordinary reverse of initialization is unavailable.
 4. Open session with float less than safe expected; safe decreases; session `opening_float_cents` matches.
 5. Open with float greater than safe expected — blocked.
@@ -27,7 +27,7 @@ Do not treat this as a substitute for CI.
 2. Zero variance: counted transfer to safe equals expected; snapshots match; Z still shows opening float and closing expected as today.
 3. Short: variance negative; short movement; safe receives counted amount not expected.
 4. Over: safe receives counted amount; over movement on the session.
-5. Material variance: manager with `cash.approve_variance` closing their own session is `direct`; a performer without that key needs a different approver. Never record the same user as both performer and approver.
+5. Variance bands (seeded defaults): $0.50 over/short needs a reason code only; $1.00 also needs a free-text note; $10.00 needs a different approver unless the closer has `cash.approve_variance` (`direct`). Never record the same user as both performer and approver.
 6. Working ticket blocks close (existing).
 7. Manager closes another cashier’s session with reason; cashier unchanged; closer audited; counted cash in safe.
 8. Closed session cannot receive drop/paid-in.

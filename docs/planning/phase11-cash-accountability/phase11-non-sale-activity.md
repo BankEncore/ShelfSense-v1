@@ -21,7 +21,7 @@ Increases expected session cash. Does not increase sales.
 
 ## 2. Paid-out
 
-Authorized non-sale disbursement from the open session. Requires `cash.paid_out`, permitted reason, available cash, notes when required. Amount at or above the effective store/org paid-out threshold is `approval_required` unless the performer also has `cash.approve_paid_out` (`direct`). `cash.paid_out` does not imply `cash.approve_paid_out`.
+Authorized non-sale disbursement from the open session. Requires `cash.paid_out`, permitted reason, available cash, notes when required. Amount `>=` the effective store/org paid-out threshold is `approval_required` unless the performer also has `cash.approve_paid_out` (`direct`). `cash.paid_out` does not imply `cash.approve_paid_out`.
 
 Decreases expected session cash. Refunds, gift-card cash-outs, buyback payouts, drops, and session-close transfers are not paid-outs.
 

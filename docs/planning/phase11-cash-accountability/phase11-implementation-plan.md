@@ -41,9 +41,9 @@ Issue branches PR **directly to `main`**. There is no Phase 11 integration branc
 23. Safe reconciliation uses snapshot/`lock_version` revalidation on submit. Cash activity **may continue** while a count is being entered. Do not hold a database row lock across HTTP requests. MVP has no durable freeze/reconciliation-in-progress record.
 24. Safe initialization is one-time. It cannot be reversed through `Cash::Reverse`. Mistakes are corrected by privileged safe reconciliation. No second initialization.
 25. Do not reverse `session_close` or session over/short in MVP.
-26. Controlled cash actions follow Phase 6 outcomes: performer with perform+approve is `direct` (no second user; `approved_by` omitted). Never persist `approved_by_id = performed_by_id`. Approver (when `approval_required`) must differ from the performer, be authorized in the same store scope, and authenticate for that exact operation.
-27. Dedicated approve keys: `cash.approve_initialize_safe`, `cash.approve_paid_out`, `cash.approve_variance`. Perform keys do not imply approve keys. Seeded `store_manager` and `system_administrator` receive both so they can self-authorize as `direct`.
-28. Variance-note, variance-approval, and paid-out-approval thresholds are organization defaults with nullable store overrides (`COALESCE(store, org)`). Defaults: note `0`, variance approval `5000`, paid-out approval `5000` (cents).
+26. Controlled cash actions follow Phase 6 outcomes except **safe initialization**: performer with perform+approve is `direct` (no second user; `approved_by` omitted). Safe initialization is always `approval_required` with a distinct `cash.approve_initialize_safe` actor, regardless of amount. Never persist `approved_by_id = performed_by_id`. Approver (when `approval_required`) must differ from the performer, be authorized in the same store scope, and authenticate for that exact operation.
+27. Dedicated approve keys: `cash.approve_initialize_safe`, `cash.approve_paid_out`, `cash.approve_variance`. Perform keys do not imply approve keys. Seeded `store_manager` and `system_administrator` receive both so they can self-authorize variance and paid-outs as `direct`; they still cannot self-approve safe initialization.
+28. Variance-note, variance-approval, and paid-out-approval thresholds are **organization-level configurable defaults** with nullable store overrides (`COALESCE(store, org)`). They are not permanent policy constants. Seeded defaults: note `100` ($1.00), variance approval `1000` ($10.00), paid-out approval `5000` ($50.00). Comparisons are inclusive (`>=`). Variance uses `abs(variance_cents)`. Session close and safe recon share the same variance settings. Any nonzero over/short requires a managed reason code; the note threshold only adds required free-text.
 
 ## Production cutover
 
@@ -75,6 +75,6 @@ If a later release needs to delay enforcement, that would be a feature gate or t
 - Extend `Pos::OpenSession`, `Pos::CloseSession`, `Pos::SessionTotals`, `GiftCards::CashOut`, and cash-refund completion/tender paths.
 - Add `Cash::Post` (name may vary) with location/session lock order, post-lock revalidation, idempotency, and nonnegative location checks—same shape as `StoredValue::Post`.
 - Reuse `Pos::AuthenticateApprover` / `PosControlledAction` for Register-originated cash actions.
-- Bootstrap/demo and tests must initialize a safe before opening a session so Docker Register enter still works.
+- Bootstrap/demo and tests must initialize a safe before opening a session so Docker Register enter still works. Initialization still uses a distinct performer and approver.
 - Local commands remain Docker-only (`./dev/rails-docker`).
 - Audit and outbox (if any) commit with the business transaction. Failed attempts that must survive rollback are recorded outside it.

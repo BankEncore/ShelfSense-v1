@@ -24,7 +24,7 @@ Status: **Proposed**. GitHub-issue-ready stories for slices 11.0–11.3.
 **I want** a one-time counted safe opening balance without an open POS session  
 **So that** floats have a source location and production cutover can happen before cashiers open.
 
-**Acceptance:** [phase11-schema.md](phase11-schema.md) §4.4; [phase11-session-lifecycle.md](phase11-session-lifecycle.md) §1; second init rejected; not a paid-in; not reversible via `Cash::Reverse`; `direct` when the performer has `cash.approve_initialize_safe`
+**Acceptance:** [phase11-schema.md](phase11-schema.md) §4.4; [phase11-session-lifecycle.md](phase11-session-lifecycle.md) §1; second init rejected; not a paid-in; not reversible via `Cash::Reverse`; always a distinct `cash.approve_initialize_safe` actor (never `direct`)
 
 ### US-11.1.2 — Open from safe
 
@@ -64,7 +64,8 @@ Status: **Proposed**. GitHub-issue-ready stories for slices 11.0–11.3.
 - Transfer `session_close` uses counted amount
 - Closed `SessionTotals` return snapshots
 - Session location balance zero
-- Material variance: `direct` if closer has `cash.approve_variance`; otherwise a different approver
+- Material variance (`abs(variance) >=` approval threshold): `direct` if closer has `cash.approve_variance`; otherwise a different approver
+- Any nonzero variance requires a managed reason code; free-text note only at/above the note threshold
 
 ### US-11.1.5 — Manager-assisted close
 
@@ -90,7 +91,7 @@ Status: **Proposed**. GitHub-issue-ready stories for slices 11.0–11.3.
 **I want** reason-coded paid-ins and paid-outs on the open session  
 **So that** non-sale cash is not mixed with tenders or gift-card cash-out.
 
-**Acceptance:** effective paid-out threshold is `COALESCE(store, org)`; performer with `cash.approve_paid_out` is `direct`; otherwise a different user with that key
+**Acceptance:** effective paid-out threshold is `COALESCE(store, org)` and inclusive `>=`; performer with `cash.approve_paid_out` is `direct`; otherwise a different user with that key
 
 ### US-11.2.2 — Drop and replenish
 
@@ -116,7 +117,7 @@ Status: **Proposed**. GitHub-issue-ready stories for slices 11.0–11.3.
 **I want** to count the safe independently of session results without freezing the store for the whole count  
 **So that** a balanced set of tills can still show a safe over/short.
 
-**Acceptance:** activity may continue during the count; submit rejects a stale `lock_version` or expected snapshot; zero variance still counts as reconciled for the store-day status
+**Acceptance:** activity may continue during the count; submit rejects a stale `lock_version` or expected snapshot; zero variance still counts as reconciled for the store-day status; nonzero uses the same reason / note / approval bands as session close
 
 ### US-11.3.2 — Prepare deposit
 

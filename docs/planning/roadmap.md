@@ -252,7 +252,7 @@ Preserve the distinction between:
 - Paid in; paid out; mid-shift drop; safe→session replenishment; atomic transfers (no acknowledgement workflow)
 - Safe reconciliation; deposit in transit (no bank confirmation); store-day cash **report** (not a hard finalization)
 - Manager-assisted session close; cash activity reasons; reversals of eligible Phase 11 operations (not session reopen or safe re-init)
-- Org cash thresholds with store override; Phase 6-style `direct` self-approval when the performer holds the matching approve key
+- Org cash thresholds with store override (seeded: note $1, variance approval $10, paid-out $50; inclusive `>=` on absolute variance); Phase 6-style `direct` self-approval when the performer holds the matching approve key, except safe initialization which always needs a distinct approver
 
 **Deliverable:**
 
