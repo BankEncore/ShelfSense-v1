@@ -1,0 +1,34 @@
+<%= form_with model: [:admin, reason], class: "form" do |form| %>
+  <%= render "shared/form_errors", record: reason %>
+  <%= form.hidden_field :lock_version %>
+  <% unless reason.persisted? %>
+    <div class="form-field"><%= form.label :code %><%= form.text_field :code %></div>
+  <% end %>
+  <div class="form-field"><%= form.label :name %><%= form.text_field :name %></div>
+  <div class="form-field"><%= form.label :description %><%= form.text_area :description, rows: 3 %></div>
+  <div class="form-field">
+    <%= form.label :allowed_direction %>
+    <%= form.select :allowed_direction, StoredValueAdjustmentReason::DIRECTIONS.map { |d| [d.humanize, d] } %>
+  </div>
+  <fieldset class="form-field">
+    <legend>Allowed account types</legend>
+    <% StoredValueAccount::ACCOUNT_TYPES.each do |type| %>
+      <label>
+        <%= check_box_tag "stored_value_adjustment_reason[allowed_account_types][]", type, Array(reason.allowed_account_types).include?(type) %>
+        <%= type.humanize %>
+      </label>
+    <% end %>
+  </fieldset>
+  <div class="form-field">
+    <%= form.check_box :notes_required %>
+    <%= form.label :notes_required, "Notes required" %>
+  </div>
+  <div class="form-field">
+    <%= form.check_box :approval_required %>
+    <%= form.label :approval_required, "Always require second-user approval" %>
+  </div>
+  <div class="actions">
+    <%= action_submit(form, reason.persisted? ? "Save Changes" : "Create reason", style: :solid, intent: :brand) %>
+    <%= action_link_to("Cancel", reason.persisted? ? admin_stored_value_adjustment_reason_path(reason) : admin_stored_value_adjustment_reasons_path, style: :ghost, intent: :neutral) %>
+  </div>
+<% end %>

@@ -83,8 +83,9 @@ module Admin
             key: :customers,
             label: "Customers",
             destinations: [
-              dest(:customers, "Customers", :admin_customers_path, permission: "customers.view", controllers: %w[admin/customers]),
+              dest(:customers, "Customers", :admin_customers_path, permission: "customers.view", controllers: %w[admin/customers admin/stored_value_adjustments]),
               dest(:customer_requests, "Customer requests", :admin_customer_requests_path, permission: "customers.view", controllers: %w[admin/customer_requests]),
+              dest(:stored_value_transfers, "Stored-value transfers", :new_admin_stored_value_transfer_path, permission: "stored_value.transfer", controllers: %w[admin/stored_value_transfers]),
               dest(:location_ops, "Location ops", :ops_location_path, permission: "customer_requests.locate", requires_store: true, controllers: %w[ops/locations])
             ]
           ),
@@ -102,6 +103,7 @@ module Admin
             label: "Organization configuration",
             destinations: [
               dest(:system_settings, "Settings", :admin_system_settings_path, permission: "system_settings.view", controllers: %w[admin/system_settings]),
+              dest(:stored_value_adjustment_reasons, "Stored-value reasons", :admin_stored_value_adjustment_reasons_path, permission: "stored_value.manage_adjustment_reasons", controllers: %w[admin/stored_value_adjustment_reasons]),
               dest(:stores, "Stores", :admin_stores_path, permission: %w[stores.view stores.create], controllers: %w[admin/stores]),
               dest(:gl_accounts, "GL Accounts", :admin_gl_accounts_path, permission: "gl_accounts.view", controllers: %w[admin/gl_accounts]),
               dest(:tax_classes, "Tax Classes", :admin_tax_classes_path, permission: "tax_classes.view", controllers: %w[admin/tax_classes]),

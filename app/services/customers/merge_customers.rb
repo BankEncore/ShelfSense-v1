@@ -11,7 +11,8 @@ module Customers
       :source,
       :requests_reassigned_count,
       :aliases_repointed_ids,
-      :replayed
+      :replayed,
+      :stored_value_transfer_ids
     )
 
     def self.call(**attrs)
@@ -68,7 +69,8 @@ module Customers
           source: source,
           requests_reassigned_count: op.operation.result_payload["requests_reassigned_count"].to_i,
           aliases_repointed_ids: Array(op.operation.result_payload["aliases_repointed_ids"]),
-          replayed: true
+          replayed: true,
+          stored_value_transfer_ids: Array(op.operation.result_payload["stored_value_transfer_ids"])
         )
       end
 
@@ -97,6 +99,16 @@ module Customers
             survivor: survivor
           )
 
+          store = @store || Store.active.order(:name).first
+          stored_value_transfer_ids = Customers::MergeStoredValueAccounts.call(
+            source: source,
+            survivor: survivor,
+            actor: @actor,
+            store: store,
+            merge_idempotency_operation: op.operation,
+            correlation_id: @correlation_id
+          )
+
           source.update!(
             merged_into_customer_id: survivor.id,
             active: false
@@ -115,7 +127,8 @@ module Customers
               reason: @reason,
               aliases_repointed_count: aliases_repointed_ids.size,
               aliases_repointed_ids: aliases_repointed_ids.first(50),
-              customer_requests_reassigned_count: requests_reassigned_count
+              customer_requests_reassigned_count: requests_reassigned_count,
+              stored_value_transfer_ids: stored_value_transfer_ids
             }
           )
 
@@ -125,7 +138,8 @@ module Customers
             result_id: survivor.id,
             result_payload: {
               requests_reassigned_count: requests_reassigned_count,
-              aliases_repointed_ids: aliases_repointed_ids
+              aliases_repointed_ids: aliases_repointed_ids,
+              stored_value_transfer_ids: stored_value_transfer_ids
             }
           )
 
@@ -134,11 +148,12 @@ module Customers
             source: source.reload,
             requests_reassigned_count: requests_reassigned_count,
             aliases_repointed_ids: aliases_repointed_ids,
-            replayed: false
+            replayed: false,
+            stored_value_transfer_ids: stored_value_transfer_ids
           )
         end
         result
-      rescue Customers::Error, ActiveRecord::RecordInvalid, ActiveRecord::StaleObjectError => e
+      rescue Customers::Error, StoredValue::Error, ActiveRecord::RecordInvalid, ActiveRecord::StaleObjectError => e
         Idempotency::OperationService.fail!(op.operation, message: e.message)
         raise Customers::Error, e.message
       rescue Idempotency::OperationService::PayloadMismatchError

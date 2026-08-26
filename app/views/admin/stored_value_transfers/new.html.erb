@@ -1,0 +1,48 @@
+<% content_for :title, "Transfer stored value" %>
+<%= render "shared/breadcrumbs", crumbs: [
+  { name: "Home", path: root_path },
+  { name: "Stored-value transfers" }
+] %>
+<%= render "shared/page_header", title: "Transfer store or trade credit" %>
+<%= form_with url: admin_stored_value_transfers_path, method: :post, class: "form" do |form| %>
+  <%= hidden_field_tag :idempotency_key, params[:idempotency_key].presence || SecureRandom.uuid_v7 %>
+  <div class="form-field">
+    <%= label_tag :from_customer_id, "Source customer ID" %>
+    <%= text_field_tag :from_customer_id, params[:from_customer_id] || @from_customer&.id, required: true %>
+  </div>
+  <div class="form-field">
+    <%= label_tag :to_customer_id, "Destination customer ID" %>
+    <%= text_field_tag :to_customer_id, params[:to_customer_id], required: true %>
+  </div>
+  <div class="form-field">
+    <%= label_tag :account_type, "Account type" %>
+    <%= select_tag :account_type, options_for_select(StoredValueAccount::CUSTOMER_OWNED_TYPES.map { |type| [type.humanize, type] }, params[:account_type] || @account_type) %>
+  </div>
+  <div class="form-field">
+    <%= label_tag :transfer_type, "Transfer type" %>
+    <%= select_tag :transfer_type, options_for_select([%w[Administrative administrative], ["Consolidation (full balance)", "account_consolidation"]], params[:transfer_type]) %>
+  </div>
+  <div class="form-field">
+    <%= label_tag :amount, "Amount (ignored for consolidation)" %>
+    <%= text_field_tag :amount, params[:amount] %>
+  </div>
+  <div class="form-field">
+    <%= label_tag :reason_code, "Reason code" %>
+    <%= text_field_tag :reason_code, params[:reason_code], required: true %>
+  </div>
+  <div class="form-field">
+    <%= label_tag :notes, "Notes" %>
+    <%= text_area_tag :notes, params[:notes], rows: 3 %>
+  </div>
+  <div class="form-field">
+    <%= label_tag :approver_username, "Approver username" %>
+    <%= text_field_tag :approver_username, params[:approver_username], required: true %>
+  </div>
+  <div class="form-field">
+    <%= label_tag :approver_password, "Approver password" %>
+    <%= password_field_tag :approver_password %>
+  </div>
+  <div class="actions">
+    <%= action_submit(form, "Post transfer", style: :solid, intent: :brand) %>
+  </div>
+<% end %>

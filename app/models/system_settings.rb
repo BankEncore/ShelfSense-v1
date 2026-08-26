@@ -11,6 +11,8 @@ class SystemSettings < ApplicationRecord
             numericality: { only_integer: true, greater_than_or_equal_to: 0 }
   validates :default_customer_reservation_expiration_days,
             numericality: { only_integer: true, greater_than: 0 }
+  validates :stored_value_adjust_credit_approval_threshold_cents,
+            numericality: { only_integer: true, greater_than_or_equal_to: 0 }
   validates :default_receipt_header, :default_receipt_footer, length: { maximum: Store::RECEIPT_MESSAGE_LIMIT }
   validate :singleton_row
   before_validation :normalize_receipt_messages

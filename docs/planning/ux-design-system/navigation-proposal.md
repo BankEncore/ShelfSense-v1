@@ -154,12 +154,14 @@ UDS-5.0 compared compact **presentations** of this inventory ([uds-5-plan.md](ud
 
 ## Proposed Phase 10 destinations
 
-Not in the UDS-4.1 production inventory until Phase 10.5 implementation updates `Admin::NavigationCatalog`. Do not add one-off header links.
+Destinations land in the slice that introduces the screens. Do not add one-off header links. Customer show balance panels are not a new destination.
 
-| Canonical group | Proposed label → destination | Visibility gate | Rationale |
+| Canonical group | Label → destination | Visibility gate | Slice |
 |---|---|---|---|
-| **Customers** | (customer show activity — not a new index destination) | `stored_value.view_activity` | Balances on existing customer record |
-| **POS operations** | Gift-card programs → `admin_gift_card_programs_path` | `gift_cards.manage_programs` | Program configuration |
-| **POS operations** | Gift cards → `admin_gift_cards_path` | `gift_cards.view` | Masked inquiry and operational administration |
+| **Customers** | (customer show activity — not a new index destination) | `stored_value.view_activity` | 10.2 |
+| **Customers** | Stored-value transfers → `new_admin_stored_value_transfer_path` | `stored_value.transfer` | 10.2 |
+| **Organization configuration** | Stored-value reasons → `admin_stored_value_adjustment_reasons_path` | `stored_value.manage_adjustment_reasons` | 10.2 |
+| **POS operations** | Gift-card programs → `admin_gift_card_programs_path` | `gift_cards.manage_programs` | 10.3 |
+| **POS operations** | Gift cards → `admin_gift_cards_path` | `gift_cards.view` | 10.3 |
 
 Exact path helpers are illustrative. Implementation must keep controllers as the authorization boundary.

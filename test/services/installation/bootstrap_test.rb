@@ -52,6 +52,9 @@ class Installation::BootstrapTest < ActiveSupport::TestCase
     assert_includes actions, "installation.started"
     assert_includes actions, "installation.completed"
     assert AuditEvent.where(actor_type: "system").exists?
+    assert StoredValueAdjustmentReason.exists?(code: "goodwill")
+    assert_not StoredValueAdjustmentReason.exists?(code: "opening_balance")
+    assert_equal 5000, result[:settings].stored_value_adjust_credit_approval_threshold_cents
   end
 
   test "rejects a second bootstrap after initialization" do

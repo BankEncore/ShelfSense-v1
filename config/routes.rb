@@ -108,7 +108,12 @@ Rails.application.routes.draw do
         post :merge
       end
       collection { get :duplicate_check }
+      resources :stored_value_adjustments, only: %i[new create]
     end
+    resources :stored_value_adjustment_reasons do
+      member { post :reactivate }
+    end
+    resources :stored_value_transfers, only: %i[new create]
     resources :customer_requests, only: %i[index show new create] do
       collection do
         get :customer_lookup

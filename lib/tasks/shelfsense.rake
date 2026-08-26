@@ -49,6 +49,7 @@ namespace :shelfsense do
     Authorization::PermissionCatalog.seed!(granted_by: granted_by)
     ProductForms::Catalog.seed!
     SubjectSchemes::Catalog.seed!
+    StoredValue::AdjustmentReasons.seed!
     after = Role.find_by!(key: "system_administrator").permissions.pluck(:key)
 
     added = after - before

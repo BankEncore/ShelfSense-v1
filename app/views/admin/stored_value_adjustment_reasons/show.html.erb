@@ -1,0 +1,21 @@
+<% content_for :title, @reason.code %>
+<%= render "shared/breadcrumbs", crumbs: [
+  { name: "Home", path: root_path },
+  { name: "Stored-value reasons", path: admin_stored_value_adjustment_reasons_path },
+  { name: @reason.code }
+] %>
+<% actions = [configuration_status_badge(@reason.active?)] %>
+<% if @reason.active? %>
+  <% actions << action_link_to("Edit", edit_admin_stored_value_adjustment_reason_path(@reason), style: :outline, intent: :neutral) %>
+  <% actions << action_button_to("Deactivate", admin_stored_value_adjustment_reason_path(@reason), method: :delete, style: :outline, intent: :warning) %>
+<% else %>
+  <% actions << action_button_to("Reactivate", reactivate_admin_stored_value_adjustment_reason_path(@reason), method: :post, style: :solid, intent: :brand) %>
+<% end %>
+<%= render "shared/page_header", title: @reason.name, actions: safe_join(actions, " ") %>
+<%= render "shared/definition_list", rows: [
+      ["Code", @reason.code],
+      ["Direction", @reason.allowed_direction.humanize],
+      ["Account types", Array(@reason.allowed_account_types).join(", ")],
+      ["Notes required", @reason.notes_required? ? "Yes" : "No"],
+      ["Approval required", @reason.approval_required? ? "Yes" : "No"]
+    ] %>
