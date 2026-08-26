@@ -103,7 +103,7 @@ module Pos
       tenders = transaction.pos_tenders.to_a
       case settlement_direction(transaction)
       when :none
-        transaction.pos_transaction_lines.any? && tenders.empty?
+        commercial_content?(transaction) && tenders.empty?
       when :payment
         tenders.any? &&
           tenders.all? { |tender| tender.direction == "payment" } &&
@@ -172,6 +172,30 @@ module Pos
       line.line_total_cents = line.net_merchandise_amount_cents + line.line_tax_cents
     end
 
+    def commercial_content?(transaction)
+      transaction.pos_transaction_lines.any? || transaction.pos_stored_value_issuances.any?
+    end
+
+    def require_commercial_content!(transaction)
+      return if commercial_content?(transaction)
+
+      raise Pos::Error, "transaction has no merchandise"
+    end
+
+    def nested_stored_value_idempotency_key(operation_id, kind, record_id)
+      Digest::UUID.uuid_v5(operation_id.to_s, "#{kind}:#{record_id}")
+    end
+
+    def next_issuance_number(transaction)
+      (transaction.pos_stored_value_issuances.maximum(:issuance_number) || 0) + 1
+    end
+
+    def issuance_contribution_cents(transaction)
+      transaction.pos_stored_value_issuances.sum { |issuance|
+        issuance.post_void_generated? ? -issuance.amount_cents : issuance.amount_cents
+      }
+    end
+
     def refresh_totals!(transaction)
       lines = transaction.pos_transaction_lines.reload
       sale_lines = lines.select(&:sale?)
@@ -188,7 +212,9 @@ module Pos
       transaction.return_total_cents =
         transaction.return_subtotal_cents - transaction.return_discount_cents + transaction.return_tax_cents
 
-      transaction.signed_net_cents = sale_total - transaction.return_total_cents
+      transaction.pos_stored_value_issuances.reload
+      transaction.stored_value_issuance_cents = issuance_contribution_cents(transaction)
+      transaction.signed_net_cents = sale_total + transaction.stored_value_issuance_cents - transaction.return_total_cents
       transaction.total_cents = transaction.signed_net_cents.abs
       transaction.save!
     end

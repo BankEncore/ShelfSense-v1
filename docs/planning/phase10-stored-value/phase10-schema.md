@@ -259,7 +259,7 @@ Add:
 
 | Column | Type | Contract |
 |---|---|---|
-| `stored_value_issuance_cents` | bigint | Default 0; ≥ 0; sum of activation/reload issuance amounts |
+| `stored_value_issuance_cents` | bigint | Default 0; sum of activation/reload issuance amounts. Post-void reversals persist the negated contribution so signed-net stays one formula. |
 | `customer_id` | uuid, nullable | FK → `customers`; optional until complete |
 
 Replace check `pos_transactions_signed_net_matches_components`:
