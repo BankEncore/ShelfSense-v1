@@ -67,7 +67,7 @@ Small maintenance (dependency bumps, tiny fixes) may use an issue + PR without a
 
 ## Branches and pull requests
 
-Branch naming: `<issue-number>-<short-description>` (lowercase, hyphenated). Merge to the primary development branch (`main`). No long-lived phase branches unless a release strategy requires them. **Phase 11 exception:** slice PRs target `phase-11-cash-accountability`; merge that branch to `main` only after the Phase 11 manual test plan is executed ([phase11-implementation-plan.md](planning/phase11-cash-accountability/phase11-implementation-plan.md)).
+Branch naming: `<issue-number>-<short-description>` (lowercase, hyphenated). Merge to the primary development branch (`main`). No long-lived phase branches unless a release strategy requires them.
 
 PR structure:
 

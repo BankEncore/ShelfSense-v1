@@ -1,21 +1,21 @@
 # Phase 11 — Implementation plan
 
-Status: **Proposed** (11.3 in this PR). Living file: update slice status when work lands.
+Status: **Complete** on `main` (August 2026). Manual test plan executed.
 
 Authority: [phase11-plan.md](phase11-plan.md), [phase11-schema.md](phase11-schema.md), [ADR-021](../../adr/ADR-021-register-and-terminal-identity.md), [ADR-025](../../adr/ADR-025-domain-owned-operational-ledgers.md).
 
 ## Merge policy
 
-Phase 11 uses a long-lived integration branch because 11.1 makes `OpenSession` fail until every active store safe is initialized. Incomplete slices must stay off `main`.
+Phase 11 used a long-lived integration branch because 11.1 makes `OpenSession` fail until every active store safe is initialized. Incomplete slices stayed off `main` until the [manual test plan](phase11-manual-test-plan.md) was executed. That branch has now merged; later cash work PRs **directly to `main`**.
 
 - Integration branch: `phase-11-cash-accountability` (from `main`). This is the only long-lived Phase 11 branch.
 - Slice branches: `<issue-number>-<short-description>` ([github-workflow.md](../../github-workflow.md)).
-- Slice PRs target **`phase-11-cash-accountability`**, not `main`. Do not start slice N+1 until slice N is reviewed and merged into the integration branch.
-- Merge order: 11.0 merge-policy docs → 11.1 → 11.2 → 11.3.
+- Slice PRs targeted **`phase-11-cash-accountability`**, not `main`, until the phase completed.
+- Merge order was 11.0 merge-policy docs → 11.1 → 11.2 → 11.3, then this `main` merge after the manual test plan.
 - 11.1 is **one** complete PR (reviewable commits, not independently mergeable): safe init, open transfer, `SessionTotals`, close transfer, available-cash, gift-card cash-out check, manager-assisted close, Z regression.
 - Do not ship paid-in/out or deposit before expected cash includes 11.1 transfers and over/short.
 - Navigation destinations land in the slice that introduces the screens.
-- Do **not** merge `phase-11-cash-accountability` to `main` until [phase11-manual-test-plan.md](phase11-manual-test-plan.md) is executed.
+- The completed phase merged to `main` after [phase11-manual-test-plan.md](phase11-manual-test-plan.md) was executed.
 
 GitHub tracker: [milestone Phase 11](https://github.com/BankEncore/ShelfSense-v1/milestone/6) — [#72](https://github.com/BankEncore/ShelfSense-v1/issues/72) 11.0, [#73](https://github.com/BankEncore/ShelfSense-v1/issues/73) 11.1, [#74](https://github.com/BankEncore/ShelfSense-v1/issues/74) 11.2, [#75](https://github.com/BankEncore/ShelfSense-v1/issues/75) 11.3.
 
@@ -71,10 +71,11 @@ If a later release needs to delay enforcement, that would be a feature gate or t
 
 | Slice | Status |
 |---|---|
-| 11.0 Contract / packet | **Complete** on `main` (planning packet). Merge-policy lock: this PR on `phase-11-cash-accountability` |
-| 11.1 Safe-backed session lifecycle | **Complete** on `phase-11-cash-accountability` |
-| 11.2 Non-sale cash activity | **Complete** on `phase-11-cash-accountability` |
-| 11.3 Safe recon, deposit, store-day report | This PR |
+| 11.0 Contract / packet | **Complete** on `main` |
+| 11.1 Safe-backed session lifecycle | **Complete** on `main` |
+| 11.2 Non-sale cash activity | **Complete** on `main` |
+| 11.3 Safe recon, deposit, store-day report | **Complete** on `main` |
+| Manual test plan | Executed (August 2026) |
 
 ## Integration notes
 

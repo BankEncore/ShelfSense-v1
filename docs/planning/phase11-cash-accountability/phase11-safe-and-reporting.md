@@ -1,6 +1,6 @@
 # Phase 11 — Safe reconciliation and reporting
 
-Status: **Implemented** on `phase-11-cash-accountability` (this PR). Deposit in transit is in Phase 11; bank confirmation is not.
+Status: **Implemented** on `main`. Deposit in transit is in Phase 11; bank confirmation is not.
 
 ### Actually locked
 

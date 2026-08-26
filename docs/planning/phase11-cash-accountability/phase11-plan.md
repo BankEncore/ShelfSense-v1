@@ -1,6 +1,6 @@
 # Phase 11 — Cash accountability plan
 
-Status: **Proposed**.
+Status: **Implemented** on `main` (August 2026). Manual test plan executed.
 
 ## Goal
 

@@ -1,6 +1,6 @@
 # Phase 11 — Session lifecycle
 
-Status: **Proposed**. Implementation authority for 11.1. Extends [phase5-plan.md](../phase4-6-point-of-sale/phase5-cash-register/phase5-plan.md) and [phase10-reporting-closeout.md](../phase10-stored-value/phase10-reporting-closeout.md).
+Status: **Implemented** on `main`. Implementation authority for 11.1. Extends [phase5-plan.md](../phase4-6-point-of-sale/phase5-cash-register/phase5-plan.md) and [phase10-reporting-closeout.md](../phase10-stored-value/phase10-reporting-closeout.md).
 
 ### Actually locked
 

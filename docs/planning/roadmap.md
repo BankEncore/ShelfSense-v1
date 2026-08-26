@@ -231,7 +231,7 @@ Gift-card cash-out vs expected cash; X/Z; receipt/print; administrative navigati
 
 ## Phase 11 — Cash accountability completion
 
-**Status:** Proposed. **After Phase 10** stored-value and Register integration. Planning packet: [phase11-cash-accountability/](phase11-cash-accountability/README.md). Policy: [ADR-021](../adr/ADR-021-register-and-terminal-identity.md), [ADR-025](../adr/ADR-025-domain-owned-operational-ledgers.md).
+**Status:** Implemented on `main` (August 2026). Manual test plan executed. After Phase 10 stored-value and Register integration. Planning packet: [phase11-cash-accountability/](phase11-cash-accountability/README.md). Policy: [ADR-021](../adr/ADR-021-register-and-terminal-identity.md), [ADR-025](../adr/ADR-025-domain-owned-operational-ledgers.md).
 
 Phase 5 implemented the beginning and end of the register session. Phase 11 fills in accountable movement during the session and between store cash locations. An open `PosSession` is till custody on a **Register**. There is no `cash_drawers` table in MVP.
 
@@ -378,7 +378,7 @@ The following remain out of scope until a planning packet and ADR review justify
 | Phase 8 — Customer foundation (MVP) | **Complete** on `main` (PR #42) |
 | Phase 9 — Catalog and bibliographic enrichment | **Implemented** |
 | Phase 10 — Stored value | **Implemented** on `main`; [manual test plan](phase10-stored-value/phase10-manual-test-plan.md) executed |
-| Phase 11 — Cash accountability completion | **Proposed**; packet [phase11-cash-accountability/](phase11-cash-accountability/README.md) |
+| Phase 11 — Cash accountability completion | **Implemented** on `main`; [manual test plan](phase11-cash-accountability/phase11-manual-test-plan.md) executed |
 | Phase 12 — Used buyback | After 8–11 (payout after 10–11) |
 | Phase 13 — Customer workspace | After activity sources exist |
 | Phase 14 — Financial posting and reporting | Consolidates operational domains |
@@ -393,7 +393,7 @@ The following remain out of scope until a planning packet and ADR review justify
 | Document | Relationship |
 |---|---|
 | [Phase 10 stored value](phase10-stored-value/README.md) | Implemented; [ADR-025](../adr/ADR-025-domain-owned-operational-ledgers.md), [ADR-026](../adr/ADR-026-gift-card-number-protection.md), [ADR-027](../adr/ADR-027-admin-gift-card-prefix-last-four-inquiry.md) |
-| [Phase 11 cash accountability](phase11-cash-accountability/README.md) | Proposed; extends Register session and store safe; [ADR-021](../adr/ADR-021-register-and-terminal-identity.md), [ADR-025](../adr/ADR-025-domain-owned-operational-ledgers.md) |
+| [Phase 11 cash accountability](phase11-cash-accountability/README.md) | Implemented; extends Register session and store safe; [ADR-021](../adr/ADR-021-register-and-terminal-identity.md), [ADR-025](../adr/ADR-025-domain-owned-operational-ledgers.md) |
 | [Phase planning packets](phase1-operational-foundation/phase1-plan.md) | Authoritative detail per implemented phase |
 | [Phase 7.1 purchasing closeout](phase7.1-purchasing-polish/README.md) | Phase 7 operability finish; [coordination with UDS-4](phase7.1-purchasing-polish/phase7.1-uds-coordination.md) |
 | [UDS-4 plan](ux-design-system/uds-4-plan.md) | Grouped navigation and cross-cutting adoption |

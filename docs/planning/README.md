@@ -31,7 +31,7 @@ An early outline in this file numbered Phase 8 as buyback and Phase 9 as financi
 
 | Packet | Status |
 |---|---|
-| [Phase 11 — Cash accountability](phase11-cash-accountability/README.md) | Proposed; [ADR-021](../adr/ADR-021-register-and-terminal-identity.md), [ADR-025](../adr/ADR-025-domain-owned-operational-ledgers.md) |
+| [Phase 11 — Cash accountability](phase11-cash-accountability/README.md) | Implemented on `main`; [ADR-021](../adr/ADR-021-register-and-terminal-identity.md), [ADR-025](../adr/ADR-025-domain-owned-operational-ledgers.md) |
 
 Phases 12–14 and the Terminal program are sequenced in [roadmap.md](roadmap.md). They do not yet have planning packets.
 

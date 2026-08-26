@@ -1,6 +1,6 @@
 # Phase 11 — Authorization contract
 
-Status: **Proposed**. Keys are seeded in `Authorization::PermissionCatalog`. The UI must not invent permission semantics. Controllers and services remain the authorization boundary.
+Status: **Implemented** on `main`. Keys are seeded in `Authorization::PermissionCatalog`. The UI must not invent permission semantics. Controllers and services remain the authorization boundary.
 
 Phase 1–10 keys are unchanged except where this document adds grants. Second-user outcomes follow [controlled-actions.md](../phase4-6-point-of-sale/phase6-pos-mvp/controlled-actions.md): `direct` / `approval_required` / `prohibited`.
 
