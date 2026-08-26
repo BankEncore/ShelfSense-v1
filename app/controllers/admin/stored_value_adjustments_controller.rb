@@ -81,7 +81,7 @@ module Admin
     end
 
     def approver_if_required!(direction:, amount_cents:, reason:)
-      return unless StoredValue::Adjust.second_user_required?(direction: direction, amount_cents: amount_cents, reason: reason)
+      return unless StoredValue::Adjust.second_user_required?(direction: direction, amount_cents: amount_cents, reason: reason, account: @account)
 
       StoredValue::AuthenticateApprover.call(
         username: params[:approver_username],

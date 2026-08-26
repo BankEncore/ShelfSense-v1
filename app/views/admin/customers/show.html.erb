@@ -140,6 +140,24 @@
   </section>
 <% end %>
 
+<% if @associated_gift_cards %>
+  <section class="section surface">
+    <h2 class="section__title">Associated gift cards</h2>
+    <% if @associated_gift_cards.any? %>
+      <% rows = @associated_gift_cards.map { |card|
+           [
+             link_to(card.masked_number, admin_gift_card_path(card)),
+             card.status.humanize,
+             format_money_cents(card.balance_cents)
+           ]
+         } %>
+      <%= render "shared/data_table", headers: ["Card", "Status", "Balance"], rows: rows %>
+    <% else %>
+      <%= render "shared/empty_state", title: "No associated gift cards", body: "Optional association does not transfer ownership of the balance." %>
+    <% end %>
+  </section>
+<% end %>
+
 <section class="section">
   <h2 class="section__title">Recent requests</h2>
   <% if effective_permissions.include?("customer_requests.manage") && @customer.canonical? && @customer.active? %>

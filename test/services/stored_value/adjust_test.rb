@@ -68,21 +68,48 @@ module StoredValue
       assert_match(/inactive customers cannot receive new credit/, error.message)
     end
 
-    test "gift-card adjustments are blocked until instruments exist" do
-      card = StoredValue::OpenAccount.call(account_type: "gift_card")
+    test "adjusts an active gift card and blocks replaced cards" do
+      GiftCards::Programs.seed!
+      program = GiftCardProgram.find_by!(code: "generated")
+      card = GiftCards::ProvisionInstrument.call(program: program, store: @store)
+      GiftCards::Fund.call(gift_card: card, amount_cents: 400, store: @store, performed_by: @actor)
+
+      adjustment = StoredValue::Adjust.call(
+        account: card.stored_value_account,
+        direction: "credit",
+        amount_cents: 100,
+        reason: @goodwill,
+        store: @store,
+        performed_by: @actor,
+        source_id: card.stored_value_account_id,
+        idempotency_key: SecureRandom.uuid_v7
+      )
+      assert_equal 500, card.stored_value_account.reload.balance_cents
+      assert_equal "adjust", adjustment.stored_value_operation.operation_type
+
+      GiftCards::Replace.call(
+        gift_card: card,
+        performed_by: @actor,
+        store: @store,
+        source_id: card.id,
+        idempotency_key: SecureRandom.uuid_v7,
+        reason_code: "lost",
+        reason_name_snapshot: "Lost card"
+      )
       error = assert_raises(StoredValue::Error) do
         StoredValue::Adjust.call(
-          account: card,
+          account: card.stored_value_account.reload,
           direction: "credit",
-          amount_cents: 100,
+          amount_cents: 10,
           reason: @goodwill,
           store: @store,
           performed_by: @actor,
-          source_id: card.id,
+          source_id: card.stored_value_account_id,
           idempotency_key: SecureRandom.uuid_v7
         )
       end
-      assert_match(/gift-card adjustments are not available/, error.message)
+      assert card.reload.replaced?
+      assert_match(/closed|replaced/, error.message)
     end
 
     test "idempotent retry returns the same adjustment" do

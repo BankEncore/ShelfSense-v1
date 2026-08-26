@@ -162,6 +162,6 @@ Destinations land in the slice that introduces the screens. Do not add one-off h
 | **Customers** | Stored-value transfers → `new_admin_stored_value_transfer_path` | `stored_value.transfer` | 10.2 |
 | **Organization configuration** | Stored-value reasons → `admin_stored_value_adjustment_reasons_path` | `stored_value.manage_adjustment_reasons` | 10.2 |
 | **POS operations** | Gift-card programs → `admin_gift_card_programs_path` | `gift_cards.manage_programs` | 10.3 |
-| **POS operations** | Gift cards → `admin_gift_cards_path` | `gift_cards.view` | 10.3 |
+| **POS operations** | Gift cards → `inquiry_admin_gift_cards_path` | `gift_cards.view` | 10.3 |
 
 Exact path helpers are illustrative. Implementation must keep controllers as the authorization boundary.

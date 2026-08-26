@@ -95,7 +95,9 @@ module Admin
             destinations: [
               dest(:pos, "POS", :pos_path, permission: "pos.transact", requires_store: true, controllers: %w[pos/homes pos/enters pos/workspaces pos/preferred_registers pos/active_sessions pos/session_closes pos/register_closes pos/closed_sessions pos/x_reports pos/reports pos/reporting_period_zs pos/reporting_period_finalizations pos/return_items pos/post_voids pos/completed_transactions]),
               dest(:pos_transactions, "Transactions", :pos_transactions_path, permission: "pos.transact", requires_store: true, controllers: %w[pos/transactions]),
-              dest(:tender_types, "Tender types", :admin_tender_types_path, permission: "pos.manage_tender_types", controllers: %w[admin/tender_types])
+              dest(:tender_types, "Tender types", :admin_tender_types_path, permission: "pos.manage_tender_types", controllers: %w[admin/tender_types]),
+              dest(:gift_card_programs, "Gift-card programs", :admin_gift_card_programs_path, permission: "gift_cards.manage_programs", controllers: %w[admin/gift_card_programs]),
+              dest(:gift_cards, "Gift cards", :inquiry_admin_gift_cards_path, permission: "gift_cards.view", controllers: %w[admin/gift_cards admin/gift_card_adjustments])
             ]
           ),
           Group.new(

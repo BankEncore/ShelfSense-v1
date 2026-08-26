@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_26_020000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_26_030000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -220,6 +220,80 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_020000) do
     t.index ["sales_returns_gl_account_id"], name: "index_departments_on_sales_returns_gl_account_id"
     t.index ["sales_revenue_gl_account_id"], name: "index_departments_on_sales_revenue_gl_account_id"
     t.check_constraint "code::text ~ '^[a-z0-9]+(_[a-z0-9]+)*$'::text", name: "departments_code_format"
+  end
+
+  create_table "gift_card_programs", id: :uuid, default: nil, force: :cascade do |t|
+    t.boolean "active", default: true, null: false
+    t.boolean "cash_out_approval_required", default: false, null: false
+    t.string "cash_out_policy", null: false
+    t.bigint "cash_out_threshold_cents"
+    t.boolean "cash_out_threshold_inclusive", default: true, null: false
+    t.string "check_digit_algorithm", default: "luhn", null: false
+    t.string "code", null: false
+    t.timestamptz "created_at", null: false
+    t.integer "lock_version", default: 0, null: false
+    t.bigint "maximum_balance_cents"
+    t.bigint "minimum_activation_cents"
+    t.string "name", null: false
+    t.string "number_authority", null: false
+    t.integer "number_length", default: 20, null: false
+    t.string "prefix", null: false
+    t.boolean "reload_allowed", default: true, null: false
+    t.timestamptz "updated_at", null: false
+    t.index ["code"], name: "index_gift_card_programs_on_code", unique: true
+    t.index ["prefix"], name: "index_gift_card_programs_on_prefix", unique: true
+    t.check_constraint "cash_out_policy::text = ANY (ARRAY['prohibited'::character varying, 'permitted_when_eligible'::character varying, 'required_on_request_when_eligible'::character varying]::text[])", name: "gift_card_programs_cash_out_policy_valid"
+    t.check_constraint "check_digit_algorithm::text = 'luhn'::text", name: "gift_card_programs_check_digit_valid"
+    t.check_constraint "number_authority::text = ANY (ARRAY['system_generated'::character varying, 'manual_external'::character varying]::text[])", name: "gift_card_programs_authority_valid"
+    t.check_constraint "number_length = 20", name: "gift_card_programs_length_phase10"
+    t.check_constraint "prefix::text ~ '^[0-9]+$'::text", name: "gift_card_programs_prefix_numeric"
+  end
+
+  create_table "gift_card_replacements", id: :uuid, default: nil, force: :cascade do |t|
+    t.bigint "amount_cents", null: false
+    t.uuid "approved_by_id"
+    t.timestamptz "created_at", null: false
+    t.text "notes"
+    t.uuid "original_gift_card_id", null: false
+    t.uuid "performed_by_id", null: false
+    t.timestamptz "posted_at", null: false
+    t.string "reason_code", null: false
+    t.string "reason_name_snapshot", null: false
+    t.uuid "replacement_gift_card_id", null: false
+    t.uuid "reversal_of_id"
+    t.uuid "stored_value_operation_id"
+    t.timestamptz "updated_at", null: false
+    t.index ["original_gift_card_id"], name: "index_gift_card_replacements_one_effective_per_original", unique: true, where: "(reversal_of_id IS NULL)"
+    t.index ["replacement_gift_card_id"], name: "index_gift_card_replacements_on_replacement_gift_card_id"
+    t.index ["reversal_of_id"], name: "index_gift_card_replacements_on_reversal_of_id", unique: true, where: "(reversal_of_id IS NOT NULL)"
+    t.index ["stored_value_operation_id"], name: "index_gift_card_replacements_on_stored_value_operation_id", unique: true, where: "(stored_value_operation_id IS NOT NULL)"
+    t.check_constraint "amount_cents > 0", name: "gift_card_replacements_amount_positive"
+    t.check_constraint "approved_by_id IS NULL OR approved_by_id <> performed_by_id", name: "gift_card_replacements_approver_differs"
+    t.check_constraint "original_gift_card_id <> replacement_gift_card_id", name: "gift_card_replacements_cards_differ"
+  end
+
+  create_table "gift_cards", id: :uuid, default: nil, force: :cascade do |t|
+    t.timestamptz "activated_at", null: false
+    t.uuid "activated_store_id", null: false
+    t.timestamptz "closed_at"
+    t.timestamptz "created_at", null: false
+    t.uuid "customer_id"
+    t.uuid "gift_card_program_id", null: false
+    t.integer "lock_version", default: 0, null: false
+    t.text "number", null: false
+    t.string "number_digest", null: false
+    t.string "number_last_four", null: false
+    t.string "number_prefix", null: false
+    t.uuid "replaced_by_id"
+    t.string "status", default: "active", null: false
+    t.uuid "stored_value_account_id", null: false
+    t.timestamptz "updated_at", null: false
+    t.index ["customer_id"], name: "index_gift_cards_on_customer_id"
+    t.index ["gift_card_program_id"], name: "index_gift_cards_on_gift_card_program_id"
+    t.index ["number_digest"], name: "index_gift_cards_on_number_digest", unique: true
+    t.index ["stored_value_account_id"], name: "index_gift_cards_on_stored_value_account_id", unique: true
+    t.check_constraint "char_length(number_last_four::text) = 4", name: "gift_cards_last_four_length"
+    t.check_constraint "status::text = ANY (ARRAY['active'::character varying, 'suspended'::character varying, 'replaced'::character varying, 'closed'::character varying]::text[])", name: "gift_cards_status_valid"
   end
 
   create_table "gl_accounts", id: :uuid, default: nil, force: :cascade do |t|
@@ -1531,6 +1605,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_020000) do
   add_foreign_key "departments", "gl_accounts", column: "receiving_clearing_gl_account_id"
   add_foreign_key "departments", "gl_accounts", column: "sales_returns_gl_account_id"
   add_foreign_key "departments", "gl_accounts", column: "sales_revenue_gl_account_id"
+  add_foreign_key "gift_card_replacements", "gift_card_replacements", column: "reversal_of_id"
+  add_foreign_key "gift_card_replacements", "gift_cards", column: "original_gift_card_id"
+  add_foreign_key "gift_card_replacements", "gift_cards", column: "replacement_gift_card_id"
+  add_foreign_key "gift_card_replacements", "stored_value_operations"
+  add_foreign_key "gift_card_replacements", "users", column: "approved_by_id"
+  add_foreign_key "gift_card_replacements", "users", column: "performed_by_id"
+  add_foreign_key "gift_cards", "customers"
+  add_foreign_key "gift_cards", "gift_card_programs"
+  add_foreign_key "gift_cards", "gift_cards", column: "replaced_by_id"
+  add_foreign_key "gift_cards", "stored_value_accounts"
+  add_foreign_key "gift_cards", "stores", column: "activated_store_id"
   add_foreign_key "gl_accounts", "gl_accounts", column: "parent_id"
   add_foreign_key "identifier_registry", "inventory_units", on_delete: :nullify
   add_foreign_key "identifier_registry", "product_variants", on_delete: :nullify

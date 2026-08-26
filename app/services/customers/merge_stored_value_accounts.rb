@@ -44,6 +44,10 @@ module Customers
         )
         transfer_ids << transfer.id
       end
+
+      GiftCard.where(customer_id: @source.id).order(:id).each do |card|
+        card.update!(customer: @survivor)
+      end
       transfer_ids
     end
 

@@ -1,0 +1,30 @@
+<% content_for :title, @gift_card.masked_number %>
+<%= render "shared/breadcrumbs", crumbs: [
+  { name: "Home", path: root_path },
+  { name: "Gift cards", path: admin_gift_cards_path },
+  { name: @gift_card.masked_number }
+] %>
+<% actions = [] %>
+<% if @gift_card.active? && effective_permissions.include?("gift_cards.suspend") %>
+  <% actions << action_button_to("Suspend", suspend_admin_gift_card_path(@gift_card), method: :post, style: :outline, intent: :warning, params: { lock_version: @gift_card.lock_version }) %>
+<% end %>
+<% if @gift_card.suspended? && effective_permissions.include?("gift_cards.suspend") %>
+  <% actions << action_button_to("Reinstate", reinstate_admin_gift_card_path(@gift_card), method: :post, style: :solid, intent: :brand, params: { lock_version: @gift_card.lock_version }) %>
+<% end %>
+<% if (@gift_card.active? || @gift_card.suspended?) && effective_permissions.include?("gift_cards.replace") %>
+  <% actions << action_link_to("Replace", replace_admin_gift_card_path(@gift_card), style: :outline, intent: :neutral) %>
+<% end %>
+<% if !@gift_card.replaced? && !@gift_card.closed? && effective_permissions.include?("gift_cards.associate_customer") %>
+  <% actions << action_link_to("Associate customer", associate_admin_gift_card_path(@gift_card), style: :outline, intent: :neutral) %>
+<% end %>
+<% if !@gift_card.replaced? && !@gift_card.closed? && effective_permissions.include?("stored_value.adjust") %>
+  <% actions << action_link_to("Adjust", new_admin_gift_card_stored_value_adjustment_path(@gift_card), style: :outline, intent: :neutral) %>
+<% end %>
+<%= render "shared/page_header", title: @gift_card.masked_number, actions: safe_join(actions, " ") %>
+<%= render "shared/definition_list", rows: [
+      ["Program", @gift_card.gift_card_program.name],
+      ["Status", @gift_card.status.humanize],
+      ["Balance", format_money_cents(@gift_card.balance_cents)],
+      ["Customer", (@gift_card.customer ? link_to(@gift_card.customer.admin_label, admin_customer_path(@gift_card.customer)) : "None")],
+      ["Activated store", @gift_card.activated_store.admin_label]
+    ] %>

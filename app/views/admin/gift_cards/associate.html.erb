@@ -1,0 +1,13 @@
+<% content_for :title, "Associate customer" %>
+<%= render "shared/page_header", title: "Associate #{@gift_card.masked_number}" %>
+<%= form_with url: associate_admin_gift_card_path(@gift_card), method: :patch, class: "form" do |form| %>
+  <%= hidden_field_tag :lock_version, @gift_card.lock_version %>
+  <div class="form-field">
+    <%= label_tag :customer_id, "Customer ID (blank to clear)" %>
+    <%= text_field_tag :customer_id, params[:customer_id] || @gift_card.customer_id %>
+  </div>
+  <div class="actions">
+    <%= action_submit(form, "Save association", style: :solid, intent: :brand) %>
+    <%= action_link_to("Cancel", admin_gift_card_path(@gift_card), style: :ghost, intent: :neutral) %>
+  </div>
+<% end %>

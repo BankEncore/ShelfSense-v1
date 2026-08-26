@@ -113,9 +113,10 @@ module StoredValue
       end
     end
 
-    def self.second_user_required?(direction:, amount_cents:, reason:)
+    def self.second_user_required?(direction:, amount_cents:, reason:, account: nil)
       return true if direction.to_s == "debit"
       return true if reason.approval_required
+      return true if account&.account_type == "gift_card" && account.gift_card&.suspended?
 
       threshold = SystemSettings.current.stored_value_adjust_credit_approval_threshold_cents
       Integer(amount_cents) >= threshold
@@ -140,9 +141,26 @@ module StoredValue
       if account.customer_owned?
         customer = account.customer
         raise Error, "inactive customers cannot receive new credit" if @direction == "credit" && !customer.active?
-      else
-        raise Error, "gift-card adjustments are not available until gift-card instruments exist" if account.account_type == "gift_card"
+      elsif account.account_type == "gift_card"
+        validate_gift_card!(account)
       end
+    end
+
+    def validate_gift_card!(account)
+      card = account.gift_card
+      raise Error, "gift-card instrument is missing" if card.blank?
+      raise Error, "replaced gift cards cannot be adjusted" if card.replaced?
+      raise Error, "closed gift cards cannot be adjusted" if card.closed?
+      if card.suspended?
+        raise Error, "second-user approval is required for suspended gift cards" if @approved_by.blank?
+        raise Error, "approver cannot be the performer" if @approved_by.id == @performed_by.id
+      end
+      return unless @direction == "credit"
+
+      maximum = card.gift_card_program.maximum_balance_cents
+      return if maximum.blank?
+
+      raise Error, "credit would exceed the program maximum balance" if account.balance_cents + Integer(@amount_cents) > maximum
     end
   end
 end

@@ -1,0 +1,18 @@
+<% content_for :title, "Gift-card programs" %>
+<%= render "shared/breadcrumbs", crumbs: [
+  { name: "Home", path: root_path },
+  { name: "Gift-card programs" }
+] %>
+<%= render "shared/page_header",
+      title: "Gift-card programs",
+      actions: action_link_to("New program", new_admin_gift_card_program_path, style: :solid, intent: :brand) %>
+<% rows = @programs.map { |program|
+     [
+       link_to(program.code, admin_gift_card_program_path(program)),
+       program.name,
+       program.prefix,
+       program.number_authority.humanize,
+       configuration_status_badge(program.active?)
+     ]
+   } %>
+<%= render "shared/data_table", headers: ["Code", "Name", "Prefix", "Authority", "Status"], rows: rows %>

@@ -37,6 +37,9 @@ module Admin
                                                 .order(created_at: :desc)
                                                 .limit(25)
       end
+      if Authorization::PermissionEvaluator.allowed?(user: current_user, permission_key: "gift_cards.view", store: current_store)
+        @associated_gift_cards = @customer.gift_cards.includes(:gift_card_program, :stored_value_account).order(:created_at)
+      end
     end
 
     def new

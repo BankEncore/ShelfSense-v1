@@ -60,6 +60,7 @@ module Installation
         SubjectSchemes::Catalog.seed!
         Inventory::AdjustmentReasons.seed!
         StoredValue::AdjustmentReasons.seed!
+        GiftCards::Programs.seed!
         Pos::TenderTypes.seed!
 
         Audit::Recorder.record!(

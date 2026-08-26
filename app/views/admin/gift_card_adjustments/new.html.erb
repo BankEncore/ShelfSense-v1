@@ -1,0 +1,34 @@
+<% content_for :title, "Adjust gift card" %>
+<%= render "shared/page_header", title: "Adjust #{@gift_card.masked_number}" %>
+<%= form_with url: admin_gift_card_stored_value_adjustments_path(@gift_card), method: :post, class: "form" do |form| %>
+  <%= hidden_field_tag :idempotency_key, params[:idempotency_key].presence || SecureRandom.uuid_v7 %>
+  <p>Current balance: <%= format_money_cents(@account.balance_cents) %></p>
+  <div class="form-field">
+    <%= label_tag :direction, "Direction" %>
+    <%= select_tag :direction, options_for_select([%w[Credit credit], %w[Debit debit]], params[:direction]) %>
+  </div>
+  <div class="form-field">
+    <%= label_tag :amount, "Amount" %>
+    <%= text_field_tag :amount, params[:amount], required: true %>
+  </div>
+  <div class="form-field">
+    <%= label_tag :reason_id, "Reason" %>
+    <%= select_tag :reason_id, options_from_collection_for_select(@reasons, :id, :name, params[:reason_id]) %>
+  </div>
+  <div class="form-field">
+    <%= label_tag :internal_notes, "Internal notes" %>
+    <%= text_area_tag :internal_notes, params[:internal_notes], rows: 3 %>
+  </div>
+  <div class="form-field">
+    <%= label_tag :approver_username, "Approver username" %>
+    <%= text_field_tag :approver_username, params[:approver_username] %>
+  </div>
+  <div class="form-field">
+    <%= label_tag :approver_password, "Approver password" %>
+    <%= password_field_tag :approver_password %>
+  </div>
+  <div class="actions">
+    <%= action_submit(form, "Post adjustment", style: :solid, intent: :brand) %>
+    <%= action_link_to("Cancel", admin_gift_card_path(@gift_card), style: :ghost, intent: :neutral) %>
+  </div>
+<% end %>

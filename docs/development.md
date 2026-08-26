@@ -86,6 +86,19 @@ The `db` hostname is the Compose service name and is reachable from the `web` co
 
 The PostgreSQL image applies `POSTGRES_USER`, `POSTGRES_PASSWORD`, and `POSTGRES_DB` only when initializing an empty data volume. Changing those values in `compose.yml` does not rewrite an existing database volume.
 
+## Gift-card encryption keys (Phase 10)
+
+Gift-card numbers use Rails Active Record Encryption plus a separate HMAC digest ([ADR-026](adr/ADR-026-gift-card-number-protection.md)). Docker, test, and CI use the documented **test** keys in `lib/shelfsense/test_secrets.rb` when environment variables are unset. These values are not production secrets.
+
+| Variable | Purpose |
+|---|---|
+| `ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY` | Rails `encrypts` primary key |
+| `ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY` | Rails deterministic key (unused by gift-card numbers; still required by Rails) |
+| `ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT` | Rails key-derivation salt |
+| `GIFT_CARD_NUMBER_HMAC_KEY` | HMAC-SHA256 lookup digest (not an Active Record Encryption key) |
+
+Production must set all four from the deployment environment. Do not commit production keys, plaintext gift-card numbers, or decryptable fixtures. Tests generate synthetic numbers and encrypt them with the test keys. Existing installations need `shelfsense:seed_permissions` (and `GiftCards::Programs.seed!`) after this slice.
+
 Do not commit production credentials. Production values must come from the deployment environment. The ERB in `config/database.yml` must not use strict `ENV.fetch` calls without defaults for production-only variables, because Rails evaluates the entire file before selecting an environment; strict production lookups would also break development and CI startup.
 
 Optional catalog enrichment (Phase 9) reads `ISBNDB_API_KEY` from the environment. Leave it unset in CI; tests stub the HTTP client. For local live lookups, copy `.env.example` to `.env` (gitignored) and set the key. Docker Compose interpolates it into the `web` service. Recreate that service after changing `.env` (`docker compose up -d --force-recreate web`). Never commit the key, a filled `.env`, or `compose.override.yml`; never log the key or store it in audit events.
