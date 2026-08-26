@@ -11,6 +11,8 @@ class StoredValueOperation < ApplicationRecord
   has_one :reversed_by, class_name: "StoredValueOperation", foreign_key: :reversal_of_id, inverse_of: :reversal_of,
           dependent: :restrict_with_exception
   has_many :stored_value_entries, -> { order(:entry_sequence) }, dependent: :restrict_with_exception
+  has_one :stored_value_adjustment, dependent: :restrict_with_exception
+  has_one :stored_value_transfer, dependent: :restrict_with_exception
 
   validates :operation_type, :business_date, :occurred_at, presence: true
   validates :operation_type, inclusion: { in: OPERATION_TYPES }

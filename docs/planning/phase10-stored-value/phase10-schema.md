@@ -387,7 +387,7 @@ These are integration messages, not `financial_events` rows.
 
 ## 13. System settings
 
-- Manual-adjustment approval threshold (organization): credits at or above require second user; all debit adjustments require second user.
+- Manual-adjustment approval threshold (organization): `system_settings.stored_value_adjust_credit_approval_threshold_cents` (default 5000). Credits at or above require second user; all debit adjustments require second user.
 - Do not put gift-card cash-out threshold here (program-level).
 
 ## 14. Idempotency

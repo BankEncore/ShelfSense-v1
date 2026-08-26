@@ -213,5 +213,37 @@ module Customers
       end
       assert_match(/email or phone/, error.message)
     end
+
+    test "merges positive store credit and closes a zero-balance trade-credit source without creating a survivor account" do
+      source_store = StoredValue::OpenAccount.call(account_type: "store_credit", customer: @source)
+      source_trade = StoredValue::OpenAccount.call(account_type: "trade_credit", customer: @source)
+      StoredValue::Post.call(
+        operation_type: "issue",
+        store: @store,
+        performed_by: @actor,
+        source_id: source_store.id,
+        idempotency_key: SecureRandom.uuid_v7,
+        entries: [ { account: source_store, amount_cents: 250 } ]
+      )
+
+      result = Customers::MergeCustomers.call(
+        source: @source,
+        survivor: @survivor,
+        actor: @actor,
+        reason: "same person",
+        idempotency_key: SecureRandom.uuid_v7,
+        store: @store
+      )
+
+      assert_equal 1, result.stored_value_transfer_ids.size
+      assert source_store.reload.closed?
+      assert_equal 0, source_store.balance_cents
+      assert_equal @source.id, source_store.customer_id
+      assert source_trade.reload.closed?
+      survivor_store = StoredValueAccount.find_by!(customer: @survivor, account_type: "store_credit")
+      assert_equal 250, survivor_store.balance_cents
+      assert_nil StoredValueAccount.find_by(customer: @survivor, account_type: "trade_credit")
+      assert_equal @source.id, source_store.stored_value_entries.first.stored_value_account.customer_id
+    end
   end
 end

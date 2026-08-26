@@ -33,6 +33,12 @@ class StoredValueAccount < ApplicationRecord
     CUSTOMER_OWNED_TYPES.include?(account_type)
   end
 
+  def close_zero!(at: Time.current)
+    raise StoredValue::Error, "cannot close an account with a nonzero balance" unless balance_cents.to_i.zero?
+
+    update!(status: "closed", closed_at: at)
+  end
+
   def apply_posted_balance!(cents)
     @allow_balance_write = true
     update!(balance_cents: cents)

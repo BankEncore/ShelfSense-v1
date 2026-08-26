@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_26_010000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_26_020000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -1201,6 +1201,50 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_010000) do
     t.check_constraint "status::text = ANY (ARRAY['active'::character varying, 'suspended'::character varying, 'closed'::character varying]::text[])", name: "stored_value_accounts_status_valid"
   end
 
+  create_table "stored_value_adjustment_reasons", id: :uuid, default: nil, force: :cascade do |t|
+    t.boolean "active", default: true, null: false
+    t.string "allowed_account_types", default: [], null: false, array: true
+    t.string "allowed_direction", null: false
+    t.boolean "approval_required", default: false, null: false
+    t.string "code", null: false
+    t.timestamptz "created_at", null: false
+    t.text "description"
+    t.integer "display_order", default: 0, null: false
+    t.integer "lock_version", default: 0, null: false
+    t.string "name", null: false
+    t.boolean "notes_required", default: false, null: false
+    t.timestamptz "updated_at", null: false
+    t.index ["code"], name: "index_stored_value_adjustment_reasons_on_code", unique: true
+    t.check_constraint "allowed_direction::text = ANY (ARRAY['credit'::character varying, 'debit'::character varying, 'either'::character varying]::text[])", name: "stored_value_adjustment_reasons_direction_valid"
+  end
+
+  create_table "stored_value_adjustments", id: :uuid, default: nil, force: :cascade do |t|
+    t.string "adjustment_direction", null: false
+    t.bigint "amount_cents", null: false
+    t.uuid "approved_by_id"
+    t.timestamptz "created_at", null: false
+    t.text "customer_explanation"
+    t.uuid "idempotency_operation_id", null: false
+    t.text "internal_notes"
+    t.uuid "performed_by_id", null: false
+    t.timestamptz "posted_at", null: false
+    t.string "reason_code", null: false
+    t.uuid "reason_id", null: false
+    t.string "reason_name_snapshot", null: false
+    t.uuid "reversal_of_id"
+    t.uuid "store_id", null: false
+    t.uuid "stored_value_account_id", null: false
+    t.uuid "stored_value_operation_id"
+    t.timestamptz "updated_at", null: false
+    t.index ["idempotency_operation_id"], name: "index_stored_value_adjustments_on_idempotency_operation_id"
+    t.index ["reversal_of_id"], name: "index_stored_value_adjustments_on_reversal_of_id", unique: true, where: "(reversal_of_id IS NOT NULL)"
+    t.index ["stored_value_account_id"], name: "index_stored_value_adjustments_on_stored_value_account_id"
+    t.index ["stored_value_operation_id"], name: "index_stored_value_adjustments_on_stored_value_operation_id", unique: true, where: "(stored_value_operation_id IS NOT NULL)"
+    t.check_constraint "adjustment_direction::text = ANY (ARRAY['credit'::character varying, 'debit'::character varying]::text[])", name: "stored_value_adjustments_direction_valid"
+    t.check_constraint "amount_cents > 0", name: "stored_value_adjustments_amount_positive"
+    t.check_constraint "approved_by_id IS NULL OR approved_by_id <> performed_by_id", name: "stored_value_adjustments_approver_differs"
+  end
+
   create_table "stored_value_entries", id: :uuid, default: nil, force: :cascade do |t|
     t.bigint "amount_cents", null: false
     t.bigint "balance_after_cents", null: false
@@ -1237,6 +1281,34 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_010000) do
     t.index ["reversal_of_id"], name: "index_stored_value_operations_on_reversal_of_id", unique: true, where: "(reversal_of_id IS NOT NULL)"
     t.index ["store_id"], name: "index_stored_value_operations_on_store_id"
     t.check_constraint "operation_type::text = ANY (ARRAY['issue'::character varying, 'activate'::character varying, 'reload'::character varying, 'redeem'::character varying, 'refund'::character varying, 'cash_out'::character varying, 'transfer'::character varying, 'adjust'::character varying, 'reverse'::character varying]::text[])", name: "stored_value_operations_type_valid"
+  end
+
+  create_table "stored_value_transfers", id: :uuid, default: nil, force: :cascade do |t|
+    t.bigint "amount_cents", null: false
+    t.uuid "approved_by_id"
+    t.timestamptz "created_at", null: false
+    t.uuid "from_account_id", null: false
+    t.uuid "merge_idempotency_operation_id"
+    t.text "notes"
+    t.uuid "performed_by_id", null: false
+    t.timestamptz "posted_at", null: false
+    t.string "reason_code"
+    t.string "reason_name_snapshot"
+    t.uuid "reversal_of_id"
+    t.uuid "source_customer_id"
+    t.uuid "stored_value_operation_id"
+    t.uuid "survivor_customer_id"
+    t.uuid "to_account_id", null: false
+    t.string "transfer_type", null: false
+    t.timestamptz "updated_at", null: false
+    t.index ["from_account_id"], name: "index_stored_value_transfers_on_from_account_id"
+    t.index ["reversal_of_id"], name: "index_stored_value_transfers_on_reversal_of_id", unique: true, where: "(reversal_of_id IS NOT NULL)"
+    t.index ["stored_value_operation_id"], name: "index_stored_value_transfers_on_stored_value_operation_id", unique: true, where: "(stored_value_operation_id IS NOT NULL)"
+    t.index ["to_account_id"], name: "index_stored_value_transfers_on_to_account_id"
+    t.check_constraint "amount_cents > 0", name: "stored_value_transfers_amount_positive"
+    t.check_constraint "approved_by_id IS NULL OR approved_by_id <> performed_by_id", name: "stored_value_transfers_approver_differs"
+    t.check_constraint "from_account_id <> to_account_id", name: "stored_value_transfers_accounts_differ"
+    t.check_constraint "transfer_type::text = ANY (ARRAY['customer_merge'::character varying, 'administrative'::character varying, 'account_consolidation'::character varying]::text[])", name: "stored_value_transfers_type_valid"
   end
 
   create_table "stores", id: :uuid, default: nil, force: :cascade do |t|
@@ -1354,12 +1426,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_010000) do
     t.integer "lock_version", default: 0, null: false
     t.string "organization_name", null: false
     t.boolean "singleton_key", default: true, null: false
+    t.bigint "stored_value_adjust_credit_approval_threshold_cents", default: 5000, null: false
     t.timestamptz "updated_at", null: false
     t.index ["singleton_key"], name: "index_system_settings_on_singleton_key", unique: true
     t.check_constraint "default_customer_reservation_expiration_days > 0", name: "system_settings_reservation_days_positive"
     t.check_constraint "default_supplier_cancellation_days >= 0", name: "system_settings_supplier_cancellation_days_nonnegative"
     t.check_constraint "fiscal_year_start_month >= 1 AND fiscal_year_start_month <= 12", name: "system_settings_fiscal_year_start_month_range"
     t.check_constraint "singleton_key = true", name: "system_settings_singleton_key_true"
+    t.check_constraint "stored_value_adjust_credit_approval_threshold_cents >= 0", name: "system_settings_sv_adjust_threshold_nonnegative"
   end
 
   create_table "tax_classes", id: :uuid, default: nil, force: :cascade do |t|
@@ -1571,6 +1645,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_010000) do
   add_foreign_key "store_tax_rules", "tax_classes"
   add_foreign_key "store_taxes", "stores"
   add_foreign_key "stored_value_accounts", "customers"
+  add_foreign_key "stored_value_adjustments", "idempotency_operations"
+  add_foreign_key "stored_value_adjustments", "stored_value_accounts"
+  add_foreign_key "stored_value_adjustments", "stored_value_adjustment_reasons", column: "reason_id"
+  add_foreign_key "stored_value_adjustments", "stored_value_adjustments", column: "reversal_of_id"
+  add_foreign_key "stored_value_adjustments", "stored_value_operations"
+  add_foreign_key "stored_value_adjustments", "stores"
+  add_foreign_key "stored_value_adjustments", "users", column: "approved_by_id"
+  add_foreign_key "stored_value_adjustments", "users", column: "performed_by_id"
   add_foreign_key "stored_value_entries", "stored_value_accounts"
   add_foreign_key "stored_value_entries", "stored_value_entries", column: "reversal_of_id"
   add_foreign_key "stored_value_entries", "stored_value_operations"
@@ -1579,6 +1661,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_010000) do
   add_foreign_key "stored_value_operations", "stored_value_operations", column: "reversal_of_id"
   add_foreign_key "stored_value_operations", "stores"
   add_foreign_key "stored_value_operations", "users", column: "performed_by_id"
+  add_foreign_key "stored_value_transfers", "customers", column: "source_customer_id"
+  add_foreign_key "stored_value_transfers", "customers", column: "survivor_customer_id"
+  add_foreign_key "stored_value_transfers", "idempotency_operations", column: "merge_idempotency_operation_id"
+  add_foreign_key "stored_value_transfers", "stored_value_accounts", column: "from_account_id"
+  add_foreign_key "stored_value_transfers", "stored_value_accounts", column: "to_account_id"
+  add_foreign_key "stored_value_transfers", "stored_value_operations"
+  add_foreign_key "stored_value_transfers", "stored_value_transfers", column: "reversal_of_id"
+  add_foreign_key "stored_value_transfers", "users", column: "approved_by_id"
+  add_foreign_key "stored_value_transfers", "users", column: "performed_by_id"
   add_foreign_key "stores", "users", column: "deactivated_by_id"
   add_foreign_key "subject_headings", "merchandise_classes", column: "suggested_merchandise_class_id"
   add_foreign_key "subject_headings", "subject_schemes"

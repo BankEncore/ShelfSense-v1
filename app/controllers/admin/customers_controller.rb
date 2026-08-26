@@ -24,6 +24,19 @@ module Admin
     def show
       @customer_requests = @customer.customer_requests.includes(:store, :product_variant).admin_ordered.limit(50)
       @merged_aliases = @customer.merged_aliases.admin_ordered if @customer.canonical?
+      if Authorization::PermissionEvaluator.allowed?(user: current_user, permission_key: "stored_value.view_activity", store: current_store)
+        @stored_value_accounts = @customer.stored_value_accounts
+                                          .where(account_type: StoredValueAccount::CUSTOMER_OWNED_TYPES)
+                                          .where.not(status: "closed").order(:account_type)
+        @stored_value_entries = StoredValueEntry.joins(:stored_value_account)
+                                                .where(stored_value_accounts: {
+                                                  customer_id: @customer.id,
+                                                  account_type: StoredValueAccount::CUSTOMER_OWNED_TYPES
+                                                })
+                                                .includes(:stored_value_operation, :stored_value_account)
+                                                .order(created_at: :desc)
+                                                .limit(25)
+      end
     end
 
     def new
@@ -109,6 +122,13 @@ module Admin
     def destroy
       if @customer.merged?
         redirect_to admin_customer_path(@customer), alert: "Merged customers cannot be deactivated separately."
+        return
+      end
+
+      if StoredValueAccount.where(customer_id: @customer.id, account_type: StoredValueAccount::CUSTOMER_OWNED_TYPES)
+                           .where.not(status: "closed").where("balance_cents > 0").exists?
+        redirect_to admin_customer_path(@customer),
+                    alert: "Cannot deactivate a customer with a nonzero store-credit or trade-credit balance."
         return
       end
 

@@ -59,6 +59,7 @@ module Installation
         ProductForms::Catalog.seed!
         SubjectSchemes::Catalog.seed!
         Inventory::AdjustmentReasons.seed!
+        StoredValue::AdjustmentReasons.seed!
         Pos::TenderTypes.seed!
 
         Audit::Recorder.record!(

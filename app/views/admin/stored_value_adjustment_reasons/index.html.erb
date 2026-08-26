@@ -1,0 +1,17 @@
+<% content_for :title, "Stored-value reasons" %>
+<%= render "shared/breadcrumbs", crumbs: [
+  { name: "Home", path: root_path },
+  { name: "Stored-value reasons" }
+] %>
+<%= render "shared/page_header",
+      title: "Stored-value adjustment reasons",
+      actions: action_link_to("New reason", new_admin_stored_value_adjustment_reason_path, style: :solid, intent: :brand) %>
+<% rows = @reasons.map { |reason|
+     [
+       link_to(reason.code, admin_stored_value_adjustment_reason_path(reason)),
+       reason.name,
+       reason.allowed_direction.humanize,
+       configuration_status_badge(reason.active?)
+     ]
+   } %>
+<%= render "shared/data_table", headers: ["Code", "Name", "Direction", "Status"], rows: rows %>

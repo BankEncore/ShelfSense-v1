@@ -28,6 +28,8 @@ class Admin::NavigationViewModelTest < ActiveSupport::TestCase
     assert purchasing.destinations.any? { |d| d.key == :receiving_ops }
     assert purchasing.destinations.any? { |d| d.key == :draft_po_ops }
     assert nav.groups.find { |g| g.key == :customers }.destinations.any? { |d| d.key == :location_ops }
+    assert nav.groups.find { |g| g.key == :customers }.destinations.any? { |d| d.key == :stored_value_transfers }
+    assert nav.groups.find { |g| g.key == :organization_configuration }.destinations.any? { |d| d.key == :stored_value_adjustment_reasons }
     assert nav.groups.find { |g| g.key == :pos_operations }.destinations.any? { |d| d.key == :pos }
 
     assert nav.groups.find { |g| g.key == :merchandise }.current

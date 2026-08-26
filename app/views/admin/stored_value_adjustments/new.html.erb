@@ -1,0 +1,46 @@
+<% content_for :title, "Adjust stored value" %>
+<%= render "shared/breadcrumbs", crumbs: [
+  { name: "Home", path: root_path },
+  { name: "Customers", path: admin_customers_path },
+  { name: @customer.admin_label, path: admin_customer_path(@customer) },
+  { name: "Adjust" }
+] %>
+<%= render "shared/page_header", title: "Adjust #{@account_type.to_s.humanize}" %>
+<%= form_with url: admin_customer_stored_value_adjustments_path(@customer), method: :post, class: "form" do |form| %>
+  <% if @account %>
+    <%= hidden_field_tag :stored_value_account_id, @account.id %>
+  <% else %>
+    <%= hidden_field_tag :account_type, @account_type %>
+  <% end %>
+  <%= hidden_field_tag :idempotency_key, params[:idempotency_key].presence || SecureRandom.uuid_v7 %>
+  <p>Current balance: <%= format_money_cents(@account&.balance_cents || 0) %></p>
+  <div class="form-field">
+    <%= label_tag :direction, "Direction" %>
+    <%= select_tag :direction, options_for_select([%w[Credit credit], %w[Debit debit]], params[:direction]) %>
+  </div>
+  <div class="form-field">
+    <%= label_tag :amount, "Amount" %>
+    <%= text_field_tag :amount, params[:amount], required: true %>
+  </div>
+  <div class="form-field">
+    <%= label_tag :reason_id, "Reason" %>
+    <%= select_tag :reason_id, options_from_collection_for_select(@reasons, :id, :name, params[:reason_id]) %>
+  </div>
+  <div class="form-field">
+    <%= label_tag :internal_notes, "Internal notes" %>
+    <%= text_area_tag :internal_notes, params[:internal_notes], rows: 3 %>
+  </div>
+  <div class="form-field">
+    <%= label_tag :approver_username, "Approver username" %>
+    <%= text_field_tag :approver_username, params[:approver_username] %>
+  </div>
+  <div class="form-field">
+    <%= label_tag :approver_password, "Approver password" %>
+    <%= password_field_tag :approver_password %>
+  </div>
+  <p class="muted">Debits and credits at or above the organization threshold require a second user.</p>
+  <div class="actions">
+    <%= action_submit(form, "Post adjustment", style: :solid, intent: :brand) %>
+    <%= action_link_to("Cancel", admin_customer_path(@customer), style: :ghost, intent: :neutral) %>
+  </div>
+<% end %>
