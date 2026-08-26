@@ -1,0 +1,46 @@
+<% if @error.present? %>
+  <p class="pos-enter__alert" role="alert"><%= @error %></p>
+<% end %>
+
+<%= form_with url: url, method: :post, local: true, class: "pos-return-items" do %>
+  <%= hidden_field_tag :source_id, SecureRandom.uuid_v7 %>
+  <%= hidden_field_tag :idempotency_key, SecureRandom.uuid_v7 %>
+  <% if local_assigns[:sessions].present? %>
+    <div class="form-field">
+      <%= label_tag :pos_session_id, "Session" %>
+      <%= select_tag :pos_session_id,
+            options_for_select(sessions.map { |open_session|
+              [ "Register #{open_session.register.admin_label} · #{open_session.cashier_user.display_name}", open_session.id ]
+            }, local_assigns[:session_value]) %>
+    </div>
+  <% end %>
+  <div class="form-field">
+    <%= label_tag :amount, "Amount" %>
+    <%= text_field_tag :amount, local_assigns[:amount_value], inputmode: "decimal", autocomplete: "off", autofocus: true, required: true %>
+  </div>
+  <% if local_assigns[:reasons].present? %>
+    <div class="form-field">
+      <%= label_tag :reason_code, "Reason" %>
+      <%= select_tag :reason_code,
+            options_from_collection_for_select(reasons, :code, :name, local_assigns[:reason_value]) %>
+    </div>
+    <div class="form-field">
+      <%= label_tag :notes, "Notes" %>
+      <%= text_field_tag :notes, local_assigns[:notes_value], autocomplete: "off" %>
+    </div>
+  <% end %>
+  <% if local_assigns[:approval] %>
+    <div class="form-field">
+      <%= label_tag :approver_username, "Approver username (material paid-out)" %>
+      <%= text_field_tag :approver_username, params[:approver_username], autocomplete: "off" %>
+    </div>
+    <div class="form-field">
+      <%= label_tag :approver_password, "Approver password" %>
+      <%= password_field_tag :approver_password, nil, autocomplete: "current-password" %>
+    </div>
+  <% end %>
+  <div class="actions">
+    <%= submit_tag submit, class: "btn" %>
+    <%= link_to "POS Home", pos_path, class: "btn btn--ghost" %>
+  </div>
+<% end %>

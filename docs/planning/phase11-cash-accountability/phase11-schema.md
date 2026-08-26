@@ -1,6 +1,6 @@
 # Phase 11 — Schema contract
 
-Status: **11.1 tables implemented** on the Phase 11 integration branch. 11.2/11.3 operation and transfer types are reserved in CHECKs. PostgreSQL is authoritative. UUIDv7 via `create_uuid_table` / application-assigned ids ([AGENTS.md](../../../AGENTS.md) §10).
+Status: **11.1–11.2 tables implemented** on the Phase 11 integration branch. 11.3 deposit source row is reserved. PostgreSQL is authoritative. UUIDv7 via `create_uuid_table` / application-assigned ids ([AGENTS.md](../../../AGENTS.md) §10).
 
 Companions: [phase11-plan.md](phase11-plan.md), [phase11-session-lifecycle.md](phase11-session-lifecycle.md), [phase5-schema.md](../phase4-6-point-of-sale/phase5-cash-register/phase5-schema.md).
 

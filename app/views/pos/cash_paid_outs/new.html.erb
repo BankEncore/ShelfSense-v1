@@ -1,0 +1,15 @@
+<% content_for :title, "Paid-out" %>
+
+<main class="pos-history">
+  <%= render "pos/shared/report_nav" %>
+  <h1>Paid-out</h1>
+  <p>Non-sale cash out of this open Register session. Gift-card cash-out is not a paid-out.</p>
+  <%= render "pos/cash_activities/form",
+        url: pos_cash_paid_outs_path,
+        submit: "Record paid-out",
+        reasons: @reasons,
+        amount_value: params[:amount],
+        reason_value: params[:reason_code],
+        notes_value: params[:notes],
+        approval: true %>
+</main>

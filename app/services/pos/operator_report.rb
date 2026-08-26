@@ -98,6 +98,7 @@ module Pos
           money_row("Cash refunds", @totals.cash_refund_cents),
           money_row("Gift-card cash-outs", @totals.gift_card_cash_out_cents),
           money_row("Gift-card cash-out reversals", @totals.gift_card_cash_out_reversal_cents),
+          signed_row("Non-sale cash", @totals.cash_movement_cents),
           signed_row("Expected Cash", @totals.expected_cash_cents)
         ]
       when :session

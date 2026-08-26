@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_26_180000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_26_200000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -204,6 +204,34 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_180000) do
     t.index ["store_id"], name: "index_cash_operations_on_store_id"
     t.check_constraint "approved_by_id IS NULL OR approved_by_id <> performed_by_id", name: "cash_operations_approver_differs"
     t.check_constraint "operation_type::text = ANY (ARRAY['initialize_safe'::character varying, 'transfer'::character varying, 'paid_in'::character varying, 'paid_out'::character varying, 'reconcile'::character varying, 'reverse'::character varying]::text[])", name: "cash_operations_type_valid"
+  end
+
+  create_table "cash_paid_ins", id: :uuid, default: nil, force: :cascade do |t|
+    t.bigint "amount_cents", null: false
+    t.uuid "cash_operation_id", null: false
+    t.timestamptz "created_at", null: false
+    t.text "notes"
+    t.uuid "pos_session_id", null: false
+    t.string "reason_code", null: false
+    t.string "reason_name_snapshot", null: false
+    t.timestamptz "updated_at", null: false
+    t.index ["cash_operation_id"], name: "index_cash_paid_ins_on_cash_operation_id", unique: true
+    t.index ["pos_session_id"], name: "index_cash_paid_ins_on_pos_session_id"
+    t.check_constraint "amount_cents > 0", name: "cash_paid_ins_amount_positive"
+  end
+
+  create_table "cash_paid_outs", id: :uuid, default: nil, force: :cascade do |t|
+    t.bigint "amount_cents", null: false
+    t.uuid "cash_operation_id", null: false
+    t.timestamptz "created_at", null: false
+    t.text "notes"
+    t.uuid "pos_session_id", null: false
+    t.string "reason_code", null: false
+    t.string "reason_name_snapshot", null: false
+    t.timestamptz "updated_at", null: false
+    t.index ["cash_operation_id"], name: "index_cash_paid_outs_on_cash_operation_id", unique: true
+    t.index ["pos_session_id"], name: "index_cash_paid_outs_on_pos_session_id"
+    t.check_constraint "amount_cents > 0", name: "cash_paid_outs_amount_positive"
   end
 
   create_table "cash_reconciliations", id: :uuid, default: nil, force: :cascade do |t|
@@ -770,6 +798,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_180000) do
     t.string "action_type", null: false
     t.string "approved_by_name_snapshot"
     t.uuid "approved_by_user_id"
+    t.uuid "cash_paid_out_id"
     t.timestamptz "created_at", null: false
     t.timestamptz "executed_at", null: false
     t.string "fingerprint_schema_version", null: false
@@ -786,14 +815,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_180000) do
     t.text "reason_note"
     t.timestamptz "updated_at", null: false
     t.index ["approved_by_user_id"], name: "index_pos_controlled_actions_on_approved_by_user_id"
+    t.index ["cash_paid_out_id"], name: "index_pos_controlled_actions_on_paid_out", unique: true, where: "(cash_paid_out_id IS NOT NULL)"
     t.index ["gift_card_cash_out_id"], name: "index_pos_controlled_actions_on_cash_out", unique: true, where: "(gift_card_cash_out_id IS NOT NULL)"
     t.index ["performed_by_user_id"], name: "index_pos_controlled_actions_on_performed_by_user_id"
     t.index ["pos_transaction_id", "action_type"], name: "index_pos_controlled_actions_one_post_void", unique: true, where: "((action_type)::text = 'post_void'::text)"
     t.index ["pos_transaction_id"], name: "index_pos_controlled_actions_on_pos_transaction_id"
     t.index ["pos_transaction_line_id", "action_type"], name: "index_pos_controlled_actions_effective_line", unique: true, where: "(pos_transaction_line_id IS NOT NULL)"
     t.index ["pos_transaction_line_id"], name: "index_pos_controlled_actions_on_pos_transaction_line_id"
-    t.check_constraint "action_type::text = 'post_void'::text AND pos_transaction_line_id IS NULL AND pos_transaction_id IS NOT NULL AND gift_card_cash_out_id IS NULL OR action_type::text = 'gift_card_cash_out'::text AND pos_transaction_line_id IS NULL AND pos_transaction_id IS NULL AND gift_card_cash_out_id IS NOT NULL OR (action_type::text <> ALL (ARRAY['post_void'::character varying, 'gift_card_cash_out'::character varying]::text[])) AND pos_transaction_line_id IS NOT NULL AND pos_transaction_id IS NOT NULL AND gift_card_cash_out_id IS NULL", name: "pos_controlled_actions_line_scope"
-    t.check_constraint "action_type::text = ANY (ARRAY['price_override'::character varying, 'line_discount'::character varying, 'tax_class_override'::character varying, 'unlinked_return'::character varying, 'post_void'::character varying, 'gift_card_cash_out'::character varying]::text[])", name: "pos_controlled_actions_type_valid"
+    t.check_constraint "action_type::text = 'post_void'::text AND pos_transaction_line_id IS NULL AND pos_transaction_id IS NOT NULL AND gift_card_cash_out_id IS NULL AND cash_paid_out_id IS NULL OR action_type::text = 'gift_card_cash_out'::text AND pos_transaction_line_id IS NULL AND pos_transaction_id IS NULL AND gift_card_cash_out_id IS NOT NULL AND cash_paid_out_id IS NULL OR action_type::text = 'cash_paid_out'::text AND pos_transaction_line_id IS NULL AND pos_transaction_id IS NULL AND gift_card_cash_out_id IS NULL AND cash_paid_out_id IS NOT NULL OR (action_type::text <> ALL (ARRAY['post_void'::character varying, 'gift_card_cash_out'::character varying, 'cash_paid_out'::character varying]::text[])) AND pos_transaction_line_id IS NOT NULL AND pos_transaction_id IS NOT NULL AND gift_card_cash_out_id IS NULL AND cash_paid_out_id IS NULL", name: "pos_controlled_actions_line_scope"
+    t.check_constraint "action_type::text = ANY (ARRAY['price_override'::character varying, 'line_discount'::character varying, 'tax_class_override'::character varying, 'unlinked_return'::character varying, 'post_void'::character varying, 'gift_card_cash_out'::character varying, 'cash_paid_out'::character varying]::text[])", name: "pos_controlled_actions_type_valid"
     t.check_constraint "approved_by_user_id IS NULL OR approved_by_user_id <> performed_by_user_id", name: "pos_controlled_actions_approver_not_performer"
     t.check_constraint "policy_result::text = 'approval_required'::text AND approved_by_user_id IS NOT NULL AND approved_by_name_snapshot IS NOT NULL OR policy_result::text = 'direct'::text AND approved_by_user_id IS NULL AND approved_by_name_snapshot IS NULL", name: "pos_controlled_actions_approver_matches_policy"
     t.check_constraint "policy_result::text = ANY (ARRAY['direct'::character varying::text, 'approval_required'::character varying::text])", name: "pos_controlled_actions_policy_valid"
@@ -1882,6 +1912,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_180000) do
   add_foreign_key "cash_operations", "stores"
   add_foreign_key "cash_operations", "users", column: "approved_by_id"
   add_foreign_key "cash_operations", "users", column: "performed_by_id"
+  add_foreign_key "cash_paid_ins", "cash_operations"
+  add_foreign_key "cash_paid_ins", "pos_sessions"
+  add_foreign_key "cash_paid_outs", "cash_operations"
+  add_foreign_key "cash_paid_outs", "pos_sessions"
   add_foreign_key "cash_reconciliations", "cash_counts"
   add_foreign_key "cash_reconciliations", "cash_locations"
   add_foreign_key "cash_reconciliations", "cash_operations"
@@ -1969,6 +2003,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_180000) do
   add_foreign_key "orders", "stores", on_delete: :restrict
   add_foreign_key "orders", "suppliers", on_delete: :restrict
   add_foreign_key "orders", "users", column: "cancelled_by_id", on_delete: :restrict
+  add_foreign_key "pos_controlled_actions", "cash_paid_outs"
   add_foreign_key "pos_controlled_actions", "gift_card_cash_outs"
   add_foreign_key "pos_controlled_actions", "pos_transaction_lines"
   add_foreign_key "pos_controlled_actions", "pos_transactions"

@@ -61,6 +61,21 @@
     <% if @open_session && Authorization::PermissionEvaluator.allowed?(user: current_user, permission_key: "gift_cards.cash_out", store: current_store) %>
       <%= link_to "Gift-card cash-out", new_pos_cash_out_path, class: "btn btn--secondary" %>
     <% end %>
+    <% if @open_session && Authorization::PermissionEvaluator.allowed?(user: current_user, permission_key: "cash.paid_in", store: current_store) %>
+      <%= link_to "Paid-in", new_pos_cash_paid_in_path, class: "btn btn--secondary" %>
+    <% end %>
+    <% if @open_session && Authorization::PermissionEvaluator.allowed?(user: current_user, permission_key: "cash.paid_out", store: current_store) %>
+      <%= link_to "Paid-out", new_pos_cash_paid_out_path, class: "btn btn--secondary" %>
+    <% end %>
+    <% if @open_session %>
+      <%= link_to "Drop", new_pos_cash_drop_path, class: "btn btn--secondary" %>
+    <% end %>
+    <% if Authorization::PermissionEvaluator.allowed?(user: current_user, permission_key: "cash.move", store: current_store) %>
+      <%= link_to "Replenish", new_pos_cash_replenishment_path, class: "btn btn--secondary" %>
+    <% end %>
+    <% if Authorization::PermissionEvaluator.allowed?(user: current_user, permission_key: "cash.reverse", store: current_store) %>
+      <%= link_to "Reverse cash", new_pos_cash_reversal_path, class: "btn btn--secondary" %>
+    <% end %>
     <% if can_view_other_sessions? %>
       <%= link_to "Active Sessions", pos_active_sessions_path, class: "btn btn--secondary" %>
     <% end %>
