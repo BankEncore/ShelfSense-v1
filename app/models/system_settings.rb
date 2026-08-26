@@ -13,7 +13,8 @@ class SystemSettings < ApplicationRecord
             numericality: { only_integer: true, greater_than: 0 }
   validates :stored_value_adjust_credit_approval_threshold_cents,
             numericality: { only_integer: true, greater_than_or_equal_to: 0 }
-  validates :default_receipt_header, :default_receipt_footer, length: { maximum: Store::RECEIPT_MESSAGE_LIMIT }
+  validates :default_receipt_header, :default_receipt_footer, :gift_card_voucher_footer,
+            length: { maximum: Store::RECEIPT_MESSAGE_LIMIT }
   validate :singleton_row
   before_validation :normalize_receipt_messages
 
@@ -33,11 +34,22 @@ class SystemSettings < ApplicationRecord
     initialized_at.present?
   end
 
+  def printed_gift_card_voucher_footer
+    text = gift_card_voucher_footer.presence
+    return if text.blank?
+
+    replacement = legal_name.presence
+    return text if replacement.blank?
+
+    text.gsub("{organization legal name}", replacement)
+  end
+
   private
 
   def normalize_receipt_messages
     self.default_receipt_header = default_receipt_header&.strip
     self.default_receipt_footer = default_receipt_footer&.strip
+    self.gift_card_voucher_footer = gift_card_voucher_footer&.strip
   end
 
   def singleton_row

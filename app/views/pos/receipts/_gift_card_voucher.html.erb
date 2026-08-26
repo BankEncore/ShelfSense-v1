@@ -1,0 +1,33 @@
+<%#
+  locals: credentials:
+%>
+<% credentials = Array(local_assigns[:credentials]) %>
+<% footer = SystemSettings.current.printed_gift_card_voucher_footer %>
+<% if credentials.any? %>
+  <section class="pos-gift-card-voucher pos-print-only" aria-hidden="true">
+    <% credentials.each do |credential| %>
+      <div class="pos-gift-card-voucher__card">
+        <% if credential.legal_name.present? %>
+          <div class="pos-gift-card-voucher__store">
+            <p class="pos-gift-card-voucher__legal-name"><%= credential.legal_name %></p>
+            <% credential.address_lines.each do |line| %>
+              <p><%= line %></p>
+            <% end %>
+          </div>
+        <% end %>
+        <% if credential.issued_at_label.present? %>
+          <p class="pos-gift-card-voucher__issued">Issued: <%= credential.issued_at_label %></p>
+        <% end %>
+        <p class="pos-gift-card-voucher__amount"><%= format_money_cents(credential.amount_cents) %></p>
+        <p class="pos-gift-card-voucher__title">Gift Card</p>
+        <div class="pos-gift-card-voucher__barcode">
+          <%= pos_code128_svg(GiftCards::Number.normalize(credential.number)) %>
+          <p class="pos-gift-card-voucher__number"><%= credential.presented_number %></p>
+        </div>
+        <% if footer.present? %>
+          <p class="pos-receipt__message pos-gift-card-voucher__footer"><%= footer %></p>
+        <% end %>
+      </div>
+    <% end %>
+  </section>
+<% end %>

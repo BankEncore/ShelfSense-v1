@@ -7,11 +7,11 @@ Do not treat this as a substitute for CI.
 ## 1. Register — issuance and tenders
 
 1. Activate a manual-number card with merchandise in one ticket; amount due = merchandise + tax + issuance; receipt shows issuance separately; last four only on reprint.
-2. Activate a system-generated card; first print shows full number; reprint is masked.
-3. Kill the client after complete before print; retry complete; first-print path still available without a second liability.
+2. Activate a system-generated card; on-screen list and **Print gift card** voucher show the full number (space-separated grouping under the barcode); **Print receipt** is masked; refresh or reopen the completed-transaction page is masked; reprint is masked. Store identity and `Issued:` print on the voucher; the organization gift-card footer prints only when `system_settings.gift_card_voucher_footer` is set.
+3. Kill the client after complete before print; while the originating session is open, retry complete or reopen the completed-transaction page to first-print without a second liability; after session close, or after the first successful first print, recovery requires `gift_cards.recover_print`.
 4. Reload an existing card; remaining balance increases only after complete; abandon working ticket has no effect.
 5. Redeem gift card partial + cash; split SV tenders on two cards.
-6. Attach customer; redeem store credit; refuse merged or inactive customer.
+6. Attach customer via Register search (not UUID paste); change or clear on a working ticket; redeem store credit; refuse merged or inactive customer; pickup does not auto-attach.
 7. Redeem trade credit issued by admin adjust.
 8. Attempt activate + redeem in one ticket — blocked.
 9. Attempt reload + redeem in one ticket — blocked.
@@ -21,8 +21,8 @@ Do not treat this as a substitute for CI.
 
 1. Original gift card present and matching — refund original; remaining on that card increases.
 2. Wrong gift card presented — blocked; masked history is not sufficient.
-3. Original gift card unavailable → new generated refund card; first print shows full number; not an issuance; `stored_value_issuance_cents` unchanged.
-4. Original unavailable → manually numbered refund card.
+3. Original gift card unavailable → new generated refund card; first print shows full number; not an issuance; `stored_value_issuance_cents` unchanged; amount cannot exceed remaining gift-card-funded portion.
+4. Original unavailable → manually numbered refund card, still capped at remaining gift-card-funded portion.
 5. Original unavailable → customer store credit (customer required).
 6. New refund card complete retry creates only one instrument/liability.
 7. Trade credit is not offered as a generic destination.
@@ -68,14 +68,15 @@ Do not treat this as a substitute for CI.
 4. Logs/audit/outbox/envelope omit full number.
 5. Ordinary reprint masked.
 6. Controlled retry prints original credential.
-7. Print recovery requires reason and authority; no general reveal screen.
+7. Print recovery requires reason and `gift_cards.recover_print`; no general reveal screen.
+8. Organization gift-card voucher footer can be set, changed, and cleared under System settings; blank omits the footer on the next voucher print.
 
 ## 7. Admin, merge, security
 
-1. Customer show balances require `stored_value.view_activity`.
+1. Customer show balances require `stored_value.view_activity`; per-account history paginates; closed accounts remain in history; gift-card show lists masked entries.
 2. Deactivate customer with nonzero store credit — warn/block.
 3. Gift-card association follows merge; balance stays on the instrument.
-4. Failed inquiry throttle; lists never show full numbers.
+4. Failed inquiry throttle; lists never show full numbers. Prefix + last-four unique match opens the card; collisions show a masked candidate list; POS redeem with prefix + last four does not resolve.
 5. Lookup code colliding with program prefix cannot be saved.
 
 ## 8. Navigation and UDS

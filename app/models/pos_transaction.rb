@@ -15,6 +15,7 @@ class PosTransaction < ApplicationRecord
   has_many :pos_controlled_actions, dependent: :destroy
   has_many :pos_tenders, -> { ordered }, dependent: :destroy
   has_many :pos_stored_value_issuances, -> { ordered }, dependent: :destroy
+  has_one :gift_card_credential_delivery, class_name: "PosGiftCardCredentialDelivery", dependent: :restrict_with_exception
   has_many :pos_operations, dependent: :restrict_with_exception
 
   validates :status, :currency_code, presence: true

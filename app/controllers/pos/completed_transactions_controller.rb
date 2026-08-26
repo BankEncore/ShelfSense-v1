@@ -13,6 +13,7 @@ module Pos
       @period = @transaction.reporting_period
       @tenders = @transaction.pos_tenders.ordered
       @tender = @tenders.find { |tender| tender.cash? && tender.direction == "payment" }
+      @transaction.customer
       @transaction.pos_transaction_lines.includes(
         :pos_controlled_actions,
         original_transaction_line: :pos_transaction,
@@ -20,6 +21,8 @@ module Pos
       ).load
       @transaction.post_void_of
       @transaction.post_void
+      @gift_card_credentials = Pos::FirstPrint.call(@transaction)
+      forbid_credential_caching! if Array(@gift_card_credentials).any?
       session[:pos_register_id] = @register.id
     rescue Pos::Denied
       raise ActiveRecord::RecordNotFound

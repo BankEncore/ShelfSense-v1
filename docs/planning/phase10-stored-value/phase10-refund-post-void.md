@@ -28,9 +28,9 @@ For an amount originally paid by gift card:
 4. Never create trade credit.
 5. Do not convert the amount directly to cash except through a separately eligible gift-card cash-out after refund completion.
 
-A new gift card is not a generic destination for arbitrary refund value. It is permitted as a substitute bearer instrument for value originally paid by gift card.
+A new gift card is not a generic destination for arbitrary refund value. It is permitted as a substitute bearer instrument for value originally paid by gift card. Original-card, new-card, and original-trade-credit allocations are capped at the remaining funded portion: original payments of that stored-value type on the linked original transactions, minus completed (non-post-voided) refunds already sent to those destinations. Completion locks the original transactions and revalidates the cap.
 
-Trade-credit-funded portions may return to the **original** trade-credit account (`allows_original_tender_refund`). Trade credit is not a generic leftover destination.
+Trade-credit-funded portions may return to the **original** trade-credit account (`allows_original_tender_refund`), still capped at the remaining trade-credit-funded portion. Trade credit is not a generic leftover destination.
 
 Store credit may receive leftover refund value (`allows_generic_refund_destination`) when a customer is attached.
 

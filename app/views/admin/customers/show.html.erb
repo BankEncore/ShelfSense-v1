@@ -97,7 +97,7 @@
     <% if @stored_value_accounts.any? %>
       <% rows = @stored_value_accounts.map { |account|
            actions = []
-           if effective_permissions.include?("stored_value.adjust") && @customer.active?
+           if effective_permissions.include?("stored_value.adjust") && @customer.active? && account.active?
              actions << action_link_to("Adjust", new_admin_customer_stored_value_adjustment_path(@customer, stored_value_account_id: account.id), style: :outline, intent: :neutral)
            end
            [
@@ -109,7 +109,7 @@
          } %>
       <%= render "shared/data_table", headers: ["Type", "Balance", "Status", ""], rows: rows %>
     <% else %>
-      <%= render "shared/empty_state", title: "No open stored-value accounts", body: "Store credit and trade credit are created when value is posted." %>
+      <%= render "shared/empty_state", title: "No stored-value accounts", body: "Store credit and trade credit are created when value is posted." %>
     <% end %>
     <% if effective_permissions.include?("stored_value.adjust") && @customer.canonical? && @customer.active? %>
       <div class="actions">
@@ -125,19 +125,21 @@
   </section>
 <% end %>
 
-<% if @stored_value_entries&.any? %>
-  <section class="section">
-    <h2 class="section__title">Recent stored-value activity</h2>
-    <% rows = @stored_value_entries.map { |entry|
-         [
-           entry.stored_value_operation.operation_type.humanize,
-           entry.stored_value_account.account_type.humanize,
-           format_money_cents(entry.amount_cents),
-           format_money_cents(entry.balance_after_cents)
-         ]
-       } %>
-    <%= render "shared/data_table", headers: ["Operation", "Account", "Amount", "Balance after"], rows: rows %>
-  </section>
+<% if @stored_value_activities.present? %>
+  <% @stored_value_activities.each do |account, activity| %>
+    <section class="section">
+      <h2 class="section__title"><%= account.account_type.humanize %> activity</h2>
+      <%= render "admin/stored_value/account_activity",
+            activity: activity,
+            show_card: false,
+            page_path: ->(page) {
+              other = (@stored_value_activities.keys - [account]).to_h { |other_account|
+                [other_account.id, @stored_value_activities[other_account].page]
+              }
+              admin_customer_path(@customer, activity_page: other.merge(account.id => page))
+            } %>
+    </section>
+  <% end %>
 <% end %>
 
 <% if @associated_gift_cards %>

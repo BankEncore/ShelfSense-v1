@@ -29,6 +29,8 @@ class StoredValueCustomerCreditTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "Stored value"
     assert_includes response.body, "Store credit"
     assert_includes response.body, format_cents(125)
+    assert_includes response.body, "Store credit activity"
+    assert_includes response.body, "Issue"
   end
 
   test "customer show hides stored-value balances without view_activity" do
@@ -39,6 +41,34 @@ class StoredValueCustomerCreditTest < ActionDispatch::IntegrationTest
     get admin_customer_path(@customer)
     assert_response :success
     assert_not_includes response.body, "Stored value"
+  end
+
+  test "closed store-credit accounts remain in activity history" do
+    account = StoredValue::OpenAccount.call(account_type: "store_credit", customer: @customer)
+    StoredValue::Post.call(
+      operation_type: "issue",
+      store: @store,
+      performed_by: @admin,
+      source_id: account.id,
+      idempotency_key: SecureRandom.uuid_v7,
+      entries: [ { account: account, amount_cents: 50 } ]
+    )
+    StoredValue::Post.call(
+      operation_type: "adjust",
+      store: @store,
+      performed_by: @admin,
+      source_id: account.id,
+      idempotency_key: SecureRandom.uuid_v7,
+      entries: [ { account: account.reload, amount_cents: -50 } ]
+    )
+    account.reload.close_zero!
+
+    sign_in_as("admin")
+    get admin_customer_path(@customer)
+    assert_response :success
+    assert_includes response.body, "Closed"
+    assert_includes response.body, "Store credit activity"
+    assert_includes response.body, "Debit adjustment"
   end
 
   test "opening the adjust form does not create an account" do

@@ -1,0 +1,40 @@
+<%#
+  locals: activity:, show_card: false, page_param: :page, page_path:
+%>
+<% activity = local_assigns.fetch(:activity) %>
+<% show_card = local_assigns.fetch(:show_card, false) %>
+<% page_path = local_assigns.fetch(:page_path) %>
+<% if activity.total_count.zero? %>
+  <%= render "shared/empty_state", title: "No stored-value activity", body: "Posted operations for this account will appear here." %>
+<% else %>
+  <% headers = ["Business date", "Store", "Operation", "Amount", "Balance after", "Actor / reason", "POS"] %>
+  <% headers.insert(3, "Card") if show_card %>
+  <% rows = activity.rows.map { |row|
+       table_row = [
+         row.business_date.iso8601,
+         row.store_label,
+         row.operation_label,
+         format_signed_money_cents(row.amount_cents),
+         format_money_cents(row.balance_after_cents),
+         row.actor_reason.presence || missing_value,
+         (pos_transaction_cross_link(row.pos_transaction, label: row.pos_transaction.transaction_reference) if row.pos_transaction)
+       ]
+       if show_card
+         card = activity.account.gift_card
+         table_row.insert(3, card&.masked_number || missing_value)
+       end
+       table_row
+     } %>
+  <%= render "shared/data_table", headers: headers, rows: rows %>
+  <% if activity.total_pages > 1 %>
+    <nav class="pagination" aria-label="Stored-value activity pages">
+      <span class="muted">Page <%= activity.page %> of <%= activity.total_pages %> · <%= activity.total_count %> total</span>
+      <% if activity.page > 1 %>
+        <%= action_link_to("Previous", page_path.call(activity.page - 1), style: :ghost, intent: :neutral) %>
+      <% end %>
+      <% if activity.page < activity.total_pages %>
+        <%= action_link_to("Next", page_path.call(activity.page + 1), style: :ghost, intent: :neutral) %>
+      <% end %>
+    </nav>
+  <% end %>
+<% end %>

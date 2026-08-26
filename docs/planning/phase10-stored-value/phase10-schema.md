@@ -207,7 +207,7 @@ Seed at least one `system_generated` and one `manual_external` program with non-
 encrypts :number
 ```
 
-Default nondeterministic Active Record Encryption. No caller-selected encryption scheme. No custom per-row key ID. HMAC secret is separate from Active Record Encryption keys. Number identity is immutable after insert.
+Default nondeterministic Active Record Encryption. No caller-selected encryption scheme. No custom per-row key ID. HMAC secret is separate from Active Record Encryption keys. Number identity is immutable after insert, including the encrypted `number` attribute. Digest, prefix, and last four must agree with the normalized number.
 
 Do not persist plaintext numbers in logs or public columns. Lifecycle starts at `active` when activation or refund-card creation completes. No preregistration table. No working-transaction reservation table in Phase 10.
 
@@ -372,6 +372,22 @@ Rules:
 - Completed detail retains account/card and masked snapshots.
 - New refund card does not increase `stored_value_issuance_cents`.
 
+### 11.6 `pos_gift_card_credential_deliveries`
+
+Mutable first-print delivery state, kept off the commercially immutable `pos_transactions` row ([ADR-013](../../adr/ADR-013-append-only-facts.md)).
+
+| Column | Type | Contract |
+|---|---|---|
+| `id` | uuid | UUIDv7 PK |
+| `pos_transaction_id` | uuid, nullable | Unique when present; POS first-print subject |
+| `gift_card_id` | uuid, nullable | Unique when present; system-generated replacement first-print subject |
+| `delivered_at` | timestamptz | Required; set when first print discloses a generated credential |
+| timestamps | timestamptz | Required |
+
+Exactly one of `pos_transaction_id` or `gift_card_id` is set. Presence means later views for that subject stay masked. `Pos::FirstPrint` decrypts only while the originating POS session is open and no delivery row exists. Idempotent complete-retry may still first-print until that delivery row exists **and** the session remains open. After session close, `gift_cards.recover_print` is required. Replacement vouchers require a `GiftCardReplacement` for that new card and stamp the new gift card, not a second reveal of the old number.
+
+Composite index on `gift_cards (number_prefix, number_last_four)` supports admin history inquiry ([ADR-027](../../adr/ADR-027-admin-gift-card-prefix-last-four-inquiry.md)). It is not unique.
+
 ## 12. Outbox
 
 Same database transaction as the business change ([ADR-010](../../adr/ADR-010-transactional-outbox.md)). Event types (versioned; minimum facts; no full number):
@@ -391,6 +407,7 @@ These are integration messages, not `financial_events` rows.
 ## 13. System settings
 
 - Manual-adjustment approval threshold (organization): `system_settings.stored_value_adjust_credit_approval_threshold_cents` (default 5000). Credits at or above require second user; all debit adjustments require second user.
+- Gift-card voucher footer (organization): `system_settings.gift_card_voucher_footer` (text, max 500 after trim). Printed on every credential voucher; blank omits the footer. `{organization legal name}` is replaced with `system_settings.legal_name`. Plain text wrapping; not a per-Store inherit/custom/none message.
 - Do not put gift-card cash-out threshold here (program-level).
 
 ## 14. Idempotency

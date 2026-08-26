@@ -80,6 +80,9 @@ module StoredValue
 
             next_balance = account.balance_cents + amount
             raise Error, "balance cannot be negative" if next_balance.negative?
+            if amount.positive? && @reversal_of.blank?
+              GiftCards::MaximumBalance.assert!(account: account, next_balance_cents: next_balance)
+            end
 
             account.apply_posted_balance!(next_balance)
             posted << {

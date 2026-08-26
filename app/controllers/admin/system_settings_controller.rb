@@ -18,7 +18,7 @@ module Admin
         @settings = SystemSettings.current
         before = @settings.attributes.slice(
           "organization_name", "legal_name", "default_timezone", "default_country_code",
-          "default_receipt_header", "default_receipt_footer",
+          "default_receipt_header", "default_receipt_footer", "gift_card_voucher_footer",
           "stored_value_adjust_credit_approval_threshold_cents"
         )
         if @settings.update(settings_params)
@@ -45,7 +45,8 @@ module Admin
         :organization_name, :legal_name, :base_currency_code, :default_timezone,
         :default_country_code, :default_region_code, :fiscal_year_start_month,
         :default_supplier_cancellation_days, :default_customer_reservation_expiration_days,
-        :default_receipt_header, :default_receipt_footer, :stored_value_adjust_credit_approval_threshold_cents, :lock_version
+        :default_receipt_header, :default_receipt_footer, :gift_card_voucher_footer,
+        :stored_value_adjust_credit_approval_threshold_cents, :lock_version
       )
     end
   end

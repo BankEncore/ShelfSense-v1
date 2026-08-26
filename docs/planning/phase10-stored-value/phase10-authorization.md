@@ -13,13 +13,14 @@ Phase 1–9 keys are unchanged except where this document adds grants to seeded 
 | `stored_value.transfer` | either | stored_value | Same-type administrative transfer and consolidation |
 | `stored_value.manage_adjustment_reasons` | global | stored_value | Catalog of adjustment reasons |
 | `gift_cards.manage_programs` | global | gift_cards | Create/update gift-card programs |
-| `gift_cards.view` | either | gift_cards | Inquiry (masked) |
+| `gift_cards.view` | either | gift_cards | Inquiry (masked), including admin prefix + last-four history |
 | `gift_cards.suspend` | either | gift_cards | Suspend / reinstate instrument |
 | `gift_cards.replace` | either | gift_cards | Replacement / controlled transfer of remaining balance |
 | `gift_cards.associate_customer` | either | gift_cards | Set or clear optional customer association |
 | `gift_cards.cash_out` | either | gift_cards | Register cash-out of eligible gift-card balance |
+| `gift_cards.recover_print` | either | gift_cards | Exceptional recovery of a system-generated credential (reason required) |
 
-Do **not** add `gift_cards.activate`, `gift_cards.reload`, `gift_cards.redeem`, `stored_value.redeem_customer_credit`, or `gift_cards.reveal_number`. Ordinary Register actions use `pos.transact`. Full-number decryption is a controlled print/recovery service, not a general plaintext-view permission.
+Do **not** add `gift_cards.activate`, `gift_cards.reload`, `gift_cards.redeem`, `stored_value.redeem_customer_credit`, or `gift_cards.reveal_number`. Ordinary Register actions use `pos.transact`. Full-number decryption after first-print delivery uses `gift_cards.recover_print`, not a general plaintext-view permission.
 
 ## Register vs administrative
 
@@ -30,9 +31,9 @@ Do **not** add `gift_cards.activate`, `gift_cards.reload`, `gift_cards.redeem`, 
 | Refund destinations (original card, new refund card, store credit) | `pos.transact` |
 | Gift-card cash-out | `gift_cards.cash_out` **and** open session |
 | Balance inquiry at Register (masked) | `pos.transact` |
-| Immediate first print after complete | `pos.transact` (same completion) |
-| Controlled print-recovery / replacement print | Narrow service authorization (not a general reveal key); store managers may be permitted narrowly |
-| Admin/customer activity | `stored_value.view_activity` |
+| Immediate first print after complete | `pos.transact` (same completion, originating session still open, until delivery is recorded); **Print gift card** voucher, not Print receipt |
+| Controlled print-recovery / replacement print | `gift_cards.recover_print` (reason required); replacement first-print voucher uses `gift_cards.replace` and only for a `GiftCardReplacement` new card. Store managers may be granted `gift_cards.recover_print`. |
+| Admin/customer activity | `stored_value.view_activity` (customer-owned accounts); `gift_cards.view` (gift-card account ledger). Store-scoped viewers see other stores’ amounts with store labeled `Another store`; actor, reason, and POS links are omitted. |
 | Manual adjust | `stored_value.adjust` |
 | Administrative transfer / consolidation | `stored_value.transfer` |
 | Adjustment reason catalog | `stored_value.manage_adjustment_reasons` |
@@ -45,7 +46,7 @@ Store-scoped `pos.transact` authorizes using an organization-wide customer credi
 | `stored_value.transfer` | Yes | Yes, store-scoped | No |
 | `stored_value.adjust` | Yes | Yes, store-scoped | No |
 | `stored_value.manage_adjustment_reasons` | Yes | No | No |
-| Controlled credential reprint | Through POS recovery/replacement service | Narrowly permitted | Immediate first print only |
+| `gift_cards.recover_print` | Yes | Yes, store-scoped | No |
 
 ## Second-user and Register controlled actions
 
@@ -61,8 +62,8 @@ Store-scoped `pos.transact` authorizes using an organization-wide customer credi
 | Role | Phase 10 additions |
 |---|---|
 | `system_administrator` | Entire Phase 10 catalog |
-| `store_manager` | `stored_value.view_activity`, `stored_value.adjust`, `stored_value.transfer`, `gift_cards.view`, `gift_cards.suspend`, `gift_cards.replace`, `gift_cards.associate_customer`, `gift_cards.cash_out` (not `gift_cards.manage_programs`, not `stored_value.manage_adjustment_reasons`) |
-| `associate` | No new keys. Existing `pos.transact` covers ordinary SV at the Register including first print. No cash-out, adjust, transfer, or program manage. |
+| `store_manager` | `stored_value.view_activity`, `stored_value.adjust`, `stored_value.transfer`, `gift_cards.view`, `gift_cards.suspend`, `gift_cards.replace`, `gift_cards.associate_customer`, `gift_cards.cash_out`, `gift_cards.recover_print` (not `gift_cards.manage_programs`, not `stored_value.manage_adjustment_reasons`) |
+| `associate` | No new keys. Existing `pos.transact` covers ordinary SV at the Register including first print while the originating session is open until delivery is recorded. No cash-out, adjust, transfer, program manage, or print recovery. |
 
 `gift_cards.manage_programs` and `stored_value.manage_adjustment_reasons` require a **global** assignment.
 
@@ -74,7 +75,7 @@ Deactivate-with-balance: `customers.manage` remains the lifecycle permission; th
 
 | Kind | Contents |
 |---|---|
-| Production baseline | Permission keys; system-protected tender types `store_credit`, `trade_credit`, `gift_card`; at least two gift-card programs; adjustment-reason seed without `opening_balance` |
+| Production baseline | Permission keys including `gift_cards.recover_print`; system-protected tender types `store_credit`, `trade_credit`, `gift_card`; at least two gift-card programs; adjustment-reason seed without `opening_balance` |
 | Bootstrap / demo | Example program names/prefixes only if needed for operability |
 | Test fixtures | Synthetic numbers encrypted with the documented Rails test encryption keys |
 

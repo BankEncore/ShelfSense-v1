@@ -1579,6 +1579,20 @@ input[type="submit"]:disabled,
   margin-top: var(--space-3);
 }
 
+.pos-customer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+.pos-customer__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+
 .pos-issuance-form,
 .pos-customer-form {
   display: flex;
@@ -2181,6 +2195,19 @@ input[type="submit"]:disabled,
     display: block !important;
   }
 
+  body:not(.is-printing-voucher) .pos-gift-card-voucher {
+    display: none !important;
+  }
+
+  body.is-printing-voucher .pos-receipt__print,
+  body.is-printing-voucher .pos-report-print {
+    display: none !important;
+  }
+
+  body.is-printing-voucher .pos-gift-card-voucher {
+    display: block !important;
+  }
+
   .pos-body,
   .pos-receipt,
   .pos-report-print {
@@ -2200,6 +2227,83 @@ input[type="submit"]:disabled,
     font-variant-numeric: tabular-nums;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
+  }
+
+  .pos-gift-card-voucher {
+    font-family: var(--font-receipt);
+    font-weight: 700;
+    color: #000;
+    font-size: 10pt;
+    line-height: 1.25;
+    text-align: center;
+  }
+
+  .pos-gift-card-voucher p {
+    margin: 0;
+  }
+
+  .pos-gift-card-voucher__card {
+    padding-bottom: 10mm;
+  }
+
+  .pos-gift-card-voucher__card + .pos-gift-card-voucher__card {
+    break-before: page;
+    page-break-before: always;
+  }
+
+  .pos-gift-card-voucher__store {
+    margin-bottom: 0.9em;
+  }
+
+  .pos-gift-card-voucher__legal-name {
+    font-size: 11pt;
+  }
+
+  .pos-gift-card-voucher__issued {
+    margin: 0.6em 0 1.1em;
+  }
+
+  .pos-gift-card-voucher__amount {
+    font-size: 22pt;
+    line-height: 1.05;
+    margin: 0.9em 0 0.25em;
+  }
+
+  .pos-gift-card-voucher__title {
+    font-size: 16pt;
+    margin: 0 0 1.1em;
+  }
+
+  .pos-gift-card-voucher__barcode {
+    margin: 0.4em 0 1.1em;
+  }
+
+  .pos-gift-card-voucher__barcode svg {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    height: 48px;
+    margin: 0 auto 0.35em;
+  }
+
+  .pos-gift-card-voucher__number {
+    font-size: 10pt;
+    word-break: break-word;
+  }
+
+  .pos-gift-card-voucher .pos-gift-card-voucher__footer {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    font-size: 9pt;
+    line-height: 1.3;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    overflow: visible;
+    text-align: center;
+    margin: 1.2em 0 0;
+    color: #000;
   }
 
   .pos-receipt__print p,

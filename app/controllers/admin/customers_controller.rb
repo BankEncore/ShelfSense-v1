@@ -27,15 +27,16 @@ module Admin
       if Authorization::PermissionEvaluator.allowed?(user: current_user, permission_key: "stored_value.view_activity", store: current_store)
         @stored_value_accounts = @customer.stored_value_accounts
                                           .where(account_type: StoredValueAccount::CUSTOMER_OWNED_TYPES)
-                                          .where.not(status: "closed").order(:account_type)
-        @stored_value_entries = StoredValueEntry.joins(:stored_value_account)
-                                                .where(stored_value_accounts: {
-                                                  customer_id: @customer.id,
-                                                  account_type: StoredValueAccount::CUSTOMER_OWNED_TYPES
-                                                })
-                                                .includes(:stored_value_operation, :stored_value_account)
-                                                .order(created_at: :desc)
-                                                .limit(25)
+                                          .order(:account_type, :opened_at)
+        pages = params[:activity_page].is_a?(ActionController::Parameters) ? params[:activity_page] : {}
+        @stored_value_activities = @stored_value_accounts.index_with do |account|
+          StoredValue::AccountActivity.call(
+            account: account,
+            actor: current_user,
+            permission_key: "stored_value.view_activity",
+            page: pages[account.id]
+          )
+        end
       end
       if Authorization::PermissionEvaluator.allowed?(user: current_user, permission_key: "gift_cards.view", store: current_store)
         @associated_gift_cards = @customer.gift_cards.includes(:gift_card_program, :stored_value_account).order(:created_at)

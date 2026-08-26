@@ -12,6 +12,7 @@ class GiftCard < ApplicationRecord
   belongs_to :replaced_by, class_name: "GiftCard", optional: true
   has_one :replaced_from, class_name: "GiftCard", foreign_key: :replaced_by_id, inverse_of: :replaced_by,
           dependent: :restrict_with_exception
+  has_one :credential_delivery, class_name: "PosGiftCardCredentialDelivery", dependent: :restrict_with_exception
   has_many :gift_card_cash_outs, dependent: :restrict_with_exception
 
   validates :number, :number_digest, :number_prefix, :number_last_four, :status, :activated_at, presence: true
@@ -19,6 +20,7 @@ class GiftCard < ApplicationRecord
   validates :number_digest, uniqueness: true
   validates :number_last_four, length: { is: 4 }
   validate :customer_must_be_canonical_when_present
+  validate :number_identity_consistent
   validate :number_identity_immutable, on: :update
   before_validation :assign_number_identity, on: :create
 
@@ -67,9 +69,25 @@ class GiftCard < ApplicationRecord
     errors.add(:customer_id, "must be an active canonical customer")
   end
 
+  def number_identity_consistent
+    normalized = GiftCards::Number.normalize(number)
+    return if normalized.blank?
+
+    errors.add(:number_digest, "must match the card number") unless number_digest == GiftCards::Number.digest(normalized)
+    errors.add(:number_last_four, "must match the card number") unless number_last_four == GiftCards::Number.last_four(normalized)
+    return if gift_card_program.blank?
+
+    errors.add(:number_prefix, "must match the program prefix") unless number_prefix == gift_card_program.prefix
+  end
+
   def number_identity_immutable
     %i[number_digest number_prefix number_last_four gift_card_program_id stored_value_account_id].each do |attr|
       errors.add(attr, "cannot change after issue") if will_save_change_to_attribute?(attr)
     end
+    persisted_digest = number_digest_in_database
+    return if persisted_digest.blank? || number.blank?
+    return if GiftCards::Number.digest(GiftCards::Number.normalize(number)) == persisted_digest
+
+    errors.add(:number, "cannot change after issue")
   end
 end

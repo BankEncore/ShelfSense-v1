@@ -20,7 +20,7 @@ module GiftCards
       end
       unless Authorization::PermissionEvaluator.allowed?(
         user: @actor,
-        permission_key: "gift_cards.view",
+        permission_key: "gift_cards.recover_print",
         store: @store
       )
         raise GiftCards::Error, "not authorized to recover a gift-card print"

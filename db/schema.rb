@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_26_050000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_26_080000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -320,6 +320,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_050000) do
     t.index ["customer_id"], name: "index_gift_cards_on_customer_id"
     t.index ["gift_card_program_id"], name: "index_gift_cards_on_gift_card_program_id"
     t.index ["number_digest"], name: "index_gift_cards_on_number_digest", unique: true
+    t.index ["number_prefix", "number_last_four"], name: "index_gift_cards_on_prefix_and_last_four"
     t.index ["stored_value_account_id"], name: "index_gift_cards_on_stored_value_account_id", unique: true
     t.check_constraint "char_length(number_last_four::text) = 4", name: "gift_cards_last_four_length"
     t.check_constraint "status::text = ANY (ARRAY['active'::character varying, 'suspended'::character varying, 'replaced'::character varying, 'closed'::character varying]::text[])", name: "gift_cards_status_valid"
@@ -643,6 +644,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_050000) do
     t.check_constraint "approved_by_user_id IS NULL OR approved_by_user_id <> performed_by_user_id", name: "pos_controlled_actions_approver_not_performer"
     t.check_constraint "policy_result::text = 'approval_required'::text AND approved_by_user_id IS NOT NULL AND approved_by_name_snapshot IS NOT NULL OR policy_result::text = 'direct'::text AND approved_by_user_id IS NULL AND approved_by_name_snapshot IS NULL", name: "pos_controlled_actions_approver_matches_policy"
     t.check_constraint "policy_result::text = ANY (ARRAY['direct'::character varying::text, 'approval_required'::character varying::text])", name: "pos_controlled_actions_policy_valid"
+  end
+
+  create_table "pos_gift_card_credential_deliveries", id: :uuid, default: nil, force: :cascade do |t|
+    t.timestamptz "created_at", null: false
+    t.timestamptz "delivered_at", null: false
+    t.uuid "gift_card_id"
+    t.uuid "pos_transaction_id"
+    t.timestamptz "updated_at", null: false
+    t.index ["gift_card_id"], name: "index_pos_gc_credential_deliveries_on_gift_card", unique: true, where: "(gift_card_id IS NOT NULL)"
+    t.index ["pos_transaction_id"], name: "index_pos_gc_credential_deliveries_on_transaction", unique: true
+    t.check_constraint "pos_transaction_id IS NOT NULL AND gift_card_id IS NULL OR pos_transaction_id IS NULL AND gift_card_id IS NOT NULL", name: "pos_gc_credential_deliveries_one_subject"
   end
 
   create_table "pos_line_tax_components", id: :uuid, default: nil, force: :cascade do |t|
@@ -1591,6 +1603,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_050000) do
     t.integer "default_supplier_cancellation_days", limit: 2, default: 20, null: false
     t.string "default_timezone", null: false
     t.integer "fiscal_year_start_month", limit: 2, default: 1, null: false
+    t.text "gift_card_voucher_footer"
     t.timestamptz "initialized_at"
     t.string "legal_name"
     t.integer "lock_version", default: 0, null: false
@@ -1765,6 +1778,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_050000) do
   add_foreign_key "pos_controlled_actions", "pos_transactions"
   add_foreign_key "pos_controlled_actions", "users", column: "approved_by_user_id"
   add_foreign_key "pos_controlled_actions", "users", column: "performed_by_user_id"
+  add_foreign_key "pos_gift_card_credential_deliveries", "gift_cards"
+  add_foreign_key "pos_gift_card_credential_deliveries", "pos_transactions"
   add_foreign_key "pos_line_tax_components", "pos_transaction_lines"
   add_foreign_key "pos_line_tax_components", "store_taxes"
   add_foreign_key "pos_operations", "pos_transactions"

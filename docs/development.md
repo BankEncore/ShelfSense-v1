@@ -97,7 +97,7 @@ Gift-card numbers use Rails Active Record Encryption plus a separate HMAC digest
 | `ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT` | Rails key-derivation salt |
 | `GIFT_CARD_NUMBER_HMAC_KEY` | HMAC-SHA256 lookup digest (not an Active Record Encryption key) |
 
-Production must set all four from the deployment environment. Do not commit production keys, plaintext gift-card numbers, or decryptable fixtures. Tests generate synthetic numbers and encrypt them with the test keys. Existing installations need `shelfsense:seed_permissions` (and `GiftCards::Programs.seed!`) after this slice.
+Production must set all four from the deployment environment. Do not commit production keys, plaintext gift-card numbers, or decryptable fixtures. Tests generate synthetic numbers and encrypt them with the test keys. Existing installations need `shelfsense:seed_permissions` after this slice so permissions, gift-card programs, and the three protected stored-value tender types (`store_credit`, `trade_credit`, `gift_card`) exist.
 
 Do not commit production credentials. Production values must come from the deployment environment. The ERB in `config/database.yml` must not use strict `ENV.fetch` calls without defaults for production-only variables, because Rails evaluates the entire file before selecting an environment; strict production lookups would also break development and CI startup.
 

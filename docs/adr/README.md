@@ -38,6 +38,7 @@ These ADRs capture the architecture decisions reached during the ShelfSense offl
 | [ADR-024](ADR-024-bibliographic-data-authority.md) | External bibliographic data is non-authoritative | Accepted |
 | [ADR-025](ADR-025-domain-owned-operational-ledgers.md) | Domain-owned operational ledgers (no universal financial-event table) | Accepted |
 | [ADR-026](ADR-026-gift-card-number-protection.md) | Gift-card number protection | Accepted |
+| [ADR-027](ADR-027-admin-gift-card-prefix-last-four-inquiry.md) | Admin gift-card inquiry by prefix and last four | Accepted |
 
 ## Governing principle
 

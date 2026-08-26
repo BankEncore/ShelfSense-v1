@@ -76,7 +76,11 @@ Register basket: distinct issuance section (UDS-3 hierarchy), not a merchandise 
 
 ## 4. Customer on the transaction
 
-`pos_transactions.customer_id` is new and optional.
+`pos_transactions.customer_id` is optional. Gift-card-only tickets do not require a customer.
+
+Cashiers attach a customer through operational Register search (`Customers::Search` mode `:operational` and `GET register/customer_search`), not by pasting a UUID. Working tickets may change or clear the customer with the same lock and cashier rules as attach. Pickup remains a request allocation and does **not** set `customer_id` unless a later packet decides otherwise. Creating a customer from the Register is out of this slice.
+
+The attached customer name appears on the completed-transaction screen and on the customer receipt header. It is not a CRM dump.
 
 At completion, if any tender is store/trade credit or destination mode is `customer_store_credit`:
 
@@ -84,7 +88,7 @@ At completion, if any tender is store/trade credit or destination mode is `custo
 - Each such tender’s account belongs to that customer
 - Revalidate customer and accounts under lock
 
-Gift-card payment tenders and new-refund-card destinations do not require a transaction customer.
+Gift-card payment tenders and new-refund-card destinations do not require a transaction customer. If store/trade tender is attempted with no customer, the server still rejects; the Register surfaces the customer-search overlay.
 
 ## 5. Tender types
 
@@ -104,9 +108,9 @@ Inside the existing complete transaction (inventory, tax, envelope, outbox):
 8. Build envelope from persisted Core (masked numbers only).
 9. Commit atomically. Failure rolls back POS and SV.
 
-Command payload includes expected signed_net, issuance cents, tender plan, destination modes, and “generate from program X” — not the resulting number.
+Command payload includes expected signed_net, issuance cents, tender plan, destination modes, and “generate from program X” — not the resulting number or generated `gift_card_id` on activations and new refund cards.
 
-Complete-retry (ADR-009): same command hash returns stored envelope **and** may decrypt for the controlled first-print channel. The public envelope still has last four only.
+Complete-retry (ADR-009): same command hash returns stored envelope **and** may decrypt for the controlled first-print channel until delivery is recorded **and** the originating session is still open. The public envelope still has last four only. After first-print delivery, or after the session closes, later views stay masked; recovery uses `gift_cards.recover_print`.
 
 ## 7. Envelope vs Core
 

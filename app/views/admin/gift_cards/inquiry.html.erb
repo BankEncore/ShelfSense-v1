@@ -5,12 +5,37 @@
   { name: "Inquiry" }
 ] %>
 <%= render "shared/page_header", title: "Inquire by number" %>
+<p class="muted">Exact number uses digest lookup. Prefix and last four are an administrative history path, not a redemption path. Lists stay masked.</p>
 <%= form_with url: inquiry_admin_gift_cards_path, method: :post, class: "form" do |form| %>
   <div class="form-field">
     <%= label_tag :card_number, "Card number" %>
     <%= password_field_tag :card_number, nil, autocomplete: "off" %>
   </div>
+  <div class="form-field">
+    <%= label_tag :number_prefix, "Prefix" %>
+    <%= text_field_tag :number_prefix, params[:number_prefix], autocomplete: "off", inputmode: "numeric" %>
+  </div>
+  <div class="form-field">
+    <%= label_tag :number_last_four, "Last four" %>
+    <%= text_field_tag :number_last_four, params[:number_last_four], autocomplete: "off", inputmode: "numeric", maxlength: 4 %>
+  </div>
   <div class="actions">
     <%= action_submit(form, "Look up", style: :solid, intent: :brand) %>
   </div>
+<% end %>
+
+<% if @candidates.present? %>
+  <section class="section">
+    <h2 class="section__title">Matching cards</h2>
+    <% rows = @candidates.map { |candidate|
+         [
+           link_to(candidate.masked_number, admin_gift_card_path(candidate.id)),
+           candidate.program_name,
+           candidate.status.humanize,
+           format_money_cents(candidate.balance_cents),
+           candidate.activated_at.to_date.iso8601
+         ]
+       } %>
+    <%= render "shared/data_table", headers: ["Card", "Program", "Status", "Balance", "Activated"], rows: rows %>
+  </section>
 <% end %>

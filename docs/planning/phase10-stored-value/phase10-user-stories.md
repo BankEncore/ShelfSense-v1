@@ -93,8 +93,16 @@ GitHub-issue-ready stories. Keep 10.4 issuance and signed-net in the same implem
 ### US-10.2.5 — Customer activity
 
 **As** staff with `stored_value.view_activity`  
-**I want** balances and recent operations on customer show  
-**So that** I can explain the account without seeing gift-card full numbers.
+**I want** balances and per-account ledger history on customer show  
+**So that** I can explain store and trade credit without seeing gift-card full numbers.
+
+**Acceptance:**
+
+- Open balances remain on customer show; closed customer-owned accounts stay visible in history
+- Each store-credit and trade-credit account has paginated activity (store, business date, operation type, amount, balance-after, actor/reason when present, POS reference when attributable)
+- Gift-card show uses `gift_cards.view` for the same table on that card’s account
+- No plaintext gift-card numbers; gift-card rows stay masked
+- Policy: [phase10-account-transfers-and-adjustments.md](phase10-account-transfers-and-adjustments.md)
 
 ### US-10.2.6 — Transfer customer credit
 
@@ -139,6 +147,14 @@ GitHub-issue-ready stories. Keep 10.4 issuance and signed-net in the same implem
 **I want** masked inquiry, suspend/reinstate, replacement, and optional customer association  
 **So that** bearer cards can be administered without changing ledger ownership rules.
 
+**Acceptance:**
+
+- Exact-number inquiry remains digest lookup
+- Admin history may inquire by prefix + last four ([ADR-027](../../adr/ADR-027-admin-gift-card-prefix-last-four-inquiry.md)): unique match opens the card; collisions show a short masked candidate list; zero matches use the generic failure
+- POS redeem, reload, cash-out, and original-card refund stay exact digest
+- Replacement of a system-generated card lands on a one-shot credential voucher for the **new** number; the old number is not revealed
+- Manual/external replacements that already have a physical number do not print a generated credential
+
 ## 10.4 — POS commercial
 
 ### US-10.4.1 — Issuance child and signed-net
@@ -153,7 +169,9 @@ GitHub-issue-ready stories. Keep 10.4 issuance and signed-net in the same implem
 - DB signed-net identity includes `stored_value_issuance_cents`
 - Envelope golden files updated; Core FKs on source rows
 - Working manual activation uses encrypted pending identity; `gift_card_id` null until complete
-- Controlled first print after generated-card activation and generated refund cards; complete-retry reprints that outcome; ordinary receipts stay masked
+- Controlled first print after generated-card activation and generated refund cards while the originating session is open; after session close, `gift_cards.recover_print`; complete-retry reprints that outcome only before delivery and while the session is open; ordinary receipts stay masked
+- Credential voucher is a distinct 80mm print from the customer receipt; **Print receipt** never includes the full number; **Print gift card** is the first-print channel until delivery is recorded
+- Voucher paper: Store identity, issued timestamp, amount, `Gift Card`, Code 128, space-separated number; organization `gift_card_voucher_footer` when set
 - Register gift-card scan routing (sale, activation, reload, redeem, refund)
 - Every new POS transaction snapshots `system_settings.base_currency_code`
 
@@ -166,6 +184,7 @@ GitHub-issue-ready stories. Keep 10.4 issuance and signed-net in the same implem
 **Acceptance:**
 
 - Customer required and revalidated for store/trade
+- Cashiers attach, change, or clear the customer via operational search on working tickets; gift-card-only tickets do not require a customer; pickup does not auto-attach
 - Multiple SV tenders allowed; lock UUID order
 - Same-transaction activate/reload + redeem forbidden
 - One detail row per stored-value tender
@@ -224,7 +243,11 @@ GitHub-issue-ready stories. Keep 10.4 issuance and signed-net in the same implem
 **I want** controlled print recovery of a generated credential with a reason  
 **So that** a failed first print can be recovered without a general reveal screen.
 
-First print of generated activation and refund cards ships in 10.4. This slice adds exceptional recovery, cash-out receipts, and X/Z print polish.
+**Acceptance:**
+
+- Requires `gift_cards.recover_print` and a reason
+- Audits last four only; does not write the number
+- `gift_cards.view` alone is not sufficient
 
 ### US-10.5.4 — Cash-out and reporting navigation
 

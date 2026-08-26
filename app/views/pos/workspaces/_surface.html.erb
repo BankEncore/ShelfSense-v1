@@ -79,6 +79,7 @@
      data-register-workspace-resolve-url-value="<%= pos_register_merchandise_resolve_path(register_scope) %>"
      data-register-workspace-search-url-value="<%= pos_register_merchandise_search_path(register_scope) %>"
      data-register-workspace-pickup-search-url-value="<%= pos_register_pickup_search_path(register_scope) %>"
+     data-register-workspace-customer-search-url-value="<%= pos_register_customer_search_path(register_scope) %>"
      data-register-workspace-pickup-allowed-value="<%= @pickup_allowed ? "true" : "false" %>"
      data-register-workspace-open-price-url-value="<%= pos_register_open_price_path(register_scope) %>"
      data-action="turbo:submit-end->register-workspace#onSubmitEnd">
@@ -239,17 +240,25 @@
           </section>
         <% end %>
         <% if @transaction.customer %>
-          <p class="pos-customer">Customer · <%= @transaction.customer.display_name %></p>
+          <div class="pos-customer">
+            <p>Customer · <%= @transaction.customer.display_name %></p>
+            <% if @ui_mode == "sale_entry" %>
+              <div class="pos-customer__actions">
+                <%= action_button "Change", style: :outline, intent: :neutral, size: :standard,
+                      data: { action: "register-workspace#openCustomerOverlay", register_workspace_target: "attachCustomerButton" } %>
+                <%= form_with url: pos_register_detach_customer_path(register_scope), method: :post, class: "pos-customer-form" do %>
+                  <%= hidden_field_tag :register_id, @register.id %>
+                  <%= hidden_field_tag :lock_version, @transaction.lock_version %>
+                  <%= submit_tag "Clear", class: "btn btn--outline" %>
+                <% end %>
+              </div>
+            <% end %>
+          </div>
         <% elsif @ui_mode == "sale_entry" %>
-          <%= form_with url: pos_register_attach_customer_path(register_scope), method: :post, class: "pos-customer-form" do %>
-            <%= hidden_field_tag :register_id, @register.id %>
-            <%= hidden_field_tag :lock_version, @transaction.lock_version %>
-            <label>
-              Customer id
-              <input name="customer_id" autocomplete="off">
-            </label>
-            <%= submit_tag "Attach customer", class: "btn btn--outline" %>
-          <% end %>
+          <div class="pos-customer">
+            <%= action_button "Attach customer", style: :outline, intent: :neutral, size: :standard,
+                  data: { action: "register-workspace#openCustomerOverlay", register_workspace_target: "attachCustomerButton" } %>
+          </div>
         <% end %>
       </div>
 
@@ -412,6 +421,12 @@
       <%= hidden_field_tag :register_id, @register.id %>
       <%= hidden_field_tag :lock_version, @transaction.lock_version %>
       <%= hidden_field_tag :customer_request_id, "", data: { register_workspace_target: "pickupRequestInput" } %>
+    <% end %>
+
+    <%= form_with url: pos_register_attach_customer_path(register_scope), method: :post, html: { class: "pos-hidden", data: { register_workspace_target: "attachCustomerForm", turbo: true } } do %>
+      <%= hidden_field_tag :register_id, @register.id %>
+      <%= hidden_field_tag :lock_version, @transaction.lock_version %>
+      <%= hidden_field_tag :customer_id, "", data: { register_workspace_target: "attachCustomerIdInput" } %>
     <% end %>
 
     <%= form_with url: pos_register_quantity_path(register_scope), method: :post, html: { class: "pos-hidden", data: { register_workspace_target: "quantityForm", turbo: true } } do %>
@@ -690,6 +705,27 @@
       <p class="muted">Enter searches, then Enter selects the highlighted available request. Esc cancels.</p>
       <%= action_button "Cancel (Esc)", style: :outline, intent: :neutral, size: :standard,
             data: { action: "register-workspace#closePickupOverlay" } %>
+    </div>
+  </div>
+
+  <div class="pos-overlay"
+       id="pos_customer_overlay"
+       hidden
+       data-register-workspace-target="customerOverlay"
+       role="dialog"
+       aria-modal="true"
+       aria-labelledby="pos-customer-title">
+    <div class="pos-overlay__panel">
+      <h2 id="pos-customer-title">Attach customer</h2>
+      <label class="field">
+        <span>Name, email, or phone</span>
+        <input type="text" autocomplete="off" data-register-workspace-target="customerQueryField">
+      </label>
+      <p class="muted" data-register-workspace-target="customerQueryLabel"></p>
+      <ul class="pos-picker" role="listbox" aria-labelledby="pos-customer-title" data-register-workspace-target="customerList"></ul>
+      <p class="muted">Enter searches, then Enter selects the highlighted customer. Esc cancels.</p>
+      <%= action_button "Cancel (Esc)", style: :outline, intent: :neutral, size: :standard,
+            data: { action: "register-workspace#closeCustomerOverlay" } %>
     </div>
   </div>
 

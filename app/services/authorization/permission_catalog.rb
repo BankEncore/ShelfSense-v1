@@ -131,7 +131,8 @@ module Authorization
       { key: "gift_cards.suspend", group_key: "gift_cards", name: "Suspend or reinstate gift cards", scope_type: "either" },
       { key: "gift_cards.replace", group_key: "gift_cards", name: "Replace gift cards", scope_type: "either" },
       { key: "gift_cards.associate_customer", group_key: "gift_cards", name: "Associate gift cards with customers", scope_type: "either" },
-      { key: "gift_cards.cash_out", group_key: "gift_cards", name: "Cash out gift cards", scope_type: "either" }
+      { key: "gift_cards.cash_out", group_key: "gift_cards", name: "Cash out gift cards", scope_type: "either" },
+      { key: "gift_cards.recover_print", group_key: "gift_cards", name: "Recover gift-card print", scope_type: "either" }
     ].freeze
 
     PHASE9_PERMISSIONS = [
@@ -177,6 +178,7 @@ module Authorization
       gift_cards.replace
       gift_cards.associate_customer
       gift_cards.cash_out
+      gift_cards.recover_print
     ].freeze
 
     STORE_MANAGER_PHASE3 = %w[

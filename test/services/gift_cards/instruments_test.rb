@@ -51,6 +51,19 @@ module GiftCards
       refute_includes event.attributes.to_json, "80100000000000000000"
     end
 
+    test "number identity cannot be rewritten after issue" do
+      card = GiftCards::ProvisionInstrument.call(program: @program, store: @store)
+      original = card.number
+      other = GiftCards::Number.generate(@program)
+
+      error = assert_raises(ActiveRecord::RecordInvalid) { card.update!(number: other) }
+      assert_match(/cannot change after issue/, error.message)
+      assert_equal original, card.reload.number
+
+      GiftCards::Suspend.call(gift_card: card, actor: @actor, store: @store)
+      assert card.reload.suspended?
+    end
+
     test "suspend and reinstate keep the ledger account in sync" do
       card = GiftCards::ProvisionInstrument.call(program: @program, store: @store)
       GiftCards::Suspend.call(gift_card: card, actor: @actor, store: @store)

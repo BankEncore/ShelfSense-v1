@@ -20,6 +20,7 @@ module Pos
                                      :post_void_of,
                                      :post_void,
                                      :pos_controlled_actions,
+                                     :customer,
                                      pos_transaction_lines: [
                                        :pos_line_tax_components,
                                        :pos_controlled_actions,
