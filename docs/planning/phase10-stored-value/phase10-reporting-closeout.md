@@ -1,6 +1,6 @@
 # Phase 10 — Reporting and closeout
 
-Status: **Proposed**. Extends frozen Phase 5/6 closeout; do not invent Phase 11’s cash-movement ledger.
+Status: **Accepted**. Extends frozen Phase 5/6 closeout; do not invent Phase 11’s cash-movement ledger.
 
 Companions: [phase5-plan.md](../phase4-6-point-of-sale/phase5-cash-register/phase5-plan.md), [Pos::SessionTotals](../../../app/services/pos/session_totals.rb), [phase10-pos-issuance-and-tenders.md](phase10-pos-issuance-and-tenders.md).
 

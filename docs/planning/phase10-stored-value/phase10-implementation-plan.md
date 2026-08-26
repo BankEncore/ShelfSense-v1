@@ -1,10 +1,10 @@
 # Phase 10 — Implementation plan
 
-Status: **Proposed** (not started). Living file: update slice status when work lands.
+Status: **Complete** on `main` (August 2026). Manual test plan executed.
 
 GitHub tracker: [milestone Phase 10](https://github.com/BankEncore/ShelfSense-v1/milestone/5) — [#58](https://github.com/BankEncore/ShelfSense-v1/issues/58) packet, [#59](https://github.com/BankEncore/ShelfSense-v1/issues/59) 10.1, [#60](https://github.com/BankEncore/ShelfSense-v1/issues/60) 10.2, [#61](https://github.com/BankEncore/ShelfSense-v1/issues/61) 10.3, [#62](https://github.com/BankEncore/ShelfSense-v1/issues/62) 10.4, [#63](https://github.com/BankEncore/ShelfSense-v1/issues/63) 10.5.
 
-Authority: [phase10-plan.md](phase10-plan.md), [phase10-schema.md](phase10-schema.md), [ADR-025](../../adr/ADR-025-domain-owned-operational-ledgers.md), [ADR-026](../../adr/ADR-026-gift-card-number-protection.md).
+Authority: [phase10-plan.md](phase10-plan.md), [phase10-schema.md](phase10-schema.md), [ADR-025](../../adr/ADR-025-domain-owned-operational-ledgers.md), [ADR-026](../../adr/ADR-026-gift-card-number-protection.md), [ADR-027](../../adr/ADR-027-admin-gift-card-prefix-last-four-inquiry.md).
 
 ## Merge policy
 
@@ -53,7 +53,8 @@ Issue branches PR **directly to `main`**. There is no `phase-10-stored-value` in
 | 10.2 Customer store/trade credit | Complete (issue [#60](https://github.com/BankEncore/ShelfSense-v1/issues/60)) |
 | 10.3 Gift-card programs and instruments | Complete (issue [#61](https://github.com/BankEncore/ShelfSense-v1/issues/61)) |
 | 10.4 POS issuance, tenders, refund destinations, post-void | Complete (issue [#62](https://github.com/BankEncore/ShelfSense-v1/issues/62)) |
-| 10.5 Cash-out, closeout, print, nav | Complete (issue [#63](https://github.com/BankEncore/ShelfSense-v1/issues/63)); Phase 10 milestone remains open until the [manual test plan](phase10-manual-test-plan.md) is executed |
+| 10.5 Cash-out, closeout, print, nav | Complete (issue [#63](https://github.com/BankEncore/ShelfSense-v1/issues/63)) |
+| Manual test plan | Executed (August 2026) |
 
 ## Integration notes
 

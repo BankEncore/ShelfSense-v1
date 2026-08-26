@@ -8,7 +8,7 @@ An early outline in this file numbered Phase 8 as buyback and Phase 9 as financi
 
 | Document | Purpose |
 |---|---|
-| [roadmap.md](roadmap.md) | Implemented milestones, forward phases 10–14, UDS, Terminal program, explicit deferrals |
+| [roadmap.md](roadmap.md) | Implemented milestones, forward phases 11–14, UDS, Terminal program, explicit deferrals |
 
 ## Implemented domain packets
 
@@ -25,12 +25,11 @@ An early outline in this file numbered Phase 8 as buyback and Phase 9 as financi
 | [Phase 7.1 — Purchasing polish](phase7.1-purchasing-polish/README.md) | Complete on `main` (7.1.1–7.1.3; 7.1.4 deferred) |
 | [Phase 8 — Customer foundation](phase8-customer-foundation/README.md) | Complete on `main` |
 | [Phase 9 catalog enrichment](phase9-catalog-enrichment/README.md) | Implemented; persistence in [phase9-remediation.md](phase9-catalog-enrichment/phase9-remediation.md) |
+| [Phase 10 — Stored value](phase10-stored-value/README.md) | Implemented on `main`; [ADR-025](../adr/ADR-025-domain-owned-operational-ledgers.md), [ADR-026](../adr/ADR-026-gift-card-number-protection.md), [ADR-027](../adr/ADR-027-admin-gift-card-prefix-last-four-inquiry.md) |
 
 ## Proposed domain packets
 
-| Packet | Status |
-|---|---|
-| [Phase 10 — Stored value](phase10-stored-value/README.md) | Slices 10.1–10.5 on `main`; milestone open until the [manual test plan](phase10-stored-value/phase10-manual-test-plan.md); [ADR-025](../adr/ADR-025-domain-owned-operational-ledgers.md), [ADR-026](../adr/ADR-026-gift-card-number-protection.md) |
+Phases 11–14 and the Terminal program are sequenced in [roadmap.md](roadmap.md). They do not yet have planning packets.
 
 ## Cross-phase UX
 

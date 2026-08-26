@@ -1,6 +1,6 @@
 # Phase 10 — Stored value
 
-Status: **Proposed** — slices 10.1–10.5 implement on `main`; [milestone 5](https://github.com/BankEncore/ShelfSense-v1/milestone/5) stays open until the [manual test plan](phase10-manual-test-plan.md) is executed. After Phase 8 customer identity. Authority: this packet plus [ADR-025](../../adr/ADR-025-domain-owned-operational-ledgers.md), [ADR-026](../../adr/ADR-026-gift-card-number-protection.md), and [ADR-027](../../adr/ADR-027-admin-gift-card-prefix-last-four-inquiry.md). GitHub tracker: [milestone 5](https://github.com/BankEncore/ShelfSense-v1/milestone/5).
+Status: **Implemented** on `main` (August 2026). Manual test plan executed. After Phase 8 customer identity. Authority: this packet plus [ADR-025](../../adr/ADR-025-domain-owned-operational-ledgers.md), [ADR-026](../../adr/ADR-026-gift-card-number-protection.md), and [ADR-027](../../adr/ADR-027-admin-gift-card-prefix-last-four-inquiry.md). GitHub tracker: [milestone 5](https://github.com/BankEncore/ShelfSense-v1/milestone/5).
 
 The draft [phase-10-stored-value-spec.md](../../drafts/phase-10-stored-value-spec.md) is **superseded**. Do not implement from it.
 

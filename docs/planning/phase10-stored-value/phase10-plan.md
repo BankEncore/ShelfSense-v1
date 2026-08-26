@@ -1,6 +1,6 @@
 # Phase 10 — Stored value plan
 
-Status: **Proposed**. Implementation slices 10.1–10.5 land on `main`; the Phase 10 milestone stays open until the [manual test plan](phase10-manual-test-plan.md) is executed.
+Status: **Implemented** on `main` (August 2026). Manual test plan executed.
 
 ## Goal
 
@@ -175,4 +175,4 @@ Do not ship Register redemption before Core posting, tenders, and signed-net che
 
 ## Parallel work
 
-Phase 10 is the next domain program after Phase 9. UDS-6/7 stay parked. Do not pull buyback or cash locations into these slices.
+Phase 11 is the next domain program. UDS-6/7 stay parked. Do not pull buyback or cash locations into stored-value slices.

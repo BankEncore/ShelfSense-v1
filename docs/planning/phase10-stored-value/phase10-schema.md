@@ -1,6 +1,6 @@
 # Phase 10 — Schema contract
 
-Status: **Proposed**. PostgreSQL is authoritative. Do not edit `db/schema.rb` until migrations land. UUIDv7 via `create_uuid_table` / application-assigned ids ([AGENTS.md](../../../AGENTS.md) §10).
+Status: **Accepted**. PostgreSQL is authoritative. UUIDv7 via `create_uuid_table` / application-assigned ids ([AGENTS.md](../../../AGENTS.md) §10).
 
 Companions: [phase10-plan.md](phase10-plan.md), [phase10-pos-issuance-and-tenders.md](phase10-pos-issuance-and-tenders.md), [phase10-gift-card-numbering.md](phase10-gift-card-numbering.md), [phase10-account-transfers-and-adjustments.md](phase10-account-transfers-and-adjustments.md).
 

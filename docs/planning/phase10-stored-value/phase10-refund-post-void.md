@@ -1,6 +1,6 @@
 # Phase 10 — Refund and post-void
 
-Status: **Proposed**. Builds on [returns.md](../phase4-6-point-of-sale/phase6-pos-mvp/returns.md) and [post-void.md](../phase4-6-point-of-sale/phase6-pos-mvp/post-void.md). Gift-card refund destinations: [phase10-pos-issuance-and-tenders.md](phase10-pos-issuance-and-tenders.md). Unused-instrument return is **deferred**.
+Status: **Accepted**. Builds on [returns.md](../phase4-6-point-of-sale/phase6-pos-mvp/returns.md) and [post-void.md](../phase4-6-point-of-sale/phase6-pos-mvp/post-void.md). Gift-card refund destinations: [phase10-pos-issuance-and-tenders.md](phase10-pos-issuance-and-tenders.md). Unused-instrument return is **deferred**.
 
 ### Actually locked
 

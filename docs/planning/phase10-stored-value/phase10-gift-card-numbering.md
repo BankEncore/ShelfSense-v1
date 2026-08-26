@@ -1,6 +1,6 @@
 # Phase 10 — Gift-card numbering and scan routing
 
-Status: **Proposed**. Policy: [ADR-026](../../adr/ADR-026-gift-card-number-protection.md), [ADR-027](../../adr/ADR-027-admin-gift-card-prefix-last-four-inquiry.md).
+Status: **Accepted**. Policy: [ADR-026](../../adr/ADR-026-gift-card-number-protection.md), [ADR-027](../../adr/ADR-027-admin-gift-card-prefix-last-four-inquiry.md).
 
 ### Actually locked
 

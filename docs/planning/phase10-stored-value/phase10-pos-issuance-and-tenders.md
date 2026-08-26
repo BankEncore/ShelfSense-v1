@@ -1,6 +1,6 @@
 # Phase 10 — POS issuance and tenders
 
-Status: **Proposed**. Implementation authority for how stored value joins completed POS facts.
+Status: **Accepted**. Implementation authority for how stored value joins completed POS facts.
 
 Companions: [phase10-schema.md](phase10-schema.md), [phase10-refund-post-void.md](phase10-refund-post-void.md), [mvp-contract.md](../phase4-6-point-of-sale/phase6-pos-mvp/mvp-contract.md), [operation-and-core-facts.md](../phase4-6-point-of-sale/phase4-point-of-sale/operation-and-core-facts.md), [ADR-020](../../adr/ADR-020-pos-operation-envelope-and-core-facts.md).
 

@@ -46,6 +46,7 @@ Several roadmap goals are **not greenfield**. The forward phases below describe 
 |---|---|
 | Customers | Identity, contact lookup, duplicate suggestions, merge, requests, reservations, Register pickup |
 | Register / POS | Session opening, cash sales, mixed tenders, returns, blind close, Z reporting, transaction history |
+| Stored value | Store credit, trade credit, gift-card instruments, POS issuance and redemption, cash-out |
 | Financial | GL classifications, tax calculation, inventory valuation, immutable POS facts |
 | Product / catalog | Strong identifiers, classification, pricing, Used units, unified lookup, CSV import, bibliographic facts, local covers, subjects, reviewed ISBNdb apply |
 | Layout / UX | Warm Parchment tokens, grouped navigation, ActionButtonHelper on reference and non-purchasing screens; remaining migration belongs to the feature phase that changes the screen |
@@ -124,7 +125,7 @@ Coordination with UDS-4: [phase7.1-uds-coordination.md](phase7.1-purchasing-poli
 
 ## Phase 8 — Customer foundation (MVP)
 
-**Status:** **Complete** on `main` (PR #42, merge `b5ed590`). Planning packet: [phase8-customer-foundation/](phase8-customer-foundation/README.md). Phase 9 catalog enrichment is implemented; Phase 10 is proposed but is not the primary stream.
+**Status:** **Complete** on `main` (PR #42, merge `b5ed590`). Planning packet: [phase8-customer-foundation/](phase8-customer-foundation/README.md). Phase 9 catalog enrichment and Phase 10 stored value are implemented.
 
 Phase 7 created the minimum customer record required for requests. Phase 8 concentrates on **reliable identification**, **essential contact methods**, **duplicate prevention and safe merge**, and **minimal lifecycle governance**—not CRM, marketing, multiple contacts, or stored-value ledger design.
 
@@ -163,7 +164,7 @@ Phase 8 does not create stored-value accounts. It documents the identity contrac
 
 ## Phase 9 — Catalog and bibliographic enrichment
 
-**Status:** Implemented. Planning packet: [phase9-catalog-enrichment/](phase9-catalog-enrichment/README.md). Policy: [ADR-024](../adr/ADR-024-bibliographic-data-authority.md). Phase 10 is unblocked by customer identity but is not the primary stream.
+**Status:** Implemented. Planning packet: [phase9-catalog-enrichment/](phase9-catalog-enrichment/README.md). Policy: [ADR-024](../adr/ADR-024-bibliographic-data-authority.md). Phase 10 stored value is implemented.
 
 Extends Phases 2 and 6.1; does not replace the product model. Policy: [ADR-024](../adr/ADR-024-bibliographic-data-authority.md).
 
@@ -192,7 +193,7 @@ The external lookup boundary returns **normalized candidate data**; the Product 
 
 ## Phase 10 — Stored value
 
-**Status:** Implementation slices 10.1–10.5 land on `main`. Phase 10 is **not Complete** until the [manual test plan](phase10-stored-value/phase10-manual-test-plan.md) is executed. Planning packet: [phase10-stored-value/](phase10-stored-value/README.md). Policy: [ADR-025](../adr/ADR-025-domain-owned-operational-ledgers.md), [ADR-026](../adr/ADR-026-gift-card-number-protection.md).
+**Status:** **Implemented** on `main` (August 2026). Manual test plan executed. Planning packet: [phase10-stored-value/](phase10-stored-value/README.md). Policy: [ADR-025](../adr/ADR-025-domain-owned-operational-ledgers.md), [ADR-026](../adr/ADR-026-gift-card-number-protection.md), [ADR-027](../adr/ADR-027-admin-gift-card-prefix-last-four-inquiry.md).
 
 Stored-value redemption is **online-authorized** until a bounded offline mechanism exists ([ADR-005](../adr/ADR-005-terminal-originated-operations.md)). There is **no** universal operational financial-event table; each domain keeps its own immutable facts. Cross-domain accounting/export is Phase 14.
 
@@ -375,8 +376,8 @@ The following remain out of scope until a planning packet and ADR review justify
 | UDS-4 — Navigation and information architecture | **UDS-4.0–4.2 on `main`** ([uds-4-plan.md](ux-design-system/uds-4-plan.md)) |
 | UDS-5 — Administrative composition | **Complete** on `main` (PR #57; [uds-5-plan.md](ux-design-system/uds-5-plan.md)) |
 | Phase 8 — Customer foundation (MVP) | **Complete** on `main` (PR #42) |
-| Phase 9 — Catalog and bibliographic enrichment | **Implemented**; Phase 10 unblocked but not primary |
-| Phase 10 — Stored value | Slices 10.1–10.5 land on `main`; milestone remains open until the [manual test plan](phase10-stored-value/phase10-manual-test-plan.md) |
+| Phase 9 — Catalog and bibliographic enrichment | **Implemented** |
+| Phase 10 — Stored value | **Implemented** on `main`; [manual test plan](phase10-stored-value/phase10-manual-test-plan.md) executed |
 | Phase 11 — Cash accountability completion | After Phase 10 stored-value and Register integration |
 | Phase 12 — Used buyback | After 8–11 (payout after 10–11) |
 | Phase 13 — Customer workspace | After activity sources exist |
@@ -391,7 +392,7 @@ The following remain out of scope until a planning packet and ADR review justify
 
 | Document | Relationship |
 |---|---|
-| [Phase 10 stored value](phase10-stored-value/README.md) | Slices 10.1–10.5 on `main`; milestone open until manual gate; [ADR-025](../adr/ADR-025-domain-owned-operational-ledgers.md) |
+| [Phase 10 stored value](phase10-stored-value/README.md) | Implemented; [ADR-025](../adr/ADR-025-domain-owned-operational-ledgers.md), [ADR-026](../adr/ADR-026-gift-card-number-protection.md), [ADR-027](../adr/ADR-027-admin-gift-card-prefix-last-four-inquiry.md) |
 | [Phase planning packets](phase1-operational-foundation/phase1-plan.md) | Authoritative detail per implemented phase |
 | [Phase 7.1 purchasing closeout](phase7.1-purchasing-polish/README.md) | Phase 7 operability finish; [coordination with UDS-4](phase7.1-purchasing-polish/phase7.1-uds-coordination.md) |
 | [UDS-4 plan](ux-design-system/uds-4-plan.md) | Grouped navigation and cross-cutting adoption |

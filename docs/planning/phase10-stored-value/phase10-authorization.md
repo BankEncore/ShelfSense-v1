@@ -1,6 +1,6 @@
 # Phase 10 — Authorization contract
 
-Status: **Proposed**. Keys are seeded in `Authorization::PermissionCatalog`. The UI must not invent permission semantics. Controllers and services remain the authorization boundary.
+Status: **Accepted**. Keys are seeded in `Authorization::PermissionCatalog`. The UI must not invent permission semantics. Controllers and services remain the authorization boundary.
 
 Phase 1–9 keys are unchanged except where this document adds grants to seeded roles.
 
