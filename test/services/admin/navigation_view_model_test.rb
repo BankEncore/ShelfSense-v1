@@ -31,6 +31,8 @@ class Admin::NavigationViewModelTest < ActiveSupport::TestCase
     assert nav.groups.find { |g| g.key == :customers }.destinations.any? { |d| d.key == :stored_value_transfers }
     assert nav.groups.find { |g| g.key == :organization_configuration }.destinations.any? { |d| d.key == :stored_value_adjustment_reasons }
     assert nav.groups.find { |g| g.key == :pos_operations }.destinations.any? { |d| d.key == :pos }
+    assert nav.groups.find { |g| g.key == :pos_operations }.destinations.any? { |d| d.key == :gift_cards }
+    assert nav.groups.find { |g| g.key == :pos_operations }.destinations.any? { |d| d.key == :gift_card_programs }
 
     assert nav.groups.find { |g| g.key == :merchandise }.current
     assert_equal :products, nav.current_destination.key

@@ -13,6 +13,7 @@ class Customer < ApplicationRecord
            dependent: :restrict_with_exception
   has_many :customer_requests, dependent: :restrict_with_exception
   has_many :stored_value_accounts, dependent: :restrict_with_exception
+  has_many :gift_cards, dependent: :restrict_with_exception
 
   validates :display_name, presence: true
   validates :preferred_contact_method, inclusion: { in: PREFERRED_CONTACT_METHODS }

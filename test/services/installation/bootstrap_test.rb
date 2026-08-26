@@ -54,6 +54,8 @@ class Installation::BootstrapTest < ActiveSupport::TestCase
     assert AuditEvent.where(actor_type: "system").exists?
     assert StoredValueAdjustmentReason.exists?(code: "goodwill")
     assert_not StoredValueAdjustmentReason.exists?(code: "opening_balance")
+    assert GiftCardProgram.exists?(code: "generated")
+    assert GiftCardProgram.exists?(code: "manual")
     assert_equal 5000, result[:settings].stored_value_adjust_credit_approval_threshold_cents
   end
 

@@ -1,0 +1,39 @@
+<%= form_with model: [:admin, program], class: "form" do |form| %>
+  <%= render "shared/form_errors", record: program %>
+  <%= form.hidden_field :lock_version %>
+  <%= form.hidden_field :number_length %>
+  <%= form.hidden_field :check_digit_algorithm %>
+  <% unless program.persisted? %>
+    <div class="form-field"><%= form.label :code %><%= form.text_field :code %></div>
+  <% end %>
+  <div class="form-field"><%= form.label :name %><%= form.text_field :name %></div>
+  <div class="form-field"><%= form.label :prefix %><%= form.text_field :prefix, readonly: program.activation_exists? %></div>
+  <div class="form-field">
+    <%= form.label :number_authority %>
+    <%= form.select :number_authority, GiftCardProgram::AUTHORITIES.map { |value| [value.humanize, value] }, {}, disabled: program.activation_exists? %>
+  </div>
+  <div class="form-field">
+    <%= form.check_box :reload_allowed %>
+    <%= form.label :reload_allowed, "Reload allowed" %>
+  </div>
+  <div class="form-field">
+    <%= form.label :maximum_balance_cents, "Maximum balance (cents)" %>
+    <%= form.number_field :maximum_balance_cents %>
+  </div>
+  <div class="form-field">
+    <%= form.label :cash_out_policy %>
+    <%= form.select :cash_out_policy, GiftCardProgram::CASH_OUT_POLICIES.map { |value| [value.humanize, value] } %>
+  </div>
+  <div class="form-field">
+    <%= form.label :cash_out_threshold_cents, "Cash-out threshold (cents)" %>
+    <%= form.number_field :cash_out_threshold_cents %>
+  </div>
+  <div class="form-field">
+    <%= form.check_box :cash_out_approval_required %>
+    <%= form.label :cash_out_approval_required, "Cash-out requires second-user approval" %>
+  </div>
+  <div class="actions">
+    <%= action_submit(form, program.persisted? ? "Save Changes" : "Create program", style: :solid, intent: :brand) %>
+    <%= action_link_to("Cancel", program.persisted? ? admin_gift_card_program_path(program) : admin_gift_card_programs_path, style: :ghost, intent: :neutral) %>
+  </div>
+<% end %>

@@ -7,6 +7,7 @@ class StoredValueAccount < ApplicationRecord
 
   belongs_to :customer, optional: true
   has_many :stored_value_entries, dependent: :restrict_with_exception
+  has_one :gift_card, dependent: :restrict_with_exception
 
   validates :account_type, :currency_code, :status, :opened_at, presence: true
   validates :account_type, inclusion: { in: ACCOUNT_TYPES }

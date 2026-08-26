@@ -1,0 +1,24 @@
+<% content_for :title, "Replace #{@gift_card.masked_number}" %>
+<%= render "shared/page_header", title: "Replace #{@gift_card.masked_number}" %>
+<p>Remaining balance <%= format_money_cents(@gift_card.balance_cents) %> moves to a new instrument. The original card is marked replaced.</p>
+<%= form_with url: replace_admin_gift_card_path(@gift_card), method: :post, class: "form" do |form| %>
+  <%= hidden_field_tag :idempotency_key, params[:idempotency_key].presence || SecureRandom.uuid_v7 %>
+  <div class="form-field">
+    <%= label_tag :reason_code, "Reason code" %>
+    <%= text_field_tag :reason_code, params[:reason_code], required: true %>
+  </div>
+  <div class="form-field">
+    <%= label_tag :notes, "Notes" %>
+    <%= text_area_tag :notes, params[:notes], rows: 3 %>
+  </div>
+  <% if @gift_card.gift_card_program.manual_external? %>
+    <div class="form-field">
+      <%= label_tag :card_number, "Replacement card number" %>
+      <%= password_field_tag :card_number, nil, autocomplete: "off" %>
+    </div>
+  <% end %>
+  <div class="actions">
+    <%= action_submit(form, "Post replacement", style: :solid, intent: :brand) %>
+    <%= action_link_to("Cancel", admin_gift_card_path(@gift_card), style: :ghost, intent: :neutral) %>
+  </div>
+<% end %>

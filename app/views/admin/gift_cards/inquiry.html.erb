@@ -1,0 +1,16 @@
+<% content_for :title, "Gift-card inquiry" %>
+<%= render "shared/breadcrumbs", crumbs: [
+  { name: "Home", path: root_path },
+  { name: "Gift cards", path: admin_gift_cards_path },
+  { name: "Inquiry" }
+] %>
+<%= render "shared/page_header", title: "Inquire by number" %>
+<%= form_with url: inquiry_admin_gift_cards_path, method: :post, class: "form" do |form| %>
+  <div class="form-field">
+    <%= label_tag :card_number, "Card number" %>
+    <%= password_field_tag :card_number, nil, autocomplete: "off" %>
+  </div>
+  <div class="actions">
+    <%= action_submit(form, "Look up", style: :solid, intent: :brand) %>
+  </div>
+<% end %>

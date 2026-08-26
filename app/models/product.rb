@@ -34,6 +34,7 @@ class Product < ApplicationRecord
   validates :series_position, numericality: { greater_than_or_equal_to: -99_999.999, less_than_or_equal_to: 99_999.999 }, allow_nil: true
   validate :validate_changed_category
   validate :validate_assignable_product_form
+  validate :lookup_code_not_gift_card_shape
   validate :identifier_write_rules
   validate :validate_field_sources
   after_save { self.identifier_writes_enabled = false }
@@ -111,5 +112,13 @@ class Product < ApplicationRecord
     if industry_identifier_changed? && !identifier_writes_enabled
       errors.add(:industry_identifier, "must be changed through Identifiers::AssignProductIndustry")
     end
+  end
+
+  def lookup_code_not_gift_card_shape
+    return if lookup_code.blank?
+    return unless GiftCardProgram.table_exists?
+    return unless GiftCards::Number.matches_active_program?(lookup_code)
+
+    errors.add(:lookup_code, "matches an active gift-card number shape")
   end
 end

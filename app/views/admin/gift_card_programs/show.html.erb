@@ -1,0 +1,24 @@
+<% content_for :title, @program.code %>
+<%= render "shared/breadcrumbs", crumbs: [
+  { name: "Home", path: root_path },
+  { name: "Gift-card programs", path: admin_gift_card_programs_path },
+  { name: @program.code }
+] %>
+<% actions = [configuration_status_badge(@program.active?)] %>
+<% if @program.active? %>
+  <% actions << action_link_to("Edit", edit_admin_gift_card_program_path(@program), style: :outline, intent: :neutral) %>
+  <% actions << action_button_to("Deactivate", admin_gift_card_program_path(@program), method: :delete, style: :outline, intent: :warning) %>
+<% else %>
+  <% actions << action_button_to("Reactivate", reactivate_admin_gift_card_program_path(@program), method: :post, style: :solid, intent: :brand) %>
+<% end %>
+<%= render "shared/page_header", title: @program.name, actions: safe_join(actions, " ") %>
+<%= render "shared/definition_list", rows: [
+      ["Code", @program.code],
+      ["Prefix", @program.prefix],
+      ["Length", @program.number_length],
+      ["Authority", @program.number_authority.humanize],
+      ["Reload allowed", @program.reload_allowed? ? "Yes" : "No"],
+      ["Cash-out policy", @program.cash_out_policy.humanize],
+      ["Cash-out approval required", @program.cash_out_approval_required? ? "Yes" : "No"],
+      ["Maximum balance", (@program.maximum_balance_cents ? format_money_cents(@program.maximum_balance_cents) : "None")]
+    ] %>

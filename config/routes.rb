@@ -114,6 +114,24 @@ Rails.application.routes.draw do
       member { post :reactivate }
     end
     resources :stored_value_transfers, only: %i[new create]
+    resources :gift_card_programs do
+      member { post :reactivate }
+    end
+    resources :gift_cards, only: %i[index show] do
+      collection do
+        get :inquiry
+        post :inquiry, action: :resolve_inquiry
+      end
+      member do
+        post :suspend
+        post :reinstate
+        get :replace
+        post :replace, action: :create_replacement
+        get :associate
+        patch :associate, action: :update_association
+      end
+      resources :stored_value_adjustments, only: %i[new create], controller: "gift_card_adjustments"
+    end
     resources :customer_requests, only: %i[index show new create] do
       collection do
         get :customer_lookup

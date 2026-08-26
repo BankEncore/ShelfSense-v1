@@ -1,0 +1,18 @@
+<% content_for :title, "Gift cards" %>
+<%= render "shared/breadcrumbs", crumbs: [
+  { name: "Home", path: root_path },
+  { name: "Gift cards" }
+] %>
+<%= render "shared/page_header",
+      title: "Gift cards",
+      actions: action_link_to("Inquire", inquiry_admin_gift_cards_path, style: :solid, intent: :brand) %>
+<p class="muted">Inquiry is exact-match only. Lists show prefix and last four, never the full number.</p>
+<% rows = @gift_cards.map { |card|
+     [
+       link_to(card.masked_number, admin_gift_card_path(card)),
+       card.gift_card_program.name,
+       format_money_cents(card.balance_cents),
+       card.status.humanize
+     ]
+   } %>
+<%= render "shared/data_table", headers: ["Card", "Program", "Balance", "Status"], rows: rows %>
