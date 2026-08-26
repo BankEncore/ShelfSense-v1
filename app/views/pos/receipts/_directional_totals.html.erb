@@ -24,5 +24,8 @@
     <div><dt>Tax reversal</dt><dd><%= format_signed_money_cents(-transaction.return_tax_cents) %></dd></div>
     <div><dt>Returns total</dt><dd><%= format_signed_money_cents(-transaction.return_total_cents) %></dd></div>
   <% end %>
+  <% if transaction.stored_value_issuance_cents.to_i != 0 %>
+    <div><dt>Gift cards</dt><dd><%= format_signed_money_cents(transaction.stored_value_issuance_cents) %></dd></div>
+  <% end %>
   <div><dt>Net</dt><dd><%= format_signed_money_cents(transaction.signed_net_cents) %></dd></div>
 <% end %>

@@ -17,7 +17,7 @@ module Pos
 
     def call
       envelope = {
-        "schema_version" => 2,
+        "schema_version" => 3,
         "operation" => {
           "operation_id" => @operation_id.to_s,
           "fact_type" => PosOperation::FACT_TYPE
@@ -48,12 +48,16 @@ module Pos
           "return_discount_cents" => @transaction.return_discount_cents,
           "return_tax_cents" => @transaction.return_tax_cents,
           "return_total_cents" => @transaction.return_total_cents,
-          "signed_net_cents" => @transaction.signed_net_cents
+          "signed_net_cents" => @transaction.signed_net_cents,
+          "stored_value_issuance_cents" => @transaction.stored_value_issuance_cents
         },
         "lines" => @transaction.pos_transaction_lines.reload.map { |line| envelope_line(line) },
         "tenders" => @transaction.pos_tenders.ordered.map { |tender| envelope_tender(tender) }
       }
       envelope["transaction"]["discount_cents"] = @transaction.discount_cents unless @transaction.discount_cents.zero?
+      envelope["transaction"]["customer_id"] = @transaction.customer_id.to_s if @transaction.customer_id.present?
+      issuances = @transaction.pos_stored_value_issuances.ordered.map { |issuance| envelope_issuance(issuance) }
+      envelope["issuances"] = issuances if issuances.any?
       actions = @transaction.pos_controlled_actions.order(:executed_at, :id).map { |action| envelope_controlled_action(action) }
       envelope["controlled_actions"] = actions if actions.any?
       if @transaction.post_void?
@@ -218,6 +222,33 @@ module Pos
       end
       payload["external_reference"] = tender.external_reference if tender.external_reference.present?
       payload["post_void_source_tender_id"] = tender.post_void_source_tender_id.to_s if tender.post_void_source_tender_id.present?
+      detail = tender.stored_value_tender_detail
+      if detail
+        stored_value = {
+          "destination_mode" => detail.destination_mode,
+          "stored_value_operation_id" => detail.stored_value_operation_id&.to_s
+        }
+        stored_value["stored_value_account_id"] = detail.stored_value_account_id.to_s if detail.stored_value_account_id.present?
+        stored_value["gift_card_id"] = detail.gift_card_id.to_s if detail.gift_card_id.present?
+        stored_value["masked_card"] = detail.masked_card_snapshot if detail.masked_card_snapshot.present?
+        payload["stored_value"] = stored_value
+      end
+      payload
+    end
+
+    def envelope_issuance(issuance)
+      payload = {
+        "issuance_id" => issuance.id.to_s,
+        "issuance_number" => issuance.issuance_number,
+        "issuance_type" => issuance.issuance_type,
+        "amount_cents" => issuance.amount_cents,
+        "number_authority" => issuance.number_authority,
+        "stored_value_operation_id" => issuance.stored_value_operation_id&.to_s
+      }
+      payload["gift_card_id"] = issuance.gift_card_id.to_s if issuance.gift_card_id.present?
+      payload["gift_card_program_id"] = issuance.gift_card_program_id.to_s if issuance.gift_card_program_id.present?
+      payload["masked_card"] = issuance.masked_card_snapshot if issuance.masked_card_snapshot.present?
+      payload["post_void_source_issuance_id"] = issuance.post_void_source_issuance_id.to_s if issuance.post_void_source_issuance_id.present?
       payload
     end
   end

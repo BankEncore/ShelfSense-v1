@@ -9,7 +9,7 @@ module Pos
     end
 
     def self.command_payload(transaction:, operation_id:, expected_lock_version:, expected_total_cents:, expected_signed_net_cents: nil)
-      {
+      payload = {
         "transaction_id" => transaction.id.to_s,
         "operation_id" => operation_id.to_s,
         "expected_lock_version" => expected_lock_version.to_i,
@@ -18,8 +18,38 @@ module Pos
           transaction: transaction,
           expected_total_cents: expected_total_cents,
           expected_signed_net_cents: expected_signed_net_cents
-        )
+        ),
+        "stored_value_issuance_cents" => transaction.stored_value_issuance_cents.to_i,
+        "customer_id" => transaction.customer_id&.to_s,
+        "issuances" => transaction.pos_stored_value_issuances.ordered.map { |issuance|
+          {
+            "issuance_id" => issuance.id.to_s,
+            "issuance_type" => issuance.issuance_type,
+            "amount_cents" => issuance.amount_cents,
+            "gift_card_program_id" => issuance.gift_card_program_id&.to_s,
+            "gift_card_id" => issuance.gift_card_id&.to_s,
+            "number_authority" => issuance.number_authority
+          }
+        },
+        "stored_value_tenders" => transaction.pos_tenders.ordered.select(&:stored_value?).map { |tender|
+          detail = tender.stored_value_tender_detail
+          {
+            "tender_id" => tender.id.to_s,
+            "tender_type" => tender.tender_type,
+            "direction" => tender.direction,
+            "amount_cents" => tender.amount_cents,
+            "destination_mode" => detail&.destination_mode,
+            "stored_value_account_id" => detail&.stored_value_account_id&.to_s,
+            "gift_card_id" => detail&.gift_card_id&.to_s,
+            "gift_card_program_id" => detail&.gift_card_program_id&.to_s
+          }
+        }
       }
+      payload = payload.compact
+      payload.delete("issuances") if payload["issuances"].blank?
+      payload.delete("stored_value_tenders") if payload["stored_value_tenders"].blank?
+      payload.delete("stored_value_issuance_cents") if payload["stored_value_issuance_cents"].to_i.zero?
+      payload
     end
 
     def self.resolve_expected_signed_net_cents!(transaction:, expected_total_cents:, expected_signed_net_cents:)
@@ -134,6 +164,7 @@ module Pos
           raise Pos::Error, "expected signed net does not match"
         end
         settle_tenders!(transaction)
+        Pos::CompleteStoredValue.call(transaction: transaction, actor: @actor, operation: operation)
 
         completion_time = Time.current
         business_date = transaction.reporting_period.business_date
@@ -166,7 +197,7 @@ module Pos
       raise Pos::Error, "register does not match reporting period" unless transaction.register_id == period.register_id
       raise Pos::Error, "reporting period does not match session" unless transaction.reporting_period_id == session.reporting_period_id
       raise Pos::Error, "store does not match register" unless transaction.store_id == transaction.register.store_id
-      raise Pos::Error, "transaction has no merchandise" if transaction.pos_transaction_lines.none?
+      Pos::Support.require_commercial_content!(transaction)
     end
 
     def lock_original_sale_lines!(transaction)
@@ -343,7 +374,7 @@ module Pos
       operation.update!(
         status: "completed",
         fact_type: PosOperation::FACT_TYPE,
-        schema_version: 2,
+        schema_version: 3,
         pos_transaction_id: transaction.id,
         store_id: transaction.store_id,
         register_id: transaction.register_id,

@@ -19,6 +19,7 @@ module Pos
 
       verify_lines!
       verify_tenders!
+      verify_issuances!
       verify_no_sale_actions!
     end
 
@@ -103,6 +104,24 @@ module Pos
       raise Pos::Error, "post-void is missing the post_void fact" unless actions.one? { |action| action.action_type == "post_void" }
       extras = actions.reject { |action| action.action_type == "post_void" }
       raise Pos::Error, "post-void cannot copy sale or unlinked controlled actions" if extras.any?
+    end
+
+    def verify_issuances!
+      source_rows = @source.pos_stored_value_issuances.ordered.to_a
+      reversal_rows = @reversal.pos_stored_value_issuances.ordered.to_a
+      raise Pos::Error, "post-void must reverse every source issuance" unless source_rows.size == reversal_rows.size
+      used_ids = reversal_rows.filter_map(&:post_void_source_issuance_id)
+      raise Pos::Error, "post-void issuance lineage is incomplete" unless used_ids.sort == source_rows.map(&:id).sort
+
+      reversal_rows.each do |issuance|
+        source = issuance.post_void_source_issuance
+        raise Pos::Error, "post-void issuance is missing the source issuance" if source.nil?
+        unless issuance.amount_cents == source.amount_cents &&
+               issuance.issuance_type == source.issuance_type &&
+               issuance.gift_card_id == source.gift_card_id
+          raise Pos::Error, "post-void issuance does not match the source"
+        end
+      end
     end
 
     def opposite_direction?(source, line)

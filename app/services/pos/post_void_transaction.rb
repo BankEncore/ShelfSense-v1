@@ -135,7 +135,7 @@ module Pos
         end
 
         source_lines = source.pos_transaction_lines.lock.order(:id).to_a
-        raise Pos::Error, "transaction has no merchandise" if source_lines.empty?
+        raise Pos::Error, "transaction has no merchandise" if source_lines.empty? && source.pos_stored_value_issuances.none?
         refuse_linked_returns!(source_lines)
         validate_card_reversals!(source)
 
@@ -158,6 +158,7 @@ module Pos
         Pos::PostVoidIntegrity.verify!(source: source, reversal: reversal)
         Pos::CompletedTransactionIntegrity.verify!(reversal)
         settle_generated_tenders!(reversal)
+        Pos::PostVoidStoredValue.reverse!(source: source, reversal: reversal, actor: @actor, operation: operation)
 
         completion_time = Time.current
         business_date = session.reporting_period.business_date
@@ -196,7 +197,7 @@ module Pos
     def clear_or_refuse_working_basket!(session)
       working = session.pos_transactions.working.first
       return if working.nil?
-      if working.pos_transaction_lines.exists? || working.pos_tenders.exists?
+      if working.pos_transaction_lines.exists? || working.pos_tenders.exists? || working.pos_stored_value_issuances.exists?
         raise Pos::Error, "Complete or cancel the current transaction before post-void."
       end
 
@@ -235,6 +236,7 @@ module Pos
         cashier_user: session.cashier_user,
         status: "working",
         currency_code: source.currency_code,
+        customer: source.customer,
         post_void_of_transaction_id: source.id
       )
       source_lines.each_with_index do |source_line, index|
@@ -285,6 +287,7 @@ module Pos
         end
         reversal.pos_tenders.create!(attrs)
       end
+      Pos::PostVoidStoredValue.copy_rows!(source: source, reversal: reversal)
       reversal
     end
 
@@ -399,7 +402,7 @@ module Pos
       operation.update!(
         status: "completed",
         fact_type: PosOperation::FACT_TYPE,
-        schema_version: 2,
+        schema_version: 3,
         pos_transaction_id: transaction.id,
         store_id: transaction.store_id,
         register_id: transaction.register_id,

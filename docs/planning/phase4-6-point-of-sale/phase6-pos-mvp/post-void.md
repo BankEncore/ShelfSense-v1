@@ -169,7 +169,7 @@ No Session ⇒ `Open a register before processing a post-void.` A **nonempty** w
 ```text
 command_type = pos.post_void_transaction
 fact_type    = pos.transaction_completed
-schema_version = 2
+schema_version = 3   # new completions; stored v1/v2 envelopes remain valid
 ```
 
 Narrowly generalize `Pos::OperationLease` to accept `command_type`. Ordinary complete defaults to `pos.complete_transaction` and stays unchanged.
