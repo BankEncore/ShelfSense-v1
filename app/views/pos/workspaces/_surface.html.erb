@@ -389,15 +389,12 @@
       <div class="pos-actions__group pos-actions__group--escape" role="group" aria-label="Cancel transaction">
         <%= action_button "Cancel (F9)", style: :outline, intent: :danger, size: :large, disabled: true,
               data: { action: "register-workspace#openOverlay", register_workspace_target: "cancelButton" } %>
-        <% if effective_permissions.include?("gift_cards.cash_out") %>
-          <%= action_link_to "Cash out", new_pos_cash_out_path, style: :outline, intent: :neutral, size: :large %>
-        <% end %>
       </div>
     </div>
 
     <% if effective_permissions.include?("gift_cards.cash_out") %>
       <%= form_with url: lookup_pos_cash_outs_path, method: :post, local: true, html: { class: "pos-hidden", data: { register_workspace_target: "cashOutForm" } } do %>
-        <%= password_field_tag :card_number, nil, autocomplete: "off", data: { register_workspace_target: "cashOutCardInput" } %>
+        <%= hidden_field_tag :card_number, nil, data: { register_workspace_target: "cashOutCardInput" } %>
       <% end %>
     <% end %>
 

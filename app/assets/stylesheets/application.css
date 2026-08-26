@@ -1533,7 +1533,7 @@ input[type="submit"]:disabled,
   min-height: 100vh;
   display: grid;
   grid-template-rows: auto 1fr auto auto auto;
-  min-width: 1280px;
+  min-width: min(1280px, 100%);
 }
 
 .pos-header {
@@ -1572,6 +1572,35 @@ input[type="submit"]:disabled,
 .pos-basket {
   overflow: auto;
   padding: var(--space-3);
+  min-width: 0;
+}
+
+.pos-issuances {
+  margin-top: var(--space-3);
+}
+
+.pos-issuance-form,
+.pos-customer-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: end;
+  max-width: 100%;
+}
+
+.pos-issuance-form label,
+.pos-customer-form label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.pos-issuance-form input,
+.pos-issuance-form select,
+.pos-customer-form input {
+  min-width: 0;
+  max-width: 12rem;
 }
 
 .pos-lines {
