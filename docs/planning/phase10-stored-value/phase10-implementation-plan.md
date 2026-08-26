@@ -52,7 +52,7 @@ Issue branches PR **directly to `main`**. There is no `phase-10-stored-value` in
 | 10.1 Stored-value core | Complete (issue [#59](https://github.com/BankEncore/ShelfSense-v1/issues/59)) |
 | 10.2 Customer store/trade credit | Complete (issue [#60](https://github.com/BankEncore/ShelfSense-v1/issues/60)) |
 | 10.3 Gift-card programs and instruments | Complete (issue [#61](https://github.com/BankEncore/ShelfSense-v1/issues/61)) |
-| 10.4 POS issuance, tenders, refund destinations, post-void | Not started |
+| 10.4 POS issuance, tenders, refund destinations, post-void | Complete (issue [#62](https://github.com/BankEncore/ShelfSense-v1/issues/62)) |
 | 10.5 Cash-out, closeout, print, nav | Not started |
 
 ## Integration notes

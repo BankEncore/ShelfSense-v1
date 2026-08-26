@@ -52,6 +52,8 @@ class PosPostVoidTransactionTest < ActiveSupport::TestCase
     assert_nil reversal_line.return_reason_code
     assert_equal source_line.line_total_cents, reversal_line.line_total_cents
     assert_equal(-source.signed_net_cents, reversal.signed_net_cents)
+    assert_equal 0, reversal.stored_value_issuance_cents
+    assert_equal 3, envelope.fetch("schema_version")
     assert_equal source.currency_code, reversal.currency_code
     refute_equal source.transaction_reference, reversal.transaction_reference
     assert_equal source.reporting_period.business_date, reversal.business_date

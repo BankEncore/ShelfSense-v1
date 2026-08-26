@@ -124,7 +124,9 @@ class PosRegisterTest < ActionDispatch::IntegrationTest
     assert_equal true, by_id.fetch(cash.id.to_s).fetch("allows_refund")
     assert_equal true, by_id.fetch(card.id.to_s).fetch("allows_refund")
     assert_equal false, by_id.fetch(voucher.id.to_s).fetch("allows_refund")
-    assert_equal %w[cash card check other other], payload.map { |row| row.fetch("category") }
+    gift_card = TenderType.find_by!(code: "gift_card")
+    assert_equal "gift_card", by_id.fetch(gift_card.id.to_s).fetch("stored_value_account_type")
+    assert_equal %w[cash card check stored_value stored_value stored_value other other], payload.map { |row| row.fetch("category") }
   end
 
   test "workspace can take Card then Cash and complete" do
