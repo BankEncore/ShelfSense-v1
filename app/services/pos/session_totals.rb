@@ -151,15 +151,15 @@ module Pos
     end
 
     def cash_movement_cents
-      paid = CashEntry.joins(:cash_operation)
-                      .where(pos_session_id: @session.id)
-                      .where(cash_operations: { operation_type: %w[paid_in paid_out] })
-                      .sum(:amount_cents)
+      movements = CashEntry.joins(:cash_operation)
+                           .where(pos_session_id: @session.id)
+                           .where(cash_operations: { operation_type: %w[paid_in paid_out reverse] })
+                           .sum(:amount_cents)
       transfers = CashEntry.joins(cash_operation: :cash_transfer)
                            .where(pos_session_id: @session.id)
                            .where(cash_transfers: { transfer_type: %w[drop replenishment] })
                            .sum(:amount_cents)
-      paid + transfers
+      movements + transfers
     end
 
     def gift_card_cash_out_count

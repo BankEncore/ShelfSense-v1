@@ -15,6 +15,8 @@ class CashOperation < ApplicationRecord
   has_one :cash_transfer, dependent: :restrict_with_exception
   has_one :cash_reconciliation, dependent: :restrict_with_exception
   has_one :cash_safe_initialization, dependent: :restrict_with_exception
+  has_one :cash_paid_in, dependent: :restrict_with_exception
+  has_one :cash_paid_out, dependent: :restrict_with_exception
 
   validates :operation_type, :business_date, :occurred_at, presence: true
   validates :operation_type, inclusion: { in: OPERATION_TYPES }

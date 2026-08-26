@@ -11,6 +11,8 @@ class PosSession < ApplicationRecord
   has_many :pos_transactions, dependent: :restrict_with_exception
   has_many :gift_card_cash_outs, dependent: :restrict_with_exception
   has_many :cash_entries, dependent: :restrict_with_exception
+  has_many :cash_paid_ins, dependent: :restrict_with_exception
+  has_many :cash_paid_outs, dependent: :restrict_with_exception
 
   validates :status, :opened_at, presence: true
   validates :status, inclusion: { in: STATUSES }

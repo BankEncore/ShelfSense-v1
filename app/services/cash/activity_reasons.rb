@@ -5,7 +5,9 @@ module Cash
     SEEDS = [
       { code: "over_count", name: "Over count", operation_kind: "over" },
       { code: "short_count", name: "Short count", operation_kind: "short" },
+      { code: "paid_in_found", name: "Found cash", operation_kind: "paid_in" },
       { code: "paid_in_other", name: "Other paid-in", operation_kind: "paid_in", notes_required: true },
+      { code: "paid_out_supplies", name: "Store supplies", operation_kind: "paid_out" },
       { code: "paid_out_other", name: "Other paid-out", operation_kind: "paid_out", notes_required: true },
       { code: "reverse", name: "Reversal", operation_kind: "reverse", notes_required: true }
     ].freeze

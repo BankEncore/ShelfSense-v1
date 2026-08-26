@@ -72,8 +72,8 @@ If a later release needs to delay enforcement, that would be a feature gate or t
 | Slice | Status |
 |---|---|
 | 11.0 Contract / packet | **Complete** on `main` (planning packet). Merge-policy lock: this PR on `phase-11-cash-accountability` |
-| 11.1 Safe-backed session lifecycle | This PR |
-| 11.2 Non-sale cash activity | Not started |
+| 11.1 Safe-backed session lifecycle | **Complete** on `phase-11-cash-accountability` |
+| 11.2 Non-sale cash activity | This PR |
 | 11.3 Safe recon, deposit, store-day report | Not started |
 
 ## Integration notes

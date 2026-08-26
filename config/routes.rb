@@ -204,6 +204,11 @@ Rails.application.routes.draw do
       collection { post :lookup }
       member { post :reverse }
     end
+    resources :cash_paid_ins, only: %i[new create]
+    resources :cash_paid_outs, only: %i[new create]
+    resources :cash_drops, only: %i[new create]
+    resources :cash_replenishments, only: %i[new create]
+    resources :cash_reversals, only: %i[new create]
     get "register", to: "workspaces#show", as: :register_workspace
     get "register/merchandise_search", to: "workspaces#search", as: :register_merchandise_search
     get "register/merchandise_resolve", to: "workspaces#resolve", as: :register_merchandise_resolve

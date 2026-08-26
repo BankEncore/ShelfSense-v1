@@ -1,0 +1,41 @@
+<% content_for :title, "Reverse cash" %>
+
+<main class="pos-history">
+  <%= render "pos/shared/report_nav" %>
+  <h1>Reverse cash</h1>
+  <p>Reverse an eligible paid-in, paid-out, drop, or replenishment exactly once. Session close, over/short, and safe initialization cannot be reversed.</p>
+
+  <% if @error.present? %>
+    <p class="pos-enter__alert" role="alert"><%= @error %></p>
+  <% end %>
+
+  <% if @operations.blank? %>
+    <p>No reversible cash operations are available on an open session.</p>
+  <% else %>
+    <%= form_with url: pos_cash_reversals_path, method: :post, local: true, class: "pos-return-items" do %>
+      <%= hidden_field_tag :source_id, SecureRandom.uuid_v7 %>
+      <%= hidden_field_tag :idempotency_key, SecureRandom.uuid_v7 %>
+      <div class="form-field">
+        <%= label_tag :cash_operation_id, "Operation" %>
+        <%= select_tag :cash_operation_id,
+              options_for_select(@operations.map { |operation|
+                label = "#{operation.occurred_at.utc.iso8601} · #{operation.operation_type}"
+                [ label, operation.id ]
+              }, params[:cash_operation_id]) %>
+      </div>
+      <div class="form-field">
+        <%= label_tag :reason_code, "Reason" %>
+        <%= select_tag :reason_code,
+              options_from_collection_for_select(@reasons, :code, :name, params[:reason_code]) %>
+      </div>
+      <div class="form-field">
+        <%= label_tag :notes, "Notes" %>
+        <%= text_field_tag :notes, params[:notes], autocomplete: "off" %>
+      </div>
+      <div class="actions">
+        <%= submit_tag "Reverse", class: "btn" %>
+        <%= link_to "POS Home", pos_path, class: "btn btn--ghost" %>
+      </div>
+    <% end %>
+  <% end %>
+</main>

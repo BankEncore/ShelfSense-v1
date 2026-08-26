@@ -1,6 +1,6 @@
 # Phase 11 — Non-sale cash activity
 
-Status: **Proposed**. Implementation authority for 11.2. Depends on 11.1 posting, session lock, and available-cash.
+Status: **Implemented** on `phase-11-cash-accountability` (this PR). Depends on 11.1 posting, session lock, and available-cash.
 
 ### Actually locked
 
