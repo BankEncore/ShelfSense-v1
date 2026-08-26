@@ -52,8 +52,8 @@ Phase 10 contracts: [phase10-plan.md](planning/phase10-stored-value/phase10-plan
 |---|---|
 | **POS session** | Cashier custody interval on a Register; the till for Phase 11 MVP. Not a `cash_drawers` row. |
 | **Store safe** | The store’s persistent accountable cash location. One operational safe per store in MVP. |
-| **Deposit in transit** | Prepared deposit that has left the safe. Bank confirmation is deferred. |
-| **Opening float** | Session snapshot (`opening_float_cents`) of a safe→session transfer after Phase 11 activation. |
+| **Deposit in transit** | Prepared deposit that has left the safe. Phase 11 does not clear it against the bank; the location balance is cumulative outstanding ledger cash, not cash still in the store. |
+| **Opening float** | Session snapshot (`opening_float_cents`). A positive float is a safe→session transfer; a zero float is snapshot 0 with no movement row. |
 | **Available cash** | Expected session cash while the session is open. Cannot go negative. |
 | **Paid-in / paid-out** | Non-sale cash into or out of an open session. Not a tender; not gift-card cash-out. |
 | **Drop** | Mid-shift transfer from the open session to the safe. |

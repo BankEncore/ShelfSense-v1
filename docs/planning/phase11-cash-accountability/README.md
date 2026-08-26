@@ -1,6 +1,6 @@
 # Phase 11 — Cash accountability
 
-Status: **Proposed**. After Phase 10 stored value on `main`. Authority: this packet plus [ADR-013](../../adr/ADR-013-append-only-facts.md), [ADR-021](../../adr/ADR-021-register-and-terminal-identity.md), and [ADR-025](../../adr/ADR-025-domain-owned-operational-ledgers.md).
+Status: **Proposed** (11.1–11.3 not started). 11.0 packet is implementation authority. After Phase 10 stored value on `main`. Companions: [ADR-013](../../adr/ADR-013-append-only-facts.md), [ADR-021](../../adr/ADR-021-register-and-terminal-identity.md), and [ADR-025](../../adr/ADR-025-domain-owned-operational-ledgers.md).
 
 The draft [phase-11-register-and-cash-management-spec.md](../../drafts/phase-11-register-and-cash-management-spec.md) is **superseded**. Do not implement from it.
 

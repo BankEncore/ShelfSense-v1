@@ -10,18 +10,18 @@ gift-card cash-out is not a paid-out
 drop and replenishment are atomic completed transfers
 no session-to-session transfer
 reasons snapshot code and display name
-reversals use reversal_of_id
+reversals use reversal_of_id and have no source row
 ```
 
 ## 1. Paid-in
 
-Cash enters the open session for a catalog reason other than a POS tender or a transfer. Requires `cash.paid_in`, open session, amount > 0, reason, notes when the reason requires them, approval when a later threshold says so (MVP: paid-in has no amount threshold unless implementation adds one symmetric with paid-out).
+Cash enters the open session for a catalog reason other than a POS tender or a transfer. Requires `cash.paid_in`, open session, amount > 0, reason, notes when the reason requires them. Paid-in has **no** amount threshold in MVP.
 
 Increases expected session cash. Does not increase sales.
 
 ## 2. Paid-out
 
-Authorized non-sale disbursement from the open session. Requires `cash.paid_out`, permitted reason, available cash, notes when required, second user when amount ≥ paid-out threshold.
+Authorized non-sale disbursement from the open session. Requires `cash.paid_out`, permitted reason, available cash, notes when required. Amount at or above the effective store/org paid-out threshold is `approval_required` unless the performer also has `cash.approve_paid_out` (`direct`). `cash.paid_out` does not imply `cash.approve_paid_out`.
 
 Decreases expected session cash. Refunds, gift-card cash-outs, buyback payouts, drops, and session-close transfers are not paid-outs.
 
@@ -45,9 +45,13 @@ Prohibited. Path is drop (or close) to safe, then replenish the destination sess
 
 ## 7. Reversal and replacement
 
-Completed Phase 11 operations are never edited. `Cash::Reverse` posts `operation_type = reverse` with `reversal_of_id`, inverse entries, and the matching source row. Double reverse is rejected. Transfers reverse both legs atomically. Reverse is refused if it would make a location or open session negative.
+Completed Phase 11 operations are never edited.
 
-Closed sessions stay closed. Close snapshots are never rewritten. Do **not** reverse `session_close` or session over/short in MVP; correct store cash with a later safe reconciliation or other safe-side operation. Paid-in/out, drop, replenishment, and deposit (while still in transit) may be reversed.
+`Cash::Reverse` posts a new `cash_operations` row with `operation_type = reverse` and `reversal_of_id` pointing at the original operation. Each inverse `cash_entry.reversal_of_id` points at the original entry. Transfers reverse both legs atomically. The original source row is **unchanged**. The reverse has **no** fabricated transfer, paid-in, paid-out, reconciliation, initialization, or deposit source row. Reason and notes live on the reverse operation. The original source exposes reversal through the operation relationship (`reversed_by`). Do not add a `cash_reversals` table in MVP.
+
+Double reverse is rejected. Reverse is refused if it would make a location or open session negative.
+
+Closed sessions stay closed. Close snapshots are never rewritten. Do **not** reverse `session_close` or session over/short in MVP; correct store cash with a later safe reconciliation. Do **not** reverse `initialize_safe`. Paid-in/out, drop, replenishment, and deposit (while still in transit) may be reversed.
 
 ## 8. Concurrency
 

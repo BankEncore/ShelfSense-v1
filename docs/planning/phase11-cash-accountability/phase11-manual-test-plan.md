@@ -7,12 +7,12 @@ Do not treat this as a substitute for CI.
 ## 1. Cutover and open
 
 1. New store: Register enter fails until the safe is initialized.
-2. Initialize safe with a count and second user; expected safe cash equals the count.
-3. Second initialize rejected.
+2. Initialize the safe **without** an open POS session. A store manager who holds both initialize and approve keys completes **direct** (no second user). A performer without `cash.approve_initialize_safe` needs a different approver. Expected safe cash equals the count.
+3. Second initialize rejected. Ordinary reverse of initialization is unavailable.
 4. Open session with float less than safe expected; safe decreases; session `opening_float_cents` matches.
 5. Open with float greater than safe expected — blocked.
 6. Two cashiers race the same register — one open session.
-7. Open $0 float; cash sale with change still completes; cash refund blocked until replenish.
+7. Open $0 float; no transfer/operation/entries; cash sale with change still completes; cash refund blocked until replenish.
 
 ## 2. Available cash and cash-out
 
@@ -27,7 +27,7 @@ Do not treat this as a substitute for CI.
 2. Zero variance: counted transfer to safe equals expected; snapshots match; Z still shows opening float and closing expected as today.
 3. Short: variance negative; short movement; safe receives counted amount not expected.
 4. Over: safe receives counted amount; over movement on the session.
-5. Material variance requires a different approver.
+5. Material variance: manager with `cash.approve_variance` closing their own session is `direct`; a performer without that key needs a different approver. Never record the same user as both performer and approver.
 6. Working ticket blocks close (existing).
 7. Manager closes another cashier’s session with reason; cashier unchanged; closer audited; counted cash in safe.
 8. Closed session cannot receive drop/paid-in.
@@ -35,17 +35,19 @@ Do not treat this as a substitute for CI.
 ## 4. Non-sale (after 11.2)
 
 1. Paid-in reason; expected up; not on the receipt as a tender.
-2. Paid-out above threshold needs second user; insufficient cash blocked.
+2. Paid-out at/above threshold: performer with `cash.approve_paid_out` is `direct`; otherwise a different user with that key. Insufficient cash blocked.
 3. Drop mid-shift; replenish other session from safe; session-to-session rejected.
-4. Reverse paid-out once; second reverse rejected.
+4. Reverse paid-out once; original paid-out row unchanged; reverse has no new paid-in/paid-out source row; second reverse rejected.
 
 ## 5. Safe and deposit (after 11.3)
 
 1. All sessions balanced; safe still short/over — stays a safe variance.
-2. Safe recon lock: open-float during recon rejected.
-3. Recon then retain overnight; next business date opens.
-4. Prepare deposit; safe down; DIT up; no bank screen.
-5. Store-day report shows open session as incomplete, not a hard error that blocks tomorrow.
+2. Start a safe count, then post an opening float (or drop) before submit — stale count rejected; staff recount.
+3. Zero-variance recon: no `cash_reconciliations` row; store-day still shows safe reconciled for that date.
+4. Recon then retain overnight; next business date opens.
+5. Prepare deposit; safe down; DIT up; no bank screen.
+6. Reverse a prepared deposit: safe increases, DIT decreases; original deposit remains immutable and visibly reversed; double reverse fails; reverse fails if DIT expected is insufficient.
+7. Store-day report lists that date’s deposits individually; DIT location balance is cumulative and is not treated as cash still in the store. An open session shows incomplete, not a hard error that blocks tomorrow.
 
 ## 6. Regression
 

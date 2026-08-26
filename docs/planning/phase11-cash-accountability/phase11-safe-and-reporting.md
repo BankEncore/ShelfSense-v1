@@ -9,7 +9,9 @@ safe recon does not require a deposit
 safe variance is not allocated onto sessions
 next business date may open on retained safe cash
 deposit is safe → deposit in transit
+safe recon uses snapshot/lock_version revalidation
 store-day is a report, not a finalization gate
+DIT accumulates until a later bank-confirmation phase
 ```
 
 ## 1. Safe expected cash
@@ -28,30 +30,48 @@ initialize_safe
 
 ## 2. Safe count integrity
 
-Beginning reconciliation locks the safe location (optimistic `lock_version` plus transaction lock) so new floats, drops, replenishments, and deposits cannot post until the recon completes or is abandoned. Record the expected balance being counted.
+Do **not** hold a database row lock while a manager counts across HTTP requests. MVP has no durable freeze record.
+
+Optimistic contract:
+
+1. Starting a count records the location’s expected balance and `lock_version` on `cash_counts` (`expected_cents_snapshot`, `location_lock_version_snapshot`).
+2. Cash activity **may continue** while the count is being entered (opens, drops, replenishments, deposits, other posts).
+3. On submission, lock the location row in the posting transaction.
+4. Compare current `lock_version` and expected balance with the count’s snapshot.
+5. If either changed, the count is stale and cannot be accepted; staff must verify or recount.
+6. If unchanged, reconciliation (or zero-variance acceptance) posts atomically.
 
 Ordinary staff: blind until submit. `cash.view_expected_before_count` may reveal expected.
+
+Deposit counts against the safe use the same snapshot/revalidation contract.
 
 ## 3. Safe variance
 
 Independent of whether every session balanced. Do not distribute a safe over/short onto `PosSession` rows.
 
-Nonzero accepted variance posts `reconcile` on the safe location (`cash.reconcile_safe`; material ⇒ `cash.approve_variance`). That rebases `expected_balance_cents` so the same difference does not recur.
+Nonzero accepted variance posts `reconcile` on the safe location (`cash.reconcile_safe`; material uses `cash.approve_variance` with `direct` / `approval_required` as in [phase11-authorization.md](phase11-authorization.md)). That rebases `expected_balance_cents` so the same difference does not recur.
 
-Zero variance: accept the count, no reconciliation row.
+Zero variance: accept the count, no `cash_reconciliations` row. Store-day **safe reconciled** is derived from an accepted `cash_counts` with `purpose = safe_reconciliation` for that store and business date, **whether variance was zero or nonzero**—not from existence of a reconciliation row.
 
 ## 4. Retain vs deposit
 
 After recon (or using current expected if the store skips recon that day—recon is **not** mandatory to open tomorrow):
 
 - Retained cash stays on the safe.
-- An authorized user may prepare a deposit: count (denominations strongly encouraged; 11.3 decides if required), bag/reference optional, `cash_deposits` + `transfer_type = deposit` safe → deposit in transit.
+- An authorized user may prepare a deposit: count (denomination lines optional), bag/reference optional, `cash_deposits` + `transfer_type = deposit` safe → deposit in transit.
 
 Deposit preparation is not required to finish the day’s review or to open the next business date.
 
 MVP: each deposit belongs to one store and one `business_date`. No split across dates. No bank-posted amount, no returned-deposit workflow.
 
-Reversing a deposit (still in transit, not bank-confirmed) returns amount to the safe with `cash.reverse`, if expected DIT covers it.
+Reversing a deposit (still in transit, not bank-confirmed) posts `operation_type = reverse` with no new deposit source row; inverse entries increase the safe and decrease DIT if expected DIT covers it. The original `cash_deposits` row stays immutable and is visibly reversed via the operation.
+
+Because bank confirmation is deferred, the deposit-in-transit location **accumulates** prepared deposits and never clears during Phase 11. That is acceptable:
+
+- Daily reporting presents **individual deposits for the selected date**.
+- The DIT location balance is **cumulative outstanding cash under the operational ledger**.
+- Phase 11 does **not** imply that cumulative DIT equals cash still physically in the store.
+- A later financial phase will clear deposits against bank confirmation.
 
 ## 5. Store-day cash report
 
@@ -59,7 +79,7 @@ Aggregate underlying facts for a store + business date. Status labels are inform
 
 - incomplete (open sessions exist)
 - sessions closed
-- safe reconciled (a recon accepted that date, or none)
+- safe reconciled (an accepted `safe_reconciliation` cash count exists for that store and business date, zero or nonzero variance)
 - deposit prepared (zero or more)
 
 Not a stored `finalized` store-day row and **not** a blocker for `OpenSession` on a later date.

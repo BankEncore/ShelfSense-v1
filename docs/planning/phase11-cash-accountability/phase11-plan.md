@@ -53,7 +53,7 @@ Authoritative commercial facts (do not copy)
 
 Phase 11 operational facts
   cash_operations + cash_entries
-    └── source rows: transfers, paid-in/out, reconciliations, safe initialization, deposits
+    └── source rows on non-reverse ops only: transfers, paid-in/out, reconciliations, safe initialization, deposits
 
 Projections (rebuildable)
   Pos::SessionTotals          expected session cash
@@ -81,7 +81,7 @@ Change given on a cash **sale** is not a $0-float blocker: `amount_cents` is alr
 
 ### 11.0 — Contract alignment (this packet)
 
-Vocabulary, ADR-025 no-duplication, existing close/Z, Phase 10 cash-out formula, historical vs new sessions, safe-init cutover. No application code except what a docs PR needs.
+Vocabulary, ADR-025 no-duplication, existing close/Z, Phase 10 cash-out formula, historical vs new sessions, explicit safe-init cutover, reversal/source-row model, optimistic safe-count concurrency, and authorization (`direct` vs `approval_required`). No application code except what a docs PR needs. This directory is 11.0 complete as implementation authority.
 
 ### 11.1 — Safe-backed session lifecycle
 
@@ -120,8 +120,12 @@ There is **no** 11.4 integration slice. Gift-card cash-out belongs in 11.1. Phas
 | Money | Integer cents; organization base currency |
 | Negative session cash | Prohibited after 11.1 (intentional migration from today’s $0-float refund/cash-out) |
 | Negative location cash | Prohibited on safe and deposit-in-transit |
-| Approval | Cannot authorize a negative expected balance |
-| Open | Requires initialized safe; float amount = transfer; `opening_float_cents` remains the session snapshot |
+| Approval | Cannot authorize a negative expected balance. Phase 6 `direct` / `approval_required`; dedicated approve keys; org defaults with store override; never `approved_by = performed_by` |
+| Open | Requires initialized safe. Positive float posts a balanced safe→session transfer; zero float keeps snapshot 0 and creates no movement |
+| Reverse | New `reverse` operation + inverse entries; original source row unchanged; no fabricated inverse business event |
+| Safe recon concurrency | Snapshot expected + `lock_version` at count start; revalidate on submit; activity may continue during the count |
+| Denominations | Never required; optional lines must sum to the count total |
+| Cutover | Coordinated maintenance window: uninitialized locations from migration; init without a POS session; then enforce OpenSession |
 | Close snapshots | `closing_expected_cash_cents` = expected before recon/transfer; variance = counted − that expected |
 | Close transfer | Counted amount to safe; session location balance then zero |
 | Session lifecycle | `open` / `closed` only; no Terminal sync/`closing` state |
@@ -148,7 +152,7 @@ There is **no** 11.4 integration slice. Gift-card cash-out belongs in 11.1. Phas
 
 ## Acceptance
 
-1. After safe initialization, opening a session posts a balanced safe→session transfer equal to `opening_float_cents`.
+1. A positive opening float posts a balanced safe→session transfer. A zero-float opening retains a zero snapshot and creates no zero-valued operation or entries.
 2. Close records expected (pre-recon), counted, and variance; posts over/short when nonzero; transfers **counted** cash to the safe; closed snapshots are never rewritten.
 3. Z `finalized_opening_float_cents_sum` and `finalized_closing_*_sum` remain sums of session custody intervals.
 4. Cash refund and gift-card cash-out fail closed when available session cash is insufficient; change on a cash sale does not.

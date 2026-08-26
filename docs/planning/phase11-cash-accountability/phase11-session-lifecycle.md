@@ -7,7 +7,7 @@ Status: **Proposed**. Implementation authority for 11.1. Extends [phase5-plan.md
 ```text
 session remains open | closed
 Register does not hold cash between sessions
-opening_float_cents is a snapshot of a safe→session transfer
+opening_float_cents is a snapshot (transfer only when float > 0)
 closing_expected_cash_cents is expected before recon and transfer
 counted amount transfers to the safe
 available cash = expected session cash
@@ -19,9 +19,11 @@ every POS complete still needs an open session
 
 Each store has one `cash_locations` row with `location_type = safe`. Until `initialize_safe` succeeds, `OpenSession` fails.
 
-Initialization: denomination-encouraged count, effective business date, notes, manager approval, `cash_operations.operation_type = initialize_safe`. Not a paid-in. Allowed once per safe (reversal + replacement only if policy later allows; MVP: reject a second init).
+Initialization is **one-time**: counted total (denomination lines optional), effective business date, notes, `cash_operations.operation_type = initialize_safe`. Not a paid-in. Outcome is `direct` or `approval_required` per [phase11-authorization.md](phase11-authorization.md) (`cash.initialize_safe` / `cash.approve_initialize_safe`). It **cannot** be reversed through `Cash::Reverse`. A second initialize is rejected. Mistakes after init are corrected with `cash.reconcile_safe`.
 
-Bootstrap, demo, and tests initialize the safe before any session open.
+The screen is usable **without** an open POS session. Production rollout is a coordinated maintenance window: migrate (uninitialized locations) → initialize every active store → then cashiers open. Do not infer a safe balance from historical close snapshots. Detail: [phase11-implementation-plan.md](phase11-implementation-plan.md) **Production cutover**.
+
+Bootstrap, demo, and tests initialize the safe before any session open so local Register enter still works.
 
 Historical closed sessions keep their float/close snapshots with **no** backfilled `cash_transfers`.
 
@@ -31,13 +33,13 @@ Historical closed sessions keep their float/close snapshots with **no** backfill
 
 1. Lock store safe then create session (deterministic lock order documented in `Cash::Post`).
 2. Require initialized safe, active register, open reporting period, no other open session on the register.
-3. Accept opening count total (optional denomination lines summing to total).
-4. Post `cash_transfers.transfer_type = opening_float` for that amount: −safe, +session.
-5. Persist `opening_float_cents` equal to the transfer.
+3. Accept opening count total (optional denomination lines summing to total when present).
+4. If the float is **positive**, post `cash_transfers.transfer_type = opening_float` for that amount: −safe, +session. Persist `opening_float_cents` equal to the transfer.
+5. If the float is **zero**, persist `opening_float_cents = 0` and create **no** operation, transfer, or entries.
 
-Insufficient safe expected cash rejects the open. Concurrent second open on the same register still hits the existing unique open-session index.
+Insufficient safe expected cash rejects a positive-float open. Concurrent second open on the same register still hits the existing unique open-session index.
 
-Zero float remains allowed **if** the safe can transfer $0 (no movement row required for a $0 transfer; session snapshot 0). A later cash refund or cash-out still requires replenishment first.
+A later cash refund or cash-out still requires replenishment first when available cash is zero.
 
 ## 3. Expected and available cash
 
@@ -91,7 +93,7 @@ Sequence:
 
 Example: expected $500, counted $480 → snapshot expected 500, count 480, variance −20; short $20; transfer $480 to safe.
 
-Material variance: `cash.approve_variance`, distinct user.
+Material variance uses `cash.approve_variance`: `direct` when the closer also holds that key; otherwise a different authorized approver authenticates for this close. Never persist `approved_by_id = performed_by_id`.
 
 ## 5. Manager-assisted close
 
@@ -126,3 +128,5 @@ Do not replace Z with store-day finalization. Multiple sessions per period remai
 - Close transfers counted, not pre-count expected.
 - Concurrent refunds/cash-outs cannot both spend the last cent.
 - Manager close vs cashier close audit fields.
+- Zero-float open creates no transfer row.
+- Safe init is available without an open session; second init rejected.

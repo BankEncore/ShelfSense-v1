@@ -31,6 +31,9 @@ One row representing installation-wide configuration.
 | `default_receipt_footer` | text | max 500 after trim | Organization default; inherit target |
 | `gift_card_voucher_footer` | text | max 500 after trim | Organization gift-card voucher terms; blank omits the footer ([phase10-schema.md](../phase10-stored-value/phase10-schema.md) §13) |
 | `stored_value_adjust_credit_approval_threshold_cents` | bigint | null: false; default `5000`; check `>= 0` | Credits at or above this amount require second-user approval; all debits require second-user approval ([phase10-schema.md](../phase10-stored-value/phase10-schema.md) §13) |
+| `cash_variance_note_threshold_cents` | bigint | null: false; default `0`; check `>= 0` | Organization default; absolute session/safe variance at or above this requires a reason/note ([phase11-schema.md](../phase11-cash-accountability/phase11-schema.md) §8) |
+| `cash_variance_approval_threshold_cents` | bigint | null: false; default `5000`; check `>= 0` | Organization default; material variance threshold ([phase11-schema.md](../phase11-cash-accountability/phase11-schema.md) §8) |
+| `cash_paid_out_approval_threshold_cents` | bigint | null: false; default `5000`; check `>= 0` | Organization default; paid-out amount at or above this uses `cash.approve_paid_out` unless the performer is `direct` ([phase11-schema.md](../phase11-cash-accountability/phase11-schema.md) §8) |
 | `initialized_at` | timestamptz |  | Set only as the final successful bootstrap step; null means install incomplete / retryable |
 | `lock_version` | integer | null: false; default `0` | Optimistic concurrency |
 | `created_at` | timestamptz | null: false |  |
@@ -66,6 +69,9 @@ Defines an operational store and reporting boundary.
 | `receipt_footer` | text |  | Custom footer text when `receipt_footer_mode = custom`; dormant otherwise |
 | `receipt_header_mode` | varchar | null: false; default `inherit`; CHECK `inherit \| custom \| none` | Independent of footer |
 | `receipt_footer_mode` | varchar | null: false; default `inherit`; CHECK `inherit \| custom \| none` | Independent of header |
+| `cash_variance_note_threshold_cents` | bigint | nullable; check `>= 0` when present | Null inherits `system_settings` ([phase11-schema.md](../phase11-cash-accountability/phase11-schema.md) §8) |
+| `cash_variance_approval_threshold_cents` | bigint | nullable; check `>= 0` when present | Null inherits organization default |
+| `cash_paid_out_approval_threshold_cents` | bigint | nullable; check `>= 0` when present | Null inherits organization default |
 | `active` | boolean | null: false; default `true` | Inactive stores cannot be selected operationally |
 | `deactivated_at` | timestamptz |  |  |
 | `deactivated_by_id` | uuid | FK: `users`; nullable |  |
@@ -79,6 +85,7 @@ Recommended rules:
 * Do not allow `store_number` to change after a completed POS transaction exists for the Store or any Register in the Store has `receipt_sequence > 0`; treat Register `register_number` as immutable once that Register has issued a receipt.  
 * Do not allow the final active store to be deactivated normally.  
 * Do not hard-delete a store after another record references it.
+* Cash threshold columns are nullable store overrides of `system_settings`; null inherits the organization default ([phase11-schema.md](../phase11-cash-accountability/phase11-schema.md) §8).
 
 ---
 
