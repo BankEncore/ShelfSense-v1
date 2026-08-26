@@ -25,6 +25,13 @@ module Pos
         raise Pos::Error, "reporting period does not belong to this register" unless period.register_id == @register.id
         raise Pos::Error, "reporting period does not belong to this store" unless period.store_id == @store.id
 
+        Cash::Locations.ensure!(@store)
+        safe = CashLocation.lock.find_by!(store: @store, location_type: "safe")
+        raise Pos::Error, "store safe is not initialized" unless safe.initialized?
+        if float_cents.positive? && safe.expected_balance_cents < float_cents
+          raise Pos::Error, "safe does not have enough cash for this opening float"
+        end
+
         session = PosSession.create!(
           store: @store,
           register: @register,
@@ -34,6 +41,29 @@ module Pos
           opened_at: Time.current,
           opening_float_cents: float_cents
         )
+
+        if float_cents.positive?
+          operation = Cash::Post.call(
+            operation_type: "transfer",
+            store: @store,
+            performed_by: @actor,
+            pos_session: session,
+            source_id: SecureRandom.uuid_v7,
+            idempotency_key: SecureRandom.uuid_v7,
+            entries: [
+              { cash_location: safe, amount_cents: -float_cents },
+              { pos_session: session, amount_cents: float_cents, balance_after_cents: float_cents }
+            ]
+          )
+          CashTransfer.create!(
+            transfer_type: "opening_float",
+            amount_cents: float_cents,
+            source_cash_location: safe,
+            destination_pos_session: session,
+            cash_operation: operation
+          )
+        end
+
         Audit::Recorder.record!(
           action: "pos.session.opened",
           outcome: "succeeded",
@@ -46,6 +76,8 @@ module Pos
         )
         session
       end
+    rescue Cash::Error => e
+      raise Pos::Error, e.message
     rescue ActiveRecord::RecordNotUnique
       raise Pos::Error, "register already has an open session"
     end

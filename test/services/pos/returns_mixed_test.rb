@@ -20,7 +20,7 @@ class PosReturnsMixedTest < ActiveSupport::TestCase
     @variant = pos_sellable_variant(actor: @actor, tax_class: @tax)
     open_quantity_stock(store: @store, variant: @variant, actor: @actor, quantity: 40, unit_cost_cents: 100)
     @thirty, @twenty = priced_variants(3000, 2000)
-    @context = pos_open_context(store: @store, actor: @actor, opening_float_cents: 0)
+    @context = pos_open_context(store: @store, actor: @actor, opening_float_cents: 50_000)
     Pos::TenderTypes.seed!
     @cash = TenderType.find_by!(code: "cash")
     @card = TenderType.find_by!(code: "card")
@@ -622,10 +622,9 @@ class PosReturnsMixedTest < ActiveSupport::TestCase
     totals = Pos::SessionTotals.for(@context[:session].reload)
     expected = @context[:session].opening_float_cents + totals.cash_payment_cents - totals.cash_refund_cents
     assert_equal expected, totals.expected_cash_cents
-    session = Pos::CloseSession.call(
+    session = pos_close_session!(
       session: @context[:session],
       actor: @actor,
-      expected_lock_version: @context[:session].reload.lock_version,
       closing_count_cents: 0
     )
     assert_equal expected, session.closing_expected_cash_cents
@@ -644,10 +643,9 @@ class PosReturnsMixedTest < ActiveSupport::TestCase
     add_unlinked!(unlinked_only, @thirty, requested_cents: 3000)
     add_refund!(unlinked_only.reload, @card, -unlinked_only.signed_net_cents, "Z-CARD")
     complete_current!(unlinked_only.reload)
-    Pos::CloseSession.call(
+    pos_close_session!(
       session: second_session,
       actor: @actor,
-      expected_lock_version: second_session.reload.lock_version,
       closing_count_cents: 0
     )
 
@@ -737,7 +735,7 @@ class PosReturnsMixedTest < ActiveSupport::TestCase
       store: @store,
       actor: @actor,
       register: @context[:register],
-      opening_float_cents: 0
+      opening_float_cents: 50_000
     )
     @context[:session]
   end

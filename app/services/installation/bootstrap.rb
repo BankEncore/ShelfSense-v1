@@ -60,6 +60,7 @@ module Installation
         SubjectSchemes::Catalog.seed!
         Inventory::AdjustmentReasons.seed!
         StoredValue::AdjustmentReasons.seed!
+        Cash::ActivityReasons.seed!
         GiftCards::Programs.seed!
         Pos::TenderTypes.seed!
 
@@ -89,6 +90,17 @@ module Installation
 
         admin = create_administrator!
         assignment = assign_administrator!(admin: admin, system_user: system_user)
+        approver = create_safe_approver!
+        assign_safe_approver!(approver: approver, system_user: system_user, store: store)
+        Cash::InitializeSafe.call(
+          store: store,
+          performed_by: admin,
+          approved_by: approver,
+          count_cents: 100_000,
+          source_id: SecureRandom.uuid_v7,
+          idempotency_key: SecureRandom.uuid_v7,
+          notes: "Bootstrap safe initialization"
+        )
 
         Audit::Recorder.record!(
           action: "users.create",
@@ -123,7 +135,7 @@ module Installation
           after_values: { initialized_at: settings.initialized_at.iso8601 }
         )
 
-        { settings: settings, store: store, system_user: system_user, administrator: admin, assignment: assignment }
+        { settings: settings, store: store, system_user: system_user, administrator: admin, assignment: assignment, safe_approver: approver }
       end
     end
 
@@ -196,6 +208,28 @@ module Installation
         user: admin,
         role: role,
         store: nil,
+        assigned_by: system_user,
+        effective_at: Time.current
+      )
+    end
+
+    def create_safe_approver!
+      User.create!(
+        username: "safe-approver",
+        display_name: "Safe approver",
+        actor_type: "human",
+        password: @admin_password,
+        password_confirmation: @admin_password,
+        password_changed_at: Time.current,
+        active: true
+      )
+    end
+
+    def assign_safe_approver!(approver:, system_user:, store:)
+      RoleAssignment.create!(
+        user: approver,
+        role: Role.find_by!(key: "store_manager"),
+        store: store,
         assigned_by: system_user,
         effective_at: Time.current
       )

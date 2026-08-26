@@ -207,10 +207,10 @@ class PosMvpCloseoutTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_match "Closing Cash count", response.body
     refute_includes response.body, "Expected Cash"
-    post pos_session_close_path(session_record), params: {
+    post pos_session_close_path(session_record), params: pos_close_http_params(
       closing_count: "0.00",
       expected_lock_version: session_record.lock_version
-    }
+    )
     assert_redirected_to pos_session_closed_path(session_record)
     follow_redirect!
     assert_response :success

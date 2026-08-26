@@ -57,6 +57,10 @@ class Installation::BootstrapTest < ActiveSupport::TestCase
     assert GiftCardProgram.exists?(code: "generated")
     assert GiftCardProgram.exists?(code: "manual")
     assert_equal 5000, result[:settings].stored_value_adjust_credit_approval_threshold_cents
+    assert Cash::Locations.safe_for!(result[:store]).initialized?
+    assert_equal 100_000, Cash::Locations.safe_for!(result[:store]).expected_balance_cents
+    assert_equal "safe-approver", result[:safe_approver].username
+    assert CashActivityReason.exists?(code: "short_count")
   end
 
   test "rejects a second bootstrap after initialization" do

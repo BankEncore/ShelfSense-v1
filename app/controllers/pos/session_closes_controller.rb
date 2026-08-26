@@ -18,6 +18,7 @@ module Pos
       end
 
       @closing_count = params[:closing_count]
+      load_variance_reasons!
     end
 
     def create
@@ -33,7 +34,12 @@ module Pos
         session: @session_record,
         actor: current_user,
         expected_lock_version: params.require(:expected_lock_version),
-        closing_count_cents: count_cents
+        closing_count_cents: count_cents,
+        variance_reason_code: params[:variance_reason_code],
+        variance_notes: params[:variance_notes],
+        close_reason_code: params[:close_reason_code],
+        approver_username: params[:approver_username],
+        approver_password: params[:approver_password]
       )
       redirect_to pos_session_closed_path(@session_record)
     rescue ActionController::ParameterMissing
@@ -64,12 +70,31 @@ module Pos
 
     def load_session!
       @session_record = PosSession.find_by!(id: params[:id], store_id: current_store.id)
-      Pos::Support.authorize!(current_user, @session_record.store)
-      Pos::Support.require_session_cashier!(current_user, @session_record)
+      authorize_close_access!
       @register = @session_record.register
       session[:pos_register_id] = @register.id
     rescue Pos::Denied
       raise ActiveRecord::RecordNotFound
+    end
+
+    def authorize_close_access!
+      if @session_record.cashier_user_id == current_user.id
+        Pos::Support.authorize!(current_user, @session_record.store)
+        return
+      end
+
+      unless Authorization::PermissionEvaluator.allowed?(
+        user: current_user,
+        permission_key: "pos.sessions.close_for_other",
+        store: @session_record.store
+      )
+        raise Pos::Denied, "not authorized to close another cashier's session"
+      end
+    end
+
+    def load_variance_reasons!
+      Cash::ActivityReasons.seed!
+      @variance_reasons = CashActivityReason.active.where(operation_kind: %w[over short]).order(:name)
     end
 
     def parse_closing_count
@@ -89,6 +114,7 @@ module Pos
         redirect_to pos_register_workspace_path, alert: "Complete or cancel the current sale before closing."
       else
         @closing_count = params[:closing_count]
+        load_variance_reasons!
         @feedback = message
         render :show, status: :unprocessable_content
       end

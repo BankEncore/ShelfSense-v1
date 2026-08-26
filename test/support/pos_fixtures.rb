@@ -67,6 +67,8 @@ module PosFixtures
   end
 
   def pos_open_context(store:, actor:, register: nil, opening_float_cents: 0)
+    Cash::ActivityReasons.seed!
+    ensure_initialized_safe!(store: store, actor: actor, count_cents: [ opening_float_cents.to_i, 100_000 ].max)
     register ||= Register.create!(store: store, register_number: (store.registers.maximum(:register_number) || 0) + 1, name: "Front")
     period = Pos::OpenReportingPeriod.call(store: store, register: register, actor: actor)
     session = Pos::OpenSession.call(
@@ -77,6 +79,67 @@ module PosFixtures
       opening_float_cents: opening_float_cents
     )
     { register: register, period: period, session: session }
+  end
+
+  def pos_close_http_params(closing_count:, expected_lock_version:, **extra)
+    Cash::ActivityReasons.seed!
+    {
+      closing_count: closing_count,
+      expected_lock_version: expected_lock_version,
+      variance_reason_code: extra[:variance_reason_code] || "short_count",
+      variance_notes: extra[:variance_notes] || "Test variance"
+    }.merge(extra.except(:variance_reason_code, :variance_notes))
+  end
+
+  def pos_close_session!(session:, actor:, closing_count_cents:, expected_lock_version: nil, **attrs)
+    Cash::ActivityReasons.seed!
+    session = session.reload
+    expected = Pos::SessionTotals.for(session).expected_cash_cents
+    variance = closing_count_cents.to_i - expected
+    if variance != 0
+      attrs = attrs.dup
+      attrs[:variance_reason_code] ||= variance.positive? ? "over_count" : "short_count"
+      if variance.abs >= Cash::Thresholds.note_cents(session.store)
+        attrs[:variance_notes] ||= "Test variance"
+      end
+    end
+
+    Pos::CloseSession.call(
+      session: session,
+      actor: actor,
+      expected_lock_version: expected_lock_version || session.lock_version,
+      closing_count_cents: closing_count_cents,
+      **attrs
+    )
+  end
+
+  def ensure_initialized_safe!(store:, actor:, count_cents: 100_000)
+    Cash::Locations.ensure!(store)
+    safe = Cash::Locations.safe_for!(store)
+    return if safe.initialized?
+
+    performer = cash_initializer(store: store, actor: actor)
+    approver = cash_distinct_approver(store: store, assigned_by: performer, excluding: performer)
+    Cash::InitializeSafe.call(
+      store: store,
+      performed_by: performer,
+      approved_by: approver,
+      count_cents: count_cents,
+      source_id: SecureRandom.uuid_v7,
+      idempotency_key: SecureRandom.uuid_v7
+    )
+  end
+
+  def cash_initializer(store:, actor:)
+    if Authorization::PermissionEvaluator.allowed?(user: actor, permission_key: "cash.initialize_safe", store: store)
+      return actor
+    end
+
+    pos_store_manager(store: store, assigned_by: actor, username: "cash-init-#{SecureRandom.hex(3)}")
+  end
+
+  def cash_distinct_approver(store:, assigned_by:, excluding: nil)
+    pos_store_manager(store: store, assigned_by: assigned_by, username: "cash-appr-#{SecureRandom.hex(3)}")
   end
 
   def open_quantity_stock(store:, variant:, actor:, quantity:, unit_cost_cents: 100)

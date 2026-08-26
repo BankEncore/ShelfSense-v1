@@ -211,7 +211,7 @@ class PosHomeTest < ActionDispatch::IntegrationTest
 
   test "session and z reports are viewable without an open session" do
     context = pos_open_context(store: @store, actor: @actor, register: @register)
-    Pos::CloseSession.call(
+    pos_close_session!(
       session: context[:session],
       actor: @actor,
       expected_lock_version: context[:session].lock_version,

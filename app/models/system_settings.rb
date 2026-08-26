@@ -13,6 +13,9 @@ class SystemSettings < ApplicationRecord
             numericality: { only_integer: true, greater_than: 0 }
   validates :stored_value_adjust_credit_approval_threshold_cents,
             numericality: { only_integer: true, greater_than_or_equal_to: 0 }
+  validates :cash_variance_note_threshold_cents, :cash_variance_approval_threshold_cents,
+            :cash_paid_out_approval_threshold_cents,
+            numericality: { only_integer: true, greater_than_or_equal_to: 0 }
   validates :default_receipt_header, :default_receipt_footer, :gift_card_voucher_footer,
             length: { maximum: Store::RECEIPT_MESSAGE_LIMIT }
   validate :singleton_row

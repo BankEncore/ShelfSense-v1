@@ -42,6 +42,23 @@ class GiftCardsCashOutTest < ActiveSupport::TestCase
     assert_equal 500, cash.rows.find { |row| row.label == "Gift-card cash-outs" }.cents
   end
 
+  test "refuses cash-out when the session does not have enough available cash" do
+    zero = pos_open_context(store: @store, actor: @actor, opening_float_cents: 0)
+    card = funded_card(500)
+    error = assert_raises(GiftCards::Error) do
+      GiftCards::CashOut.call(
+        gift_card: card,
+        session: zero[:session],
+        actor: @actor,
+        source_id: SecureRandom.uuid_v7,
+        idempotency_key: SecureRandom.uuid_v7
+      )
+    end
+    assert_equal Cash::INSUFFICIENT_AVAILABLE_CASH, error.message
+    assert_equal 500, card.stored_value_account.reload.balance_cents
+    assert card.reload.active?
+  end
+
   test "associates cannot cash out" do
     card = funded_card(500)
     associate = User.create!(
@@ -171,7 +188,7 @@ class GiftCardsCashOutTest < ActiveSupport::TestCase
       source_id: SecureRandom.uuid_v7,
       idempotency_key: SecureRandom.uuid_v7
     )
-    closed = Pos::CloseSession.call(
+    closed = pos_close_session!(
       session: @session,
       actor: @actor,
       expected_lock_version: @session.lock_version,

@@ -276,17 +276,17 @@ class PosLinkedReturnWorkspaceTest < ActionDispatch::IntegrationTest
 
   test "closed session and z show returns refunds net and legacy nulls as not captured" do
     sale = complete_cash_sale!
-    Pos::CloseSession.call(
+    pos_close_session!(
       session: @context[:session],
       actor: @actor,
       expected_lock_version: @context[:session].lock_version,
       closing_count_cents: 0
     )
     return_register = Register.create!(store: @store, register_number: 2, name: "Returns")
-    return_context = pos_open_context(store: @store, actor: @actor, register: return_register, opening_float_cents: 0)
+    return_context = pos_open_context(store: @store, actor: @actor, register: return_register, opening_float_cents: 50_000)
     post pos_register_enter_path, params: {
       register_id: return_register.id,
-      opening_float: "0.00",
+      opening_float: "500.00",
       confirmed_business_date: return_context[:period].business_date.iso8601
     }
     post pos_transaction_return_items_path(sale), params: selected_item(sale.pos_transaction_lines.first)
@@ -304,16 +304,17 @@ class PosLinkedReturnWorkspaceTest < ActionDispatch::IntegrationTest
       expected_signed_net_cents: working.signed_net_cents
     }
     session_record = return_context[:session]
+    expected = Pos::SessionTotals.for(session_record.reload).expected_cash_cents
     post pos_register_close_path, params: { session_id: session_record.id }
     follow_redirect!
     post pos_session_close_path(session_record), params: {
-      closing_count: "0.00",
+      closing_count: dollars(expected),
       expected_lock_version: session_record.lock_version
     }
     follow_redirect!
     session_record.reload
     assert session_record.closed?
-    assert session_record.closing_expected_cash_cents.negative?
+    assert_operator session_record.closing_expected_cash_cents, :>=, 0
     assert_match "Returns total", response.body
     assert_match "Cash refunds", response.body
     assert_match "Net", response.body

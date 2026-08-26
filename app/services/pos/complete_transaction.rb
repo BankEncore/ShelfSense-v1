@@ -143,6 +143,7 @@ module Pos
         end
         raise OperationLease::Error, "completion lease is not in flight" unless operation.status == "in_flight"
 
+        PosSession.lock.find(transaction.pos_session_id)
         transaction = PosTransaction.lock.find(transaction.id)
         if transaction.completed?
           raise Pos::Error, "transaction is already completed"
@@ -208,11 +209,13 @@ module Pos
       original_ids = transaction.pos_transaction_lines.filter_map(&:original_transaction_line_id).uniq.sort
       return if original_ids.empty?
 
-      originals = PosTransactionLine.lock.where(id: original_ids).order(:id).to_a
-      raise Pos::Error, "original sale line is missing" if originals.size != original_ids.size
+      line_rows = PosTransactionLine.where(id: original_ids).pluck(:id, :pos_transaction_id)
+      raise Pos::Error, "original sale line is missing" if line_rows.size != original_ids.size
 
-      original_transaction_ids = originals.map(&:pos_transaction_id).uniq.sort
+      original_transaction_ids = line_rows.map(&:last).uniq.sort
       PosTransaction.where(id: original_transaction_ids).lock.order(:id).to_a
+
+      originals = PosTransactionLine.lock.where(id: original_ids).order(:id).to_a
 
       originals.each do |original|
         remaining = Pos::Returnability.remaining_quantity(original)
@@ -291,6 +294,14 @@ module Pos
 
       applied = tenders.sum(&:amount_cents)
       raise Pos::Error, "refunds must equal amount due" unless applied == refund_due_cents
+
+      if cash
+        begin
+          Cash::AvailableCash.assert!(cash.pos_transaction.pos_session, cash.amount_cents)
+        rescue Cash::Error => e
+          raise Pos::Error, e.message
+        end
+      end
     end
 
     def allocate_receipt!(transaction)

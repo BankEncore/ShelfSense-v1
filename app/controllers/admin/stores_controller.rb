@@ -47,7 +47,10 @@ module Admin
         before = @store.attributes.slice(
           "name", "legal_name", "phone", "street_address_1", "street_address_2",
           "city", "region_code", "postal_code", "country_code", "timezone",
-          "receipt_header_mode", "receipt_header", "receipt_footer_mode", "receipt_footer"
+          "receipt_header_mode", "receipt_header", "receipt_footer_mode", "receipt_footer",
+          "cash_variance_note_threshold_cents",
+          "cash_variance_approval_threshold_cents",
+          "cash_paid_out_approval_threshold_cents"
         )
         if @store.update(store_params)
           Audit::Recorder.record!(
@@ -99,10 +102,18 @@ module Admin
       permitted = [
         :code, :name, :legal_name, :street_address_1, :street_address_2,
         :city, :region_code, :postal_code, :country_code, :phone, :san, :timezone,
-        :receipt_header, :receipt_footer, :receipt_header_mode, :receipt_footer_mode, :lock_version
+        :receipt_header, :receipt_footer, :receipt_header_mode, :receipt_footer_mode, :lock_version,
+        :cash_variance_note_threshold_cents, :cash_variance_approval_threshold_cents,
+        :cash_paid_out_approval_threshold_cents
       ]
       permitted.unshift(:store_number) unless @store&.store_number_locked?
-      params.require(:store).permit(*permitted)
+      attrs = params.require(:store).permit(*permitted)
+      %i[
+        cash_variance_note_threshold_cents
+        cash_variance_approval_threshold_cents
+        cash_paid_out_approval_threshold_cents
+      ].each { |key| attrs[key] = attrs[key].presence }
+      attrs
     end
   end
 end

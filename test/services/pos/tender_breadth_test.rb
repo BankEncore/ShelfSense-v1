@@ -359,7 +359,7 @@ class PosTenderBreadthTest < ActiveSupport::TestCase
       expected_lock_version: transaction.lock_version,
       expected_total_cents: transaction.total_cents
     )
-    Pos::CloseSession.call(
+    pos_close_session!(
       session: @context[:session].reload,
       actor: @actor,
       expected_lock_version: @context[:session].lock_version,

@@ -1,0 +1,9 @@
+<% content_for :title, "Store safe" %>
+<%= render "shared/page_header", title: "Store safe" %>
+
+<p>Expected balance: <%= format_money_cents(@safe.expected_balance_cents) %></p>
+<p>Initialized: <%= @safe.initialized? ? @safe.initialized_at : "Not initialized" %></p>
+
+<% unless @safe.initialized? %>
+  <p><%= action_link_to("Initialize safe", new_admin_cash_safe_path, style: :solid, intent: :brand) %></p>
+<% end %>

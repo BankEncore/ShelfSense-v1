@@ -117,6 +117,7 @@ Rails.application.routes.draw do
     resources :gift_card_programs do
       member { post :reactivate }
     end
+    resource :cash_safe, only: %i[show new create], controller: "cash_safes"
     resources :gift_cards, only: %i[index show] do
       collection do
         get :inquiry

@@ -199,10 +199,10 @@ class PosPostVoidWorkspaceTest < ActionDispatch::IntegrationTest
     session_record = @context[:session]
     post pos_register_close_path, params: { session_id: session_record.id }
     follow_redirect!
-    post pos_session_close_path(session_record), params: {
+    post pos_session_close_path(session_record), params: pos_close_http_params(
       closing_count: "0.00",
       expected_lock_version: session_record.reload.lock_version
-    }
+    )
     follow_redirect!
     assert_response :success
     assert_match "Post-void adjustments", response.body
