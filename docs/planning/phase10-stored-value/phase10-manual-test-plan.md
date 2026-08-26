@@ -1,6 +1,6 @@
 # Phase 10 — Manual test plan
 
-Status: **Proposed**. Complements automated tests in [phase10-user-stories.md](phase10-user-stories.md). Register and print checks need a browser; admin checks use current UDS screens once they exist.
+Status: **Executed** (August 2026). Complements automated tests in [phase10-user-stories.md](phase10-user-stories.md).
 
 Do not treat this as a substitute for CI.
 

@@ -4,7 +4,7 @@ ShelfSense is an inventory, purchasing, customer-service, and point-of-sale syst
 
 ## Project status
 
-The operational foundation through **Phase 9** is implemented on `main`, including:
+The operational foundation through **Phase 10** is implemented on `main`, including:
 
 - Organization, stores, users, scoped authorization, and audit
 - Merchandise, identifiers, classification, pricing, and inventory valuation
@@ -12,9 +12,10 @@ The operational foundation through **Phase 9** is implemented on `main`, includi
 - Suppliers, customer requests, reservations, purchase orders, receiving, and corrections
 - Customer identity, contact lookup, duplicate suggestions, and merge
 - Catalog and bibliographic enrichment with reviewed external-data apply
+- Store credit, trade credit, and gift cards
 - The Warm Parchment UX foundation, grouped administrative navigation, ActionButtonHelper adoption on reference and non-purchasing screens, and UDS-5 administrative composition (compact nav and Product reference family)
 
-Forward domain work is sequenced in the [canonical roadmap](docs/planning/roadmap.md). Phase 10 stored-value slices 10.1–10.5 land on `main`; the milestone stays open until the [manual test plan](docs/planning/phase10-stored-value/phase10-manual-test-plan.md) is executed. Later phases cover cash accountability, used buyback, customer-service expansion, and financial/reporting closeout.
+Forward domain work is sequenced in the [canonical roadmap](docs/planning/roadmap.md). Later phases cover cash accountability, used buyback, customer-service expansion, and financial/reporting closeout.
 
 ## Technology
 
@@ -97,6 +98,7 @@ Named domains for ownership. `buyback` and `reports` are reserved for later phas
 | `merchandise` | Catalog, variants, classification, pricing, inventory units, and inventory |
 | `purchasing` | Suppliers, orders, purchase orders, receiving, and supplier-facing workflows |
 | `pos` | Sales, returns, tenders, sessions, business dates, and Register operation |
+| `stored_value` | Store credit, trade credit, gift-card instruments, and their ledger |
 | `buyback` | Acquisition and valuation of used merchandise from customers (Phase 12) |
 | `reports` | Operational, financial, and analytical reporting (Phase 14 closeout) |
 

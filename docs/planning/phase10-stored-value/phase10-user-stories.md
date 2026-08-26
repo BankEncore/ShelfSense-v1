@@ -1,6 +1,6 @@
 # Phase 10 — User stories
 
-GitHub-issue-ready stories. Keep 10.4 issuance and signed-net in the same implementation PR when they land.
+Status: **Implemented** on `main`. GitHub-issue-ready stories used for slices 10.1–10.5.
 
 ## 10.1 — Stored-value core
 

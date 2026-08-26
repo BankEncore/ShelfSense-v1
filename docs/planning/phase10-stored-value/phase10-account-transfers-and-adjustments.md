@@ -1,6 +1,6 @@
 # Phase 10 — Account transfers and adjustments
 
-Status: **Proposed**. Administrative same-type movement and manual ledger corrections. POS refund destinations remain [phase10-refund-post-void.md](phase10-refund-post-void.md). Schema: [phase10-schema.md](phase10-schema.md). Authorization: [phase10-authorization.md](phase10-authorization.md).
+Status: **Accepted**. Administrative same-type movement and manual ledger corrections. POS refund destinations remain [phase10-refund-post-void.md](phase10-refund-post-void.md). Schema: [phase10-schema.md](phase10-schema.md). Authorization: [phase10-authorization.md](phase10-authorization.md).
 
 ### Actually locked
 
