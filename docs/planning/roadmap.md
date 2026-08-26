@@ -231,32 +231,31 @@ Gift-card cash-out vs expected cash; X/Z; receipt/print; administrative navigati
 
 ## Phase 11 — Cash accountability completion
 
-**Status:** Proposed. **After Phase 10** stored-value and Register integration.
+**Status:** Proposed. **After Phase 10** stored-value and Register integration. Planning packet: [phase11-cash-accountability/](phase11-cash-accountability/README.md). Policy: [ADR-021](../adr/ADR-021-register-and-terminal-identity.md), [ADR-025](../adr/ADR-025-domain-owned-operational-ledgers.md).
 
-Phase 5 implemented the beginning and end of the register session. Phase 11 fills in accountable movement during the session and between cash locations.
+Phase 5 implemented the beginning and end of the register session. Phase 11 fills in accountable movement during the session and between store cash locations. An open `PosSession` is till custody on a **Register**. There is no `cash_drawers` table in MVP.
 
 Preserve the distinction between:
 
-- **Register** — durable POS identity
-- **Register session** — cashier/accountability period
-- **Cash container/location** — the actual pool of currency (drawer, safe, deposit-in-transit)
+- **Register** — durable POS checkout and Z identity (does not hold cash between sessions)
+- **POS session** — cashier custody interval
+- **Cash location** — store safe and deposit in transit
 
 ### Build on what exists
 
-- Register definition; session opening; opening float
-- Cash tender; cash refunds; blind close; expected/count comparison; immutable Z closeout
+- Register definition; session opening; `opening_float_cents` snapshot; cash tender; cash refunds; blind close; expected/count snapshots; immutable Z; Phase 10 gift-card cash-out
 
 ### Add
 
-- Cash location or accountability model (drawer, register session, safe, deposit-in-transit if needed)
-- Paid in; paid out; cash drop; drawer-to-safe transfer; safe-to-drawer replenishment
-- Accountable handoff; reason codes; approval thresholds; available-cash checks
-- Transfer acknowledgement; deposit preparation; cash movement reversal/correction
-- Expanded over/short reconciliation; cash activity and safe-balance reports
+- One store safe with one-time initialization; opening float as safe→session transfer
+- Close: over/short then transfer **counted** cash to the safe; available-cash on refunds and gift-card cash-outs
+- Paid in; paid out; mid-shift drop; safe→session replenishment; atomic transfers (no acknowledgement workflow)
+- Safe reconciliation; deposit in transit (no bank confirmation); store-day cash **report** (not a hard finalization)
+- Manager-assisted session close; cash activity reasons; reversals of Phase 11 operations (not session reopen)
 
 **Deliverable:**
 
-> Every non-sale cash movement is authorized, attributable, reflected in expected cash, and reconcilable from drawer through safe or deposit.
+> Every non-sale cash movement is authorized, attributable, reflected in expected cash, and reconcilable from session custody through safe or deposit.
 
 ## Phase 12 — Used buyback
 
@@ -378,7 +377,7 @@ The following remain out of scope until a planning packet and ADR review justify
 | Phase 8 — Customer foundation (MVP) | **Complete** on `main` (PR #42) |
 | Phase 9 — Catalog and bibliographic enrichment | **Implemented** |
 | Phase 10 — Stored value | **Implemented** on `main`; [manual test plan](phase10-stored-value/phase10-manual-test-plan.md) executed |
-| Phase 11 — Cash accountability completion | After Phase 10 stored-value and Register integration |
+| Phase 11 — Cash accountability completion | **Proposed**; packet [phase11-cash-accountability/](phase11-cash-accountability/README.md) |
 | Phase 12 — Used buyback | After 8–11 (payout after 10–11) |
 | Phase 13 — Customer workspace | After activity sources exist |
 | Phase 14 — Financial posting and reporting | Consolidates operational domains |
@@ -393,6 +392,7 @@ The following remain out of scope until a planning packet and ADR review justify
 | Document | Relationship |
 |---|---|
 | [Phase 10 stored value](phase10-stored-value/README.md) | Implemented; [ADR-025](../adr/ADR-025-domain-owned-operational-ledgers.md), [ADR-026](../adr/ADR-026-gift-card-number-protection.md), [ADR-027](../adr/ADR-027-admin-gift-card-prefix-last-four-inquiry.md) |
+| [Phase 11 cash accountability](phase11-cash-accountability/README.md) | Proposed; extends Register session and store safe; [ADR-021](../adr/ADR-021-register-and-terminal-identity.md), [ADR-025](../adr/ADR-025-domain-owned-operational-ledgers.md) |
 | [Phase planning packets](phase1-operational-foundation/phase1-plan.md) | Authoritative detail per implemented phase |
 | [Phase 7.1 purchasing closeout](phase7.1-purchasing-polish/README.md) | Phase 7 operability finish; [coordination with UDS-4](phase7.1-purchasing-polish/phase7.1-uds-coordination.md) |
 | [UDS-4 plan](ux-design-system/uds-4-plan.md) | Grouped navigation and cross-cutting adoption |

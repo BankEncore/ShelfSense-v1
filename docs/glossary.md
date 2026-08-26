@@ -2,7 +2,7 @@
 
 Canonical ShelfSense terms. Add materially distinct words here rather than inventing local synonyms ([ADR-011](adr/ADR-011-naming-conventions.md)).
 
-This file starts with stored-value vocabulary for [Phase 10](planning/phase10-stored-value/README.md) and the project-wide terms those contracts depend on. Expand as other domains need a durable definition.
+This file starts with stored-value and cash-accountability vocabulary and the project-wide terms those contracts depend on. Expand as other domains need a durable definition.
 
 ## Project-wide
 
@@ -45,3 +45,21 @@ This file starts with stored-value vocabulary for [Phase 10](planning/phase10-st
 | **Tender versus issuance** | A tender settles what the customer owes or is owed. An issuance is customer-paid sale of gift-card liability and increases amount due. Refunds (including new refund cards) are tenders, not issuance. |
 
 Phase 10 contracts: [phase10-plan.md](planning/phase10-stored-value/phase10-plan.md). Unused-instrument return is deferred and is not a Phase 10 glossary term.
+
+## Cash accountability
+
+| Term | Meaning |
+|---|---|
+| **POS session** | Cashier custody interval on a Register; the till for Phase 11 MVP. Not a `cash_drawers` row. |
+| **Store safe** | The store’s persistent accountable cash location. One operational safe per store in MVP. |
+| **Deposit in transit** | Prepared deposit that has left the safe. Bank confirmation is deferred. |
+| **Opening float** | Session snapshot (`opening_float_cents`) of a safe→session transfer after Phase 11 activation. |
+| **Available cash** | Expected session cash while the session is open. Cannot go negative. |
+| **Paid-in / paid-out** | Non-sale cash into or out of an open session. Not a tender; not gift-card cash-out. |
+| **Drop** | Mid-shift transfer from the open session to the safe. |
+| **Replenishment** | Transfer from the safe to an open session. |
+| **Session close transfer** | Move of **counted** session cash to the safe at close (`session_close`). |
+| **Over / short** | Explicit reconcile movement that aligns expected cash with an accepted count. Not a paid-in/out. |
+| **Manager-assisted close** | Privileged close of another cashier’s session; assigned cashier unchanged. |
+
+Phase 11 contracts: [phase11-plan.md](planning/phase11-cash-accountability/phase11-plan.md). Direct session-to-session transfer and bank deposit confirmation are deferred.
