@@ -12,6 +12,7 @@ class GiftCard < ApplicationRecord
   belongs_to :replaced_by, class_name: "GiftCard", optional: true
   has_one :replaced_from, class_name: "GiftCard", foreign_key: :replaced_by_id, inverse_of: :replaced_by,
           dependent: :restrict_with_exception
+  has_many :gift_card_cash_outs, dependent: :restrict_with_exception
 
   validates :number, :number_digest, :number_prefix, :number_last_four, :status, :activated_at, presence: true
   validates :status, inclusion: { in: STATUSES }

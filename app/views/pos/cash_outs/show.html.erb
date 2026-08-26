@@ -1,0 +1,50 @@
+<% content_for :title, "Gift-card cash-out" %>
+
+<main class="pos-receipt" data-controller="pos-receipt">
+  <div class="pos-receipt__screen">
+    <h1 tabindex="-1" autofocus><%= @cash_out.reversal? ? "Cash-out reversed" : "Cash-out complete" %></h1>
+    <% if notice.present? %>
+      <p role="status"><%= notice %></p>
+    <% end %>
+    <% if @error.present? %>
+      <p class="pos-enter__alert" role="alert"><%= @error %></p>
+    <% end %>
+    <dl class="pos-receipt__totals">
+      <div><dt>Card</dt><dd><%= @cash_out.gift_card.masked_number %></dd></div>
+      <div><dt>Amount</dt><dd><%= format_money_cents(@cash_out.amount_cents) %></dd></div>
+      <div><dt>Register</dt><dd><%= @cash_out.register.admin_label %></dd></div>
+      <div><dt>Business date</dt><dd><%= @cash_out.business_date.iso8601 %></dd></div>
+      <div><dt>Remaining balance</dt><dd><%= format_money_cents(@cash_out.gift_card.balance_cents) %></dd></div>
+    </dl>
+  </div>
+
+  <div class="pos-receipt__actions pos-no-print">
+    <%= action_button("Print", style: :solid, intent: :brand, data: { action: "pos-receipt#print" }) %>
+    <%= action_link_to("POS Home", pos_path, style: :outline, intent: :neutral) %>
+    <% if !@cash_out.reversal? && !@cash_out.reversed? && cashier_target_session %>
+      <%= form_with url: reverse_pos_cash_out_path(@cash_out), method: :post, local: true, class: "pos-return-items" do %>
+        <%= hidden_field_tag :source_id, SecureRandom.uuid_v7 %>
+        <%= hidden_field_tag :idempotency_key, SecureRandom.uuid_v7 %>
+        <div class="form-field">
+          <label>
+            <%= check_box_tag :physical_cash_returned, "1", false, id: "physical_cash_returned" %>
+            Original cash has physically returned to this open Register
+          </label>
+        </div>
+        <% if @cash_out.gift_card.gift_card_program.cash_out_approval_required? %>
+          <div class="form-field">
+            <%= label_tag :approver_username, "Approver username" %>
+            <%= text_field_tag :approver_username, params[:approver_username], id: "approver_username", autocomplete: "off" %>
+          </div>
+          <div class="form-field">
+            <%= label_tag :approver_password, "Approver password" %>
+            <%= password_field_tag :approver_password, nil, id: "approver_password", autocomplete: "off" %>
+          </div>
+        <% end %>
+        <div class="actions">
+          <%= submit_tag "Reverse cash-out", class: "btn" %>
+        </div>
+      <% end %>
+    <% end %>
+  </div>
+</main>

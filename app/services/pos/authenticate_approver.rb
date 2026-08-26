@@ -6,12 +6,13 @@ module Pos
       new(**attrs).call
     end
 
-    def initialize(username:, password:, store:, action_type:, performer:)
+    def initialize(username:, password:, store:, action_type:, performer:, permission_key: nil)
       @username = username.to_s.strip
       @password = password
       @store = store
       @action_type = action_type
       @performer = performer
+      @permission_key = permission_key.presence || "pos.#{action_type}.approve"
     end
 
     def call
@@ -25,7 +26,7 @@ module Pos
 
       unless Authorization::PermissionEvaluator.allowed?(
         user: user,
-        permission_key: "pos.#{@action_type}.approve",
+        permission_key: @permission_key,
         store: @store
       )
         raise Pos::Denied, "approver is not authorized at this store"

@@ -2,11 +2,11 @@
 
 module Admin
   class GiftCardsController < BaseController
-    before_action -> { require_permission!("gift_cards.view") }, only: %i[index show inquiry resolve_inquiry]
+    before_action -> { require_permission!("gift_cards.view") }, only: %i[index show inquiry resolve_inquiry print_recovery create_print_recovery]
     before_action -> { require_permission!("gift_cards.suspend") }, only: %i[suspend reinstate]
     before_action -> { require_permission!("gift_cards.replace") }, only: %i[replace create_replacement]
     before_action -> { require_permission!("gift_cards.associate_customer") }, only: %i[associate update_association]
-    before_action :set_gift_card, only: %i[show suspend reinstate replace create_replacement associate update_association]
+    before_action :set_gift_card, only: %i[show suspend reinstate replace create_replacement associate update_association print_recovery create_print_recovery]
 
     def index
       @gift_cards = GiftCard.includes(:gift_card_program, :stored_value_account, :customer).admin_ordered.limit(100)
@@ -78,6 +78,21 @@ module Admin
 
     def associate
       @customer = @gift_card.customer
+    end
+
+    def print_recovery; end
+
+    def create_print_recovery
+      @recovered_number = GiftCards::PrintRecovery.call(
+        gift_card: @gift_card,
+        actor: current_user,
+        store: operational_store,
+        reason: params[:reason]
+      )
+      render :print_recovery
+    rescue GiftCards::Error => e
+      flash.now[:alert] = e.message
+      render :print_recovery, status: :unprocessable_entity
     end
 
     def update_association

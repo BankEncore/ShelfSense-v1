@@ -69,6 +69,7 @@
      data-register-workspace-settlement-value="<%= settlement_direction %>"
      data-register-workspace-refund-remaining-value="<%= remaining_refund_cents %>"
      data-register-workspace-payment-remaining-value="<%= remaining_payment_cents %>"
+     data-register-workspace-cash-out-allowed-value="<%= effective_permissions.include?("gift_cards.cash_out") ? "true" : "false" %>"
      data-register-workspace-transactions-url-value="<%= pos_transactions_path %>"
      data-register-workspace-policies-value="<%= h((@control_policies || {}).to_json) %>"
      data-register-workspace-reasons-value="<%= h(Pos::ControlledActionReasons::CATALOGS.to_json) %>"
@@ -388,8 +389,17 @@
       <div class="pos-actions__group pos-actions__group--escape" role="group" aria-label="Cancel transaction">
         <%= action_button "Cancel (F9)", style: :outline, intent: :danger, size: :large, disabled: true,
               data: { action: "register-workspace#openOverlay", register_workspace_target: "cancelButton" } %>
+        <% if effective_permissions.include?("gift_cards.cash_out") %>
+          <%= action_link_to "Cash out", new_pos_cash_out_path, style: :outline, intent: :neutral, size: :large %>
+        <% end %>
       </div>
     </div>
+
+    <% if effective_permissions.include?("gift_cards.cash_out") %>
+      <%= form_with url: lookup_pos_cash_outs_path, method: :post, local: true, html: { class: "pos-hidden", data: { register_workspace_target: "cashOutForm" } } do %>
+        <%= password_field_tag :card_number, nil, autocomplete: "off", data: { register_workspace_target: "cashOutCardInput" } %>
+      <% end %>
+    <% end %>
 
     <%= form_with url: pos_register_merchandise_path(register_scope), method: :post, html: { class: "pos-hidden", data: { register_workspace_target: "merchandiseForm", turbo: true } } do %>
       <%= hidden_field_tag :register_id, @register.id %>

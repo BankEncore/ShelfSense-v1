@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_26_040000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_26_050000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -220,6 +220,35 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_040000) do
     t.index ["sales_returns_gl_account_id"], name: "index_departments_on_sales_returns_gl_account_id"
     t.index ["sales_revenue_gl_account_id"], name: "index_departments_on_sales_revenue_gl_account_id"
     t.check_constraint "code::text ~ '^[a-z0-9]+(_[a-z0-9]+)*$'::text", name: "departments_code_format"
+  end
+
+  create_table "gift_card_cash_outs", id: :uuid, default: nil, force: :cascade do |t|
+    t.bigint "amount_cents", null: false
+    t.uuid "approved_by_id"
+    t.date "business_date", null: false
+    t.timestamptz "created_at", null: false
+    t.uuid "gift_card_id", null: false
+    t.uuid "performed_by_id", null: false
+    t.boolean "physical_cash_confirmed", default: false, null: false
+    t.uuid "physical_cash_confirmed_by_id"
+    t.uuid "pos_session_id", null: false
+    t.timestamptz "posted_at", null: false
+    t.jsonb "program_policy_snapshot", default: {}, null: false
+    t.uuid "register_id", null: false
+    t.uuid "reversal_of_id"
+    t.uuid "store_id", null: false
+    t.uuid "stored_value_account_id", null: false
+    t.uuid "stored_value_operation_id"
+    t.timestamptz "updated_at", null: false
+    t.index ["gift_card_id"], name: "index_gift_card_cash_outs_on_gift_card_id"
+    t.index ["pos_session_id"], name: "index_gift_card_cash_outs_on_pos_session_id"
+    t.index ["register_id"], name: "index_gift_card_cash_outs_on_register_id"
+    t.index ["reversal_of_id"], name: "index_gift_card_cash_outs_on_reversal_of_id", unique: true, where: "(reversal_of_id IS NOT NULL)"
+    t.index ["store_id"], name: "index_gift_card_cash_outs_on_store_id"
+    t.index ["stored_value_account_id"], name: "index_gift_card_cash_outs_on_stored_value_account_id"
+    t.index ["stored_value_operation_id"], name: "index_gift_card_cash_outs_on_operation", unique: true, where: "(stored_value_operation_id IS NOT NULL)"
+    t.check_constraint "amount_cents > 0", name: "gift_card_cash_outs_amount_positive"
+    t.check_constraint "reversal_of_id IS NULL AND physical_cash_confirmed = false AND physical_cash_confirmed_by_id IS NULL OR reversal_of_id IS NOT NULL AND physical_cash_confirmed = true AND physical_cash_confirmed_by_id IS NOT NULL", name: "gift_card_cash_outs_physical_cash_on_reversal"
   end
 
   create_table "gift_card_programs", id: :uuid, default: nil, force: :cascade do |t|
@@ -590,25 +619,27 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_040000) do
     t.timestamptz "created_at", null: false
     t.timestamptz "executed_at", null: false
     t.string "fingerprint_schema_version", null: false
+    t.uuid "gift_card_cash_out_id"
     t.jsonb "material_values", default: {}, null: false
     t.string "performed_by_name_snapshot", null: false
     t.uuid "performed_by_user_id", null: false
     t.string "policy_result", null: false
     t.string "policy_version", null: false
-    t.uuid "pos_transaction_id", null: false
+    t.uuid "pos_transaction_id"
     t.uuid "pos_transaction_line_id"
     t.string "reason_code", null: false
     t.string "reason_name_snapshot", null: false
     t.text "reason_note"
     t.timestamptz "updated_at", null: false
     t.index ["approved_by_user_id"], name: "index_pos_controlled_actions_on_approved_by_user_id"
+    t.index ["gift_card_cash_out_id"], name: "index_pos_controlled_actions_on_cash_out", unique: true, where: "(gift_card_cash_out_id IS NOT NULL)"
     t.index ["performed_by_user_id"], name: "index_pos_controlled_actions_on_performed_by_user_id"
     t.index ["pos_transaction_id", "action_type"], name: "index_pos_controlled_actions_one_post_void", unique: true, where: "((action_type)::text = 'post_void'::text)"
     t.index ["pos_transaction_id"], name: "index_pos_controlled_actions_on_pos_transaction_id"
     t.index ["pos_transaction_line_id", "action_type"], name: "index_pos_controlled_actions_effective_line", unique: true, where: "(pos_transaction_line_id IS NOT NULL)"
     t.index ["pos_transaction_line_id"], name: "index_pos_controlled_actions_on_pos_transaction_line_id"
-    t.check_constraint "action_type::text = 'post_void'::text AND pos_transaction_line_id IS NULL OR action_type::text <> 'post_void'::text AND pos_transaction_line_id IS NOT NULL", name: "pos_controlled_actions_line_scope"
-    t.check_constraint "action_type::text = ANY (ARRAY['price_override'::character varying::text, 'line_discount'::character varying::text, 'tax_class_override'::character varying::text, 'unlinked_return'::character varying::text, 'post_void'::character varying::text])", name: "pos_controlled_actions_type_valid"
+    t.check_constraint "action_type::text = 'post_void'::text AND pos_transaction_line_id IS NULL AND pos_transaction_id IS NOT NULL AND gift_card_cash_out_id IS NULL OR action_type::text = 'gift_card_cash_out'::text AND pos_transaction_line_id IS NULL AND pos_transaction_id IS NULL AND gift_card_cash_out_id IS NOT NULL OR (action_type::text <> ALL (ARRAY['post_void'::character varying, 'gift_card_cash_out'::character varying]::text[])) AND pos_transaction_line_id IS NOT NULL AND pos_transaction_id IS NOT NULL AND gift_card_cash_out_id IS NULL", name: "pos_controlled_actions_line_scope"
+    t.check_constraint "action_type::text = ANY (ARRAY['price_override'::character varying, 'line_discount'::character varying, 'tax_class_override'::character varying, 'unlinked_return'::character varying, 'post_void'::character varying, 'gift_card_cash_out'::character varying]::text[])", name: "pos_controlled_actions_type_valid"
     t.check_constraint "approved_by_user_id IS NULL OR approved_by_user_id <> performed_by_user_id", name: "pos_controlled_actions_approver_not_performer"
     t.check_constraint "policy_result::text = 'approval_required'::text AND approved_by_user_id IS NOT NULL AND approved_by_name_snapshot IS NOT NULL OR policy_result::text = 'direct'::text AND approved_by_user_id IS NULL AND approved_by_name_snapshot IS NULL", name: "pos_controlled_actions_approver_matches_policy"
     t.check_constraint "policy_result::text = ANY (ARRAY['direct'::character varying::text, 'approval_required'::character varying::text])", name: "pos_controlled_actions_policy_valid"
@@ -676,6 +707,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_040000) do
     t.bigint "finalized_closing_expected_cash_cents_sum"
     t.bigint "finalized_closing_variance_cents_sum"
     t.bigint "finalized_discount_cents"
+    t.bigint "finalized_gift_card_cash_out_cents"
+    t.bigint "finalized_gift_card_cash_out_reversal_cents"
     t.bigint "finalized_net_cents"
     t.bigint "finalized_opening_float_cents_sum"
     t.bigint "finalized_other_payment_cents"
@@ -690,6 +723,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_040000) do
     t.bigint "finalized_return_tax_cents"
     t.bigint "finalized_return_total_cents"
     t.integer "finalized_session_count"
+    t.bigint "finalized_stored_value_issuance_cents"
+    t.bigint "finalized_stored_value_payment_cents"
+    t.bigint "finalized_stored_value_refund_cents"
     t.bigint "finalized_subtotal_cents"
     t.bigint "finalized_tax_cents"
     t.bigint "finalized_total_cents"
@@ -713,6 +749,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_040000) do
     t.check_constraint "finalized_closing_count_cents_sum IS NULL OR finalized_closing_count_cents_sum >= 0", name: "pos_reporting_periods_finalized_closing_count_sum_nonnegative"
     t.check_constraint "finalized_closing_variance_cents_sum IS NULL OR finalized_closing_variance_cents_sum = (finalized_closing_count_cents_sum - finalized_closing_expected_cash_cents_sum)", name: "pos_reporting_periods_finalized_variance_matches_sums"
     t.check_constraint "finalized_discount_cents IS NULL OR finalized_discount_cents >= 0", name: "pos_reporting_periods_finalized_discount_nonnegative"
+    t.check_constraint "finalized_gift_card_cash_out_cents IS NULL OR finalized_gift_card_cash_out_cents >= 0", name: "pos_reporting_periods_finalized_gc_cash_out_nonnegative"
+    t.check_constraint "finalized_gift_card_cash_out_reversal_cents IS NULL OR finalized_gift_card_cash_out_reversal_cents >= 0", name: "pos_reporting_periods_finalized_gc_cash_out_rev_nonnegative"
     t.check_constraint "finalized_opening_float_cents_sum IS NULL OR finalized_opening_float_cents_sum >= 0", name: "pos_reporting_periods_finalized_opening_float_sum_nonnegative"
     t.check_constraint "finalized_other_payment_cents IS NULL OR finalized_other_payment_cents >= 0", name: "pos_reporting_periods_finalized_other_payment_nonnegative"
     t.check_constraint "finalized_other_refund_cents IS NULL OR finalized_other_refund_cents >= 0", name: "pos_reporting_periods_finalized_other_refund_cents_nonnegative"
@@ -722,6 +760,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_040000) do
     t.check_constraint "finalized_return_tax_cents IS NULL OR finalized_return_tax_cents >= 0", name: "pos_reporting_periods_finalized_return_tax_cents_nonnegative"
     t.check_constraint "finalized_return_total_cents IS NULL OR finalized_return_total_cents >= 0", name: "pos_reporting_periods_finalized_return_total_cents_nonnegative"
     t.check_constraint "finalized_session_count IS NULL OR finalized_session_count >= 0", name: "pos_reporting_periods_finalized_session_count_nonnegative"
+    t.check_constraint "finalized_stored_value_issuance_cents IS NULL OR finalized_stored_value_issuance_cents >= 0", name: "pos_reporting_periods_finalized_sv_issuance_nonnegative"
+    t.check_constraint "finalized_stored_value_payment_cents IS NULL OR finalized_stored_value_payment_cents >= 0", name: "pos_reporting_periods_finalized_sv_payment_nonnegative"
+    t.check_constraint "finalized_stored_value_refund_cents IS NULL OR finalized_stored_value_refund_cents >= 0", name: "pos_reporting_periods_finalized_sv_refund_nonnegative"
     t.check_constraint "finalized_subtotal_cents IS NULL OR finalized_subtotal_cents >= 0", name: "pos_reporting_periods_finalized_subtotal_nonnegative"
     t.check_constraint "finalized_tax_cents IS NULL OR finalized_tax_cents >= 0", name: "pos_reporting_periods_finalized_tax_nonnegative"
     t.check_constraint "finalized_total_cents IS NULL OR finalized_total_cents >= 0", name: "pos_reporting_periods_finalized_total_nonnegative"
@@ -1665,6 +1706,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_040000) do
   add_foreign_key "departments", "gl_accounts", column: "receiving_clearing_gl_account_id"
   add_foreign_key "departments", "gl_accounts", column: "sales_returns_gl_account_id"
   add_foreign_key "departments", "gl_accounts", column: "sales_revenue_gl_account_id"
+  add_foreign_key "gift_card_cash_outs", "gift_card_cash_outs", column: "reversal_of_id"
+  add_foreign_key "gift_card_cash_outs", "gift_cards"
+  add_foreign_key "gift_card_cash_outs", "pos_sessions"
+  add_foreign_key "gift_card_cash_outs", "registers"
+  add_foreign_key "gift_card_cash_outs", "stored_value_accounts"
+  add_foreign_key "gift_card_cash_outs", "stored_value_operations"
+  add_foreign_key "gift_card_cash_outs", "stores"
+  add_foreign_key "gift_card_cash_outs", "users", column: "approved_by_id"
+  add_foreign_key "gift_card_cash_outs", "users", column: "performed_by_id"
+  add_foreign_key "gift_card_cash_outs", "users", column: "physical_cash_confirmed_by_id"
   add_foreign_key "gift_card_replacements", "gift_card_replacements", column: "reversal_of_id"
   add_foreign_key "gift_card_replacements", "gift_cards", column: "original_gift_card_id"
   add_foreign_key "gift_card_replacements", "gift_cards", column: "replacement_gift_card_id"
@@ -1709,6 +1760,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_040000) do
   add_foreign_key "orders", "stores", on_delete: :restrict
   add_foreign_key "orders", "suppliers", on_delete: :restrict
   add_foreign_key "orders", "users", column: "cancelled_by_id", on_delete: :restrict
+  add_foreign_key "pos_controlled_actions", "gift_card_cash_outs"
   add_foreign_key "pos_controlled_actions", "pos_transaction_lines"
   add_foreign_key "pos_controlled_actions", "pos_transactions"
   add_foreign_key "pos_controlled_actions", "users", column: "approved_by_user_id"

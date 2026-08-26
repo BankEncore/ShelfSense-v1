@@ -30,7 +30,7 @@ An early outline in this file numbered Phase 8 as buyback and Phase 9 as financi
 
 | Packet | Status |
 |---|---|
-| [Phase 10 — Stored value](phase10-stored-value/README.md) | **Proposed**; [ADR-025](../adr/ADR-025-domain-owned-operational-ledgers.md), [ADR-026](../adr/ADR-026-gift-card-number-protection.md) |
+| [Phase 10 — Stored value](phase10-stored-value/README.md) | Slices 10.1–10.5 on `main`; milestone open until the [manual test plan](phase10-stored-value/phase10-manual-test-plan.md); [ADR-025](../adr/ADR-025-domain-owned-operational-ledgers.md), [ADR-026](../adr/ADR-026-gift-card-number-protection.md) |
 
 ## Cross-phase UX
 

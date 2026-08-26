@@ -192,7 +192,7 @@ The external lookup boundary returns **normalized candidate data**; the Product 
 
 ## Phase 10 — Stored value
 
-**Status:** Proposed. **After Phase 8** (customer identity foundation). Planning packet: [phase10-stored-value/](phase10-stored-value/README.md). Policy: [ADR-025](../adr/ADR-025-domain-owned-operational-ledgers.md), [ADR-026](../adr/ADR-026-gift-card-number-protection.md).
+**Status:** Implementation slices 10.1–10.5 land on `main`. Phase 10 is **not Complete** until the [manual test plan](phase10-stored-value/phase10-manual-test-plan.md) is executed. Planning packet: [phase10-stored-value/](phase10-stored-value/README.md). Policy: [ADR-025](../adr/ADR-025-domain-owned-operational-ledgers.md), [ADR-026](../adr/ADR-026-gift-card-number-protection.md).
 
 Stored-value redemption is **online-authorized** until a bounded offline mechanism exists ([ADR-005](../adr/ADR-005-terminal-originated-operations.md)). There is **no** universal operational financial-event table; each domain keeps its own immutable facts. Cross-domain accounting/export is Phase 14.
 
@@ -376,7 +376,7 @@ The following remain out of scope until a planning packet and ADR review justify
 | UDS-5 — Administrative composition | **Complete** on `main` (PR #57; [uds-5-plan.md](ux-design-system/uds-5-plan.md)) |
 | Phase 8 — Customer foundation (MVP) | **Complete** on `main` (PR #42) |
 | Phase 9 — Catalog and bibliographic enrichment | **Implemented**; Phase 10 unblocked but not primary |
-| Phase 10 — Stored value | After Phase 8 (unblocked; packet [phase10-stored-value](phase10-stored-value/README.md); not the primary stream) |
+| Phase 10 — Stored value | Slices 10.1–10.5 land on `main`; milestone remains open until the [manual test plan](phase10-stored-value/phase10-manual-test-plan.md) |
 | Phase 11 — Cash accountability completion | After Phase 10 stored-value and Register integration |
 | Phase 12 — Used buyback | After 8–11 (payout after 10–11) |
 | Phase 13 — Customer workspace | After activity sources exist |
@@ -391,7 +391,7 @@ The following remain out of scope until a planning packet and ADR review justify
 
 | Document | Relationship |
 |---|---|
-| [Phase 10 stored value](phase10-stored-value/README.md) | Proposed stored-value packet; [ADR-025](../adr/ADR-025-domain-owned-operational-ledgers.md) |
+| [Phase 10 stored value](phase10-stored-value/README.md) | Slices 10.1–10.5 on `main`; milestone open until manual gate; [ADR-025](../adr/ADR-025-domain-owned-operational-ledgers.md) |
 | [Phase planning packets](phase1-operational-foundation/phase1-plan.md) | Authoritative detail per implemented phase |
 | [Phase 7.1 purchasing closeout](phase7.1-purchasing-polish/README.md) | Phase 7 operability finish; [coordination with UDS-4](phase7.1-purchasing-polish/phase7.1-uds-coordination.md) |
 | [UDS-4 plan](ux-design-system/uds-4-plan.md) | Grouped navigation and cross-cutting adoption |

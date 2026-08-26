@@ -227,6 +227,9 @@ Do not persist plaintext numbers in logs or public columns. Lifecycle starts at 
 | `performed_by_id` | uuid | Required |
 | `approved_by_id` | uuid, nullable | When `cash_out_approval_required` |
 | `stored_value_operation_id` | uuid, nullable | Unique when present |
+| `reversal_of_id` | uuid, nullable | Unique when present |
+| `physical_cash_confirmed` | boolean | Required true on reversal rows; false on originals |
+| `physical_cash_confirmed_by_id` | uuid, nullable | Required on reversal |
 | `posted_at` | timestamptz | Required |
 | timestamps | timestamptz | Required |
 

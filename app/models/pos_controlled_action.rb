@@ -1,13 +1,14 @@
 # frozen_string_literal: true
 
 class PosControlledAction < ApplicationRecord
-  ACTION_TYPES = %w[price_override line_discount tax_class_override unlinked_return post_void].freeze
+  ACTION_TYPES = %w[price_override line_discount tax_class_override unlinked_return post_void gift_card_cash_out].freeze
   POLICY_RESULTS = %w[direct approval_required].freeze
   POLICY_VERSION = "phase6_permission_tier_v1"
   FINGERPRINT_SCHEMA_VERSION = "v1"
 
-  belongs_to :pos_transaction
+  belongs_to :pos_transaction, optional: true
   belongs_to :pos_transaction_line, optional: true
+  belongs_to :gift_card_cash_out, optional: true
   belongs_to :performed_by_user, class_name: "User"
   belongs_to :approved_by_user, class_name: "User", optional: true
 
@@ -20,7 +21,7 @@ class PosControlledAction < ApplicationRecord
   validate :approver_matches_policy
 
   def readonly?
-    super || (persisted? && pos_transaction&.commercially_immutable?)
+    super || (persisted? && (pos_transaction&.commercially_immutable? || gift_card_cash_out_id.present?))
   end
 
   private

@@ -892,6 +892,8 @@ A reprint may differ from the original physical paper in Store legal name, addre
 
 No reprint table. **No reprint audit** — 6.3 stands (`window.print` stays client-side). This contract does not add print-attempt persistence.
 
+Phase 10: ordinary POS reprints stay masked. Full generated gift-card numbers appear only on controlled first print, complete-retry of that outcome, or exceptional print recovery with a reason (`GiftCards::PrintRecovery`). Gift-card cash-out has its own receipt (masked number, amount, remaining balance); it is not a tender line.
+
 ---
 
 ## 25. Post-voided original receipts
@@ -946,6 +948,10 @@ commit immutable facts
         ↓
 render/print receipt
 ```
+
+Phase 10 cash-out commits `gift_card_cash_outs` then renders/prints a cash-out receipt. Print recovery after a failed first print does not reopen the stored-value fact.
+
+---
 
 Never print then commit. Printer or browser printing failure does not reopen, cancel, or reverse the transaction, release the receipt identity, or rerun tax or settlement.
 

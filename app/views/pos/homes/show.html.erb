@@ -38,6 +38,16 @@
         <% end %>
       </dd>
     </div>
+    <% if @open_session && @session_totals %>
+      <div>
+        <dt>Expected cash</dt>
+        <dd><%= format_money_cents(@session_totals.expected_cash_cents) %></dd>
+      </div>
+      <div>
+        <dt>Gift-card cash-outs</dt>
+        <dd><%= format_money_cents(@session_totals.gift_card_cash_out_cents) %></dd>
+      </div>
+    <% end %>
   </dl>
 
   <nav class="pos-home__actions" aria-label="POS Home">
@@ -48,6 +58,9 @@
     <% end %>
     <%= link_to "Transactions", pos_transactions_path, class: "btn btn--secondary" %>
     <%= link_to "X Report", pos_x_report_path, class: "btn btn--secondary" %>
+    <% if @open_session && Authorization::PermissionEvaluator.allowed?(user: current_user, permission_key: "gift_cards.cash_out", store: current_store) %>
+      <%= link_to "Gift-card cash-out", new_pos_cash_out_path, class: "btn btn--secondary" %>
+    <% end %>
     <% if can_view_other_sessions? %>
       <%= link_to "Active Sessions", pos_active_sessions_path, class: "btn btn--secondary" %>
     <% end %>

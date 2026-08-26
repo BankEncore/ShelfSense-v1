@@ -129,9 +129,12 @@ Rails.application.routes.draw do
         post :replace, action: :create_replacement
         get :associate
         patch :associate, action: :update_association
+        get :print_recovery
+        post :print_recovery, action: :create_print_recovery
       end
       resources :stored_value_adjustments, only: %i[new create], controller: "gift_card_adjustments"
     end
+    resource :stored_value_report, only: :show
     resources :customer_requests, only: %i[index show new create] do
       collection do
         get :customer_lookup
@@ -195,6 +198,10 @@ Rails.application.routes.draw do
     resources :transactions, only: %i[index show]
     get "register/enter", to: "enters#show", as: :register_enter
     post "register/enter", to: "enters#create"
+    resources :cash_outs, only: %i[new create show] do
+      collection { post :lookup }
+      member { post :reverse }
+    end
     get "register", to: "workspaces#show", as: :register_workspace
     get "register/merchandise_search", to: "workspaces#search", as: :register_merchandise_search
     get "register/merchandise_resolve", to: "workspaces#resolve", as: :register_merchandise_resolve

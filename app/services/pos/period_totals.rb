@@ -108,6 +108,55 @@ module Pos
       snapshot_or(:finalized_other_refund_cents) { category_refund_cents("other") }
     end
 
+    def stored_value_issuance_cents
+      snapshot_or(:finalized_stored_value_issuance_cents) { commercial_transactions.sum(:stored_value_issuance_cents) }
+    end
+
+    def stored_value_payment_cents
+      snapshot_or(:finalized_stored_value_payment_cents) { category_payment_cents("stored_value") }
+    end
+
+    def stored_value_refund_cents
+      snapshot_or(:finalized_stored_value_refund_cents) { category_refund_cents("stored_value") }
+    end
+
+    def gift_card_cash_out_cents
+      snapshot_or(:finalized_gift_card_cash_out_cents) { period_cash_outs.originals.sum(:amount_cents) }
+    end
+
+    def gift_card_cash_out_reversal_cents
+      snapshot_or(:finalized_gift_card_cash_out_reversal_cents) { period_cash_outs.reversals.sum(:amount_cents) }
+    end
+
+    def gift_card_cash_out_count
+      period_cash_outs.originals.count
+    end
+
+    def store_credit_payment_cents
+      type_tender_cents("store_credit", "payment")
+    end
+
+    def trade_credit_payment_cents
+      type_tender_cents("trade_credit", "payment")
+    end
+
+    def gift_card_payment_cents
+      type_tender_cents("gift_card", "payment")
+    end
+
+    def gift_card_existing_refund_cents
+      refund_destination_cents("existing_account", tender_type: "gift_card")
+    end
+
+    def gift_card_new_refund_cents
+      refund_destination_cents("new_gift_card")
+    end
+
+    def store_credit_refund_destination_cents
+      refund_destination_cents("customer_store_credit") +
+        refund_destination_cents("existing_account", tender_type: "store_credit")
+    end
+
     def session_count
       snapshot_or(:finalized_session_count) { closed_sessions.count }
     end
@@ -148,6 +197,11 @@ module Pos
         finalized_card_refund_cents: card_refund_cents,
         finalized_check_refund_cents: check_refund_cents,
         finalized_other_refund_cents: other_refund_cents,
+        finalized_stored_value_issuance_cents: stored_value_issuance_cents,
+        finalized_stored_value_payment_cents: stored_value_payment_cents,
+        finalized_stored_value_refund_cents: stored_value_refund_cents,
+        finalized_gift_card_cash_out_cents: gift_card_cash_out_cents,
+        finalized_gift_card_cash_out_reversal_cents: gift_card_cash_out_reversal_cents,
         finalized_post_void_transaction_count: post_void_transaction_count,
         finalized_post_void_merchandise_cents: post_void_merchandise_cents,
         finalized_post_void_discount_cents: post_void_discount_cents,
@@ -184,6 +238,22 @@ module Pos
                .sum(:amount_cents)
     end
 
+    def type_tender_cents(tender_type, direction)
+      PosTender.joins(:pos_transaction)
+               .where(pos_transactions: { reporting_period_id: @period.id, status: "completed" })
+               .where(tender_type: tender_type, direction: direction)
+               .sum(:amount_cents)
+    end
+
+    def refund_destination_cents(destination_mode, tender_type: nil)
+      relation = PosTender.joins(:pos_transaction, :stored_value_tender_detail)
+                          .where(pos_transactions: { reporting_period_id: @period.id, status: "completed" })
+                          .where(direction: "refund")
+                          .where(pos_stored_value_tender_details: { destination_mode: destination_mode })
+      relation = relation.where(tender_type: tender_type) if tender_type
+      relation.sum(:amount_cents)
+    end
+
     def completed_transactions
       @period.pos_transactions.completed
     end
@@ -202,6 +272,10 @@ module Pos
 
     def closed_sessions
       @period.pos_sessions.closed
+    end
+
+    def period_cash_outs
+      GiftCardCashOut.joins(:pos_session).where(pos_sessions: { reporting_period_id: @period.id })
     end
   end
 end

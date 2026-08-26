@@ -8,6 +8,7 @@ module Pos
         Pos::OpenGate.for(store: current_store, register: @preferred_register, actor: current_user)
       end
       @open_session = cashier_target_session
+      @session_totals = Pos::SessionTotals.for(@open_session) if @open_session
     end
   end
 end
