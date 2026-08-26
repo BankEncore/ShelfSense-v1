@@ -121,6 +121,19 @@ module Authorization
       { key: "purchase_receipts.compensate", group_key: "purchase_receipts", name: "Authorize compensating adjustments when exact receipt reversal is unsafe", scope_type: "either" }
     ].freeze
 
+    PHASE10_PERMISSIONS = [
+      { key: "stored_value.view_activity", group_key: "stored_value", name: "View stored-value activity", scope_type: "either" },
+      { key: "stored_value.adjust", group_key: "stored_value", name: "Adjust stored-value accounts", scope_type: "either" },
+      { key: "stored_value.transfer", group_key: "stored_value", name: "Transfer stored-value accounts", scope_type: "either" },
+      { key: "stored_value.manage_adjustment_reasons", group_key: "stored_value", name: "Manage stored-value adjustment reasons", scope_type: "global" },
+      { key: "gift_cards.manage_programs", group_key: "gift_cards", name: "Manage gift-card programs", scope_type: "global" },
+      { key: "gift_cards.view", group_key: "gift_cards", name: "View gift cards", scope_type: "either" },
+      { key: "gift_cards.suspend", group_key: "gift_cards", name: "Suspend or reinstate gift cards", scope_type: "either" },
+      { key: "gift_cards.replace", group_key: "gift_cards", name: "Replace gift cards", scope_type: "either" },
+      { key: "gift_cards.associate_customer", group_key: "gift_cards", name: "Associate gift cards with customers", scope_type: "either" },
+      { key: "gift_cards.cash_out", group_key: "gift_cards", name: "Cash out gift cards", scope_type: "either" }
+    ].freeze
+
     PHASE9_PERMISSIONS = [
       { key: "product_forms.view", group_key: "product_forms", name: "View product forms", scope_type: "either" },
       { key: "product_forms.update", group_key: "product_forms", name: "Update product forms", scope_type: "global" },
@@ -134,7 +147,7 @@ module Authorization
     ].freeze
 
     PERMISSIONS = (
-      PHASE1_PERMISSIONS + PHASE2_PERMISSIONS + PHASE3_PERMISSIONS + PHASE4_PERMISSIONS + PHASE7_PERMISSIONS + PHASE9_PERMISSIONS
+      PHASE1_PERMISSIONS + PHASE2_PERMISSIONS + PHASE3_PERMISSIONS + PHASE4_PERMISSIONS + PHASE7_PERMISSIONS + PHASE9_PERMISSIONS + PHASE10_PERMISSIONS
     ).freeze
 
     STORE_MANAGER_PHASE2_VIEWS = %w[
@@ -153,6 +166,17 @@ module Authorization
       product_forms.view
       subject_schemes.view
       subject_headings.view
+    ].freeze
+
+    STORE_MANAGER_PHASE10 = %w[
+      stored_value.view_activity
+      stored_value.adjust
+      stored_value.transfer
+      gift_cards.view
+      gift_cards.suspend
+      gift_cards.replace
+      gift_cards.associate_customer
+      gift_cards.cash_out
     ].freeze
 
     STORE_MANAGER_PHASE3 = %w[
@@ -219,7 +243,7 @@ module Authorization
           registers.manage
           registers.deactivate
           audit_events.view
-        ] + STORE_MANAGER_PHASE2_VIEWS + STORE_MANAGER_PHASE3 + STORE_MANAGER_PHASE4 + STORE_MANAGER_PHASE7 + STORE_MANAGER_PHASE9_VIEWS
+        ] + STORE_MANAGER_PHASE2_VIEWS + STORE_MANAGER_PHASE3 + STORE_MANAGER_PHASE4 + STORE_MANAGER_PHASE7 + STORE_MANAGER_PHASE9_VIEWS + STORE_MANAGER_PHASE10
       },
       {
         key: "associate",

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_24_130000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_26_010000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -1180,6 +1180,65 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_24_130000) do
     t.check_constraint "rate_percent >= 0::numeric AND rate_percent <= 100::numeric", name: "store_taxes_rate_percent_range"
   end
 
+  create_table "stored_value_accounts", id: :uuid, default: nil, force: :cascade do |t|
+    t.string "account_type", null: false
+    t.bigint "balance_cents", default: 0, null: false
+    t.timestamptz "closed_at"
+    t.timestamptz "created_at", null: false
+    t.string "currency_code", limit: 3, null: false
+    t.uuid "customer_id"
+    t.integer "lock_version", default: 0, null: false
+    t.timestamptz "opened_at", null: false
+    t.string "status", default: "active", null: false
+    t.timestamptz "updated_at", null: false
+    t.index ["customer_id", "account_type"], name: "index_stored_value_accounts_one_open_per_customer_type", unique: true, where: "((customer_id IS NOT NULL) AND ((status)::text <> 'closed'::text))"
+    t.index ["customer_id"], name: "index_stored_value_accounts_on_customer_id"
+    t.check_constraint "(account_type::text = ANY (ARRAY['store_credit'::character varying, 'trade_credit'::character varying]::text[])) AND customer_id IS NOT NULL OR account_type::text = 'gift_card'::text AND customer_id IS NULL", name: "stored_value_accounts_customer_matches_type"
+    t.check_constraint "account_type::text = ANY (ARRAY['store_credit'::character varying, 'trade_credit'::character varying, 'gift_card'::character varying]::text[])", name: "stored_value_accounts_type_valid"
+    t.check_constraint "balance_cents >= 0", name: "stored_value_accounts_balance_nonnegative"
+    t.check_constraint "char_length(currency_code::text) = 3", name: "stored_value_accounts_currency_length"
+    t.check_constraint "status::text <> 'closed'::text AND closed_at IS NULL OR status::text = 'closed'::text AND closed_at IS NOT NULL AND balance_cents = 0", name: "stored_value_accounts_closed_consistency"
+    t.check_constraint "status::text = ANY (ARRAY['active'::character varying, 'suspended'::character varying, 'closed'::character varying]::text[])", name: "stored_value_accounts_status_valid"
+  end
+
+  create_table "stored_value_entries", id: :uuid, default: nil, force: :cascade do |t|
+    t.bigint "amount_cents", null: false
+    t.bigint "balance_after_cents", null: false
+    t.timestamptz "created_at", null: false
+    t.integer "entry_sequence", null: false
+    t.uuid "reversal_of_id"
+    t.uuid "stored_value_account_id", null: false
+    t.uuid "stored_value_operation_id", null: false
+    t.index ["reversal_of_id"], name: "index_stored_value_entries_on_reversal_of_id", unique: true, where: "(reversal_of_id IS NOT NULL)"
+    t.index ["stored_value_account_id"], name: "index_stored_value_entries_on_stored_value_account_id"
+    t.index ["stored_value_operation_id", "entry_sequence"], name: "index_stored_value_entries_on_operation_and_sequence", unique: true
+    t.check_constraint "amount_cents <> 0", name: "stored_value_entries_amount_nonzero"
+    t.check_constraint "balance_after_cents >= 0", name: "stored_value_entries_balance_after_nonnegative"
+    t.check_constraint "entry_sequence >= 0", name: "stored_value_entries_sequence_nonnegative"
+  end
+
+  create_table "stored_value_operations", id: :uuid, default: nil, force: :cascade do |t|
+    t.date "business_date", null: false
+    t.timestamptz "created_at", null: false
+    t.uuid "idempotency_operation_id", null: false
+    t.text "notes"
+    t.timestamptz "occurred_at", null: false
+    t.string "operation_type", null: false
+    t.uuid "performed_by_id", null: false
+    t.uuid "pos_session_id"
+    t.string "reason_code"
+    t.string "reason_name_snapshot"
+    t.uuid "reversal_of_id"
+    t.uuid "store_id", null: false
+    t.timestamptz "updated_at", null: false
+    t.index ["idempotency_operation_id"], name: "index_stored_value_operations_on_idempotency_operation_id", unique: true
+    t.index ["performed_by_id"], name: "index_stored_value_operations_on_performed_by_id"
+    t.index ["pos_session_id"], name: "index_stored_value_operations_on_pos_session_id"
+    t.index ["reversal_of_id"], name: "index_stored_value_operations_on_reversal_of_id", unique: true, where: "(reversal_of_id IS NOT NULL)"
+    t.index ["store_id"], name: "index_stored_value_operations_on_store_id"
+    t.check_constraint "operation_type::text = ANY (ARRAY['issue'::character varying, 'activate'::character varying, 'reload'::character varying, 'redeem'::character varying, 'refund'::character varying, 'cash_out'::character varying, 'transfer'::character varying, 'adjust'::character varying, 'reverse'::character varying]::text[])", name: "stored_value_operations_type_valid"
+  end
+
   create_table "stores", id: :uuid, default: nil, force: :cascade do |t|
     t.boolean "active", default: true, null: false
     t.string "city"
@@ -1511,6 +1570,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_24_130000) do
   add_foreign_key "store_tax_rules", "store_taxes"
   add_foreign_key "store_tax_rules", "tax_classes"
   add_foreign_key "store_taxes", "stores"
+  add_foreign_key "stored_value_accounts", "customers"
+  add_foreign_key "stored_value_entries", "stored_value_accounts"
+  add_foreign_key "stored_value_entries", "stored_value_entries", column: "reversal_of_id"
+  add_foreign_key "stored_value_entries", "stored_value_operations"
+  add_foreign_key "stored_value_operations", "idempotency_operations"
+  add_foreign_key "stored_value_operations", "pos_sessions"
+  add_foreign_key "stored_value_operations", "stored_value_operations", column: "reversal_of_id"
+  add_foreign_key "stored_value_operations", "stores"
+  add_foreign_key "stored_value_operations", "users", column: "performed_by_id"
   add_foreign_key "stores", "users", column: "deactivated_by_id"
   add_foreign_key "subject_headings", "merchandise_classes", column: "suggested_merchandise_class_id"
   add_foreign_key "subject_headings", "subject_schemes"
