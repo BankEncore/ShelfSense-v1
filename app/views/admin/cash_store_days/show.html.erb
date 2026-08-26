@@ -1,0 +1,81 @@
+<% content_for :title, "Store-day cash" %>
+<%= render "shared/page_header", title: "Store-day cash", subtitle: current_store.admin_label %>
+
+<%= form_with url: admin_cash_store_day_path, method: :get, class: "form" do %>
+  <div class="form-field">
+    <%= label_tag :business_date, "Business date" %>
+    <%= date_field_tag :business_date, @business_date.iso8601 %>
+  </div>
+  <%= submit_tag "Show", class: "btn" %>
+<% end %>
+
+<p>Status: <%= @report.status_labels.to_sentence %>. This report is not a close gate. Tomorrow can open on retained safe cash.</p>
+<p>Deposit in transit (cumulative ledger, not cash still in the store): <%= format_money_cents(@report.dit_balance_cents) %></p>
+<p>Retained on the store safe now: <%= format_money_cents(@report.retained_cents) %></p>
+
+<h2 class="section__title">Sessions</h2>
+<% session_rows = @report.sessions.map { |row|
+     [
+       row.register_label,
+       row.cashier_name,
+       row.closer_name.presence || "—",
+       row.manager_assisted ? "Yes" : "No",
+       format_money_cents(row.opening_float_cents),
+       format_money_cents(row.cash_payment_cents),
+       format_money_cents(row.cash_refund_cents),
+       format_money_cents(row.gift_card_cash_out_cents),
+       format_money_cents(row.expected_cents),
+       row.counted_cents.nil? ? "—" : format_money_cents(row.counted_cents),
+       row.variance_cents.nil? ? "—" : format_money_cents(row.variance_cents),
+       row.open ? "Open" : "Closed"
+     ]
+   } %>
+<%= render "shared/data_table",
+      headers: ["Register", "Cashier", "Closer", "Manager-assisted", "Opening float", "Cash in", "Cash refunds", "Gift-card cash-outs", "Expected", "Counted", "Variance", "Status"],
+      rows: session_rows %>
+
+<h2 class="section__title">Non-sale cash</h2>
+<p>Drops: <%= format_money_cents(@report.drop_cents) %>. Replenishments: <%= format_money_cents(@report.replenishment_cents) %>.</p>
+<% paid_in_rows = @report.paid_ins.map { |row| [ row.reason_name, row.count, format_money_cents(row.amount_cents) ] } %>
+<%= render "shared/data_table", headers: ["Paid-in reason", "Count", "Amount"], rows: paid_in_rows %>
+<% paid_out_rows = @report.paid_outs.map { |row| [ row.reason_name, row.count, format_money_cents(row.amount_cents) ] } %>
+<%= render "shared/data_table", headers: ["Paid-out reason", "Count", "Amount"], rows: paid_out_rows %>
+
+<h2 class="section__title">Safe</h2>
+<% if @report.latest_safe_count %>
+  <p>
+    Counted <%= format_money_cents(@report.safe_counted_cents) %>
+    against expected <%= format_money_cents(@report.safe_expected_cents) %>
+    (<%= format_money_cents(@report.safe_variance_cents) %> variance).
+  </p>
+<% else %>
+  <p>No accepted safe reconciliation count for this business date.</p>
+<% end %>
+
+<h2 class="section__title">Deposits for this date</h2>
+<% deposit_rows = @report.deposits.map { |row|
+     [
+       row.deposit.deposit_number,
+       format_money_cents(row.deposit.total_cents),
+       row.deposit.bag_reference.presence || "—",
+       row.reversed ? "Reversed" : "In transit",
+       link_to("View", admin_cash_deposit_path(row.deposit))
+     ]
+   } %>
+<%= render "shared/data_table",
+      headers: ["Number", "Amount", "Reference", "Status", ""],
+      rows: deposit_rows %>
+
+<h2 class="section__title">Reversals</h2>
+<% reversal_rows = @report.reversals.map { |operation|
+     [
+       operation.occurred_at.utc.iso8601,
+       operation.operation_type,
+       operation.notes.presence || "—"
+     ]
+   } %>
+<%= render "shared/data_table", headers: ["Occurred", "Type", "Notes"], rows: reversal_rows %>
+
+<% if @report.open_sessions.any? %>
+  <p>Open sessions remain. That is incomplete for this date; it does not block the next business date.</p>
+<% end %>

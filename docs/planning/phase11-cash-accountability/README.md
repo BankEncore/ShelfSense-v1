@@ -1,6 +1,6 @@
 # Phase 11 — Cash accountability
 
-Status: **Proposed** (11.1–11.3 not started). 11.0 packet is implementation authority. After Phase 10 stored value on `main`. Companions: [ADR-013](../../adr/ADR-013-append-only-facts.md), [ADR-021](../../adr/ADR-021-register-and-terminal-identity.md), and [ADR-025](../../adr/ADR-025-domain-owned-operational-ledgers.md).
+Status: **Implemented** on `main` (August 2026). Manual test plan executed. After Phase 10 stored value on `main`. Companions: [ADR-013](../../adr/ADR-013-append-only-facts.md), [ADR-021](../../adr/ADR-021-register-and-terminal-identity.md), and [ADR-025](../../adr/ADR-025-domain-owned-operational-ledgers.md). GitHub tracker: [milestone 6](https://github.com/BankEncore/ShelfSense-v1/milestone/6).
 
 The draft [phase-11-register-and-cash-management-spec.md](../../drafts/phase-11-register-and-cash-management-spec.md) is **superseded**. Do not implement from it.
 

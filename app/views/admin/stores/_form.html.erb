@@ -64,6 +64,21 @@
     </div>
   <% end %>
 
+  <%= render layout: "shared/form_section", locals: { title: "Cash thresholds", help: "Leave blank to inherit the organization default. Comparisons are inclusive (>=) on the absolute variance or paid-out amount." } do %>
+    <div class="form-field">
+      <%= form.label :cash_variance_note_threshold_cents, "Variance note threshold (cents)" %>
+      <%= form.number_field :cash_variance_note_threshold_cents, min: 0 %>
+    </div>
+    <div class="form-field">
+      <%= form.label :cash_variance_approval_threshold_cents, "Variance approval threshold (cents)" %>
+      <%= form.number_field :cash_variance_approval_threshold_cents, min: 0 %>
+    </div>
+    <div class="form-field">
+      <%= form.label :cash_paid_out_approval_threshold_cents, "Paid-out approval threshold (cents)" %>
+      <%= form.number_field :cash_paid_out_approval_threshold_cents, min: 0 %>
+    </div>
+  <% end %>
+
   <%= render layout: "shared/form_section", locals: { title: "Receipt messages", help: "Plain text only. Messages wrap to receipt width and are not a template language. Custom text is kept when you switch away from custom mode." } do %>
     <% settings = SystemSettings.current %>
     <div data-store-receipt-messages>

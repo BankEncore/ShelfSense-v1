@@ -135,6 +135,21 @@ module Authorization
       { key: "gift_cards.recover_print", group_key: "gift_cards", name: "Recover gift-card print", scope_type: "either" }
     ].freeze
 
+    PHASE11_PERMISSIONS = [
+      { key: "cash.initialize_safe", group_key: "cash", name: "Initialize store safe", scope_type: "either" },
+      { key: "cash.approve_initialize_safe", group_key: "cash", name: "Approve safe initialization", scope_type: "either" },
+      { key: "cash.paid_in", group_key: "cash", name: "Record paid-in", scope_type: "either" },
+      { key: "cash.paid_out", group_key: "cash", name: "Record paid-out", scope_type: "either" },
+      { key: "cash.approve_paid_out", group_key: "cash", name: "Approve paid-out", scope_type: "either" },
+      { key: "cash.move", group_key: "cash", name: "Move cash between safe and session", scope_type: "either" },
+      { key: "cash.view_expected_before_count", group_key: "cash", name: "View expected cash before count", scope_type: "either" },
+      { key: "cash.approve_variance", group_key: "cash", name: "Approve cash variance", scope_type: "either" },
+      { key: "cash.reconcile_safe", group_key: "cash", name: "Reconcile store safe", scope_type: "either" },
+      { key: "cash.prepare_deposit", group_key: "cash", name: "Prepare deposit", scope_type: "either" },
+      { key: "cash.reverse", group_key: "cash", name: "Reverse cash operation", scope_type: "either" },
+      { key: "pos.sessions.close_for_other", group_key: "pos", name: "Close another cashier's session", scope_type: "either" }
+    ].freeze
+
     PHASE9_PERMISSIONS = [
       { key: "product_forms.view", group_key: "product_forms", name: "View product forms", scope_type: "either" },
       { key: "product_forms.update", group_key: "product_forms", name: "Update product forms", scope_type: "global" },
@@ -148,7 +163,7 @@ module Authorization
     ].freeze
 
     PERMISSIONS = (
-      PHASE1_PERMISSIONS + PHASE2_PERMISSIONS + PHASE3_PERMISSIONS + PHASE4_PERMISSIONS + PHASE7_PERMISSIONS + PHASE9_PERMISSIONS + PHASE10_PERMISSIONS
+      PHASE1_PERMISSIONS + PHASE2_PERMISSIONS + PHASE3_PERMISSIONS + PHASE4_PERMISSIONS + PHASE7_PERMISSIONS + PHASE9_PERMISSIONS + PHASE10_PERMISSIONS + PHASE11_PERMISSIONS
     ).freeze
 
     STORE_MANAGER_PHASE2_VIEWS = %w[
@@ -179,6 +194,21 @@ module Authorization
       gift_cards.associate_customer
       gift_cards.cash_out
       gift_cards.recover_print
+    ].freeze
+
+    STORE_MANAGER_PHASE11 = %w[
+      cash.initialize_safe
+      cash.approve_initialize_safe
+      cash.paid_in
+      cash.paid_out
+      cash.approve_paid_out
+      cash.move
+      cash.view_expected_before_count
+      cash.approve_variance
+      cash.reconcile_safe
+      cash.prepare_deposit
+      cash.reverse
+      pos.sessions.close_for_other
     ].freeze
 
     STORE_MANAGER_PHASE3 = %w[
@@ -245,7 +275,7 @@ module Authorization
           registers.manage
           registers.deactivate
           audit_events.view
-        ] + STORE_MANAGER_PHASE2_VIEWS + STORE_MANAGER_PHASE3 + STORE_MANAGER_PHASE4 + STORE_MANAGER_PHASE7 + STORE_MANAGER_PHASE9_VIEWS + STORE_MANAGER_PHASE10
+        ] + STORE_MANAGER_PHASE2_VIEWS + STORE_MANAGER_PHASE3 + STORE_MANAGER_PHASE4 + STORE_MANAGER_PHASE7 + STORE_MANAGER_PHASE9_VIEWS + STORE_MANAGER_PHASE10 + STORE_MANAGER_PHASE11
       },
       {
         key: "associate",

@@ -1,6 +1,6 @@
 # Phase 11 — User stories
 
-Status: **Proposed**. GitHub-issue-ready stories for slices 11.0–11.3.
+Status: **Implemented** on `main`. GitHub-issue-ready stories for slices 11.0–11.3.
 
 ## 11.0 — Contract
 

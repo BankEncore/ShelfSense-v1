@@ -1,6 +1,8 @@
 # Phase 11 — Manual test plan
 
-Status: **Proposed**. Complements automated tests in [phase11-user-stories.md](phase11-user-stories.md). Register and print checks need a browser.
+Status: **Executed** (August 2026) on `phase-11-cash-accountability` before merge to `main`. Complements automated tests in [phase11-user-stories.md](phase11-user-stories.md). Register and print checks need a browser.
+
+Live Docker Register and admin checks covered: Register enter blocked until safe init; initialize without a POS session with a distinct `cash.approve_initialize_safe` actor (self-approval rejected); second initialize rejected; open with float below safe expected; paid-in, drop, replenish, and reverse; X report Non-sale cash; zero-variance safe recon with no reconciliation row; deposit prepare and reverse while in transit; store-day report listing that date’s deposits, cumulative DIT, incomplete open session, and no close gate. Concurrent last-cent exclusion, variance note/approval bands, manager-assisted close, gift-card cash-out available-cash, and ordinary Print receipt masking were covered by CI.
 
 Do not treat this as a substitute for CI.
 

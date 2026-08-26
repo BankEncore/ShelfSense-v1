@@ -1,0 +1,11 @@
+<% content_for :title, "Drop" %>
+
+<main class="pos-history">
+  <%= render "pos/shared/report_nav" %>
+  <h1>Drop</h1>
+  <p>Move cash from this open session to the store safe. This is not session close.</p>
+  <%= render "pos/cash_activities/form",
+        url: pos_cash_drops_path,
+        submit: "Record drop",
+        amount_value: params[:amount] %>
+</main>

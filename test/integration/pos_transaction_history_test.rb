@@ -106,7 +106,7 @@ class PosTransactionHistoryTest < ActionDispatch::IntegrationTest
 
   test "history list shows signed net and detail offers Return items without opening a session" do
     transaction = complete_cash_sale!
-    Pos::CloseSession.call(
+    pos_close_session!(
       session: @context[:session],
       actor: @actor,
       expected_lock_version: @context[:session].lock_version,

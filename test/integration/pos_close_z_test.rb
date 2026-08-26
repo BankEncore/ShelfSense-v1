@@ -119,10 +119,10 @@ class PosCloseZTest < ActionDispatch::IntegrationTest
     post pos_register_close_path, params: { session_id: session_record.id }
     follow_redirect!
 
-    post pos_session_close_path(session_record), params: {
+    post pos_session_close_path(session_record), params: pos_close_http_params(
       closing_count: "0.00",
       expected_lock_version: session_record.lock_version
-    }
+    )
     assert_redirected_to pos_session_closed_path(session_record)
     follow_redirect!
     assert_response :success
@@ -175,7 +175,7 @@ class PosCloseZTest < ActionDispatch::IntegrationTest
   test "already closed close post redirects without a second audit" do
     complete_http_sale
     session_record = PosSession.open.find_by!(register: @register)
-    Pos::CloseSession.call(
+    pos_close_session!(
       session: session_record,
       actor: @actor,
       expected_lock_version: session_record.lock_version,
@@ -207,7 +207,7 @@ class PosCloseZTest < ActionDispatch::IntegrationTest
   test "leave period open returns to the enter gate for that register" do
     complete_http_sale
     session_record = PosSession.open.find_by!(register: @register)
-    Pos::CloseSession.call(
+    pos_close_session!(
       session: session_record,
       actor: @actor,
       expected_lock_version: session_record.lock_version,
@@ -336,7 +336,7 @@ class PosCloseZTest < ActionDispatch::IntegrationTest
   test "second cashier cannot access another cashier close flow but may finalize z" do
     complete_http_sale
     session_record = PosSession.open.find_by!(register: @register)
-    Pos::CloseSession.call(
+    pos_close_session!(
       session: session_record,
       actor: @actor,
       expected_lock_version: session_record.lock_version,
@@ -374,7 +374,7 @@ class PosCloseZTest < ActionDispatch::IntegrationTest
   test "wrong store cannot access close or z" do
     complete_http_sale
     session_record = PosSession.open.find_by!(register: @register)
-    Pos::CloseSession.call(
+    pos_close_session!(
       session: session_record,
       actor: @actor,
       expected_lock_version: session_record.lock_version,
@@ -405,7 +405,7 @@ class PosCloseZTest < ActionDispatch::IntegrationTest
   test "finalized z is read-only persisted snapshots" do
     complete_http_sale
     session_record = PosSession.open.find_by!(register: @register)
-    Pos::CloseSession.call(
+    pos_close_session!(
       session: session_record,
       actor: @actor,
       expected_lock_version: session_record.lock_version,
@@ -428,7 +428,7 @@ class PosCloseZTest < ActionDispatch::IntegrationTest
   test "stale close for session A does not cancel session B" do
     complete_http_sale
     session_a = PosSession.open.find_by!(register: @register)
-    Pos::CloseSession.call(
+    pos_close_session!(
       session: session_a,
       actor: @actor,
       expected_lock_version: session_a.lock_version,
@@ -471,7 +471,7 @@ class PosCloseZTest < ActionDispatch::IntegrationTest
   test "closed session shows view z after the period is finalized" do
     complete_http_sale
     session_record = PosSession.open.find_by!(register: @register)
-    Pos::CloseSession.call(
+    pos_close_session!(
       session: session_record,
       actor: @actor,
       expected_lock_version: session_record.lock_version,

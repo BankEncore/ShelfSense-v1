@@ -122,7 +122,12 @@ module Pos
       return @session.closing_expected_cash_cents if @session.closed?
 
       @session.opening_float_cents + cash_payment_cents - cash_refund_cents -
-        gift_card_cash_out_cents + gift_card_cash_out_reversal_cents
+        gift_card_cash_out_cents + gift_card_cash_out_reversal_cents +
+        cash_movement_cents
+    end
+
+    def available_cash_cents
+      expected_cash_cents
     end
 
     def stored_value_issuance_cents
@@ -143,6 +148,18 @@ module Pos
 
     def gift_card_cash_out_reversal_cents
       GiftCardCashOut.reversals.where(pos_session_id: @session.id).sum(:amount_cents)
+    end
+
+    def cash_movement_cents
+      movements = CashEntry.joins(:cash_operation)
+                           .where(pos_session_id: @session.id)
+                           .where(cash_operations: { operation_type: %w[paid_in paid_out reverse] })
+                           .sum(:amount_cents)
+      transfers = CashEntry.joins(cash_operation: :cash_transfer)
+                           .where(pos_session_id: @session.id)
+                           .where(cash_transfers: { transfer_type: %w[drop replenishment] })
+                           .sum(:amount_cents)
+      movements + transfers
     end
 
     def gift_card_cash_out_count

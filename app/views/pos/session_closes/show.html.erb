@@ -27,6 +27,30 @@
             autofocus: true,
             class: "pos-close__field" %>
     </div>
+    <div class="form-field">
+      <label for="variance_reason_code">Over/short reason (required if counted cash differs)</label>
+      <%= select_tag :variance_reason_code,
+            options_from_collection_for_select(@variance_reasons, :code, :name, params[:variance_reason_code]),
+            include_blank: "None" %>
+    </div>
+    <div class="form-field">
+      <label for="variance_notes">Over/short note</label>
+      <%= text_field_tag :variance_notes, params[:variance_notes], autocomplete: "off" %>
+    </div>
+    <% if @session_record.cashier_user_id != current_user.id %>
+      <div class="form-field">
+        <label for="close_reason_code">Reason for closing another cashier's session</label>
+        <%= text_field_tag :close_reason_code, params[:close_reason_code], required: true, autocomplete: "off" %>
+      </div>
+    <% end %>
+    <div class="form-field">
+      <label for="approver_username">Approver username (material over/short)</label>
+      <%= text_field_tag :approver_username, params[:approver_username], autocomplete: "off" %>
+    </div>
+    <div class="form-field">
+      <label for="approver_password">Approver password</label>
+      <%= password_field_tag :approver_password, nil, autocomplete: "current-password" %>
+    </div>
     <div class="pos-close__actions">
       <%= submit_tag "Close session", class: "btn" %>
     </div>

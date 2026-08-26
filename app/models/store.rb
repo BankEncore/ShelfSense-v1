@@ -8,6 +8,9 @@ class Store < ApplicationRecord
   has_many :pos_sessions, dependent: :restrict_with_exception
   has_many :pos_transactions, dependent: :restrict_with_exception
   has_many :role_assignments, dependent: :restrict_with_exception
+  has_many :cash_locations, dependent: :restrict_with_exception
+
+  after_create :ensure_cash_locations!
 
   RECEIPT_MODES = %w[inherit custom none].freeze
   RECEIPT_MESSAGE_LIMIT = 500
@@ -26,6 +29,9 @@ class Store < ApplicationRecord
   validates :code, uniqueness: { case_sensitive: false }
   validate :store_number_immutable_after_receipts, on: :update
   validate :cannot_deactivate_with_open_pos_context, if: :deactivating?
+  validates :cash_variance_note_threshold_cents, :cash_variance_approval_threshold_cents,
+            :cash_paid_out_approval_threshold_cents,
+            numericality: { only_integer: true, greater_than_or_equal_to: 0 }, allow_nil: true
 
   scope :active, -> { where(active: true) }
   scope :admin_ordered, -> { order(:name) }
@@ -77,6 +83,10 @@ class Store < ApplicationRecord
     return unless store_number_locked?
 
     errors.add(:store_number, "cannot change after a receipt has been issued")
+  end
+
+  def ensure_cash_locations!
+    Cash::Locations.ensure!(self)
   end
 
   def deactivating?

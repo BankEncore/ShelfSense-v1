@@ -174,7 +174,7 @@ class PosReturnItemsTest < ActionDispatch::IntegrationTest
     sale = complete_cash_sale!
     get pos_transaction_return_items_path(sale)
     assert_response :success
-    Pos::CloseSession.call(
+    pos_close_session!(
       session: @context[:session],
       actor: @actor,
       expected_lock_version: @context[:session].lock_version,

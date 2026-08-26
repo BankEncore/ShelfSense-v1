@@ -1,0 +1,27 @@
+<% content_for :title, "Initialize store safe" %>
+<%= render "shared/page_header", title: "Initialize store safe" %>
+
+<% if @feedback.present? %>
+  <p role="alert"><%= @feedback %></p>
+<% end %>
+
+<%= form_with url: admin_cash_safe_path, method: :post, class: "form" do %>
+  <%= hidden_field_tag :idempotency_key, params[:idempotency_key].presence || SecureRandom.uuid_v7 %>
+  <div class="form-field">
+    <%= label_tag :count, "Counted cash" %>
+    <%= text_field_tag :count, params[:count], required: true, inputmode: "decimal", autocomplete: "off" %>
+  </div>
+  <div class="form-field">
+    <%= label_tag :notes, "Notes" %>
+    <%= text_area_tag :notes, params[:notes], rows: 3 %>
+  </div>
+  <div class="form-field">
+    <%= label_tag :approver_username, "Approver username" %>
+    <%= text_field_tag :approver_username, params[:approver_username], required: true, autocomplete: "off" %>
+  </div>
+  <div class="form-field">
+    <%= label_tag :approver_password, "Approver password" %>
+    <%= password_field_tag :approver_password, nil, required: true, autocomplete: "current-password" %>
+  </div>
+  <%= submit_tag "Initialize safe", class: "btn" %>
+<% end %>

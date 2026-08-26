@@ -1,0 +1,13 @@
+<% content_for :title, "Replenish" %>
+
+<main class="pos-history">
+  <%= render "pos/shared/report_nav" %>
+  <h1>Replenish</h1>
+  <p>Move cash from the store safe to an open Register session.</p>
+  <%= render "pos/cash_activities/form",
+        url: pos_cash_replenishments_path,
+        submit: "Record replenishment",
+        amount_value: params[:amount],
+        sessions: @open_sessions,
+        session_value: @session_record&.id %>
+</main>

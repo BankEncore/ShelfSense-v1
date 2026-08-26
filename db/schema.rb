@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_26_080000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_26_220000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -107,6 +107,209 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_080000) do
     t.string "provider", null: false
     t.timestamptz "updated_at", null: false
     t.index ["lookup_key"], name: "index_bibliographic_lookup_cache_on_lookup_key", unique: true
+  end
+
+  create_table "cash_activity_reasons", id: :uuid, default: nil, force: :cascade do |t|
+    t.boolean "active", default: true, null: false
+    t.string "code", null: false
+    t.timestamptz "created_at", null: false
+    t.string "name", null: false
+    t.boolean "notes_required", default: false, null: false
+    t.string "operation_kind", null: false
+    t.timestamptz "updated_at", null: false
+    t.index ["code"], name: "index_cash_activity_reasons_on_code", unique: true
+    t.check_constraint "operation_kind::text = ANY (ARRAY['paid_in'::character varying, 'paid_out'::character varying, 'over'::character varying, 'short'::character varying, 'reverse'::character varying]::text[])", name: "cash_activity_reasons_kind_valid"
+  end
+
+  create_table "cash_count_denomination_lines", id: :uuid, default: nil, force: :cascade do |t|
+    t.uuid "cash_count_id", null: false
+    t.timestamptz "created_at", null: false
+    t.bigint "denomination_cents", null: false
+    t.integer "quantity", null: false
+    t.index ["cash_count_id"], name: "index_cash_count_denomination_lines_on_cash_count_id"
+    t.check_constraint "denomination_cents > 0", name: "cash_count_denomination_lines_denomination_positive"
+    t.check_constraint "quantity > 0", name: "cash_count_denomination_lines_quantity_positive"
+  end
+
+  create_table "cash_counts", id: :uuid, default: nil, force: :cascade do |t|
+    t.date "business_date"
+    t.uuid "cash_location_id"
+    t.timestamptz "created_at", null: false
+    t.bigint "expected_cents_snapshot"
+    t.integer "location_lock_version_snapshot"
+    t.uuid "pos_session_id"
+    t.string "purpose", null: false
+    t.string "status", null: false
+    t.uuid "superseded_count_id"
+    t.bigint "total_cents", null: false
+    t.index ["cash_location_id", "purpose", "business_date"], name: "index_cash_counts_on_location_purpose_date"
+    t.index ["cash_location_id"], name: "index_cash_counts_on_cash_location_id"
+    t.index ["pos_session_id"], name: "index_cash_counts_on_pos_session_id"
+    t.check_constraint "purpose::text = ANY (ARRAY['session_open'::character varying, 'session_close'::character varying, 'safe_reconciliation'::character varying, 'deposit'::character varying, 'safe_initialization'::character varying]::text[])", name: "cash_counts_purpose_valid"
+    t.check_constraint "status::text = ANY (ARRAY['discarded'::character varying, 'accepted'::character varying]::text[])", name: "cash_counts_status_valid"
+    t.check_constraint "total_cents >= 0", name: "cash_counts_total_nonnegative"
+  end
+
+  create_table "cash_deposits", id: :uuid, default: nil, force: :cascade do |t|
+    t.uuid "approved_by_id"
+    t.string "bag_reference"
+    t.date "business_date", null: false
+    t.uuid "cash_count_id", null: false
+    t.uuid "cash_operation_id", null: false
+    t.timestamptz "created_at", null: false
+    t.integer "deposit_number", null: false
+    t.uuid "prepared_by_id", null: false
+    t.uuid "store_id", null: false
+    t.bigint "total_cents", null: false
+    t.timestamptz "updated_at", null: false
+    t.index ["cash_count_id"], name: "index_cash_deposits_on_cash_count_id"
+    t.index ["cash_operation_id"], name: "index_cash_deposits_on_cash_operation_id", unique: true
+    t.index ["store_id", "business_date", "deposit_number"], name: "index_cash_deposits_on_store_date_number", unique: true
+    t.index ["store_id"], name: "index_cash_deposits_on_store_id"
+    t.check_constraint "deposit_number > 0", name: "cash_deposits_number_positive"
+    t.check_constraint "total_cents > 0", name: "cash_deposits_total_positive"
+  end
+
+  create_table "cash_entries", id: :uuid, default: nil, force: :cascade do |t|
+    t.bigint "amount_cents", null: false
+    t.bigint "balance_after_cents", null: false
+    t.uuid "cash_location_id"
+    t.uuid "cash_operation_id", null: false
+    t.timestamptz "created_at", null: false
+    t.integer "entry_sequence", null: false
+    t.uuid "pos_session_id"
+    t.uuid "reversal_of_id"
+    t.index ["cash_location_id"], name: "index_cash_entries_on_cash_location_id"
+    t.index ["cash_operation_id", "entry_sequence"], name: "index_cash_entries_on_operation_and_sequence", unique: true
+    t.index ["pos_session_id"], name: "index_cash_entries_on_pos_session_id"
+    t.index ["reversal_of_id"], name: "index_cash_entries_on_reversal_of_id", unique: true, where: "(reversal_of_id IS NOT NULL)"
+    t.check_constraint "amount_cents <> 0", name: "cash_entries_amount_nonzero"
+    t.check_constraint "balance_after_cents >= 0", name: "cash_entries_balance_after_nonnegative"
+    t.check_constraint "entry_sequence >= 0", name: "cash_entries_sequence_nonnegative"
+    t.check_constraint "pos_session_id IS NOT NULL AND cash_location_id IS NULL OR pos_session_id IS NULL AND cash_location_id IS NOT NULL", name: "cash_entries_target_xor"
+  end
+
+  create_table "cash_locations", id: :uuid, default: nil, force: :cascade do |t|
+    t.timestamptz "created_at", null: false
+    t.bigint "expected_balance_cents", default: 0, null: false
+    t.timestamptz "initialized_at"
+    t.string "location_type", null: false
+    t.integer "lock_version", default: 0, null: false
+    t.uuid "store_id", null: false
+    t.timestamptz "updated_at", null: false
+    t.index ["store_id"], name: "index_cash_locations_one_dit_per_store", unique: true, where: "((location_type)::text = 'deposit_in_transit'::text)"
+    t.index ["store_id"], name: "index_cash_locations_one_safe_per_store", unique: true, where: "((location_type)::text = 'safe'::text)"
+    t.check_constraint "expected_balance_cents >= 0", name: "cash_locations_balance_nonnegative"
+    t.check_constraint "location_type::text = ANY (ARRAY['safe'::character varying, 'deposit_in_transit'::character varying]::text[])", name: "cash_locations_type_valid"
+  end
+
+  create_table "cash_operations", id: :uuid, default: nil, force: :cascade do |t|
+    t.uuid "approved_by_id"
+    t.date "business_date", null: false
+    t.timestamptz "created_at", null: false
+    t.uuid "idempotency_operation_id", null: false
+    t.text "notes"
+    t.timestamptz "occurred_at", null: false
+    t.string "operation_type", null: false
+    t.uuid "performed_by_id", null: false
+    t.uuid "pos_session_id"
+    t.string "reason_code"
+    t.string "reason_name_snapshot"
+    t.uuid "reversal_of_id"
+    t.uuid "store_id", null: false
+    t.timestamptz "updated_at", null: false
+    t.index ["approved_by_id"], name: "index_cash_operations_on_approved_by_id"
+    t.index ["idempotency_operation_id"], name: "index_cash_operations_on_idempotency_operation_id", unique: true
+    t.index ["performed_by_id"], name: "index_cash_operations_on_performed_by_id"
+    t.index ["pos_session_id"], name: "index_cash_operations_on_pos_session_id"
+    t.index ["reversal_of_id"], name: "index_cash_operations_on_reversal_of_id", unique: true, where: "(reversal_of_id IS NOT NULL)"
+    t.index ["store_id"], name: "index_cash_operations_on_store_id"
+    t.check_constraint "approved_by_id IS NULL OR approved_by_id <> performed_by_id", name: "cash_operations_approver_differs"
+    t.check_constraint "operation_type::text = ANY (ARRAY['initialize_safe'::character varying, 'transfer'::character varying, 'paid_in'::character varying, 'paid_out'::character varying, 'reconcile'::character varying, 'reverse'::character varying]::text[])", name: "cash_operations_type_valid"
+  end
+
+  create_table "cash_paid_ins", id: :uuid, default: nil, force: :cascade do |t|
+    t.bigint "amount_cents", null: false
+    t.uuid "cash_operation_id", null: false
+    t.timestamptz "created_at", null: false
+    t.text "notes"
+    t.uuid "pos_session_id", null: false
+    t.string "reason_code", null: false
+    t.string "reason_name_snapshot", null: false
+    t.timestamptz "updated_at", null: false
+    t.index ["cash_operation_id"], name: "index_cash_paid_ins_on_cash_operation_id", unique: true
+    t.index ["pos_session_id"], name: "index_cash_paid_ins_on_pos_session_id"
+    t.check_constraint "amount_cents > 0", name: "cash_paid_ins_amount_positive"
+  end
+
+  create_table "cash_paid_outs", id: :uuid, default: nil, force: :cascade do |t|
+    t.bigint "amount_cents", null: false
+    t.uuid "cash_operation_id", null: false
+    t.timestamptz "created_at", null: false
+    t.text "notes"
+    t.uuid "pos_session_id", null: false
+    t.string "reason_code", null: false
+    t.string "reason_name_snapshot", null: false
+    t.timestamptz "updated_at", null: false
+    t.index ["cash_operation_id"], name: "index_cash_paid_outs_on_cash_operation_id", unique: true
+    t.index ["pos_session_id"], name: "index_cash_paid_outs_on_pos_session_id"
+    t.check_constraint "amount_cents > 0", name: "cash_paid_outs_amount_positive"
+  end
+
+  create_table "cash_reconciliations", id: :uuid, default: nil, force: :cascade do |t|
+    t.uuid "cash_count_id", null: false
+    t.uuid "cash_location_id"
+    t.uuid "cash_operation_id", null: false
+    t.bigint "counted_cents", null: false
+    t.timestamptz "created_at", null: false
+    t.string "direction", null: false
+    t.bigint "expected_cents", null: false
+    t.uuid "pos_session_id"
+    t.timestamptz "updated_at", null: false
+    t.bigint "variance_cents", null: false
+    t.index ["cash_count_id"], name: "index_cash_reconciliations_on_cash_count_id"
+    t.index ["cash_location_id"], name: "index_cash_reconciliations_on_cash_location_id"
+    t.index ["cash_operation_id"], name: "index_cash_reconciliations_on_cash_operation_id", unique: true
+    t.index ["pos_session_id"], name: "index_cash_reconciliations_on_pos_session_id"
+    t.check_constraint "counted_cents >= 0", name: "cash_reconciliations_counted_nonnegative"
+    t.check_constraint "direction::text = ANY (ARRAY['over'::character varying, 'short'::character varying]::text[])", name: "cash_reconciliations_direction_valid"
+    t.check_constraint "pos_session_id IS NOT NULL AND cash_location_id IS NULL OR pos_session_id IS NULL AND cash_location_id IS NOT NULL", name: "cash_reconciliations_target_xor"
+    t.check_constraint "variance_cents <> 0", name: "cash_reconciliations_variance_nonzero"
+    t.check_constraint "variance_cents = (counted_cents - expected_cents)", name: "cash_reconciliations_variance_matches"
+  end
+
+  create_table "cash_safe_initializations", id: :uuid, default: nil, force: :cascade do |t|
+    t.uuid "cash_count_id", null: false
+    t.uuid "cash_location_id", null: false
+    t.uuid "cash_operation_id", null: false
+    t.bigint "counted_cents", null: false
+    t.timestamptz "created_at", null: false
+    t.text "notes"
+    t.timestamptz "updated_at", null: false
+    t.index ["cash_location_id"], name: "index_cash_safe_initializations_on_cash_location_id", unique: true
+    t.index ["cash_operation_id"], name: "index_cash_safe_initializations_on_cash_operation_id", unique: true
+    t.check_constraint "counted_cents >= 0", name: "cash_safe_initializations_counted_nonnegative"
+  end
+
+  create_table "cash_transfers", id: :uuid, default: nil, force: :cascade do |t|
+    t.bigint "amount_cents", null: false
+    t.uuid "cash_operation_id", null: false
+    t.timestamptz "created_at", null: false
+    t.uuid "destination_cash_location_id"
+    t.uuid "destination_pos_session_id"
+    t.uuid "source_cash_location_id"
+    t.uuid "source_pos_session_id"
+    t.string "transfer_type", null: false
+    t.timestamptz "updated_at", null: false
+    t.index ["cash_operation_id"], name: "index_cash_transfers_on_cash_operation_id", unique: true
+    t.index ["destination_cash_location_id"], name: "index_cash_transfers_on_destination_cash_location_id"
+    t.index ["destination_pos_session_id"], name: "index_cash_transfers_on_destination_pos_session_id"
+    t.index ["source_cash_location_id"], name: "index_cash_transfers_on_source_cash_location_id"
+    t.index ["source_pos_session_id"], name: "index_cash_transfers_on_source_pos_session_id"
+    t.check_constraint "amount_cents > 0", name: "cash_transfers_amount_positive"
+    t.check_constraint "destination_pos_session_id IS NOT NULL AND destination_cash_location_id IS NULL OR destination_pos_session_id IS NULL AND destination_cash_location_id IS NOT NULL", name: "cash_transfers_destination_xor"
+    t.check_constraint "source_pos_session_id IS NOT NULL AND source_cash_location_id IS NULL OR source_pos_session_id IS NULL AND source_cash_location_id IS NOT NULL", name: "cash_transfers_source_xor"
+    t.check_constraint "transfer_type::text = ANY (ARRAY['opening_float'::character varying, 'drop'::character varying, 'replenishment'::character varying, 'session_close'::character varying, 'deposit'::character varying]::text[])", name: "cash_transfers_type_valid"
   end
 
   create_table "customer_request_allocations", id: :uuid, default: nil, force: :cascade do |t|
@@ -617,6 +820,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_080000) do
     t.string "action_type", null: false
     t.string "approved_by_name_snapshot"
     t.uuid "approved_by_user_id"
+    t.uuid "cash_paid_out_id"
     t.timestamptz "created_at", null: false
     t.timestamptz "executed_at", null: false
     t.string "fingerprint_schema_version", null: false
@@ -633,14 +837,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_080000) do
     t.text "reason_note"
     t.timestamptz "updated_at", null: false
     t.index ["approved_by_user_id"], name: "index_pos_controlled_actions_on_approved_by_user_id"
+    t.index ["cash_paid_out_id"], name: "index_pos_controlled_actions_on_paid_out", unique: true, where: "(cash_paid_out_id IS NOT NULL)"
     t.index ["gift_card_cash_out_id"], name: "index_pos_controlled_actions_on_cash_out", unique: true, where: "(gift_card_cash_out_id IS NOT NULL)"
     t.index ["performed_by_user_id"], name: "index_pos_controlled_actions_on_performed_by_user_id"
     t.index ["pos_transaction_id", "action_type"], name: "index_pos_controlled_actions_one_post_void", unique: true, where: "((action_type)::text = 'post_void'::text)"
     t.index ["pos_transaction_id"], name: "index_pos_controlled_actions_on_pos_transaction_id"
     t.index ["pos_transaction_line_id", "action_type"], name: "index_pos_controlled_actions_effective_line", unique: true, where: "(pos_transaction_line_id IS NOT NULL)"
     t.index ["pos_transaction_line_id"], name: "index_pos_controlled_actions_on_pos_transaction_line_id"
-    t.check_constraint "action_type::text = 'post_void'::text AND pos_transaction_line_id IS NULL AND pos_transaction_id IS NOT NULL AND gift_card_cash_out_id IS NULL OR action_type::text = 'gift_card_cash_out'::text AND pos_transaction_line_id IS NULL AND pos_transaction_id IS NULL AND gift_card_cash_out_id IS NOT NULL OR (action_type::text <> ALL (ARRAY['post_void'::character varying, 'gift_card_cash_out'::character varying]::text[])) AND pos_transaction_line_id IS NOT NULL AND pos_transaction_id IS NOT NULL AND gift_card_cash_out_id IS NULL", name: "pos_controlled_actions_line_scope"
-    t.check_constraint "action_type::text = ANY (ARRAY['price_override'::character varying, 'line_discount'::character varying, 'tax_class_override'::character varying, 'unlinked_return'::character varying, 'post_void'::character varying, 'gift_card_cash_out'::character varying]::text[])", name: "pos_controlled_actions_type_valid"
+    t.check_constraint "action_type::text = 'post_void'::text AND pos_transaction_line_id IS NULL AND pos_transaction_id IS NOT NULL AND gift_card_cash_out_id IS NULL AND cash_paid_out_id IS NULL OR action_type::text = 'gift_card_cash_out'::text AND pos_transaction_line_id IS NULL AND pos_transaction_id IS NULL AND gift_card_cash_out_id IS NOT NULL AND cash_paid_out_id IS NULL OR action_type::text = 'cash_paid_out'::text AND pos_transaction_line_id IS NULL AND pos_transaction_id IS NULL AND gift_card_cash_out_id IS NULL AND cash_paid_out_id IS NOT NULL OR (action_type::text <> ALL (ARRAY['post_void'::character varying, 'gift_card_cash_out'::character varying, 'cash_paid_out'::character varying]::text[])) AND pos_transaction_line_id IS NOT NULL AND pos_transaction_id IS NOT NULL AND gift_card_cash_out_id IS NULL AND cash_paid_out_id IS NULL", name: "pos_controlled_actions_line_scope"
+    t.check_constraint "action_type::text = ANY (ARRAY['price_override'::character varying, 'line_discount'::character varying, 'tax_class_override'::character varying, 'unlinked_return'::character varying, 'post_void'::character varying, 'gift_card_cash_out'::character varying, 'cash_paid_out'::character varying]::text[])", name: "pos_controlled_actions_type_valid"
     t.check_constraint "approved_by_user_id IS NULL OR approved_by_user_id <> performed_by_user_id", name: "pos_controlled_actions_approver_not_performer"
     t.check_constraint "policy_result::text = 'approval_required'::text AND approved_by_user_id IS NOT NULL AND approved_by_name_snapshot IS NOT NULL OR policy_result::text = 'direct'::text AND approved_by_user_id IS NULL AND approved_by_name_snapshot IS NULL", name: "pos_controlled_actions_approver_matches_policy"
     t.check_constraint "policy_result::text = ANY (ARRAY['direct'::character varying::text, 'approval_required'::character varying::text])", name: "pos_controlled_actions_policy_valid"
@@ -785,7 +990,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_080000) do
 
   create_table "pos_sessions", id: :uuid, default: nil, force: :cascade do |t|
     t.uuid "cashier_user_id", null: false
+    t.string "close_reason_code"
+    t.string "close_reason_name_snapshot"
     t.timestamptz "closed_at"
+    t.uuid "closed_by_user_id"
     t.bigint "closing_count_cents"
     t.bigint "closing_expected_cash_cents"
     t.bigint "closing_variance_cents"
@@ -799,6 +1007,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_080000) do
     t.uuid "store_id", null: false
     t.timestamptz "updated_at", null: false
     t.index ["cashier_user_id"], name: "index_pos_sessions_on_cashier_user_id"
+    t.index ["closed_by_user_id"], name: "index_pos_sessions_on_closed_by_user_id"
     t.index ["register_id"], name: "index_pos_sessions_on_register_id"
     t.index ["register_id"], name: "index_pos_sessions_one_open_per_register", unique: true, where: "((status)::text = 'open'::text)"
     t.index ["reporting_period_id"], name: "index_pos_sessions_on_reporting_period_id"
@@ -1495,6 +1704,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_080000) do
 
   create_table "stores", id: :uuid, default: nil, force: :cascade do |t|
     t.boolean "active", default: true, null: false
+    t.bigint "cash_paid_out_approval_threshold_cents"
+    t.bigint "cash_variance_approval_threshold_cents"
+    t.bigint "cash_variance_note_threshold_cents"
     t.string "city"
     t.string "code", null: false
     t.string "country_code", limit: 2, null: false
@@ -1519,6 +1731,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_080000) do
     t.timestamptz "updated_at", null: false
     t.index "lower((code)::text)", name: "index_stores_on_lower_code", unique: true
     t.index ["store_number"], name: "index_stores_on_store_number", unique: true
+    t.check_constraint "cash_paid_out_approval_threshold_cents IS NULL OR cash_paid_out_approval_threshold_cents >= 0", name: "stores_cash_paid_out_threshold_nonnegative"
+    t.check_constraint "cash_variance_approval_threshold_cents IS NULL OR cash_variance_approval_threshold_cents >= 0", name: "stores_cash_approval_threshold_nonnegative"
+    t.check_constraint "cash_variance_note_threshold_cents IS NULL OR cash_variance_note_threshold_cents >= 0", name: "stores_cash_note_threshold_nonnegative"
     t.check_constraint "receipt_footer_mode::text <> 'custom'::text OR receipt_footer IS NOT NULL AND length(btrim(receipt_footer)) > 0", name: "stores_receipt_footer_custom_text"
     t.check_constraint "receipt_footer_mode::text = ANY (ARRAY['inherit'::character varying::text, 'custom'::character varying::text, 'none'::character varying::text])", name: "stores_receipt_footer_mode_valid"
     t.check_constraint "receipt_header_mode::text <> 'custom'::text OR receipt_header IS NOT NULL AND length(btrim(receipt_header)) > 0", name: "stores_receipt_header_custom_text"
@@ -1594,6 +1809,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_080000) do
 
   create_table "system_settings", id: :uuid, default: nil, force: :cascade do |t|
     t.string "base_currency_code", limit: 3, null: false
+    t.bigint "cash_paid_out_approval_threshold_cents", default: 5000, null: false
+    t.bigint "cash_variance_approval_threshold_cents", default: 1000, null: false
+    t.bigint "cash_variance_note_threshold_cents", default: 100, null: false
     t.timestamptz "created_at", null: false
     t.string "default_country_code", limit: 2, null: false
     t.integer "default_customer_reservation_expiration_days", limit: 2, default: 7, null: false
@@ -1612,6 +1830,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_080000) do
     t.bigint "stored_value_adjust_credit_approval_threshold_cents", default: 5000, null: false
     t.timestamptz "updated_at", null: false
     t.index ["singleton_key"], name: "index_system_settings_on_singleton_key", unique: true
+    t.check_constraint "cash_paid_out_approval_threshold_cents >= 0", name: "system_settings_cash_paid_out_threshold_nonnegative"
+    t.check_constraint "cash_variance_approval_threshold_cents >= 0", name: "system_settings_cash_approval_threshold_nonnegative"
+    t.check_constraint "cash_variance_note_threshold_cents >= 0", name: "system_settings_cash_note_threshold_nonnegative"
     t.check_constraint "default_customer_reservation_expiration_days > 0", name: "system_settings_reservation_days_positive"
     t.check_constraint "default_supplier_cancellation_days >= 0", name: "system_settings_supplier_cancellation_days_nonnegative"
     t.check_constraint "fiscal_year_start_month >= 1 AND fiscal_year_start_month <= 12", name: "system_settings_fiscal_year_start_month_range"
@@ -1698,6 +1919,42 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_080000) do
   add_foreign_key "audit_events", "stores"
   add_foreign_key "audit_events", "user_sessions"
   add_foreign_key "audit_events", "users", column: "actor_user_id"
+  add_foreign_key "cash_count_denomination_lines", "cash_counts"
+  add_foreign_key "cash_counts", "cash_counts", column: "superseded_count_id"
+  add_foreign_key "cash_counts", "cash_locations"
+  add_foreign_key "cash_counts", "pos_sessions"
+  add_foreign_key "cash_deposits", "cash_counts"
+  add_foreign_key "cash_deposits", "cash_operations"
+  add_foreign_key "cash_deposits", "stores"
+  add_foreign_key "cash_deposits", "users", column: "approved_by_id"
+  add_foreign_key "cash_deposits", "users", column: "prepared_by_id"
+  add_foreign_key "cash_entries", "cash_entries", column: "reversal_of_id"
+  add_foreign_key "cash_entries", "cash_locations"
+  add_foreign_key "cash_entries", "cash_operations"
+  add_foreign_key "cash_entries", "pos_sessions"
+  add_foreign_key "cash_locations", "stores"
+  add_foreign_key "cash_operations", "cash_operations", column: "reversal_of_id"
+  add_foreign_key "cash_operations", "idempotency_operations"
+  add_foreign_key "cash_operations", "pos_sessions"
+  add_foreign_key "cash_operations", "stores"
+  add_foreign_key "cash_operations", "users", column: "approved_by_id"
+  add_foreign_key "cash_operations", "users", column: "performed_by_id"
+  add_foreign_key "cash_paid_ins", "cash_operations"
+  add_foreign_key "cash_paid_ins", "pos_sessions"
+  add_foreign_key "cash_paid_outs", "cash_operations"
+  add_foreign_key "cash_paid_outs", "pos_sessions"
+  add_foreign_key "cash_reconciliations", "cash_counts"
+  add_foreign_key "cash_reconciliations", "cash_locations"
+  add_foreign_key "cash_reconciliations", "cash_operations"
+  add_foreign_key "cash_reconciliations", "pos_sessions"
+  add_foreign_key "cash_safe_initializations", "cash_counts"
+  add_foreign_key "cash_safe_initializations", "cash_locations"
+  add_foreign_key "cash_safe_initializations", "cash_operations"
+  add_foreign_key "cash_transfers", "cash_locations", column: "destination_cash_location_id"
+  add_foreign_key "cash_transfers", "cash_locations", column: "source_cash_location_id"
+  add_foreign_key "cash_transfers", "cash_operations"
+  add_foreign_key "cash_transfers", "pos_sessions", column: "destination_pos_session_id"
+  add_foreign_key "cash_transfers", "pos_sessions", column: "source_pos_session_id"
   add_foreign_key "customer_request_allocations", "customer_requests", on_delete: :restrict
   add_foreign_key "customer_request_allocations", "inventory_units", on_delete: :restrict
   add_foreign_key "customer_request_allocations", "pos_transaction_lines", column: "fulfilled_pos_transaction_line_id", on_delete: :restrict
@@ -1773,6 +2030,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_080000) do
   add_foreign_key "orders", "stores", on_delete: :restrict
   add_foreign_key "orders", "suppliers", on_delete: :restrict
   add_foreign_key "orders", "users", column: "cancelled_by_id", on_delete: :restrict
+  add_foreign_key "pos_controlled_actions", "cash_paid_outs"
   add_foreign_key "pos_controlled_actions", "gift_card_cash_outs"
   add_foreign_key "pos_controlled_actions", "pos_transaction_lines"
   add_foreign_key "pos_controlled_actions", "pos_transactions"
@@ -1792,6 +2050,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_080000) do
   add_foreign_key "pos_sessions", "registers"
   add_foreign_key "pos_sessions", "stores"
   add_foreign_key "pos_sessions", "users", column: "cashier_user_id"
+  add_foreign_key "pos_sessions", "users", column: "closed_by_user_id"
   add_foreign_key "pos_stored_value_issuances", "gift_card_programs"
   add_foreign_key "pos_stored_value_issuances", "gift_cards"
   add_foreign_key "pos_stored_value_issuances", "pos_stored_value_issuances", column: "post_void_source_issuance_id"

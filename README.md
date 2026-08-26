@@ -4,7 +4,7 @@ ShelfSense is an inventory, purchasing, customer-service, and point-of-sale syst
 
 ## Project status
 
-The operational foundation through **Phase 10** is implemented on `main`, including:
+The operational foundation through **Phase 11** is implemented on `main`, including:
 
 - Organization, stores, users, scoped authorization, and audit
 - Merchandise, identifiers, classification, pricing, and inventory valuation
@@ -13,9 +13,10 @@ The operational foundation through **Phase 10** is implemented on `main`, includ
 - Customer identity, contact lookup, duplicate suggestions, and merge
 - Catalog and bibliographic enrichment with reviewed external-data apply
 - Store credit, trade credit, and gift cards
+- Safe-backed Register sessions, non-sale cash, deposit in transit, and store-day cash reporting
 - The Warm Parchment UX foundation, grouped administrative navigation, ActionButtonHelper adoption on reference and non-purchasing screens, and UDS-5 administrative composition (compact nav and Product reference family)
 
-Forward domain work is sequenced in the [canonical roadmap](docs/planning/roadmap.md). Later phases cover cash accountability, used buyback, customer-service expansion, and financial/reporting closeout.
+Forward domain work is sequenced in the [canonical roadmap](docs/planning/roadmap.md). Later phases cover used buyback, customer-service expansion, and financial/reporting closeout.
 
 ## Technology
 

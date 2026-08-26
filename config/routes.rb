@@ -117,6 +117,12 @@ Rails.application.routes.draw do
     resources :gift_card_programs do
       member { post :reactivate }
     end
+    resource :cash_safe, only: %i[show new create], controller: "cash_safes"
+    resource :cash_safe_reconciliation, only: %i[new create], controller: "cash_safe_reconciliations"
+    resources :cash_deposits, only: %i[index new create show] do
+      member { post :reverse }
+    end
+    resource :cash_store_day, only: :show, controller: "cash_store_days"
     resources :gift_cards, only: %i[index show] do
       collection do
         get :inquiry
@@ -203,6 +209,11 @@ Rails.application.routes.draw do
       collection { post :lookup }
       member { post :reverse }
     end
+    resources :cash_paid_ins, only: %i[new create]
+    resources :cash_paid_outs, only: %i[new create]
+    resources :cash_drops, only: %i[new create]
+    resources :cash_replenishments, only: %i[new create]
+    resources :cash_reversals, only: %i[new create]
     get "register", to: "workspaces#show", as: :register_workspace
     get "register/merchandise_search", to: "workspaces#search", as: :register_merchandise_search
     get "register/merchandise_resolve", to: "workspaces#resolve", as: :register_merchandise_resolve

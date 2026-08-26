@@ -79,6 +79,11 @@ module GiftCards
           end
 
           amount = eligibility.amount_cents
+          begin
+            Cash::AvailableCash.assert!(session, amount)
+          rescue Cash::Error => e
+            raise GiftCards::Error, e.message
+          end
           approver = authenticate_approver!(session) if eligibility.approval_required
           cash_out_id = SecureRandom.uuid_v7
           occurred_at = Time.current

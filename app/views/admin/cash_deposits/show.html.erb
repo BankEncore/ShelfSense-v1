@@ -1,0 +1,37 @@
+<% content_for :title, "Deposit #{@deposit.deposit_number}" %>
+<%= render "shared/page_header", title: "Deposit #{@deposit.deposit_number}" %>
+
+<% if @feedback.present? %>
+  <p role="alert"><%= @feedback %></p>
+<% end %>
+
+<dl>
+  <dt>Business date</dt>
+  <dd><%= @deposit.business_date.iso8601 %></dd>
+  <dt>Amount</dt>
+  <dd><%= format_money_cents(@deposit.total_cents) %></dd>
+  <dt>Bag or reference</dt>
+  <dd><%= @deposit.bag_reference.presence || "—" %></dd>
+  <dt>Prepared by</dt>
+  <dd><%= @deposit.prepared_by.display_name %></dd>
+  <dt>Status</dt>
+  <dd><%= @deposit.reversed? ? "Reversed" : "In transit" %></dd>
+  <dt>Deposit in transit (cumulative)</dt>
+  <dd><%= format_money_cents(@dit.expected_balance_cents) %></dd>
+</dl>
+
+<% if !@deposit.reversed? && Authorization::PermissionEvaluator.allowed?(user: current_user, permission_key: "cash.reverse", store: current_store) %>
+  <h2>Reverse while in transit</h2>
+  <%= form_with url: reverse_admin_cash_deposit_path(@deposit), method: :post, class: "form" do %>
+    <%= hidden_field_tag :source_id, SecureRandom.uuid_v7 %>
+    <%= hidden_field_tag :idempotency_key, SecureRandom.uuid_v7 %>
+    <%= hidden_field_tag :reason_code, "reverse" %>
+    <div class="form-field">
+      <%= label_tag :notes, "Notes" %>
+      <%= text_field_tag :notes, params[:notes], required: true, autocomplete: "off" %>
+    </div>
+    <%= submit_tag "Reverse deposit", class: "btn" %>
+  <% end %>
+<% end %>
+
+<p><%= link_to "All deposits", admin_cash_deposits_path %></p>

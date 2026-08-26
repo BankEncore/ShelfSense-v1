@@ -1,0 +1,14 @@
+<% content_for :title, "Paid-in" %>
+
+<main class="pos-history">
+  <%= render "pos/shared/report_nav" %>
+  <h1>Paid-in</h1>
+  <p>Non-sale cash into this open Register session. This is not a tender.</p>
+  <%= render "pos/cash_activities/form",
+        url: pos_cash_paid_ins_path,
+        submit: "Record paid-in",
+        reasons: @reasons,
+        amount_value: params[:amount],
+        reason_value: params[:reason_code],
+        notes_value: params[:notes] %>
+</main>

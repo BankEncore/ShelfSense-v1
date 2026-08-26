@@ -137,7 +137,7 @@ class Pos::ConcurrencyTest < ActiveSupport::TestCase
       end,
       Thread.new do
         ActiveRecord::Base.connection_pool.with_connection do
-          close_result = Pos::CloseSession.call(
+          close_result = pos_close_session!(
             session: PosSession.find(session_id),
             actor: User.find(actor_id),
             expected_lock_version: lock_version,
@@ -795,7 +795,7 @@ class Pos::ConcurrencyTest < ActiveSupport::TestCase
         ActiveRecord::Base.connection_pool.with_connection do
           ready << true
           go.pop
-          close_result = Pos::CloseSession.call(
+          close_result = pos_close_session!(
             session: PosSession.find(session_id),
             actor: User.find(actor_id),
             expected_lock_version: session_lock,
@@ -1019,7 +1019,7 @@ class Pos::ConcurrencyTest < ActiveSupport::TestCase
 
   def prepare_empty_sale(register_number:)
     register = Register.create!(store: @store, register_number: register_number, name: "Lane #{register_number}")
-    context = pos_open_context(store: @store, actor: @actor, register: register)
+    context = pos_open_context(store: @store, actor: @actor, register: register, opening_float_cents: 10_000)
     transaction = Pos::StartTransaction.call(session: context[:session], actor: @actor)
     { context: context, transaction: transaction }
   end

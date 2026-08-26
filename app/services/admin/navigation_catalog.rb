@@ -98,6 +98,10 @@ module Admin
               dest(:tender_types, "Tender types", :admin_tender_types_path, permission: "pos.manage_tender_types", controllers: %w[admin/tender_types]),
               dest(:gift_card_programs, "Gift-card programs", :admin_gift_card_programs_path, permission: "gift_cards.manage_programs", controllers: %w[admin/gift_card_programs]),
               dest(:gift_cards, "Gift cards", :inquiry_admin_gift_cards_path, permission: "gift_cards.view", controllers: %w[admin/gift_cards admin/gift_card_adjustments]),
+              dest(:cash_safe, "Store safe", :admin_cash_safe_path, permission: "cash.initialize_safe", requires_store: true, controllers: %w[admin/cash_safes]),
+              dest(:cash_safe_reconciliation, "Reconcile safe", :new_admin_cash_safe_reconciliation_path, permission: "cash.reconcile_safe", requires_store: true, controllers: %w[admin/cash_safe_reconciliations]),
+              dest(:cash_deposits, "Deposits", :admin_cash_deposits_path, permission: "cash.prepare_deposit", requires_store: true, controllers: %w[admin/cash_deposits]),
+              dest(:cash_store_day, "Store-day cash", :admin_cash_store_day_path, permission: "pos.sessions.view", requires_store: true, controllers: %w[admin/cash_store_days]),
               dest(:stored_value_report, "Stored-value reporting", :admin_stored_value_report_path, permission: "stored_value.view_activity", controllers: %w[admin/stored_value_reports])
             ]
           ),
