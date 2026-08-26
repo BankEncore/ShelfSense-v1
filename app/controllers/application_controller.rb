@@ -6,4 +6,10 @@ class ApplicationController < ActionController::Base
 
   allow_browser versions: :modern unless Rails.env.test?
   before_action :require_authentication
+
+  private
+
+  def forbid_credential_caching!
+    response.headers["Cache-Control"] = "no-store"
+  end
 end

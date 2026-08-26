@@ -384,7 +384,7 @@ Mutable first-print delivery state, kept off the commercially immutable `pos_tra
 | `delivered_at` | timestamptz | Required; set when first print discloses a generated credential |
 | timestamps | timestamptz | Required |
 
-Exactly one of `pos_transaction_id` or `gift_card_id` is set. Presence means later views for that subject stay masked. Idempotent complete-retry may still first-print until the POS transaction delivery row exists. Replacement vouchers stamp the new gift card, not a second reveal of the old number.
+Exactly one of `pos_transaction_id` or `gift_card_id` is set. Presence means later views for that subject stay masked. `Pos::FirstPrint` decrypts only while the originating POS session is open and no delivery row exists. Idempotent complete-retry may still first-print until that delivery row exists **and** the session remains open. After session close, `gift_cards.recover_print` is required. Replacement vouchers require a `GiftCardReplacement` for that new card and stamp the new gift card, not a second reveal of the old number.
 
 Composite index on `gift_cards (number_prefix, number_last_four)` supports admin history inquiry ([ADR-027](../../adr/ADR-027-admin-gift-card-prefix-last-four-inquiry.md)). It is not unique.
 
@@ -407,6 +407,7 @@ These are integration messages, not `financial_events` rows.
 ## 13. System settings
 
 - Manual-adjustment approval threshold (organization): `system_settings.stored_value_adjust_credit_approval_threshold_cents` (default 5000). Credits at or above require second user; all debit adjustments require second user.
+- Gift-card voucher footer (organization): `system_settings.gift_card_voucher_footer` (text, max 500 after trim). Printed on every credential voucher; blank omits the footer. `{organization legal name}` is replaced with `system_settings.legal_name`. Plain text wrapping; not a per-Store inherit/custom/none message.
 - Do not put gift-card cash-out threshold here (program-level).
 
 ## 14. Idempotency

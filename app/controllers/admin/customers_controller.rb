@@ -30,7 +30,12 @@ module Admin
                                           .order(:account_type, :opened_at)
         pages = params[:activity_page].is_a?(ActionController::Parameters) ? params[:activity_page] : {}
         @stored_value_activities = @stored_value_accounts.index_with do |account|
-          StoredValue::AccountActivity.call(account: account, page: pages[account.id])
+          StoredValue::AccountActivity.call(
+            account: account,
+            actor: current_user,
+            permission_key: "stored_value.view_activity",
+            page: pages[account.id]
+          )
         end
       end
       if Authorization::PermissionEvaluator.allowed?(user: current_user, permission_key: "gift_cards.view", store: current_store)

@@ -60,14 +60,68 @@ class GiftCardsAdminTest < ActionDispatch::IntegrationTest
     new_card = original.reload.replaced_by
     assert_redirected_to credential_admin_gift_card_path(new_card)
     follow_redirect!
+    voucher = css_select(".pos-gift-card-voucher").first
+    presented = GiftCards::Number.present(new_card.number, prefix: new_card.number_prefix)
+    assert voucher
+    assert_includes voucher.text, @store.legal_name
+    assert_includes voucher.text, "Gift Card"
+    assert_includes voucher.text, presented
     assert_includes response.body, new_card.number
     refute_includes response.body, old_number
+    assert_match(/no-store/, response.headers["Cache-Control"].to_s)
+    assert css_select(".pos-gift-card-voucher svg[aria-label='#{new_card.number}']").any?
+    assert_empty css_select(".pos-gift-card-voucher__footer")
     assert_match "Print gift card", response.body
 
     get credential_admin_gift_card_path(new_card)
     assert_redirected_to admin_gift_card_path(new_card)
     follow_redirect!
     refute_includes response.body, new_card.number
+  end
+
+  test "replacement credential route does not reveal a POS or provisioned card" do
+    card = GiftCards::ProvisionInstrument.call(program: @program, store: @store)
+    GiftCards::Fund.call(gift_card: card, amount_cents: 250, store: @store, performed_by: @admin)
+
+    get credential_admin_gift_card_path(card)
+    assert_redirected_to admin_gift_card_path(card)
+    follow_redirect!
+    refute_includes response.body, card.number
+    assert_includes response.body, card.masked_number
+  end
+
+  test "print recovery sets Cache-Control no-store when the number is disclosed" do
+    card = GiftCards::ProvisionInstrument.call(program: @program, store: @store)
+    GiftCards::Fund.call(gift_card: card, amount_cents: 150, store: @store, performed_by: @admin)
+
+    post print_recovery_admin_gift_card_path(card), params: { reason: "printer jammed" }
+    assert_response :success
+    assert_includes response.body, card.number
+    assert_match(/no-store/, response.headers["Cache-Control"].to_s)
+  end
+
+  test "store-scoped activity redacts another store's identity" do
+    other = Store.create!(
+      store_number: 92,
+      code: "gc_east",
+      name: "East Gift Store",
+      legal_name: "East Gift LLC",
+      timezone: "America/New_York",
+      country_code: "US"
+    )
+    card = GiftCards::ProvisionInstrument.call(program: @program, store: @store)
+    GiftCards::Fund.call(gift_card: card, amount_cents: 200, store: @store, performed_by: @admin)
+    GiftCards::Fund.call(gift_card: card, amount_cents: 75, store: other, performed_by: @admin)
+    manager = pos_store_manager(store: @store, assigned_by: @admin, username: "gc_activity_mgr")
+
+    delete session_path
+    sign_in_as("gc_activity_mgr")
+    post store_selection_path, params: { store_id: @store.id }
+    get admin_gift_card_path(card)
+    assert_response :success
+    assert_includes response.body, "Another store"
+    refute_includes response.body, other.admin_label
+    assert_includes response.body, @store.admin_label
   end
 
   private

@@ -892,7 +892,9 @@ A reprint may differ from the original physical paper in Store legal name, addre
 
 No reprint table. **No reprint audit** — 6.3 stands (`window.print` stays client-side). This contract does not add print-attempt persistence.
 
-Phase 10: ordinary POS reprints stay masked. Full generated gift-card numbers appear only on the dedicated **credential voucher** (controlled first print, complete-retry of that outcome before delivery, system-generated replacement voucher, or exceptional print recovery with a reason (`GiftCards::PrintRecovery`)). **Print receipt** never includes the full number. Gift-card cash-out has its own receipt (masked number, amount, remaining balance); it is not a tender line.
+Phase 10: ordinary POS reprints stay masked. Full generated gift-card numbers appear only on the dedicated **credential voucher** (controlled first print while the originating session is open, complete-retry of that outcome before delivery while the session remains open, system-generated replacement voucher, or exceptional print recovery with a reason (`GiftCards::PrintRecovery`)). **Print receipt** never includes the full number. Gift-card cash-out has its own receipt (masked number, amount, remaining balance); it is not a tender line.
+
+The credential voucher is a separate 80 mm slip from the customer receipt. Layout: current Store identity (`stores.legal_name`, address, phone), `Issued:` timestamp, amount, the title `Gift Card`, Code 128 of the normalized number, the space-separated presentation from [phase10-gift-card-numbering.md](../../phase10-stored-value/phase10-gift-card-numbering.md) §1, then `system_settings.gift_card_voucher_footer` when that organization setting is present. The footer is plain text with the same 500-character limit as receipt messages; it is not inherited per Store. `{organization legal name}` is replaced with the organization legal name. Blank omits the footer.
 
 ---
 
@@ -949,7 +951,7 @@ commit immutable facts
 render/print receipt
 ```
 
-Phase 10 cash-out commits `gift_card_cash_outs` then renders/prints a cash-out receipt. Gift-card credential vouchers are a separate print from the customer receipt; they use the same 80mm browser print CSS. Print recovery after a failed first print does not reopen the stored-value fact.
+Phase 10 cash-out commits `gift_card_cash_outs` then renders/prints a cash-out receipt. Gift-card credential vouchers are a separate print from the customer receipt; they use the same 80mm browser print CSS and the voucher layout in [phase10-gift-card-numbering.md](../../phase10-stored-value/phase10-gift-card-numbering.md) §5. Print recovery after a failed first print does not reopen the stored-value fact.
 
 ---
 
@@ -1067,7 +1069,7 @@ Add database CHECK constraints for the mode enums. Where practical, add database
 
 Receipt configuration remains ordinary mutable administrative configuration.
 
-Changes to Store legal name/address/phone, Store receipt mode, Store receipt custom text, and System default receipt header/footer should use the existing configuration audit conventions.
+Changes to Store legal name/address/phone, Store receipt mode, Store receipt custom text, System default receipt header/footer, and `system_settings.gift_card_voucher_footer` should use the existing configuration audit conventions.
 
 Rendering or reprinting a receipt does not modify completed commercial facts and does not create a reprint audit event.
 

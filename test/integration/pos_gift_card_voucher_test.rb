@@ -20,6 +20,14 @@ class PosGiftCardVoucherTest < ActionDispatch::IntegrationTest
     GiftCards::Programs.seed!
     Pos::TenderTypes.seed!
     @program = GiftCardProgram.find_by!(code: "generated")
+    @store.update!(
+      street_address_1: "1234 Any Street",
+      city: "Any Town",
+      region_code: "MI",
+      postal_code: "99999",
+      phone: "586-555-9999"
+    )
+    SystemSettings.current.update!(gift_card_voucher_footer: "Redeemable at Example Books LLC.\nTreat this voucher like cash.")
     sign_in_as("admin")
   end
 
@@ -45,13 +53,33 @@ class PosGiftCardVoucherTest < ActionDispatch::IntegrationTest
     }
     follow_redirect!
     card = transaction.reload.pos_stored_value_issuances.sole.gift_card
+    presented = GiftCards::Number.present(card.number, prefix: card.number_prefix)
     voucher = css_select(".pos-gift-card-voucher").first
     receipt = css_select(".pos-receipt__print").first
     assert voucher
-    assert_includes voucher.text, card.number
+    assert_includes voucher.text, @store.legal_name
+    assert_includes voucher.text, "1234 Any Street"
+    assert_includes voucher.text, "Issued:"
+    assert_includes voucher.text, "$10.00"
+    assert_includes voucher.text, "Gift Card"
+    assert_includes voucher.text, presented
+    refute_includes voucher.text, card.number
+    barcode = css_select(".pos-gift-card-voucher svg").first
+    assert barcode
+    assert_equal card.number, barcode["aria-label"]
+    assert_includes voucher.to_html, card.number
+    assert_includes voucher.text, "Redeemable at Example Books LLC."
+    assert_includes voucher.text, "Treat this voucher like cash."
+    refute_includes voucher.text, "Store generated"
+    refute_includes voucher.text, "Activation"
     assert_match "Print gift card", response.body
+    assert_match(/no-store/, response.headers["Cache-Control"].to_s)
     refute_includes receipt.text, card.number
+    refute_includes receipt.text, presented
+    refute_includes receipt.text, "Treat this voucher like cash."
     assert_includes receipt.text, card.masked_number
+    receipt_svgs = css_select(".pos-receipt__print svg")
+    refute receipt_svgs.any? { |svg| svg["aria-label"] == card.number }
 
     get pos_completed_transaction_path(transaction)
     assert_response :success

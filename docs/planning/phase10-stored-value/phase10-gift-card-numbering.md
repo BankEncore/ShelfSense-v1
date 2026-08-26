@@ -67,19 +67,36 @@ If the number must be printed **before** payment, that is out of Phase 10 (would
 
 ## 5. Print and recovery
 
-The **credential voucher** is a distinct 80mm print from the customer receipt. Ordinary **Print receipt** (including history reprint) stays masked. Explicit **Print gift card** prints the decrypted number only when first-print delivery has not yet been recorded: undelivered completed POS activation or new refund card, complete-retry before delivery, system-generated replacement of a card, or `gift_cards.recover_print`. Reloads of an existing number do not first-print. Manual/external replacements that already have a physical number do not need generated-credential print.
+The **credential voucher** is a distinct 80mm print from the customer receipt. Ordinary **Print receipt** (including history reprint) stays masked. Explicit **Print gift card** prints the decrypted number only when first-print delivery has not yet been recorded **and** the originating POS session is still open: undelivered completed POS activation or new refund card, or complete-retry of that outcome before delivery while the session remains open. After the session closes, recovery requires `gift_cards.recover_print` plus a reason. System-generated replacement of a card uses the replacement credential route only for a card that is the `replacement_gift_card` on a `GiftCardReplacement`. Reloads of an existing number do not first-print. Manual/external replacements that already have a physical number do not need generated-credential print.
 
-On-screen completed-transaction copy may list undelivered credentials. The voucher HTML is **not** inside `.pos-receipt__screen` (print CSS hides that block). After delivery, **Print gift card** is gone; recover-print is the exceptional path.
+On-screen completed-transaction copy may list undelivered credentials. The voucher HTML is **not** inside `.pos-receipt__screen` (print CSS hides that block). After delivery, **Print gift card** is gone; recover-print is the exceptional path. Responses that include a full number send `Cache-Control: no-store`.
+
+Printed voucher order, centered on 80 mm:
+
+```text
+Store legal name
+address and phone (omit blank lines)
+Issued: {completed_at in the Store timezone, same format as receipts}
+{amount}
+Gift Card
+[Code 128 of the normalized number]
+PPP RRRR RRRR RRRR RRRR C
+{system_settings.gift_card_voucher_footer, when present}
+```
+
+The human-readable number is the space-separated grouping from §1 (strip separators before lookup). Do not print a hyphenated form, per-digit spacing, program name, or issuance kind on the voucher. Barcode payload is the normalized digits. One slip per credential, with a page break between cards.
+
+The voucher footer is organization configuration (`system_settings.gift_card_voucher_footer`): plain text, 500-character limit after trim. Blank omits the footer. The token `{organization legal name}` is replaced with `system_settings.legal_name` when that name is present. Store receipt header/footer messages are not used on this slip.
 
 | Channel | Full number |
 |---|---|
 | Credential voucher (undelivered first print) | Yes |
-| Idempotent retry of same completion before delivery is recorded | Yes |
+| Idempotent retry of same completion before delivery, originating session still open | Yes |
 | Ordinary Print receipt / later completed-transaction view / history / envelope | No |
 | Controlled print-recovery service (`gift_cards.recover_print` + reason) | Only with reason and appropriate authority |
-| System-generated replacement | Print new credential voucher once; do not reveal old |
+| System-generated replacement | Print new credential voucher once for the replacement card only; do not reveal old; do not use this route for ordinary POS cards |
 
-First-print delivery is mutable processing state (`pos_gift_card_credential_deliveries`), not an edit of the completed POS fact. POS completions key delivery by transaction. System-generated replacements key delivery by the new gift card. The first successful first-print call records delivery. After that, print recovery or another replacement is the path to a credential.
+First-print delivery is mutable processing state (`pos_gift_card_credential_deliveries`), not an edit of the completed POS fact. POS completions key delivery by transaction. System-generated replacements key delivery by the new gift card. `Pos::FirstPrint` decrypts only while the originating session is open and no delivery row exists; the first successful first-print call then records delivery. After session close, or after delivery, print recovery or another replacement is the path to a credential.
 
 Print failure after commit does not reopen the transaction ([receipt-presentation.md](../phase4-6-point-of-sale/phase6-pos-mvp/receipt-presentation.md)). Recovery is the print-recovery service or replacement—not a general reveal screen and not unused-instrument return (deferred).
 

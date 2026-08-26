@@ -12,8 +12,11 @@
        kind: "print_recovery",
        masked_number: @gift_card.masked_number,
        number: @recovered_number,
+       number_prefix: @gift_card.number_prefix,
        amount_cents: @gift_card.balance_cents,
-       program_name: @gift_card.gift_card_program.name
+       program_name: @gift_card.gift_card_program.name,
+       store: @gift_card.activated_store,
+       issued_at: @gift_card.activated_at
      )] %>
   <main class="pos-receipt" data-controller="pos-receipt">
     <section class="pos-first-print pos-receipt__screen">

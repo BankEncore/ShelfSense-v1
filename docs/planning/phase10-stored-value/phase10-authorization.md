@@ -31,9 +31,9 @@ Do **not** add `gift_cards.activate`, `gift_cards.reload`, `gift_cards.redeem`, 
 | Refund destinations (original card, new refund card, store credit) | `pos.transact` |
 | Gift-card cash-out | `gift_cards.cash_out` **and** open session |
 | Balance inquiry at Register (masked) | `pos.transact` |
-| Immediate first print after complete | `pos.transact` (same completion, until delivery is recorded); **Print gift card** voucher, not Print receipt |
-| Controlled print-recovery / replacement print | `gift_cards.recover_print` (reason required); replacement first-print voucher uses `gift_cards.replace`. Store managers may be granted `gift_cards.recover_print`. |
-| Admin/customer activity | `stored_value.view_activity` (customer-owned accounts); `gift_cards.view` (gift-card account ledger) |
+| Immediate first print after complete | `pos.transact` (same completion, originating session still open, until delivery is recorded); **Print gift card** voucher, not Print receipt |
+| Controlled print-recovery / replacement print | `gift_cards.recover_print` (reason required); replacement first-print voucher uses `gift_cards.replace` and only for a `GiftCardReplacement` new card. Store managers may be granted `gift_cards.recover_print`. |
+| Admin/customer activity | `stored_value.view_activity` (customer-owned accounts); `gift_cards.view` (gift-card account ledger). Store-scoped viewers see other stores’ amounts with store labeled `Another store`; actor, reason, and POS links are omitted. |
 | Manual adjust | `stored_value.adjust` |
 | Administrative transfer / consolidation | `stored_value.transfer` |
 | Adjustment reason catalog | `stored_value.manage_adjustment_reasons` |
@@ -63,7 +63,7 @@ Store-scoped `pos.transact` authorizes using an organization-wide customer credi
 |---|---|
 | `system_administrator` | Entire Phase 10 catalog |
 | `store_manager` | `stored_value.view_activity`, `stored_value.adjust`, `stored_value.transfer`, `gift_cards.view`, `gift_cards.suspend`, `gift_cards.replace`, `gift_cards.associate_customer`, `gift_cards.cash_out`, `gift_cards.recover_print` (not `gift_cards.manage_programs`, not `stored_value.manage_adjustment_reasons`) |
-| `associate` | No new keys. Existing `pos.transact` covers ordinary SV at the Register including first print until delivery is recorded. No cash-out, adjust, transfer, program manage, or print recovery. |
+| `associate` | No new keys. Existing `pos.transact` covers ordinary SV at the Register including first print while the originating session is open until delivery is recorded. No cash-out, adjust, transfer, program manage, or print recovery. |
 
 `gift_cards.manage_programs` and `stored_value.manage_adjustment_reasons` require a **global** assignment.
 

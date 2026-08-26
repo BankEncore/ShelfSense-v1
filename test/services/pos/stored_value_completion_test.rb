@@ -74,6 +74,42 @@ class PosStoredValueCompletionTest < ActiveSupport::TestCase
     assert_equal 2500, note.balance_cents
   end
 
+  test "first print does not decrypt after the originating session is closed" do
+    transaction = Pos::StartTransaction.call(session: @context[:session], actor: @actor)
+    Pos::AddStoredValueIssuance.call(
+      transaction: transaction,
+      actor: @actor,
+      expected_lock_version: transaction.lock_version,
+      issuance_type: "activation",
+      amount_cents: 1200,
+      gift_card_program: @program
+    )
+    Pos::TenderCash.call(
+      transaction: transaction.reload,
+      actor: @actor,
+      expected_lock_version: transaction.lock_version,
+      amount_presented_cents: 1200
+    )
+    result = complete_current!(transaction.reload)
+    card = result.transaction.pos_stored_value_issuances.sole.gift_card
+    Pos::CloseSession.call(
+      session: @context[:session],
+      actor: @actor,
+      expected_lock_version: @context[:session].lock_version,
+      closing_count_cents: 11_200
+    )
+
+    assert_equal [], Pos::FirstPrint.call(result.transaction)
+    refute PosGiftCardCredentialDelivery.exists?(pos_transaction_id: result.transaction.id)
+    recovered = GiftCards::PrintRecovery.call(
+      gift_card: card,
+      actor: @actor,
+      store: @store,
+      reason: "session closed before voucher print"
+    )
+    assert_equal card.number, recovered
+  end
+
   test "gift-card redeem posts a negative redeem and rejects same-ticket issuance" do
     card = GiftCards::ProvisionInstrument.call(program: @program, store: @store)
     GiftCards::Fund.call(gift_card: card, amount_cents: 5000, store: @store, performed_by: @actor)

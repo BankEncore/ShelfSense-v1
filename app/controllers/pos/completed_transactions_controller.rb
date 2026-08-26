@@ -22,6 +22,7 @@ module Pos
       @transaction.post_void_of
       @transaction.post_void
       @gift_card_credentials = Pos::FirstPrint.call(@transaction)
+      forbid_credential_caching! if Array(@gift_card_credentials).any?
       session[:pos_register_id] = @register.id
     rescue Pos::Denied
       raise ActiveRecord::RecordNotFound

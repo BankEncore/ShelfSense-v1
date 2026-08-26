@@ -29,6 +29,7 @@ One row representing installation-wide configuration.
 | `default_customer_reservation_expiration_days` | smallint | null: false; default `7`; check `>= 0` | Default for customer reservations |
 | `default_receipt_header` | text | max 500 after trim | Organization default; inherit target |
 | `default_receipt_footer` | text | max 500 after trim | Organization default; inherit target |
+| `gift_card_voucher_footer` | text | max 500 after trim | Organization gift-card voucher terms; blank omits the footer ([phase10-schema.md](../phase10-stored-value/phase10-schema.md) §13) |
 | `stored_value_adjust_credit_approval_threshold_cents` | bigint | null: false; default `5000`; check `>= 0` | Credits at or above this amount require second-user approval; all debits require second-user approval ([phase10-schema.md](../phase10-stored-value/phase10-schema.md) §13) |
 | `initialized_at` | timestamptz |  | Set only as the final successful bootstrap step; null means install incomplete / retryable |
 | `lock_version` | integer | null: false; default `0` | Optimistic concurrency |

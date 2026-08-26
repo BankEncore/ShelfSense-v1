@@ -21,6 +21,16 @@ module GiftCards
       normalized.to_s[-4, 4]
     end
 
+    def present(raw, prefix:)
+      digits = normalize(raw)
+      prefix = prefix.to_s
+      return digits if prefix.blank? || !digits.start_with?(prefix) || digits.length <= prefix.length
+
+      check = digits[-1]
+      body = digits[prefix.length...-1]
+      [ prefix, *body.scan(/.{1,4}/), check ].compact_blank.join(" ")
+    end
+
     def generate(program)
       prefix = program.prefix
       length = program.number_length

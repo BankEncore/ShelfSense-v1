@@ -68,7 +68,7 @@ class StoredValueCustomerCreditTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_includes response.body, "Closed"
     assert_includes response.body, "Store credit activity"
-    assert_includes response.body, "Adjust"
+    assert_includes response.body, "Debit adjustment"
   end
 
   test "opening the adjust form does not create an account" do

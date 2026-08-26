@@ -31,9 +31,20 @@ module GiftCards
       credentials = GiftCards::ReplacementFirstPrint.call(new_card)
       assert_equal 1, credentials.size
       assert_equal new_card.number, credentials.first.number
+      assert_equal @store, credentials.first.store
+      assert_equal GiftCards::Number.present(new_card.number, prefix: new_card.number_prefix),
+                   credentials.first.presented_number
       refute_equal old_number, credentials.first.number
       assert_equal [], GiftCards::ReplacementFirstPrint.call(new_card)
       assert PosGiftCardCredentialDelivery.exists?(gift_card_id: new_card.id)
+    end
+
+    test "does not decrypt a system-generated card that was not created by replacement" do
+      card = GiftCards::ProvisionInstrument.call(program: @program, store: @store)
+      GiftCards::Fund.call(gift_card: card, amount_cents: 250, store: @store, performed_by: @actor)
+
+      assert_equal [], GiftCards::ReplacementFirstPrint.call(card)
+      refute PosGiftCardCredentialDelivery.exists?(gift_card_id: card.id)
     end
   end
 end

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_26_070000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_26_080000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -1603,6 +1603,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_070000) do
     t.integer "default_supplier_cancellation_days", limit: 2, default: 20, null: false
     t.string "default_timezone", null: false
     t.integer "fiscal_year_start_month", limit: 2, default: 1, null: false
+    t.text "gift_card_voucher_footer"
     t.timestamptz "initialized_at"
     t.string "legal_name"
     t.integer "lock_version", default: 0, null: false

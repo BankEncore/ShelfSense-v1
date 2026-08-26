@@ -14,7 +14,12 @@ module Admin
     end
 
     def show
-      @activity = StoredValue::AccountActivity.call(account: @gift_card.stored_value_account, page: params[:page])
+      @activity = StoredValue::AccountActivity.call(
+        account: @gift_card.stored_value_account,
+        actor: current_user,
+        permission_key: "gift_cards.view",
+        page: params[:page]
+      )
     end
 
     def inquiry; end
@@ -119,7 +124,11 @@ module Admin
 
     def credential
       @gift_card_credentials = GiftCards::ReplacementFirstPrint.call(@gift_card)
-      redirect_to admin_gift_card_path(@gift_card) if @gift_card_credentials.empty?
+      if @gift_card_credentials.empty?
+        redirect_to admin_gift_card_path(@gift_card)
+      else
+        forbid_credential_caching!
+      end
     end
 
     def create_print_recovery
@@ -129,6 +138,7 @@ module Admin
         store: operational_store,
         reason: params[:reason]
       )
+      forbid_credential_caching! if @recovered_number.present?
       render :print_recovery
     rescue GiftCards::Error => e
       flash.now[:alert] = e.message

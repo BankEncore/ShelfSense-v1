@@ -20,5 +20,10 @@
     <%= form.text_area :default_receipt_footer, maxlength: Store::RECEIPT_MESSAGE_LIMIT %>
   </p>
   <p class="muted">Used by Stores configured to inherit. Receipt messages are plain text and automatically wrap to receipt width. A blank System value means there is no organization default message.</p>
+  <p>
+    <%= form.label :gift_card_voucher_footer, "Gift card voucher footer" %>
+    <%= form.text_area :gift_card_voucher_footer, maxlength: Store::RECEIPT_MESSAGE_LIMIT %>
+  </p>
+  <p class="muted">Printed at the bottom of every gift-card voucher. Plain text wraps to 80 mm. Leave blank to omit a footer. The token {organization legal name} is replaced with this organization's legal name.</p>
   <p><%= action_submit(form, "Save", style: :solid, intent: :brand) %></p>
 <% end %>

@@ -169,8 +169,9 @@ GitHub-issue-ready stories. Keep 10.4 issuance and signed-net in the same implem
 - DB signed-net identity includes `stored_value_issuance_cents`
 - Envelope golden files updated; Core FKs on source rows
 - Working manual activation uses encrypted pending identity; `gift_card_id` null until complete
-- Controlled first print after generated-card activation and generated refund cards; complete-retry reprints that outcome; ordinary receipts stay masked
+- Controlled first print after generated-card activation and generated refund cards while the originating session is open; after session close, `gift_cards.recover_print`; complete-retry reprints that outcome only before delivery and while the session is open; ordinary receipts stay masked
 - Credential voucher is a distinct 80mm print from the customer receipt; **Print receipt** never includes the full number; **Print gift card** is the first-print channel until delivery is recorded
+- Voucher paper: Store identity, issued timestamp, amount, `Gift Card`, Code 128, space-separated number; organization `gift_card_voucher_footer` when set
 - Register gift-card scan routing (sale, activation, reload, redeem, refund)
 - Every new POS transaction snapshots `system_settings.base_currency_code`
 

@@ -78,4 +78,4 @@ No GL export status.
 
 ## 5. Print
 
-See [phase10-gift-card-numbering.md](phase10-gift-card-numbering.md) and [receipt-presentation.md](../phase4-6-point-of-sale/phase6-pos-mvp/receipt-presentation.md). Customer paper: issuance, redemption, remaining balance (masked), refund destinations, cash-out. Full number only on controlled first print, complete-retry, or print recovery.
+See [phase10-gift-card-numbering.md](phase10-gift-card-numbering.md) and [receipt-presentation.md](../phase4-6-point-of-sale/phase6-pos-mvp/receipt-presentation.md). Customer paper: issuance, redemption, remaining balance (masked), refund destinations, cash-out. Full number only on controlled first print while the originating session is open, complete-retry of that outcome before delivery, or print recovery.

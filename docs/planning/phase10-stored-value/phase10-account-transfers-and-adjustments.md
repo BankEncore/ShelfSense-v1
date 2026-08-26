@@ -74,7 +74,13 @@ Reasons come from `stored_value_adjustment_reasons`. Do not seed `opening_balanc
 
 Staff with `stored_value.view_activity` see per-account history on customer show for store credit and trade credit, including closed accounts. Staff with `gift_cards.view` see the same table on gift-card show for that instrument’s account.
 
-Columns: store, business date, operation type, signed amount, balance-after, actor and reason snapshot when present, and a POS transaction reference when the operation is attributable to a completed POS issuance, tender, or related source row. Gift-card identity stays masked. This is UI over `stored_value_entries`; it is not a second ledger.
+Columns: store, business date, operation label, signed amount, balance-after, actor and reason snapshot when present, and a POS transaction reference when the operation is attributable to a completed POS issuance, tender, or related source row. Gift-card identity stays masked. This is UI over `stored_value_entries`; it is not a second ledger.
+
+Order entries by `stored_value_operations.occurred_at DESC`, `stored_value_operations.id DESC`, `stored_value_entries.entry_sequence DESC`.
+
+Operation labels distinguish transfer in vs out, credit vs debit adjustment, cash-out reversal, post-void reversal, and mark reversed originals.
+
+Store-scoped viewers keep every row so the running balance remains explainable. Unauthorized stores are labeled `Another store`. Actor, reason, and POS transaction links for those rows are omitted. Global assignments see store identity and provenance for every row.
 
 ## 5. Outbox
 

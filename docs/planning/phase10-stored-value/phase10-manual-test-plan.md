@@ -7,8 +7,8 @@ Do not treat this as a substitute for CI.
 ## 1. Register — issuance and tenders
 
 1. Activate a manual-number card with merchandise in one ticket; amount due = merchandise + tax + issuance; receipt shows issuance separately; last four only on reprint.
-2. Activate a system-generated card; on-screen list and **Print gift card** voucher show the full number; **Print receipt** is masked; refresh or reopen the completed-transaction page is masked; reprint is masked.
-3. Kill the client after complete before print; retry complete; first-print path still available without a second liability; after the first successful first print, recovery requires `gift_cards.recover_print`.
+2. Activate a system-generated card; on-screen list and **Print gift card** voucher show the full number (space-separated grouping under the barcode); **Print receipt** is masked; refresh or reopen the completed-transaction page is masked; reprint is masked. Store identity and `Issued:` print on the voucher; the organization gift-card footer prints only when `system_settings.gift_card_voucher_footer` is set.
+3. Kill the client after complete before print; while the originating session is open, retry complete or reopen the completed-transaction page to first-print without a second liability; after session close, or after the first successful first print, recovery requires `gift_cards.recover_print`.
 4. Reload an existing card; remaining balance increases only after complete; abandon working ticket has no effect.
 5. Redeem gift card partial + cash; split SV tenders on two cards.
 6. Attach customer via Register search (not UUID paste); change or clear on a working ticket; redeem store credit; refuse merged or inactive customer; pickup does not auto-attach.
@@ -69,6 +69,7 @@ Do not treat this as a substitute for CI.
 5. Ordinary reprint masked.
 6. Controlled retry prints original credential.
 7. Print recovery requires reason and `gift_cards.recover_print`; no general reveal screen.
+8. Organization gift-card voucher footer can be set, changed, and cleared under System settings; blank omits the footer on the next voucher print.
 
 ## 7. Admin, merge, security
 

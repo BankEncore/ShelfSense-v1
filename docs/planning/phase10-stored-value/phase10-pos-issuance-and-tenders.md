@@ -110,7 +110,7 @@ Inside the existing complete transaction (inventory, tax, envelope, outbox):
 
 Command payload includes expected signed_net, issuance cents, tender plan, destination modes, and “generate from program X” — not the resulting number or generated `gift_card_id` on activations and new refund cards.
 
-Complete-retry (ADR-009): same command hash returns stored envelope **and** may decrypt for the controlled first-print channel until delivery is recorded. The public envelope still has last four only. After first-print delivery, later views stay masked.
+Complete-retry (ADR-009): same command hash returns stored envelope **and** may decrypt for the controlled first-print channel until delivery is recorded **and** the originating session is still open. The public envelope still has last four only. After first-print delivery, or after the session closes, later views stay masked; recovery uses `gift_cards.recover_print`.
 
 ## 7. Envelope vs Core
 
