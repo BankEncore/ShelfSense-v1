@@ -18,7 +18,7 @@ class PosUnlinkedReturnCompletionTest < ActiveSupport::TestCase
     )
     @variant = pos_sellable_variant(actor: @actor, tax_class: @tax)
     open_quantity_stock(store: @store, variant: @variant, actor: @actor, quantity: 20, unit_cost_cents: 100)
-    @context = pos_open_context(store: @store, actor: @actor)
+    @context = pos_open_context(store: @store, actor: @actor, opening_float_cents: 50_000)
     Pos::TenderTypes.seed!
     @cash = TenderType.find_by!(code: "cash")
   end
@@ -264,7 +264,7 @@ class PosUnlinkedReturnCompletionTest < ActiveSupport::TestCase
     session = @context[:session]
     return session if session.reload.open?
 
-    @context = pos_open_context(store: @store, actor: @actor, register: @context[:register])
+    @context = pos_open_context(store: @store, actor: @actor, register: @context[:register], opening_float_cents: 50_000)
     @context[:session]
   end
 

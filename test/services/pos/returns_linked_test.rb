@@ -18,7 +18,7 @@ class PosReturnsLinkedTest < ActiveSupport::TestCase
     )
     @variant = pos_sellable_variant(actor: @actor, tax_class: @tax)
     open_quantity_stock(store: @store, variant: @variant, actor: @actor, quantity: 20, unit_cost_cents: 100)
-    @context = pos_open_context(store: @store, actor: @actor, opening_float_cents: 0)
+    @context = pos_open_context(store: @store, actor: @actor, opening_float_cents: 50_000)
     Pos::TenderTypes.seed!
     @cash = TenderType.find_by!(code: "cash")
   end
@@ -176,7 +176,7 @@ class PosReturnsLinkedTest < ActiveSupport::TestCase
     assert_match(/remaining quantity/, error.message)
   end
 
-  test "Cash refund lowers expected Cash and close may be negative" do
+  test "Cash refund lowers expected Cash without going negative" do
     other = pos_open_context(
       store: @store,
       actor: @actor,
@@ -189,16 +189,17 @@ class PosReturnsLinkedTest < ActiveSupport::TestCase
     totals = Pos::SessionTotals.for(@context[:session].reload)
     assert totals.cash_refund_cents.positive?
     expected = totals.expected_cash_cents
-    assert expected.negative?
+    assert_operator expected, :>=, 0
+    assert_equal 50_000 - totals.cash_refund_cents, expected
 
-    session = Pos::CloseSession.call(
+    session = pos_close_session!(
       session: @context[:session],
       actor: @actor,
       expected_lock_version: @context[:session].reload.lock_version,
-      closing_count_cents: 0
+      closing_count_cents: expected
     )
     assert_equal expected, session.closing_expected_cash_cents
-    assert_equal 0 - expected, session.closing_variance_cents
+    assert_equal 0, session.closing_variance_cents
 
     period = Pos::FinalizeReportingPeriod.call(
       period: @context[:period],

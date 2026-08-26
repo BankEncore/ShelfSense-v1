@@ -60,10 +60,9 @@ class PosCashAccountabilityTest < ActiveSupport::TestCase
     context = pos_open_context(store: @store, actor: @actor, opening_float_cents: 10_000)
     complete_cash_sale(session: context[:session], amount_presented_cents: 2500)
 
-    session = Pos::CloseSession.call(
+    session = pos_close_session!(
       session: context[:session],
       actor: @actor,
-      expected_lock_version: context[:session].lock_version,
       closing_count_cents: 12_100
     )
 
@@ -82,10 +81,9 @@ class PosCashAccountabilityTest < ActiveSupport::TestCase
     context = pos_open_context(store: @store, actor: @actor, opening_float_cents: 10_000)
     complete_cash_sale(session: context[:session], amount_presented_cents: 2500)
 
-    session = Pos::CloseSession.call(
+    session = pos_close_session!(
       session: context[:session],
       actor: @actor,
-      expected_lock_version: context[:session].reload.lock_version,
       closing_count_cents: 12_000
     )
 
@@ -108,7 +106,7 @@ class PosCashAccountabilityTest < ActiveSupport::TestCase
       expected_lock_version: transaction.lock_version
     )
 
-    session = Pos::CloseSession.call(
+    session = pos_close_session!(
       session: context[:session],
       actor: @actor,
       expected_lock_version: context[:session].reload.lock_version,
@@ -119,11 +117,62 @@ class PosCashAccountabilityTest < ActiveSupport::TestCase
     assert_equal 0, session.closing_variance_cents
   end
 
+  test "cash sale change is not blocked by available cash" do
+    context = pos_open_context(store: @store, actor: @actor, opening_float_cents: 0)
+    result = complete_cash_sale(session: context[:session], amount_presented_cents: 2500)
+
+    assert result.transaction.completed?
+    assert_operator Pos::SessionTotals.for(context[:session].reload).expected_cash_cents, :positive?
+  end
+
+  test "cash refund is refused when the session does not have enough available cash" do
+    sale_context = pos_open_context(store: @store, actor: @actor, opening_float_cents: 10_000)
+    sale = complete_cash_sale(session: sale_context[:session], amount_presented_cents: 2500)
+    original_line = sale.transaction.pos_transaction_lines.first
+
+    empty = pos_open_context(
+      store: @store,
+      actor: @actor,
+      register: Register.create!(store: @store, register_number: 91, name: "Empty till"),
+      opening_float_cents: 0
+    )
+    Pos::TenderTypes.seed!
+    cash = TenderType.find_by!(code: "cash")
+    transaction = Pos::StartTransaction.call(session: empty[:session], actor: @actor)
+    Pos::AddLinkedReturnLine.call(
+      transaction: transaction,
+      actor: @actor,
+      expected_lock_version: transaction.lock_version,
+      original_line: original_line,
+      quantity: 1,
+      reason_code: "changed_mind"
+    )
+    transaction.reload
+    Pos::AddRefundTender.call(
+      transaction: transaction,
+      actor: @actor,
+      expected_lock_version: transaction.lock_version,
+      tender_type: cash,
+      amount_cents: -transaction.signed_net_cents
+    )
+    error = assert_raises(Pos::Error) do
+      Pos::CompleteTransaction.call(
+        transaction: transaction.reload,
+        actor: @actor,
+        operation_id: SecureRandom.uuid_v7,
+        expected_lock_version: transaction.lock_version,
+        expected_total_cents: transaction.total_cents,
+        expected_signed_net_cents: transaction.signed_net_cents
+      )
+    end
+    assert_equal Cash::INSUFFICIENT_AVAILABLE_CASH, error.message
+  end
+
   test "close rejects a stale lock_version" do
     context = pos_open_context(store: @store, actor: @actor, opening_float_cents: 0)
 
     assert_raises(Pos::StaleObject) do
-      Pos::CloseSession.call(
+      pos_close_session!(
         session: context[:session],
         actor: @actor,
         expected_lock_version: context[:session].lock_version - 1,
@@ -138,7 +187,7 @@ class PosCashAccountabilityTest < ActiveSupport::TestCase
     other = pos_transacting_user(store: @store, assigned_by: @actor, username: "other_cash")
 
     assert_raises(Pos::Denied) do
-      Pos::CloseSession.call(
+      pos_close_session!(
         session: context[:session],
         actor: other,
         expected_lock_version: context[:session].lock_version,
@@ -165,10 +214,9 @@ class PosCashAccountabilityTest < ActiveSupport::TestCase
   test "finalize after close persists immutable Z snapshots from completed facts" do
     context = pos_open_context(store: @store, actor: @actor, opening_float_cents: 10_000)
     complete_cash_sale(session: context[:session], amount_presented_cents: 2500)
-    Pos::CloseSession.call(
+    pos_close_session!(
       session: context[:session],
       actor: @actor,
-      expected_lock_version: context[:session].lock_version,
       closing_count_cents: 12_000
     )
 
@@ -202,7 +250,7 @@ class PosCashAccountabilityTest < ActiveSupport::TestCase
 
   test "another store cashier may finalize a period they did not cashier" do
     context = pos_open_context(store: @store, actor: @actor, opening_float_cents: 0)
-    Pos::CloseSession.call(
+    pos_close_session!(
       session: context[:session],
       actor: @actor,
       expected_lock_version: context[:session].lock_version,
@@ -264,7 +312,7 @@ class PosCashAccountabilityTest < ActiveSupport::TestCase
 
   test "closed session and finalized period are immutable" do
     context = pos_open_context(store: @store, actor: @actor, opening_float_cents: 0)
-    session = Pos::CloseSession.call(
+    session = pos_close_session!(
       session: context[:session],
       actor: @actor,
       expected_lock_version: context[:session].lock_version,
@@ -284,7 +332,7 @@ class PosCashAccountabilityTest < ActiveSupport::TestCase
     context = pos_open_context(store: @store, actor: @actor, opening_float_cents: 0)
 
     assert_raises(ArgumentError) do
-      Pos::CloseSession.call(
+      pos_close_session!(
         session: context[:session],
         actor: @actor,
         expected_lock_version: context[:session].lock_version,
@@ -293,7 +341,7 @@ class PosCashAccountabilityTest < ActiveSupport::TestCase
       )
     end
     assert_raises(ArgumentError) do
-      Pos::CloseSession.call(
+      pos_close_session!(
         session: context[:session],
         actor: @actor,
         expected_lock_version: context[:session].lock_version,
@@ -307,10 +355,9 @@ class PosCashAccountabilityTest < ActiveSupport::TestCase
   test "closed session totals return persisted close snapshots" do
     context = pos_open_context(store: @store, actor: @actor, opening_float_cents: 10_000)
     complete_cash_sale(session: context[:session], amount_presented_cents: 2500)
-    session = Pos::CloseSession.call(
+    session = pos_close_session!(
       session: context[:session],
       actor: @actor,
-      expected_lock_version: context[:session].lock_version,
       closing_count_cents: 12_000
     )
 
@@ -325,10 +372,9 @@ class PosCashAccountabilityTest < ActiveSupport::TestCase
   test "finalized period totals return persisted Z snapshots" do
     context = pos_open_context(store: @store, actor: @actor, opening_float_cents: 10_000)
     complete_cash_sale(session: context[:session], amount_presented_cents: 2500)
-    Pos::CloseSession.call(
+    pos_close_session!(
       session: context[:session],
       actor: @actor,
-      expected_lock_version: context[:session].lock_version,
       closing_count_cents: 12_000
     )
     period = Pos::FinalizeReportingPeriod.call(
@@ -424,7 +470,7 @@ class PosCashAccountabilityTest < ActiveSupport::TestCase
       opening_float_cents: 0
     )
     assert_raises(ArgumentError) do
-      Pos::CloseSession.call(
+      pos_close_session!(
         session: session,
         actor: @actor,
         expected_lock_version: session.lock_version,
@@ -432,7 +478,7 @@ class PosCashAccountabilityTest < ActiveSupport::TestCase
         closed_at: supplied
       )
     end
-    Pos::CloseSession.call(
+    pos_close_session!(
       session: session,
       actor: @actor,
       expected_lock_version: session.lock_version,
@@ -477,10 +523,9 @@ class PosCashAccountabilityTest < ActiveSupport::TestCase
   test "multi-session Z sums independent session snapshots without a drawer chain" do
     context = pos_open_context(store: @store, actor: @actor, opening_float_cents: 10_000)
     complete_cash_sale(session: context[:session], amount_presented_cents: 2500)
-    first = Pos::CloseSession.call(
+    first = pos_close_session!(
       session: context[:session],
       actor: @actor,
-      expected_lock_version: context[:session].lock_version,
       closing_count_cents: 12_000
     )
     second_session = Pos::OpenSession.call(
@@ -490,7 +535,7 @@ class PosCashAccountabilityTest < ActiveSupport::TestCase
       reporting_period: context[:period],
       opening_float_cents: 5_000
     )
-    second = Pos::CloseSession.call(
+    second = pos_close_session!(
       session: second_session,
       actor: @actor,
       expected_lock_version: second_session.lock_version,

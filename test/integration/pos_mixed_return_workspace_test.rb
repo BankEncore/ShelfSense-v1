@@ -200,6 +200,7 @@ class PosMixedReturnWorkspaceTest < ActionDispatch::IntegrationTest
     east = Store.create!(store_number: "2", code: "east", name: "East Store", legal_name: "Example Books LLC", timezone: "America/New_York", country_code: "US")
     pos_transacting_user(store: east, assigned_by: @actor, username: "east_clerk")
     east_register = Register.create!(store: east, register_number: 1, name: "East Front")
+    ensure_initialized_safe!(store: east, actor: @actor)
     delete session_path
     sign_in_as("east_clerk")
 
@@ -238,7 +239,7 @@ class PosMixedReturnWorkspaceTest < ActionDispatch::IntegrationTest
   def enter_params
     {
       register_id: @register.id,
-      opening_float: "0.00",
+      opening_float: "500.00",
       confirmed_business_date: BusinessDate.for_store(@store).iso8601
     }
   end

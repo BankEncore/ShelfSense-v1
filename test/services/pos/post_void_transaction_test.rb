@@ -301,7 +301,7 @@ class PosPostVoidTransactionTest < ActiveSupport::TestCase
     assert_equal source.signed_net_cents + reversal.signed_net_cents, totals.net_cents
     assert totals.cash_refund_cents.positive?
 
-    Pos::CloseSession.call(
+    pos_close_session!(
       session: open_session,
       actor: @actor,
       expected_lock_version: open_session.lock_version,

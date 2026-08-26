@@ -134,7 +134,7 @@ class PosMixedReturnTest < ApplicationSystemTestCase
     find_field("session_password").send_keys :enter
     assert_text "Signed in successfully"
     visit pos_register_enter_path(register_id: @register.id)
-    fill_in "Opening float", with: "0.00"
+    fill_in "Opening float", with: "500.00"
     click_on "Open register"
     assert_text "SALE ENTRY", wait: 10
   end

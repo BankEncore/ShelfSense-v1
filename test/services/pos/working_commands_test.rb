@@ -110,7 +110,7 @@ class PosWorkingCommandsTest < ActiveSupport::TestCase
   test "second cashier cannot close another cashier's session" do
     other = pos_transacting_user(store: @store, assigned_by: @actor, username: "other_close")
     assert_raises(Pos::Denied) do
-      Pos::CloseSession.call(
+      pos_close_session!(
         session: @context[:session],
         actor: other,
         expected_lock_version: @context[:session].lock_version,
@@ -188,7 +188,7 @@ class PosWorkingCommandsTest < ActiveSupport::TestCase
     assert_not @store.valid?
     assert_includes @store.errors[:base], "cannot deactivate while an open reporting period exists"
 
-    Pos::CloseSession.call(
+    pos_close_session!(
       session: @context[:session],
       actor: @actor,
       expected_lock_version: @context[:session].lock_version,
@@ -208,7 +208,7 @@ class PosWorkingCommandsTest < ActiveSupport::TestCase
   end
 
   test "inactive register rejects POS commands" do
-    Pos::CloseSession.call(
+    pos_close_session!(
       session: @context[:session],
       actor: @actor,
       expected_lock_version: @context[:session].lock_version,
@@ -283,7 +283,7 @@ class PosWorkingCommandsTest < ActiveSupport::TestCase
     transaction = Pos::StartTransaction.call(session: @context[:session], actor: @actor)
     session = @context[:session]
     error = assert_raises(Pos::Error) do
-      Pos::CloseSession.call(
+      pos_close_session!(
         session: session,
         actor: @actor,
         expected_lock_version: session.lock_version,
@@ -298,7 +298,7 @@ class PosWorkingCommandsTest < ActiveSupport::TestCase
       expected_lock_version: transaction.lock_version
     )
     session.reload
-    Pos::CloseSession.call(
+    pos_close_session!(
       session: session,
       actor: @actor,
       expected_lock_version: session.lock_version,

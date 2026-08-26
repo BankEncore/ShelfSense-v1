@@ -764,6 +764,7 @@ class PosRegisterTest < ActionDispatch::IntegrationTest
       country_code: "US"
     )
     west_register = Register.create!(store: west, register_number: 1, name: "West Front")
+    ensure_initialized_safe!(store: west, actor: @actor)
     post store_selection_path, params: { store_id: west.id }
     post pos_register_enter_path, params: {
       register_id: west_register.id,

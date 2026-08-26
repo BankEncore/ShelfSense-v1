@@ -29,11 +29,12 @@ class PosCloseZTest < ApplicationSystemTestCase
     assert_no_text "Expected"
     assert_no_text "Opening float"
     assert_no_text "$100.00"
-    assert_no_text "Variance"
 
     field = find("#closing_count")
     field.fill_in with: "0.00"
-    field.send_keys :enter
+    select "Short count", from: "variance_reason_code"
+    fill_in "Over/short note", with: "Blind zero count"
+    click_on "Close session"
 
     assert_text "Session closed"
     assert_text "Expected closing Cash"

@@ -1,6 +1,6 @@
 # Phase 11 — Implementation plan
 
-Status: **Proposed** (11.1–11.3 not started). Living file: update slice status when work lands.
+Status: **Proposed** (11.2–11.3 not started). Living file: update slice status when work lands.
 
 Authority: [phase11-plan.md](phase11-plan.md), [phase11-schema.md](phase11-schema.md), [ADR-021](../../adr/ADR-021-register-and-terminal-identity.md), [ADR-025](../../adr/ADR-025-domain-owned-operational-ledgers.md).
 
@@ -59,10 +59,11 @@ GitHub tracker: [milestone Phase 11](https://github.com/BankEncore/ShelfSense-v1
 Before cashiers open after 11.1:
 
 1. Migration creates the store **safe** and **deposit-in-transit** locations in an **uninitialized** state (`initialized_at` null on the safe; expected balances 0). Historical sessions are untouched.
-2. Safe initialization is an administrative (or dedicated) screen usable **without** an open POS session.
-3. Authorized staff initialize every **active** operational store after migrate, **before** cashiers open.
-4. Deployment verification confirms every active store has `cash_locations.initialized_at` set on its safe.
-5. Do **not** infer a safe balance from historical closing snapshots.
+2. Run `shelfsense:seed_permissions` so Phase 11 permission keys and cash activity reasons exist on existing installations.
+3. Safe initialization is an administrative (or dedicated) screen usable **without** an open POS session.
+4. Authorized staff initialize every **active** operational store after migrate, **before** cashiers open. Initialization always requires a distinct `cash.approve_initialize_safe` actor.
+5. Deployment verification confirms every active store has `cash_locations.initialized_at` set on its safe.
+6. Do **not** infer a safe balance from historical closing snapshots.
 
 If a later release needs to delay enforcement, that would be a feature gate or two-step deploy; this packet locks the maintenance-window path unless a superseding note is added here.
 
@@ -71,7 +72,7 @@ If a later release needs to delay enforcement, that would be a feature gate or t
 | Slice | Status |
 |---|---|
 | 11.0 Contract / packet | **Complete** on `main` (planning packet). Merge-policy lock: this PR on `phase-11-cash-accountability` |
-| 11.1 Safe-backed session lifecycle | Not started |
+| 11.1 Safe-backed session lifecycle | This PR |
 | 11.2 Non-sale cash activity | Not started |
 | 11.3 Safe recon, deposit, store-day report | Not started |
 

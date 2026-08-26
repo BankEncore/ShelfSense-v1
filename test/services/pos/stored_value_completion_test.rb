@@ -92,7 +92,7 @@ class PosStoredValueCompletionTest < ActiveSupport::TestCase
     )
     result = complete_current!(transaction.reload)
     card = result.transaction.pos_stored_value_issuances.sole.gift_card
-    Pos::CloseSession.call(
+    pos_close_session!(
       session: @context[:session],
       actor: @actor,
       expected_lock_version: @context[:session].lock_version,

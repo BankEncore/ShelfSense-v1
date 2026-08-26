@@ -5,6 +5,9 @@
   <dt>Legal name</dt><dd><%= @settings.legal_name %></dd>
   <dt>Currency</dt><dd><%= @settings.base_currency_code %></dd>
   <dt>Stored-value credit approval threshold</dt><dd><%= @settings.stored_value_adjust_credit_approval_threshold_cents %> cents</dd>
+  <dt>Cash variance note threshold</dt><dd><%= @settings.cash_variance_note_threshold_cents %> cents</dd>
+  <dt>Cash variance approval threshold</dt><dd><%= @settings.cash_variance_approval_threshold_cents %> cents</dd>
+  <dt>Paid-out approval threshold</dt><dd><%= @settings.cash_paid_out_approval_threshold_cents %> cents</dd>
   <dt>Gift card voucher footer</dt><dd><%= @settings.gift_card_voucher_footer.presence || "Not set" %></dd>
   <dt>Timezone</dt><dd><%= @settings.default_timezone %></dd>
   <dt>Country</dt><dd><%= @settings.default_country_code %></dd>

@@ -10,6 +10,9 @@
   <p><%= form.label :default_region_code %><%= form.text_field :default_region_code %></p>
   <p><%= form.label :fiscal_year_start_month %><%= form.number_field :fiscal_year_start_month %></p>
   <p><%= form.label :stored_value_adjust_credit_approval_threshold_cents, "Stored-value credit approval threshold (cents)" %><%= form.number_field :stored_value_adjust_credit_approval_threshold_cents %></p>
+  <p><%= form.label :cash_variance_note_threshold_cents, "Cash variance note threshold (cents)" %><%= form.number_field :cash_variance_note_threshold_cents, min: 0 %></p>
+  <p><%= form.label :cash_variance_approval_threshold_cents, "Cash variance approval threshold (cents)" %><%= form.number_field :cash_variance_approval_threshold_cents, min: 0 %></p>
+  <p><%= form.label :cash_paid_out_approval_threshold_cents, "Paid-out approval threshold (cents)" %><%= form.number_field :cash_paid_out_approval_threshold_cents, min: 0 %></p>
   <p>
     <%= form.label :default_receipt_header, "Default receipt header message" %>
     <%= form.text_area :default_receipt_header, maxlength: Store::RECEIPT_MESSAGE_LIMIT %>

@@ -50,6 +50,7 @@ namespace :shelfsense do
     ProductForms::Catalog.seed!
     SubjectSchemes::Catalog.seed!
     StoredValue::AdjustmentReasons.seed!
+    Cash::ActivityReasons.seed!
     GiftCards::Programs.seed!
     Pos::TenderTypes.seed!
     after = Role.find_by!(key: "system_administrator").permissions.pluck(:key)

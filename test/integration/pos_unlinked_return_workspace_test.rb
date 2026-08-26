@@ -159,7 +159,7 @@ class PosUnlinkedReturnWorkspaceTest < ActionDispatch::IntegrationTest
   def enter_params
     {
       register_id: @register.id,
-      opening_float: "0.00",
+      opening_float: "500.00",
       confirmed_business_date: BusinessDate.for_store(@store).iso8601
     }
   end
