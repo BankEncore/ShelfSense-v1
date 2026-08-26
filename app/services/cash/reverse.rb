@@ -11,7 +11,6 @@ module Cash
 
       transfer = operation.cash_transfer
       return false if transfer && FORBIDDEN_TRANSFERS.include?(transfer.transfer_type)
-      return false if transfer&.transfer_type == "deposit"
 
       session_ids = operation.cash_entries.filter_map(&:pos_session_id).uniq
       return true if session_ids.empty?
@@ -45,9 +44,6 @@ module Cash
       transfer = @operation.cash_transfer
       if transfer && FORBIDDEN_TRANSFERS.include?(transfer.transfer_type)
         raise Error, "this operation cannot be reversed"
-      end
-      if transfer&.transfer_type == "deposit"
-        raise Error, "deposit reversal is not available until deposit in transit is implemented"
       end
 
       reason = ActivityReasons.require!(@reason_code, "reverse")

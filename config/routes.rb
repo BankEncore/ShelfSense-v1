@@ -118,6 +118,11 @@ Rails.application.routes.draw do
       member { post :reactivate }
     end
     resource :cash_safe, only: %i[show new create], controller: "cash_safes"
+    resource :cash_safe_reconciliation, only: %i[new create], controller: "cash_safe_reconciliations"
+    resources :cash_deposits, only: %i[index new create show] do
+      member { post :reverse }
+    end
+    resource :cash_store_day, only: :show, controller: "cash_store_days"
     resources :gift_cards, only: %i[index show] do
       collection do
         get :inquiry

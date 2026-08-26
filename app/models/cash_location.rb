@@ -5,6 +5,7 @@ class CashLocation < ApplicationRecord
 
   belongs_to :store
   has_many :cash_entries, dependent: :restrict_with_exception
+  has_many :cash_counts, dependent: :restrict_with_exception
   has_one :cash_safe_initialization, dependent: :restrict_with_exception
 
   validates :location_type, presence: true, inclusion: { in: LOCATION_TYPES }

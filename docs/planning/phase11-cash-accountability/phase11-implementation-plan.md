@@ -1,6 +1,6 @@
 # Phase 11 — Implementation plan
 
-Status: **Proposed** (11.2–11.3 not started). Living file: update slice status when work lands.
+Status: **Proposed** (11.3 in this PR). Living file: update slice status when work lands.
 
 Authority: [phase11-plan.md](phase11-plan.md), [phase11-schema.md](phase11-schema.md), [ADR-021](../../adr/ADR-021-register-and-terminal-identity.md), [ADR-025](../../adr/ADR-025-domain-owned-operational-ledgers.md).
 
@@ -73,8 +73,8 @@ If a later release needs to delay enforcement, that would be a feature gate or t
 |---|---|
 | 11.0 Contract / packet | **Complete** on `main` (planning packet). Merge-policy lock: this PR on `phase-11-cash-accountability` |
 | 11.1 Safe-backed session lifecycle | **Complete** on `phase-11-cash-accountability` |
-| 11.2 Non-sale cash activity | This PR |
-| 11.3 Safe recon, deposit, store-day report | Not started |
+| 11.2 Non-sale cash activity | **Complete** on `phase-11-cash-accountability` |
+| 11.3 Safe recon, deposit, store-day report | This PR |
 
 ## Integration notes
 

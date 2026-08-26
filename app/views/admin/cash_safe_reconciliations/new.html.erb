@@ -1,0 +1,44 @@
+<% content_for :title, "Reconcile store safe" %>
+<%= render "shared/page_header", title: "Reconcile store safe" %>
+
+<p>Count the store safe. Session results are not allocated onto this count. Cash activity may continue; a stale count is rejected.</p>
+
+<% if @feedback.present? %>
+  <p role="alert"><%= @feedback %></p>
+<% end %>
+
+<% if @can_view_expected %>
+  <p>Expected when this count started: <%= format_money_cents(@count.expected_cents_snapshot) %></p>
+<% else %>
+  <p>This is a blind count. Expected cash is hidden until you submit.</p>
+<% end %>
+
+<%= form_with url: admin_cash_safe_reconciliation_path, method: :post, class: "form" do %>
+  <%= hidden_field_tag :cash_count_id, @count.id %>
+  <%= hidden_field_tag :source_id, params[:source_id].presence || SecureRandom.uuid_v7 %>
+  <%= hidden_field_tag :idempotency_key, params[:idempotency_key].presence || SecureRandom.uuid_v7 %>
+  <div class="form-field">
+    <%= label_tag :count, "Counted cash" %>
+    <%= text_field_tag :count, params[:count], required: true, inputmode: "decimal", autocomplete: "off" %>
+  </div>
+  <div class="form-field">
+    <%= label_tag :variance_reason_code, "Over/short reason (required if counted cash differs)" %>
+    <%= select_tag :variance_reason_code,
+          options_from_collection_for_select(@variance_reasons, :code, :name, params[:variance_reason_code]),
+          include_blank: "None" %>
+  </div>
+  <div class="form-field">
+    <%= label_tag :variance_notes, "Over/short note" %>
+    <%= text_field_tag :variance_notes, params[:variance_notes], autocomplete: "off" %>
+  </div>
+  <div class="form-field">
+    <%= label_tag :approver_username, "Approver username (material over/short)" %>
+    <%= text_field_tag :approver_username, params[:approver_username], autocomplete: "off" %>
+  </div>
+  <div class="form-field">
+    <%= label_tag :approver_password, "Approver password" %>
+    <%= password_field_tag :approver_password, nil, autocomplete: "current-password" %>
+  </div>
+  <%= submit_tag "Accept count", class: "btn" %>
+  <%= link_to "Store safe", admin_cash_safe_path, class: "btn btn--ghost" %>
+<% end %>

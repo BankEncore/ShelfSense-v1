@@ -6,4 +6,16 @@
 
 <% unless @safe.initialized? %>
   <p><%= action_link_to("Initialize safe", new_admin_cash_safe_path, style: :solid, intent: :brand) %></p>
+<% else %>
+  <p>
+    <% if Authorization::PermissionEvaluator.allowed?(user: current_user, permission_key: "cash.reconcile_safe", store: current_store) %>
+      <%= action_link_to("Reconcile safe", new_admin_cash_safe_reconciliation_path, style: :solid, intent: :brand) %>
+    <% end %>
+    <% if Authorization::PermissionEvaluator.allowed?(user: current_user, permission_key: "cash.prepare_deposit", store: current_store) %>
+      <%= action_link_to("Prepare deposit", new_admin_cash_deposit_path, style: :ghost, intent: :neutral) %>
+    <% end %>
+    <% if Authorization::PermissionEvaluator.allowed?(user: current_user, permission_key: "pos.sessions.view", store: current_store) %>
+      <%= action_link_to("Store-day cash", admin_cash_store_day_path, style: :ghost, intent: :neutral) %>
+    <% end %>
+  </p>
 <% end %>
