@@ -55,6 +55,8 @@
   end
   sale_lines = lines.select(&:sale?)
   return_lines = lines.select(&:return?)
+  issuances = @issuances || @transaction.pos_stored_value_issuances.ordered.to_a
+  gift_card_programs = @gift_card_programs || GiftCardProgram.active.admin_ordered.to_a
 %>
 
 <div id="pos_workspace"
@@ -89,7 +91,7 @@
           <%= link_to "POS Home", pos_path, class: "pos-header__link" %>
           <%= link_to "Transactions", pos_transactions_path, class: "pos-header__link" %>
           <%= link_to "X Report", pos_x_report_path, class: "pos-header__link" %>
-          <% if @ui_mode == "sale_entry" && lines.empty? && tenders.empty? %>
+          <% if @ui_mode == "sale_entry" && lines.empty? && tenders.empty? && issuances.empty? %>
             <%= action_button_to "Close register", pos_register_close_path, style: :outline, intent: :neutral, size: :standard, method: :post,
                   params: { session_id: @session_record.id, register_id: @register.id } %>
           <% end %>
@@ -181,6 +183,73 @@
             <% end %>
           </tbody>
         </table>
+        <% if issuances.any? || (@ui_mode == "sale_entry" && gift_card_programs.any?) %>
+          <section class="pos-issuances" aria-label="Gift cards">
+            <h2 class="pos-issuances__title">Gift cards</h2>
+            <% issuances.each do |issuance| %>
+              <div class="pos-issuance">
+                <%= issuance.activation? ? "Activation" : "Reload" %>
+                · <%= format_money_cents(issuance.amount_cents) %>
+                <% if issuance.masked_card_snapshot.present? || issuance.pending_card_number_last_four.present? %>
+                  · <%= issuance.masked_card_snapshot.presence || "#{issuance.pending_card_number_prefix}••••#{issuance.pending_card_number_last_four}" %>
+                <% elsif issuance.gift_card_program %>
+                  · <%= issuance.gift_card_program.name %>
+                <% end %>
+                <% if @ui_mode == "sale_entry" %>
+                  <%= button_to "Remove",
+                        pos_register_remove_stored_value_issuance_path(register_scope),
+                        method: :post,
+                        params: { lock_version: @transaction.lock_version, register_id: @register.id, issuance_id: issuance.id },
+                        form: { data: { turbo: true } },
+                        class: "btn btn--ghost" %>
+                <% end %>
+              </div>
+            <% end %>
+            <% if @ui_mode == "sale_entry" && gift_card_programs.any? %>
+              <%= form_with url: pos_register_stored_value_issuance_path(register_scope), method: :post, class: "pos-issuance-form" do %>
+                <%= hidden_field_tag :register_id, @register.id %>
+                <%= hidden_field_tag :lock_version, @transaction.lock_version %>
+                <label>
+                  Type
+                  <select name="issuance_type">
+                    <option value="activation">Activation</option>
+                    <option value="reload">Reload</option>
+                  </select>
+                </label>
+                <label>
+                  Program
+                  <select name="gift_card_program_id">
+                    <% gift_card_programs.each do |program| %>
+                      <option value="<%= program.id %>"><%= program.name %></option>
+                    <% end %>
+                  </select>
+                </label>
+                <label>
+                  Amount
+                  <input name="issuance_amount" inputmode="decimal" autocomplete="off">
+                </label>
+                <label>
+                  Card number
+                  <input name="card_number" autocomplete="off" data-register-workspace-target="issuanceCardNumber">
+                </label>
+                <%= submit_tag "Add gift card", class: "btn btn--solid btn--brand" %>
+              <% end %>
+            <% end %>
+          </section>
+        <% end %>
+        <% if @transaction.customer %>
+          <p class="pos-customer">Customer · <%= @transaction.customer.display_name %></p>
+        <% elsif @ui_mode == "sale_entry" %>
+          <%= form_with url: pos_register_attach_customer_path(register_scope), method: :post, class: "pos-customer-form" do %>
+            <%= hidden_field_tag :register_id, @register.id %>
+            <%= hidden_field_tag :lock_version, @transaction.lock_version %>
+            <label>
+              Customer id
+              <input name="customer_id" autocomplete="off">
+            </label>
+            <%= submit_tag "Attach customer", class: "btn btn--outline" %>
+          <% end %>
+        <% end %>
       </div>
 
       <aside id="pos_totals" class="pos-totals">
@@ -195,6 +264,9 @@
           <% if @transaction.return_discount_cents.positive? %>
             <div>Discount reversal  <%= format_signed_money_cents(@transaction.return_discount_cents) %></div>
           <% end %>
+        <% end %>
+        <% if @transaction.stored_value_issuance_cents.to_i != 0 %>
+          <div>Gift cards  <%= format_signed_money_cents(@transaction.stored_value_issuance_cents) %></div>
         <% end %>
         <div>Net  <%= format_signed_money_cents(@transaction.signed_net_cents) %></div>
         <% tenders.each do |working_tender| %>
@@ -235,6 +307,13 @@
              autocomplete="off"
              <%= "disabled" if locked || @ui_mode == "completion_pending" %>
              <%= "autofocus" unless locked || @ui_mode == "completion_failed" || completion_recovery %>>
+      <div data-register-workspace-target="giftCardNumberWrap" hidden>
+        <label for="pos-gift-card-number-field">Gift card number</label>
+        <input id="pos-gift-card-number-field"
+               class="pos-command__field"
+               data-register-workspace-target="giftCardNumberField"
+               autocomplete="off">
+      </div>
       <div data-register-workspace-target="referenceWrap" <%= "hidden" unless show_reference %>>
         <label for="pos-reference-field" data-register-workspace-target="referenceLabel">
           <%= selected_tender_type&.reference_field_label || "Reference" %>
@@ -285,6 +364,8 @@
                 data: { action: "register-workspace#chooseCheck", register_workspace_target: "checkButton" } %>
           <%= action_button "Other (F4)", style: :outline, intent: :neutral, size: :large, disabled: true,
                 data: { action: "register-workspace#chooseOther", register_workspace_target: "otherButton" } %>
+          <%= action_button "Stored value (F5)", style: :outline, intent: :neutral, size: :large, disabled: true,
+                data: { action: "register-workspace#chooseStoredValue", register_workspace_target: "storedValueButton" } %>
           <%= action_button (even_exchange ? "Complete (+)" : (refund_mode ? "Refund (+)" : "Tender (+)")),
                 style: :outline, intent: :neutral, size: :large, disabled: true,
                 data: { action: "register-workspace#enterTender", register_workspace_target: "tenderButton" } %>
@@ -345,6 +426,8 @@
       <%= hidden_field_tag :tender_amount, "", data: { register_workspace_target: "presentedInput" } %>
       <%= hidden_field_tag :tender_type_id, selected_tender_type&.id, data: { register_workspace_target: "tenderTypeInput" } %>
       <%= hidden_field_tag :external_reference, "", data: { register_workspace_target: "referenceInput" } %>
+      <%= hidden_field_tag :card_number, "", data: { register_workspace_target: "cardNumberInput" } %>
+      <%= hidden_field_tag :destination_mode, "", data: { register_workspace_target: "destinationModeInput" } %>
     <% end %>
 
     <%= form_with url: pos_register_remove_tender_path(register_scope), method: :post, html: { class: "pos-hidden", data: { register_workspace_target: "removeTenderForm", turbo: true } } do %>

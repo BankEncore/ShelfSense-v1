@@ -29,7 +29,7 @@ scan unique sellable → add immediately
 - opens Linked/Unlinked chooser (keyboard)
 post-void remains history-only
 F10 opens history; working basket untouched
-F5 left unbound (browser)
+F5 stored-value tenders (Phase 10.4; Keyboard Lock includes F5)
 + = Cash with remaining prefilled (not a generic “any tender”)
 Enter in scanner-sensitive fields resolves; never confirms cancel
 ```
@@ -200,7 +200,7 @@ The cookie confers neither authorization nor Session ownership.
 | F2 | Card |
 | F3 | Check |
 | F4 | Other |
-| F5 | unbound (browser) |
+| F5 | stored-value tenders |
 | F6 | **Price** on selected sale line (§9.3) |
 | F7 | line discount on selected sale line |
 | F8 | remove selected line or selected tender |
@@ -210,9 +210,9 @@ The cookie confers neither authorization nor Session ownership.
 
 Intercept `/`, `*`, `-`, `+` only when the primary field is **empty** (same pattern as today’s `*` / `+`). A hyphen or slash inside a typed/scanned identifier is not Return or Search.
 
-Extend Keyboard Lock to F1–F4 and F6–F10. **Never** lock F5. Postpone Ctrl/Cmd/Alt.
+Extend Keyboard Lock to F1–F10. Phase 10.4 binds F5 to stored-value tenders (6.7 left it unbound). Postpone Ctrl/Cmd/Alt.
 
-Every shortcut has a visible, focusable control. Unavailable keys explain why (§12.2) — no silent no-op for F1–F4 / F6 / F7 / F8 / `*` / `+` when the cashier has reason to think they should work.
+Every shortcut has a visible, focusable control. Unavailable keys explain why (§12.2) — no silent no-op for F1–F5 / F6 / F7 / F8 / `*` / `+` when the cashier has reason to think they should work.
 
 F6/F7 remain disabled on **return** lines ([returns.md](returns.md)). Tax Class stays a **visible control** only (no F-key).
 

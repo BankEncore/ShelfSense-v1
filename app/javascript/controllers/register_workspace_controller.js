@@ -25,6 +25,11 @@ export default class extends Controller {
     "referenceInput",
     "referenceField",
     "referenceWrap",
+    "giftCardNumberWrap",
+    "giftCardNumberField",
+    "cardNumberInput",
+    "issuanceCardNumber",
+    "destinationModeInput",
     "referenceLabel",
     "removeTenderInput",
     "quantityLineInput",
@@ -101,6 +106,7 @@ export default class extends Controller {
     "cardButton",
     "checkButton",
     "otherButton",
+    "storedValueButton",
     "otherOverlay",
     "otherList",
     "searchOverlay",
@@ -336,6 +342,11 @@ export default class extends Controller {
       this.chooseOther()
       return
     }
+    if (key === "F5") {
+      event.preventDefault()
+      this.chooseStoredValue()
+      return
+    }
 
     if (this.modeValue === "tender") {
       if (key === "F8") {
@@ -544,6 +555,20 @@ export default class extends Controller {
       const capture = this.hasReferenceWrapTarget && !this.referenceWrapTarget.hidden && this.hasReferenceFieldTarget
       this.referenceInputTarget.value = capture ? this.referenceFieldTarget.value.trim() : ""
     }
+    if (this.hasCardNumberInputTarget) {
+      const captureCard = this.hasGiftCardNumberWrapTarget && !this.giftCardNumberWrapTarget.hidden && this.hasGiftCardNumberFieldTarget
+      this.cardNumberInputTarget.value = captureCard ? this.giftCardNumberFieldTarget.value.trim() : ""
+    }
+    if (this.hasDestinationModeInputTarget) {
+      const type = this.selectedTenderType()
+      if (this.settlementValue === "refund" && type?.stored_value_account_type === "gift_card" && !(this.cardNumberInputTarget?.value)) {
+        this.destinationModeInputTarget.value = "new_gift_card"
+      } else if (this.settlementValue === "refund" && type?.stored_value_account_type === "store_credit") {
+        this.destinationModeInputTarget.value = "customer_store_credit"
+      } else {
+        this.destinationModeInputTarget.value = type?.category === "stored_value" ? "existing_account" : ""
+      }
+    }
     this.beginFlight()
     this.tenderFormTarget.requestSubmit()
   }
@@ -579,7 +604,7 @@ export default class extends Controller {
   enterTender() {
     if (this.inFlight) return
     if (this.modeValue !== "sale_entry") return
-    if (!this.element.querySelector(".pos-lines tbody tr")) {
+    if (!this.hasCommercialContent()) {
       this.showFeedback("Add merchandise before taking a tender.")
       return
     }
@@ -622,6 +647,24 @@ export default class extends Controller {
     this.openOtherPicker(types)
   }
 
+  chooseStoredValue() {
+    if (this.inFlight) return
+    if (this.modeValue !== "sale_entry" && this.modeValue !== "tender") return
+    if (!this.ensureTenderable()) return
+    const types = this.typesForCategory("stored_value")
+    if (types.length === 0) {
+      this.showFeedback("Stored-value tender is not available.")
+      return
+    }
+    if (types.length === 1) {
+      this.beginTenderMode()
+      this.applyTenderType(types[0])
+      this.prefillRemaining()
+      return
+    }
+    this.openOtherPicker(types)
+  }
+
   chooseTenderCategory(category) {
     if (this.inFlight) return
     if (this.modeValue !== "sale_entry" && this.modeValue !== "tender") return
@@ -643,7 +686,7 @@ export default class extends Controller {
 
   ensureTenderable() {
     if (this.modeValue === "tender") return true
-    if (!this.element.querySelector(".pos-lines tbody tr")) {
+    if (!this.hasCommercialContent()) {
       this.showFeedback("Add merchandise before taking a tender.")
       return false
     }
@@ -698,6 +741,7 @@ export default class extends Controller {
     if (category === "cash") return "Cash"
     if (category === "card") return "Card"
     if (category === "check") return "Check"
+    if (category === "stored_value") return "Stored value"
     return "Other"
   }
 
@@ -828,6 +872,9 @@ export default class extends Controller {
           variantId: result.variant?.id,
           prompt: this.variantLabel(result.variant)
         })
+        return
+      case "gift_card":
+        this.handleGiftCardScan(result)
         return
       default:
         this.showFeedback(result.message || "merchandise not found")
@@ -1456,6 +1503,55 @@ export default class extends Controller {
       this.setFieldLabel(cash ? `${dueText}. Cash presented` : `${dueText}. ${name} amount`)
     }
     this.toggleReferenceField(type.reference_policy)
+    this.toggleGiftCardNumberField(type)
+  }
+
+  toggleGiftCardNumberField(type) {
+    if (!this.hasGiftCardNumberWrapTarget) return
+    const show = this.modeValue === "tender" && type?.stored_value_account_type === "gift_card"
+    this.giftCardNumberWrapTarget.hidden = !show
+    if (!show && this.hasGiftCardNumberFieldTarget) this.giftCardNumberFieldTarget.value = ""
+  }
+
+  hasCommercialContent() {
+    return Boolean(this.element.querySelector(".pos-lines tbody tr") || this.element.querySelector(".pos-issuance"))
+  }
+
+  handleGiftCardScan(result) {
+    const scanned = this.hasFieldTarget ? this.fieldTarget.value.trim() : ""
+    if (this.hasIdentifierInputTarget) this.identifierInputTarget.value = ""
+    if (this.hasFieldTarget) this.fieldTarget.value = ""
+
+    if (result.found) {
+      if (this.settlementValue === "payment" && this.remainingCents() > 0) {
+        const gift = this.typesForCategory("stored_value").find((type) => type.stored_value_account_type === "gift_card")
+        if (!gift) {
+          this.showFeedback("Gift card tender is not available.")
+          this.enableReadyActions()
+          this.restoreFocus()
+          return
+        }
+        this.beginTenderMode()
+        this.applyTenderType(gift)
+        if (this.hasGiftCardNumberFieldTarget) this.giftCardNumberFieldTarget.value = scanned
+        this.prefillRemaining()
+        this.enableReadyActions()
+        return
+      }
+      this.showFeedback(result.masked_number ? `Gift card ${result.masked_number}` : "Gift card on file")
+      this.enableReadyActions()
+      this.restoreFocus()
+      return
+    }
+
+    if (result.number_authority === "manual_external" && this.hasIssuanceCardNumberTarget) {
+      this.issuanceCardNumberTarget.value = scanned
+      this.showFeedback("Gift card not on file. Enter an activation amount.")
+    } else {
+      this.showFeedback(result.message || "gift card not on file")
+    }
+    this.enableReadyActions()
+    this.restoreFocus()
   }
 
   cashTenderIndex() {
@@ -2062,24 +2158,25 @@ export default class extends Controller {
   }
 
   disableMutationControls() {
-    ["returnButton", "quantityButton", "overrideButton", "discountButton", "taxClassButton", "tenderButton", "removeButton", "cancelButton", "retry", "abandonButton", "cashButton", "cardButton", "checkButton", "otherButton"].forEach((name) => {
+    ["returnButton", "quantityButton", "overrideButton", "discountButton", "taxClassButton", "tenderButton", "removeButton", "cancelButton", "retry", "abandonButton", "cashButton", "cardButton", "checkButton", "otherButton", "storedValueButton"].forEach((name) => {
       this.setActionEnabled(name, false)
     })
   }
 
   enableTenderIdentityButtons() {
-    const hasLines = Boolean(this.element.querySelector(".pos-lines tbody tr"))
+    const hasLines = this.hasCommercialContent()
     const enabled = hasLines && (this.modeValue === "sale_entry" || this.modeValue === "tender")
     this.setActionEnabled("cashButton", enabled && this.typesForCategory("cash").length > 0)
     this.setActionEnabled("cardButton", enabled && this.typesForCategory("card").length > 0)
     this.setActionEnabled("checkButton", enabled && this.typesForCategory("check").length > 0)
     this.setActionEnabled("otherButton", enabled && this.otherTypes().length > 0)
+    this.setActionEnabled("storedValueButton", enabled && this.typesForCategory("stored_value").length > 0)
   }
 
   enableReadyActions() {
     if (this.modeValue === "sale_entry") {
       const hasSelection = Boolean(this.selectedRow())
-      const hasLines = Boolean(this.element.querySelector(".pos-lines tbody tr"))
+      const hasLines = this.hasCommercialContent()
       const returnLine = this.selectedReturnLine()
       const quantityOk = hasSelection && !this.selectedUnitLine() && !this.selectedQuantityBlocked()
       this.setActionEnabled("returnButton", true)
@@ -2209,7 +2306,7 @@ export default class extends Controller {
   requestFunctionKeyLock() {
     const keyboard = navigator.keyboard
     if (!keyboard || typeof keyboard.lock !== "function") return
-    keyboard.lock(["F1", "F2", "F3", "F4", "F6", "F7", "F8", "F9", "F10"]).catch(() => {})
+    keyboard.lock(["F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10"]).catch(() => {})
   }
 
   releaseFunctionKeyLock() {
@@ -2225,7 +2322,7 @@ export default class extends Controller {
   }
 
   claimedFunctionKey(key) {
-    return key === "F1" || key === "F2" || key === "F3" || key === "F4" || key === "F6" || key === "F7" || key === "F8" || key === "F9" || key === "F10"
+    return key === "F1" || key === "F2" || key === "F3" || key === "F4" || key === "F5" || key === "F6" || key === "F7" || key === "F8" || key === "F9" || key === "F10"
   }
 
   claimFunctionKey(event) {

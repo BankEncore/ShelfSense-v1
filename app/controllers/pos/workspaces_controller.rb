@@ -294,14 +294,27 @@ module Pos
         direction = Pos::Support.settlement_direction(@transaction)
         case direction
         when :refund
-          Pos::AddRefundTender.call(
-            transaction: @transaction,
-            actor: current_user,
-            expected_lock_version: expected_lock_version,
-            tender_type: type,
-            amount_cents: amount,
-            external_reference: params[:external_reference]
-          )
+          if type.stored_value?
+            Pos::AddStoredValueRefundTender.call(
+              transaction: @transaction,
+              actor: current_user,
+              expected_lock_version: expected_lock_version,
+              tender_type: type,
+              amount_cents: amount,
+              destination_mode: stored_value_destination_mode(type),
+              card_number: params[:card_number],
+              gift_card_program: find_optional_gift_card_program
+            )
+          else
+            Pos::AddRefundTender.call(
+              transaction: @transaction,
+              actor: current_user,
+              expected_lock_version: expected_lock_version,
+              tender_type: type,
+              amount_cents: amount,
+              external_reference: params[:external_reference]
+            )
+          end
         when :payment
           if type.cash?
             Pos::TenderCash.call(
@@ -309,6 +322,15 @@ module Pos
               actor: current_user,
               expected_lock_version: expected_lock_version,
               amount_presented_cents: amount
+            )
+          elsif type.stored_value?
+            Pos::AddStoredValueTender.call(
+              transaction: @transaction,
+              actor: current_user,
+              expected_lock_version: expected_lock_version,
+              tender_type: type,
+              amount_cents: amount,
+              card_number: params[:card_number]
             )
           else
             Pos::AddTender.call(
@@ -327,6 +349,69 @@ module Pos
         apply_post_tender_view!
         respond_workspace
       end
+    end
+
+    def stored_value_issuance
+      rescue_workspace(error_mode: "sale_entry") do
+        amount = Money::ParseCents.call(params[:issuance_amount])
+        raise Pos::Error, "issuance amount is required" if amount.nil?
+
+        Pos::AddStoredValueIssuance.call(
+          transaction: @transaction,
+          actor: current_user,
+          expected_lock_version: expected_lock_version,
+          issuance_type: params.require(:issuance_type),
+          amount_cents: amount,
+          gift_card_program: find_optional_gift_card_program,
+          card_number: params[:card_number]
+        )
+        @transaction.reload
+        @ui_mode = "sale_entry"
+        respond_workspace
+      end
+    end
+
+    def remove_stored_value_issuance
+      rescue_workspace(error_mode: "sale_entry") do
+        issuance = @transaction.pos_stored_value_issuances.find(params.require(:issuance_id))
+        Pos::RemoveStoredValueIssuance.call(
+          transaction: @transaction,
+          actor: current_user,
+          expected_lock_version: expected_lock_version,
+          issuance: issuance
+        )
+        @transaction.reload
+        @ui_mode = "sale_entry"
+        respond_workspace
+      end
+    end
+
+    def attach_customer
+      rescue_workspace(error_mode: "sale_entry") do
+        customer = Customer.find(params.require(:customer_id))
+        Pos::AttachCustomer.call(
+          transaction: @transaction,
+          actor: current_user,
+          expected_lock_version: expected_lock_version,
+          customer: customer
+        )
+        @transaction.reload
+        @ui_mode = "sale_entry"
+        respond_workspace
+      end
+    end
+
+    def customer_search
+      rows = Customers::Search.call(query: params[:q], mode: :operational, limit: 20)
+      render json: {
+        results: rows.map { |row|
+          customer = row.customer
+          {
+            id: customer.id,
+            label: [ customer.display_name, customer.email, customer.phone ].compact.join(" · ")
+          }
+        }
+      }
     end
 
     def remove_tender
@@ -442,6 +527,8 @@ module Pos
         original_transaction_line: :pos_transaction
       )
       @tenders = @transaction.pos_tenders.ordered.to_a
+      @issuances = @transaction.pos_stored_value_issuances.ordered.to_a
+      @gift_card_programs = GiftCardProgram.active.admin_ordered.to_a
       @tender = @tenders.find { |tender| pos_workspace_cash_payment?(tender) }
       @settlement_direction = Pos::Support.settlement_direction(@transaction)
       @remaining_payment_cents = Pos::Support.remaining_payment_cents(@transaction)
@@ -684,6 +771,22 @@ module Pos
       tender.cash? && tender.direction == "payment"
     end
 
+    def find_optional_gift_card_program
+      id = params[:gift_card_program_id].presence
+      return if id.blank?
+
+      GiftCardProgram.find_by(id: id)
+    end
+
+    def stored_value_destination_mode(type)
+      explicit = params[:destination_mode].presence
+      return explicit if explicit.present?
+      return "new_gift_card" if type.code == "gift_card" && params[:card_number].blank?
+      return "customer_store_credit" if type.code == "store_credit"
+
+      "existing_account"
+    end
+
     def find_optional_variant
       id = params[:product_variant_id].presence
       return if id.blank?
@@ -718,6 +821,17 @@ module Pos
       payload[:variants] = Array(result.variants).map { |variant| serialize_variant(variant) }
       payload[:units] = Array(result.units).map { |unit| serialize_unit(unit) }
       payload[:products] = Array(result.products).map { |product| serialize_product(product) }
+      if result.outcome == :gift_card
+        payload[:found] = result.gift_card.present?
+        payload[:gift_card_id] = result.gift_card&.id
+        payload[:masked_number] = result.gift_card&.masked_number
+        payload[:status] = result.gift_card&.status
+        payload[:balance_cents] = result.gift_card&.balance_cents
+        payload[:program_id] = result.gift_card_program&.id
+        payload[:program_code] = result.gift_card_program&.code
+        payload[:number_authority] = result.gift_card_program&.number_authority
+        payload[:reload_allowed] = result.gift_card_program&.reload_allowed
+      end
       payload
     end
 

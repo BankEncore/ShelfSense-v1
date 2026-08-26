@@ -212,6 +212,10 @@ Rails.application.routes.draw do
     post "register/abandon_tender", to: "workspaces#abandon_tender"
     post "register/cancel", to: "workspaces#cancel"
     post "register/tender", to: "workspaces#tender"
+    post "register/stored_value_issuance", to: "workspaces#stored_value_issuance"
+    post "register/remove_stored_value_issuance", to: "workspaces#remove_stored_value_issuance"
+    post "register/attach_customer", to: "workspaces#attach_customer"
+    get "register/customer_search", to: "workspaces#customer_search", as: :register_customer_search
     post "register/remove_tender", to: "workspaces#remove_tender"
     post "register/continue", to: "workspaces#continue"
     get "transactions/:transaction_id/return_items", to: "return_items#show", as: :transaction_return_items
