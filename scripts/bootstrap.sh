@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# One-shot local bootstrap. Does not overwrite an existing installation.
+# Recreate first with: ./dev/rails-docker bin/rails db:reset
 # Bootstrap the application
 ./dev/rails-docker env \
   ORGANIZATION_NAME="ShelfSense" \

@@ -136,7 +136,7 @@ After `db:prepare` / `db:migrate`, initialize once:
   bin/rails shelfsense:bootstrap
 ```
 
-Do not commit real passwords. Bootstrap is concurrency-safe and sets `system_settings.initialized_at` only on success.
+Do not commit real passwords. Bootstrap is concurrency-safe and sets `system_settings.initialized_at` only on success. `scripts/bootstrap.sh` is a local convenience wrapper for the same task. It does not overwrite an existing installation or reset passwords; a second run raises `AlreadyInitialized`.
 
 After pulling catalog changes (for example Phase 2 permission keys), re-seed permissions and system role grants on an already-initialized database:
 
@@ -195,6 +195,10 @@ To rebuild the development database through Rails while retaining the PostgreSQL
 ```sh
 ./dev/rails-docker bin/rails db:reset
 ```
+
+`./dev/rails-docker` executes the arguments inside the `web` container. `db:drop` is a Rails task, so `./dev/rails-docker db:drop` fails; use `./dev/rails-docker bin/rails db:reset` (or `bin/rails db:drop db:create db:migrate`). After a reset, run `scripts/bootstrap.sh` again — `db:reset` does not create the administrator.
+
+Five consecutive failed sign-ins lock the account until an administrator unlocks it. Bootstrap will not unlock or change that password.
 
 Deleting volumes permanently removes local PostgreSQL data and the cached gem volume. Use this only when that loss is intended:
 

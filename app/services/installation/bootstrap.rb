@@ -50,7 +50,8 @@ module Installation
 
       ActiveRecord::Base.transaction do
         acquire_advisory_lock!
-        raise AlreadyInitialized, "ShelfSense is already initialized" if SystemSettings.initialized?
+        settings_row = SystemSettings.order(:created_at).first
+        raise AlreadyInitialized, already_initialized_message(settings_row) if SystemSettings.initialized?
 
         correlation_id = SecureRandom.uuid_v7
         settings = create_settings!
@@ -144,6 +145,18 @@ module Installation
     attr_reader :organization_name, :legal_name, :store_legal_name, :store_number, :store_code, :store_name,
                 :store_timezone, :store_country_code, :admin_username, :admin_display_name,
                 :admin_password, :admin_email, :base_currency_code, :default_timezone, :default_country_code
+
+    def already_initialized_message(settings)
+      detail = if settings&.initialized_at
+        " (#{settings.organization_name} since #{settings.initialized_at.utc.iso8601})"
+      else
+        ""
+      end
+
+      "ShelfSense is already initialized#{detail}. " \
+        "Bootstrap does not overwrite an existing installation or reset passwords. " \
+        "To start over, run `./dev/rails-docker bin/rails db:reset`, then `scripts/bootstrap.sh`."
+    end
 
     def validate_input!
       raise InvalidInput, "admin password is required" if admin_password.blank?

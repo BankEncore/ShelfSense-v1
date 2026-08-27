@@ -18,21 +18,25 @@ namespace :shelfsense do
     missing = required.select { |key| ENV[key].to_s.strip.empty? }
     abort "Missing required environment variables: #{missing.join(', ')}" if missing.any?
 
-    result = Installation::Bootstrap.call(
-      organization_name: ENV.fetch("ORGANIZATION_NAME"),
-      legal_name: ENV["LEGAL_NAME"],
-      store_number: ENV.fetch("STORE_NUMBER"),
-      store_code: ENV.fetch("STORE_CODE"),
-      store_name: ENV.fetch("STORE_NAME"),
-      store_legal_name: ENV.fetch("STORE_LEGAL_NAME"),
-      store_timezone: ENV.fetch("STORE_TIMEZONE"),
-      store_country_code: ENV.fetch("STORE_COUNTRY_CODE"),
-      admin_username: ENV.fetch("ADMIN_USERNAME"),
-      admin_display_name: ENV.fetch("ADMIN_DISPLAY_NAME"),
-      admin_password: ENV.fetch("ADMIN_PASSWORD"),
-      admin_email: ENV["ADMIN_EMAIL"],
-      base_currency_code: ENV.fetch("BASE_CURRENCY_CODE", "USD")
-    )
+    begin
+      result = Installation::Bootstrap.call(
+        organization_name: ENV.fetch("ORGANIZATION_NAME"),
+        legal_name: ENV["LEGAL_NAME"],
+        store_number: ENV.fetch("STORE_NUMBER"),
+        store_code: ENV.fetch("STORE_CODE"),
+        store_name: ENV.fetch("STORE_NAME"),
+        store_legal_name: ENV.fetch("STORE_LEGAL_NAME"),
+        store_timezone: ENV.fetch("STORE_TIMEZONE"),
+        store_country_code: ENV.fetch("STORE_COUNTRY_CODE"),
+        admin_username: ENV.fetch("ADMIN_USERNAME"),
+        admin_display_name: ENV.fetch("ADMIN_DISPLAY_NAME"),
+        admin_password: ENV.fetch("ADMIN_PASSWORD"),
+        admin_email: ENV["ADMIN_EMAIL"],
+        base_currency_code: ENV.fetch("BASE_CURRENCY_CODE", "USD")
+      )
+    rescue Installation::Bootstrap::AlreadyInitialized => e
+      abort e.message
+    end
 
     puts "Bootstrap complete."
     puts "Organization: #{result[:settings].organization_name}"
