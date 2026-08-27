@@ -34,11 +34,11 @@ module Cash
       @occurred_at = occurred_at
       @pos_session = pos_session
       @approved_by = approved_by
-      @reason_code = reason_code
-      @reason_name_snapshot = reason_name_snapshot
-      @notes = notes
+      @reason_code = reason_code.to_s.strip.presence
+      @reason_name_snapshot = reason_name_snapshot.to_s.strip.presence
+      @notes = notes.to_s.strip.presence
       @reversal_of = reversal_of
-      @outbox_event_type = outbox_event_type
+      @outbox_event_type = outbox_event_type.to_s.strip.presence
       @correlation_id = correlation_id || SecureRandom.uuid_v7
     end
 
@@ -201,10 +201,27 @@ module Cash
 
     def lock_targets!
       location_ids = @entries.filter_map { |entry| location_id_for(entry) }.uniq.sort
-      session_ids = @entries.filter_map { |entry| session_id_for(entry) }.uniq.sort
+      session_ids = @entries.filter_map { |entry| session_id_for(entry) }
+      session_ids << @pos_session.id if @pos_session
+      session_ids = session_ids.compact.uniq.sort
       locked_locations = location_ids.index_with { |id| CashLocation.lock.find(id) }
       locked_sessions = session_ids.index_with { |id| PosSession.lock.find(id) }
+      assert_store_scope!(locked_locations, locked_sessions)
+      @pos_session = locked_sessions[@pos_session.id] if @pos_session
       [ locked_locations, locked_sessions ]
+    end
+
+    def assert_store_scope!(locked_locations, locked_sessions)
+      locked_locations.each_value do |location|
+        next if location.store_id == @store.id
+
+        raise Error, "cash location does not belong to this store"
+      end
+      locked_sessions.each_value do |session|
+        next if session.store_id == @store.id
+
+        raise Error, "session does not belong to this store"
+      end
     end
 
     def location_id_for(entry)
@@ -229,15 +246,23 @@ module Cash
       {
         operation_type: @operation_type,
         store_id: @store.id,
-        pos_session_id: @pos_session&.id,
+        performed_by_id: @performed_by.id,
         approved_by_id: @approved_by&.id,
+        pos_session_id: @pos_session&.id,
+        business_date: @business_date,
+        occurred_at: @occurred_at,
+        reason_code: @reason_code,
+        reason_name_snapshot: @reason_name_snapshot,
+        notes: @notes,
         reversal_of_id: @reversal_of&.id,
+        outbox_event_type: @outbox_event_type,
         entries: @entries.map { |entry|
           {
             cash_location_id: location_id_for(entry),
             pos_session_id: session_id_for(entry),
             amount_cents: Integer(entry.fetch(:amount_cents)),
-            balance_after_cents: entry[:balance_after_cents]
+            balance_after_cents: entry[:balance_after_cents],
+            reversal_of_id: entry[:reversal_of]&.id || entry[:reversal_of_id]
           }
         }
       }

@@ -3,6 +3,8 @@
 module Cash
   class SnapshotCount
     STALE = "This count is stale because safe cash changed. Start a new count."
+    ALREADY_ACCEPTED = "This count has already been accepted."
+    NOT_DISCARDED = "This count is not a discarded snapshot."
 
     def self.start!(location:, purpose:)
       raise Error, "safe is not initialized" if location.safe? && !location.initialized?
@@ -29,16 +31,24 @@ module Cash
     end
 
     def self.accept!(count:, total_cents:)
+      locked = CashCount.lock.find(count.id)
+      raise Error, NOT_DISCARDED unless locked.status == "discarded"
+      raise Error, ALREADY_ACCEPTED if CashCount.exists?(superseded_count_id: locked.id)
+
       CashCount.create!(
-        purpose: count.purpose,
+        purpose: locked.purpose,
         total_cents: total_cents,
-        expected_cents_snapshot: count.expected_cents_snapshot,
-        location_lock_version_snapshot: count.location_lock_version_snapshot,
-        cash_location: count.cash_location,
+        expected_cents_snapshot: locked.expected_cents_snapshot,
+        location_lock_version_snapshot: locked.location_lock_version_snapshot,
+        cash_location: locked.cash_location,
         status: "accepted",
-        business_date: count.business_date,
-        superseded_count: count
+        business_date: locked.business_date,
+        superseded_count: locked
       )
+    rescue ActiveRecord::RecordNotUnique, ActiveRecord::RecordInvalid => e
+      raise Error, ALREADY_ACCEPTED if CashCount.exists?(superseded_count_id: count.id)
+
+      raise Error, e.message
     end
   end
 end
