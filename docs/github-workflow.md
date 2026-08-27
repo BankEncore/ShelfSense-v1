@@ -69,6 +69,8 @@ Small maintenance (dependency bumps, tiny fixes) may use an issue + PR without a
 
 Branch naming: `<issue-number>-<short-description>` (lowercase, hyphenated). Merge to the primary development branch (`main`). No long-lived phase branches unless a release strategy requires them.
 
+Active exception: [Register workspace consolidation](planning/register-workspace-consolidation/implementation-plan.md) uses integration branch `register-workspace-consolidation` until [closeout](planning/register-workspace-consolidation/closeout-plan.md). An incomplete Register replacement on `main` would leave cashiers without POS Home and without F10. Slice PRs for that program target the integration branch; merge `main` into it regularly. Phase 11 used the same pattern and has merged.
+
 PR structure:
 
 ```markdown

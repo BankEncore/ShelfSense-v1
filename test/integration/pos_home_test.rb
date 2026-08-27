@@ -260,6 +260,72 @@ class PosHomeTest < ActionDispatch::IntegrationTest
     refute_match "Switch Register", response.body
   end
 
+  test "get pos does not mutate period session cash or transaction records" do
+    context = pos_open_context(store: @store, actor: @actor, register: @register, opening_float_cents: 500)
+    pos_session = context[:session]
+    period = context[:period]
+    safe = Cash::Locations.safe_for!(@store)
+    dit = Cash::Locations.deposit_in_transit_for!(@store)
+
+    snapshot = {
+      period_count: PosReportingPeriod.count,
+      session_count: PosSession.count,
+      transaction_count: PosTransaction.count,
+      cash_operation_count: CashOperation.count,
+      cash_entry_count: CashEntry.count,
+      period_lock: period.lock_version,
+      period_date: period.business_date,
+      period_status: period.status,
+      session_lock: pos_session.lock_version,
+      session_status: pos_session.status,
+      session_float: pos_session.opening_float_cents,
+      safe_lock: safe.lock_version,
+      safe_expected: safe.expected_balance_cents,
+      safe_initialized_at: safe.initialized_at,
+      dit_lock: dit.lock_version,
+      dit_expected: dit.expected_balance_cents
+    }
+
+    get pos_path
+    assert_response :success
+
+    period.reload
+    pos_session.reload
+    safe.reload
+    dit.reload
+
+    assert_equal snapshot[:period_count], PosReportingPeriod.count
+    assert_equal snapshot[:session_count], PosSession.count
+    assert_equal snapshot[:transaction_count], PosTransaction.count
+    assert_equal snapshot[:cash_operation_count], CashOperation.count
+    assert_equal snapshot[:cash_entry_count], CashEntry.count
+    assert_equal snapshot[:period_lock], period.lock_version
+    assert_equal snapshot[:period_date], period.business_date
+    assert_equal snapshot[:period_status], period.status
+    assert_equal snapshot[:session_lock], pos_session.lock_version
+    assert_equal snapshot[:session_status], pos_session.status
+    assert_equal snapshot[:session_float], pos_session.opening_float_cents
+    assert_equal snapshot[:safe_lock], safe.lock_version
+    assert_equal snapshot[:safe_expected], safe.expected_balance_cents
+    assert_equal snapshot[:safe_initialized_at], safe.initialized_at
+    assert_equal snapshot[:dit_lock], dit.lock_version
+    assert_equal snapshot[:dit_expected], dit.expected_balance_cents
+  end
+
+  test "home treats multiple unbound owned sessions as having no current session" do
+    pos_open_context(store: @store, actor: @actor, register: @register)
+    pos_open_context(store: @store, actor: @actor, register: @back)
+    assert_equal 2, PosSession.open.where(cashier_user: @actor).count
+    assert_nil session[:pos_register_id]
+
+    get pos_path
+    assert_response :success
+    assert_select "a", text: "Open Register"
+    assert_select "a", text: "Resume Register", count: 0
+    assert_select "dd", text: "None"
+    assert_match "Current session", response.body
+  end
+
   private
 
   def sign_in_as(username)

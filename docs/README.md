@@ -46,6 +46,7 @@ This directory contains the project’s technical authority, development guidanc
 | [Phase 9 catalog enrichment](planning/phase9-catalog-enrichment/README.md) | Implemented; [ADR-024](adr/ADR-024-bibliographic-data-authority.md) |
 | [Phase 10 stored value](planning/phase10-stored-value/README.md) | Implemented on `main`; [ADR-025](adr/ADR-025-domain-owned-operational-ledgers.md), [ADR-026](adr/ADR-026-gift-card-number-protection.md), [ADR-027](adr/ADR-027-admin-gift-card-prefix-last-four-inquiry.md) |
 | [Phase 11 cash accountability](planning/phase11-cash-accountability/README.md) | Implemented on `main`; safe-backed POS sessions and deposit in transit |
+| [Register workspace consolidation](planning/register-workspace-consolidation/README.md) | Accepted packet (Slice 1); implementation slices 2–7 on integration branch |
 | [Canonical roadmap](planning/roadmap.md) | Implemented milestones, forward phases 11–14, UDS, Terminal program |
 | [Planning packets](planning/README.md) | Phase and UX packet index |
 | [UX design system](planning/ux-design-system/README.md) | Warm Parchment UDS-1–3 operationally complete; UDS-4.0–4.2 and UDS-5 on `main` |

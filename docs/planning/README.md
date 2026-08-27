@@ -39,6 +39,7 @@ Phases 12–14 and the Terminal program are sequenced in [roadmap.md](roadmap.md
 
 | Packet | Status |
 |---|---|
+| [Register workspace consolidation](register-workspace-consolidation/README.md) | **Accepted packet** (Slice 1 on `main`); slices 2–7 on `register-workspace-consolidation` |
 | [UX design system](ux-design-system/README.md) | UDS-1–3 operationally complete; UDS-4.0–4.2 on `main`; UDS-5 complete on `main` (PR #57) |
 | [UDS-4 plan](ux-design-system/uds-4-plan.md) | Grouped navigation and non-purchasing adoption |
 | [UDS-5 plan](ux-design-system/uds-5-plan.md) | Administrative composition; 5.0–5.5 complete on `main`; 5.0 gate **Passed**; serif adopted |

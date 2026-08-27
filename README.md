@@ -16,6 +16,8 @@ The operational foundation through **Phase 11** is implemented on `main`, includ
 - Safe-backed Register sessions, non-sale cash, deposit in transit, and store-day cash reporting
 - The Warm Parchment UX foundation, grouped administrative navigation, ActionButtonHelper adoption on reference and non-purchasing screens, and UDS-5 administrative composition (compact nav and Product reference family)
 
+Register workspace consolidation is an accepted UX packet ([docs/planning/register-workspace-consolidation/](docs/planning/register-workspace-consolidation/README.md)); implementation slices are not yet on `main`.
+
 Forward domain work is sequenced in the [canonical roadmap](docs/planning/roadmap.md). Later phases cover used buyback, customer-service expansion, and financial/reporting closeout.
 
 ## Technology

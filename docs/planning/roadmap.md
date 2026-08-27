@@ -94,6 +94,18 @@ Scope:
 
 Persistent sidebar and global search remain parked ([#56](https://github.com/BankEncore/ShelfSense-v1/issues/56)). Staff history composition is UDS-6.
 
+### Register workspace consolidation
+
+**Status:** **Accepted packet** (Slice 1 on `main`). Implementation slices 2–7 on integration branch `register-workspace-consolidation`; merge to `main` after [closeout-plan.md](register-workspace-consolidation/closeout-plan.md). Tracker: [milestone](https://github.com/BankEncore/ShelfSense-v1/milestone/7). Not a numbered domain phase (12–14 remain buyback, customer workspace, financial closeout).
+
+Authoritative packet: [register-workspace-consolidation/](register-workspace-consolidation/README.md). Staged supersession of [pos-workflow.md](phase4-6-point-of-sale/phase6-pos-mvp/pos-workflow.md) 6.7 Home / F10 / keyboard.
+
+Replaces generic POS Home with state-aware Register entry and a shared shell. Preserves POS, cash, and stored-value **services**. Deletes obsolete presentation in the owning slice (no parallel Home).
+
+**Deliverable:**
+
+> Authorized cashiers enter Register and immediately work from the correct operational state, with consistent custody context, without a generic POS Home, and without a second financial model.
+
 ## Phase 7.1 — Purchasing workflow and presentation closeout
 
 **Status:** **Complete** — **7.1.1–7.1.3 on `main`** (PR #35, PR #40); **UDS-4.1/4.2 on `main`**; **7.1.4 deferred**.
