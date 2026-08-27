@@ -24,6 +24,8 @@ class PosRegisterTest < ActionDispatch::IntegrationTest
 
   test "get enter does not create a session or transaction" do
     get pos_register_enter_path, params: { register_id: @register.id }
+    assert_redirected_to pos_path(register_id: @register.id)
+    follow_redirect!
     assert_response :success
     assert_equal 0, PosSession.count
     assert_equal 0, PosTransaction.count
@@ -177,12 +179,15 @@ class PosRegisterTest < ActionDispatch::IntegrationTest
     sign_in_as("clerk_pos")
 
     get pos_register_enter_path, params: { register_id: @register.id }
+    follow_redirect!
     assert_response :success
     assert_match "is open for", response.body
-    assert_select "input[type='submit'][value='Open register'][disabled]"
+    assert_select "h1", text: "Register in use"
 
     post pos_register_enter_path, params: enter_params
     assert_response :unprocessable_content
+    assert_select "h1", text: "Register in use"
+    assert_match "is open for #{@actor.display_name}", response.body
     assert_equal 1, PosSession.open.where(register: @register).count
     assert_equal @actor.id, PosSession.open.find_by!(register: @register).cashier_user_id
   end
@@ -402,6 +407,7 @@ class PosRegisterTest < ActionDispatch::IntegrationTest
     now = Time.current
     confirmed = BusinessDate.for_store(@store, at: now)
     get pos_register_enter_path, params: { register_id: @register.id }
+    follow_redirect!
     assert_response :success
     assert_select "input[name='confirmed_business_date'][value='#{confirmed.iso8601}']"
 

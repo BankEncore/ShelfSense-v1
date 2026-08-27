@@ -12,7 +12,7 @@ class PosCashActivitiesTest < ActionDispatch::IntegrationTest
     sign_in_as("admin")
   end
 
-  test "cashier records a paid-in from POS Home" do
+  test "cashier records a paid-in from Register" do
     get pos_path
     assert_response :success
     assert_includes response.body, new_pos_cash_paid_in_path

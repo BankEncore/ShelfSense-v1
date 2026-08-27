@@ -20,7 +20,7 @@
 
   <div class="pos-receipt__actions pos-no-print">
     <%= action_button("Print", style: :solid, intent: :brand, data: { action: "pos-receipt#print" }) %>
-    <%= action_link_to("POS Home", pos_path, style: :outline, intent: :neutral) %>
+    <%= action_link_to("Register", pos_path, style: :outline, intent: :neutral) %>
     <% if !@cash_out.reversal? && !@cash_out.reversed? && cashier_target_session %>
       <%= form_with url: reverse_pos_cash_out_path(@cash_out), method: :post, local: true, class: "pos-return-items" do %>
         <%= hidden_field_tag :source_id, SecureRandom.uuid_v7 %>

@@ -1,0 +1,35 @@
+<section class="pos-enter" aria-labelledby="register-selector-heading">
+  <h1 id="register-selector-heading">Select a Register</h1>
+  <p>Store <%= current_store.admin_label %></p>
+
+  <% if @registers.blank? %>
+    <p>No active register is available in this store.</p>
+  <% else %>
+    <table class="pos-register-selector">
+      <thead>
+        <tr>
+          <th>Register</th>
+          <th>Status</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% register_selector_rows.each do |row| %>
+          <tr>
+            <td><%= row[:register].admin_label %></td>
+            <td><%= row[:status] %></td>
+            <td>
+              <% if row[:owned] %>
+                <%= action_link_to "Resume", row[:resume_path], style: :solid, intent: :brand %>
+              <% else %>
+                <%= action_link_to "View", row[:view_path], style: :outline, intent: :neutral %>
+              <% end %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  <% end %>
+
+  <%= action_link_to "Return to ShelfSense", root_path, style: :ghost, intent: :neutral, **register_leave_confirm_options %>
+</section>

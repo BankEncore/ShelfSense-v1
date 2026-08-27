@@ -481,6 +481,10 @@ module Pos
       reject_workspace_context!(register_id: nil)
     end
 
+    def prepare_workspace_shell!
+      prepare_register_shell!(resolve_register_state(requested_register: @register))
+    end
+
     def actor_session
       PosSession.open.find_by(store: current_store, register: @register, cashier_user: current_user)
     end
@@ -532,6 +536,7 @@ module Pos
     end
 
     def prepare_view_state
+      prepare_workspace_shell!
       @period = @session_record.reporting_period
       @lines = @transaction.pos_transaction_lines.includes(
         :inventory_unit,

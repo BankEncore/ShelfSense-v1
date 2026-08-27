@@ -1,6 +1,6 @@
 # Register workspace consolidation — Plan
 
-Status: **Accepted** (Slice 1). Implementation not started on `main`.
+Status: **Accepted** (Slice 1). Slice 2 implementation on `register-workspace-consolidation`.
 
 Companions: [routing-and-authority.md](routing-and-authority.md), [implementation-plan.md](implementation-plan.md), [pos-workflow.md](../phase4-6-point-of-sale/phase6-pos-mvp/pos-workflow.md) (6.7 remains lock until the owning slice supersedes it).
 
@@ -58,11 +58,11 @@ This is presentation replacement. It must not introduce a second transaction, ca
 
 ## UX adoption targets
 
-- **Screens created or materially changed:** Slice 2+ (`/pos`, Register shell, later F10 destinations and workspace partials). Slice 1 changes no screens.
-- **Current migration-matrix state:** Register workspace is UDS-3 refined; POS Home is legacy chrome.
+- **Screens created or materially changed:** Slice 2 (`/pos` state entry, Register shell partials, wrapped workspace, selector/closed/between/occupied bodies, destination cluster). Later slices: F10 destinations and workspace composition.
+- **Current migration-matrix state:** Register workspace remains verified-automated for basket/overlays; POS Home markup deleted; entry is state-aware shell.
 - **Accepted primitives:** Warm Parchment, `ActionButtonHelper`, Register layout contracts.
-- **Applicable automated evidence:** existing `test/system/pos_*` plus slice system tests; Layer A where new surfaces warrant it.
-- **Matrix rows:** update in the slice that changes the screen.
+- **Applicable automated evidence:** `test/services/pos/register_state_resolver_test.rb`, retargeted `pos_home` / enter request tests, existing `test/system/pos_*`.
+- **Matrix rows:** `pos/homes/**` replaced; `pos/workspaces/**` shell wrap; `layouts/pos.html.erb` shared shell chrome.
 
 ## Deliverable
 

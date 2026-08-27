@@ -1940,6 +1940,38 @@ input[type="submit"]:disabled,
   margin-left: auto;
 }
 
+.pos-register-shell {
+  width: min(100% - 2rem, 72rem);
+  margin: var(--space-4) auto var(--space-8);
+}
+
+.pos-register-shell .pos-shell {
+  width: 100%;
+}
+
+.pos-register-cluster {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: var(--space-6);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+}
+
+.pos-register-selector {
+  width: 100%;
+  border-collapse: collapse;
+  margin: var(--space-4) 0;
+}
+
+.pos-register-selector th,
+.pos-register-selector td {
+  text-align: left;
+  padding: var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+  vertical-align: middle;
+}
+
 .pos-home {
   width: min(100% - 2rem, 48rem);
   margin: var(--space-6) auto;

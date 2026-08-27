@@ -269,7 +269,7 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
   test "empty basket disables cancel" do
     open_register
     assert_button "Cancel (F9)", disabled: true
-    assert_button "Close register"
+    assert_button "Close Session"
   end
 
   test "quantity mode prefills and invalid quantity stays in quantity" do
@@ -325,7 +325,7 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     send_keys :enter
     assert_text "Transaction complete"
     visit pos_register_workspace_path
-    assert_text "Open register"
+    assert_text "Resume Register"
   end
 
   test "unknown identifier feedback does not move the command field" do

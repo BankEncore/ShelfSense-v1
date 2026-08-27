@@ -85,20 +85,6 @@
      data-action="turbo:submit-end->register-workspace#onSubmitEnd">
   <div data-register-workspace-target="chrome">
     <header class="pos-header">
-      <div class="pos-header__row">
-        <span>Store  <%= current_store.admin_label %></span>
-        <span>Register  <%= @register.register_number %></span>
-        <span><%= current_user.display_name %></span>
-        <nav class="pos-header__nav" aria-label="Register">
-          <%= link_to "POS Home", pos_path, class: "pos-header__link" %>
-          <%= link_to "Transactions", pos_transactions_path, class: "pos-header__link" %>
-          <%= link_to "X Report", pos_x_report_path, class: "pos-header__link" %>
-          <% if @ui_mode == "sale_entry" && lines.empty? && tenders.empty? && issuances.empty? %>
-            <%= action_button_to "Close register", pos_register_close_path, style: :outline, intent: :neutral, size: :standard, method: :post,
-                  params: { session_id: @session_record.id, register_id: @register.id } %>
-          <% end %>
-        </nav>
-      </div>
       <div class="pos-header__date <%= "pos-date-emphasis" if leftover %>">
         Business date  <%= @session_record.reporting_period.business_date.iso8601 %>
       </div>
@@ -399,6 +385,12 @@
         <%= action_button "Cancel (F9)", style: :outline, intent: :danger, size: :large, disabled: true,
               data: { action: "register-workspace#openOverlay", register_workspace_target: "cancelButton" } %>
       </div>
+      <% if @ui_mode == "sale_entry" && lines.empty? && tenders.empty? && issuances.empty? %>
+        <div class="pos-actions__group" role="group" aria-label="Session">
+          <%= action_button_to "Close Session", pos_register_close_path, style: :outline, intent: :neutral, size: :standard, method: :post,
+                params: { session_id: @session_record.id, register_id: @register.id } %>
+        </div>
+      <% end %>
     </div>
 
     <% if effective_permissions.include?("gift_cards.cash_out") %>

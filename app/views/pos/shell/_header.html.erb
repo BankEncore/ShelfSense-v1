@@ -1,0 +1,28 @@
+<header class="pos-header">
+  <div class="pos-header__row">
+    <span><%= current_store.admin_label %></span>
+    <% if @register %>
+      <span>Register <%= pos_padded_register_number(@register) %></span>
+    <% end %>
+    <%= link_to "ShelfSense ↗", root_path, class: "pos-header__link", **register_leave_confirm_options %>
+  </div>
+  <div class="pos-header__date">
+    <% if @gate %>
+      <% if @gate.own_session? %>
+        <%= @gate.business_date.iso8601 %>
+        · <%= @gate.session.cashier_user.display_name %>
+        · Opened <%= format_store_timestamp(@gate.session.opened_at, current_store) %>
+      <% elsif @gate.occupied? %>
+        <%= @gate.business_date.iso8601 %>
+        · In use by <%= @gate.occupier.display_name %>
+        · Opened <%= format_store_timestamp(@gate.session.opened_at, current_store) %>
+      <% elsif @gate.period.present? %>
+        Business date <%= @gate.business_date.iso8601 %> · Between sessions
+      <% else %>
+        Business date not open · No active session
+      <% end %>
+    <% else %>
+      <%= current_user.display_name %>
+    <% end %>
+  </div>
+</header>

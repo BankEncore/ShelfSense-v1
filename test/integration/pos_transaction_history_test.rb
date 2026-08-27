@@ -222,7 +222,7 @@ class PosTransactionHistoryTest < ActionDispatch::IntegrationTest
 
     get pos_transactions_path
     assert_response :success
-    assert_select "a[href='#{pos_register_enter_path}']", text: "Register"
+    assert_select "a[href='#{pos_path}']", text: "Resume"
 
     post pos_register_enter_path, params: {
       register_id: other_register.id,
@@ -233,8 +233,8 @@ class PosTransactionHistoryTest < ActionDispatch::IntegrationTest
 
     get pos_transactions_path
     assert_response :success
-    assert_select "a[href='#{pos_register_workspace_path(register_id: other_register.id)}']", text: "Register"
-    assert_select "a[href='#{pos_register_workspace_path(register_id: @register.id)}']", text: "Register", count: 0
+    assert_select "a[href='#{pos_register_workspace_path(register_id: other_register.id)}']", text: "Resume"
+    assert_select "a[href='#{pos_register_workspace_path(register_id: @register.id)}']", text: "Resume", count: 0
   end
 
   test "transaction history index exposes search landmarks for workflow layer" do

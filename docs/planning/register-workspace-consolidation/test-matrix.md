@@ -68,7 +68,7 @@ F10 working-basket preservation is already covered in [test/system/pos_register_
 Added to `PosHomeTest`:
 
 1. **GET `/pos` does not mutate** period, session, cash location/operation/entry, or transaction **counts or selected lock/state attributes**, including when a session already exists.
-2. **Multiple unbound owned sessions:** current Home uses `cashier_target_session`, which is `nil` when two open sessions exist and `session[:pos_register_id]` is unset — the page presents **Open Register** as if there were no session. Slice 2 must replace this with the selector. This test documents the **current** defect so Slice 2 can change the assertion.
+2. **Multiple unbound owned sessions:** Slice 2 inverts the Home defect. `GET /pos` renders the selector with **Your session** / **Resume** on every owned Register, even when a preferred Register exists.
 
 ## Slice 2 resolver tests (not in Slice 1)
 
