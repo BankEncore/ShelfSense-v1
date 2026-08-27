@@ -80,7 +80,7 @@ If a later release needs to delay enforcement, that would be a feature gate or t
 ## Integration notes
 
 - Extend `Pos::OpenSession`, `Pos::CloseSession`, `Pos::SessionTotals`, `GiftCards::CashOut`, and cash-refund completion/tender paths.
-- Add `Cash::Post` (name may vary) with location/session lock order, post-lock revalidation, idempotency, and nonnegative location checks—same shape as `StoredValue::Post`.
+- Add `Cash::Post` (name may vary) with location/session lock order, post-lock store-scope checks, revalidation, complete-command idempotency, and nonnegative location checks—same shape as `StoredValue::Post`.
 - Reuse `Pos::AuthenticateApprover` / `PosControlledAction` for Register-originated cash actions.
 - Bootstrap/demo and tests must initialize a safe before opening a session so Docker Register enter still works. Initialization still uses a distinct performer and approver.
 - Local commands remain Docker-only (`./dev/rails-docker`).

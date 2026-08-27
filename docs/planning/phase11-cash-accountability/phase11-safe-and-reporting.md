@@ -39,7 +39,7 @@ Optimistic contract:
 3. On submission, lock the location row in the posting transaction.
 4. Compare current `lock_version` and expected balance with the count’s snapshot.
 5. If either changed, the count is stale and cannot be accepted; staff must verify or recount.
-6. If unchanged, reconciliation (or zero-variance acceptance) posts atomically.
+6. If unchanged, lock the starting `cash_counts` row. It must still be the discarded snapshot and must not already be referenced by an accepted count (`superseded_count_id` unique where not null). Then reconciliation (or zero-variance acceptance) posts atomically. Reusing the same start row with a new command id is rejected even when expected cash did not move.
 
 Ordinary staff: blind until submit. `cash.view_expected_before_count` may reveal expected.
 

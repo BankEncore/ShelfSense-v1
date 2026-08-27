@@ -32,6 +32,30 @@ module Cash
       report = Cash::StoreDayReport.for(store: @store, business_date: accepted.business_date)
       assert report.safe_reconciled?
       assert_includes report.status_labels, "safe reconciled"
+
+      error = assert_raises(Cash::Error) do
+        Cash::ReconcileSafe.call(
+          store: @store,
+          actor: @actor,
+          start_count: start_count,
+          count_cents: expected,
+          source_id: SecureRandom.uuid_v7,
+          idempotency_key: SecureRandom.uuid_v7
+        )
+      end
+      assert_equal Cash::SnapshotCount::ALREADY_ACCEPTED, error.message
+      assert_equal 1, CashCount.where(superseded_count_id: start_count.id).count
+      assert_equal 1, AuditEvent.where(action: "cash.reconcile_safe", outcome: "succeeded", subject_id: accepted.id).count
+    end
+
+    test "accept! refuses a snapshot that is not the discarded start row" do
+      start_count = Cash::SnapshotCount.start!(location: @safe.reload, purpose: "safe_reconciliation")
+      accepted = Cash::SnapshotCount.accept!(count: start_count, total_cents: start_count.expected_cents_snapshot)
+
+      error = assert_raises(Cash::Error) do
+        Cash::SnapshotCount.accept!(count: accepted, total_cents: accepted.total_cents)
+      end
+      assert_equal Cash::SnapshotCount::NOT_DISCARDED, error.message
     end
 
     test "nonzero safe over posts a reconciliation and rebases expected cash" do

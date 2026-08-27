@@ -46,8 +46,8 @@ MVP does not expose a second safe in UI. A later unique partial index change may
 | `occurred_at` | timestamptz | Required |
 | `performed_by_id` | uuid | Required |
 | `approved_by_id` | uuid, nullable | Set only for `approval_required`; omitted for `direct`; never equal to `performed_by_id` |
-| `pos_session_id` | uuid, nullable | When the operation is session-custody (open, close recon, paid-in/out, drop, replenish) |
-| `idempotency_operation_id` | uuid | FK to claimed `idempotency_operations` |
+| `pos_session_id` | uuid, nullable | When the operation is session-custody (open, close recon, paid-in/out, drop, replenish). Must belong to `store_id`. |
+| `idempotency_operation_id` | uuid | FK to claimed `idempotency_operations`. `Cash::Post` hashes the complete command (store, actor, session, dates, reason, notes, outbox type, entries), not only amounts. Optional text is stripped; blank becomes null. |
 | `reversal_of_id` | uuid, nullable | Unique when present |
 | `reason_code` | string, nullable | Required for paid-in/out, reconcile, reverse, manager close context as applicable |
 | `reason_name_snapshot` | string, nullable | Historic label |
@@ -72,7 +72,7 @@ Do **not** persist `pos_tender_id` or `gift_card_cash_out_id` on this table.
 | `reversal_of_id` | uuid, nullable | Unique when present |
 | `created_at` | timestamptz | Required |
 
-XOR: exactly one of `pos_session_id` or `cash_location_id`. Transfer operations have two entries that net to zero. Paid-in/out, initialize_safe, and reconcile are single-sided.
+XOR: exactly one of `pos_session_id` or `cash_location_id`. Transfer operations have two entries that net to zero. Paid-in/out, initialize_safe, and reconcile are single-sided. Each target’s `store_id` must equal the parent operation’s `store_id`. `Cash::Post` rejects cross-store locations and sessions, including a `pos_session` on the operation itself.
 
 No generic update of `amount_cents` after insert.
 
@@ -139,7 +139,7 @@ Immutable observations. They do not change expected cash until a reconciliation 
 | `location_lock_version_snapshot` | integer, nullable | Required with `expected_cents_snapshot`: that location’s `lock_version` at count start |
 | `pos_session_id` / `cash_location_id` | uuid, nullable | As applicable |
 | `status` | string | `discarded`, `accepted` |
-| `superseded_count_id` | uuid, nullable | Replacement before acceptance |
+| `superseded_count_id` | uuid, nullable | Replacement before acceptance. Unique where not null: accepting a snapshot consumes it. |
 
 Optional `cash_count_denomination_lines` (`quantity`, `denomination_cents`). When any line exists, lines must sum to `total_cents`. Denomination lines are **never required** (session, safe, deposit, or initialization).
 

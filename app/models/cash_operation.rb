@@ -22,6 +22,7 @@ class CashOperation < ApplicationRecord
   validates :operation_type, :business_date, :occurred_at, presence: true
   validates :operation_type, inclusion: { in: OPERATION_TYPES }
   validate :approver_differs_from_performer
+  validate :pos_session_belongs_to_store
 
   def readonly?
     super || persisted?
@@ -42,5 +43,12 @@ class CashOperation < ApplicationRecord
     return if approved_by_id != performed_by_id
 
     errors.add(:approved_by_id, "must differ from the performer")
+  end
+
+  def pos_session_belongs_to_store
+    return if pos_session.blank? || store_id.blank?
+    return if pos_session.store_id == store_id
+
+    errors.add(:pos_session_id, "must belong to the operation store")
   end
 end

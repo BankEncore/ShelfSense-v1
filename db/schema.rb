@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_26_220000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_27_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -145,6 +145,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_26_220000) do
     t.index ["cash_location_id", "purpose", "business_date"], name: "index_cash_counts_on_location_purpose_date"
     t.index ["cash_location_id"], name: "index_cash_counts_on_cash_location_id"
     t.index ["pos_session_id"], name: "index_cash_counts_on_pos_session_id"
+    t.index ["superseded_count_id"], name: "index_cash_counts_on_superseded_count_id", unique: true, where: "(superseded_count_id IS NOT NULL)"
     t.check_constraint "purpose::text = ANY (ARRAY['session_open'::character varying, 'session_close'::character varying, 'safe_reconciliation'::character varying, 'deposit'::character varying, 'safe_initialization'::character varying]::text[])", name: "cash_counts_purpose_valid"
     t.check_constraint "status::text = ANY (ARRAY['discarded'::character varying, 'accepted'::character varying]::text[])", name: "cash_counts_status_valid"
     t.check_constraint "total_cents >= 0", name: "cash_counts_total_nonnegative"

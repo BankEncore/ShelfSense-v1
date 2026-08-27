@@ -55,4 +55,4 @@ Closed sessions stay closed. Close snapshots are never rewritten. Do **not** rev
 
 ## 8. Concurrency
 
-Same as 11.1: lock locations then sessions in UUID order; revalidate available cash after lock; idempotent retries; two drops/payouts cannot share the last cent.
+Same as 11.1: lock locations then sessions in UUID order; revalidate available cash after lock; idempotent retries of an identical complete `Cash::Post` payload; two drops/payouts cannot share the last cent. `Cash::Post` rejects any location or session whose `store_id` differs from the operation store.
