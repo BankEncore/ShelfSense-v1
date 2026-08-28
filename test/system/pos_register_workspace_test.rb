@@ -272,6 +272,23 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     assert_button "Close Session"
   end
 
+  test "command field stays clickable above the destination cluster" do
+    open_register
+    field = find("#pos-command-field")
+    hit = page.evaluate_script(<<~JS.squish)
+      (function() {
+        var el = document.getElementById("pos-command-field");
+        var box = el.getBoundingClientRect();
+        var top = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
+        return Boolean(top && (top === el || el.contains(top)));
+      })()
+    JS
+    assert hit, "command field must not be covered by shell chrome"
+    field.click
+    field.send_keys @variant.sku, :enter
+    assert_selector "tbody tr.is-selected", text: "Example Book", wait: 10
+  end
+
   test "quantity mode prefills and invalid quantity stays in quantity" do
     open_register
     add_current_sku
