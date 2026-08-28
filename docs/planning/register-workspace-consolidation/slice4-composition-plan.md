@@ -56,7 +56,13 @@ Never use the label `Sales` or `sale_total_cents` as a summary row (`sale_total_
 | named tax groups | sum to `+ tax_cents − return_tax_cents` |
 | Net | `transaction.signed_net_cents` |
 
-Invariant: `summary_rows.sum(&:signed_cents) == transaction.signed_net_cents`.
+Invariant:
+
+```ruby
+formula_rows = summary_rows.reject { |row| row.key == :net }
+formula_rows.sum(&:signed_cents) == transaction.signed_net_cents
+summary_rows.last.signed_cents == transaction.signed_net_cents
+```
 
 Omit zero rows only when the formula remains understandable. Omit zero-net tax groups unless needed to explain a nonzero formula.
 

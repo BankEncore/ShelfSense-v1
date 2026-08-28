@@ -61,7 +61,9 @@ class PosWorkspacePresenterTest < ActiveSupport::TestCase
     assert result.locked
     assert_equal "CASH TENDER", result.mode_label
     assert_equal 1, result.tender_rows.size
-    assert_equal "CHANGE", result.settlement_cues.first.label
+    assert_equal %i[settled change], result.settlement_cues.map(&:kind)
+    assert_equal "Settled", result.settlement_cues.first.label
+    assert_equal "CHANGE", result.settlement_cues.second.label
   end
 
   test "sale only summary reconciles to signed net without Sales label" do
@@ -286,8 +288,148 @@ class PosWorkspacePresenterTest < ActiveSupport::TestCase
     assert_equal tender.amount_presented_cents, row.presented_cents
     assert_equal tender.change_cents, row.change_cents
     assert_operator row.presented_cents, :>, row.amount_cents
-    assert_equal "CHANGE", result.settlement_cues.first.label
-    assert_equal tender.change_cents, result.settlement_cues.first.amount_cents
+    assert_equal %i[settled change], result.settlement_cues.map(&:kind)
+    assert_equal "Settled", result.settlement_cues.first.label
+    assert_equal "CHANGE", result.settlement_cues.second.label
+    assert_equal tender.change_cents, result.settlement_cues.second.amount_cents
+    assert_equal tender.change_cents, row.change_cents
+  end
+
+  test "exact non-cash payment shows Settled without fabricating amount due" do
+    transaction = start_sale
+    Pos::AddTender.call(
+      transaction: transaction,
+      actor: @actor,
+      expected_lock_version: transaction.lock_version,
+      tender_type: @card,
+      amount_cents: transaction.signed_net_cents,
+      external_reference: "AUTH-SETTLE"
+    )
+    transaction.reload
+    result = present(
+      transaction,
+      ui_mode: "tender",
+      settlement_direction: :payment,
+      remaining_payment_cents: 0
+    )
+
+    assert_equal [ :settled ], result.settlement_cues.map(&:kind)
+    assert_equal "Settled", result.settlement_cues.first.label
+    refute(result.settlement_cues.any? { |cue| cue.kind == :amount_due || cue.kind == :change })
+  end
+
+  test "exact refund shows Settled" do
+    original = complete_cash_sale!
+    transaction = Pos::StartTransaction.call(session: @context[:session], actor: @actor)
+    Pos::ExecuteUnlinkedReturn.call(
+      transaction: transaction,
+      actor: @actor,
+      expected_lock_version: transaction.lock_version,
+      identifier: @variant.sku,
+      quantity: 1,
+      reason_code: "changed_mind",
+      requested_return_unit_price_cents: original.pos_transaction_lines.first.selling_unit_price_cents
+    )
+    transaction.reload
+    Pos::AddRefundTender.call(
+      transaction: transaction,
+      actor: @actor,
+      expected_lock_version: transaction.lock_version,
+      tender_type: @cash,
+      amount_cents: -transaction.signed_net_cents
+    )
+    transaction.reload
+    result = present(
+      transaction,
+      ui_mode: "tender",
+      settlement_direction: :refund,
+      remaining_refund_cents: 0
+    )
+
+    assert_equal [ :settled ], result.settlement_cues.map(&:kind)
+    assert_equal "Settled", result.settlement_cues.first.label
+  end
+
+  test "partial payment shows Amount due" do
+    transaction = start_sale
+    Pos::AddTender.call(
+      transaction: transaction,
+      actor: @actor,
+      expected_lock_version: transaction.lock_version,
+      tender_type: @card,
+      amount_cents: 500,
+      external_reference: "AUTH-PARTIAL"
+    )
+    transaction.reload
+    remaining = Pos::Support.remaining_payment_cents(transaction)
+    assert_operator remaining, :>, 0
+    payment = present(
+      transaction,
+      ui_mode: "tender",
+      settlement_direction: :payment,
+      remaining_payment_cents: remaining
+    )
+    assert_equal [ :amount_due ], payment.settlement_cues.map(&:kind)
+    assert_equal remaining, payment.settlement_cues.first.amount_cents
+  end
+
+  test "partial refund shows Refund due" do
+    original = complete_cash_sale!
+    refund_txn = Pos::StartTransaction.call(session: @context[:session], actor: @actor)
+    Pos::ExecuteUnlinkedReturn.call(
+      transaction: refund_txn,
+      actor: @actor,
+      expected_lock_version: refund_txn.lock_version,
+      identifier: @variant.sku,
+      quantity: 1,
+      reason_code: "changed_mind",
+      requested_return_unit_price_cents: original.pos_transaction_lines.first.selling_unit_price_cents
+    )
+    refund_txn.reload
+    due = -refund_txn.signed_net_cents
+    Pos::AddRefundTender.call(
+      transaction: refund_txn,
+      actor: @actor,
+      expected_lock_version: refund_txn.lock_version,
+      tender_type: @cash,
+      amount_cents: [ due - 100, 1 ].max
+    )
+    refund_txn.reload
+    remaining_refund = Pos::Support.remaining_refund_cents(refund_txn)
+    assert_operator remaining_refund, :>, 0
+    refund = present(
+      refund_txn,
+      ui_mode: "tender",
+      settlement_direction: :refund,
+      remaining_refund_cents: remaining_refund
+    )
+    assert_equal [ :refund_due ], refund.settlement_cues.map(&:kind)
+    assert_equal remaining_refund, refund.settlement_cues.first.amount_cents
+  end
+
+  test "action capabilities come from the controller-supplied hash" do
+    transaction = Pos::StartTransaction.call(session: @context[:session], actor: @actor)
+    denied = present(
+      transaction,
+      ui_mode: "sale_entry",
+      action_capabilities: {
+        close_session_available: false,
+        issuance_remove_available: false
+      }
+    )
+    assert_not denied.close_session_available
+    assert_not denied.issuance_remove_available
+
+    allowed = present(
+      transaction,
+      ui_mode: "tender",
+      action_capabilities: {
+        close_session_available: true,
+        issuance_remove_available: true
+      }
+    )
+    assert allowed.close_session_available
+    assert allowed.issuance_remove_available
   end
 
   test "refund tender keeps positive applied amount with refund direction" do
@@ -402,6 +544,12 @@ class PosWorkspacePresenterTest < ActiveSupport::TestCase
     tenders = transaction.pos_tenders.ordered.to_a
     issuances = transaction.pos_stored_value_issuances.ordered.to_a
     direction = settlement_direction || Pos::Support.settlement_direction(transaction)
+    defaults = {
+      close_session_available: ui_mode == "sale_entry" && lines.empty? && tenders.empty? && issuances.empty?,
+      issuance_remove_available: ui_mode == "sale_entry",
+      pickup_available: false,
+      gift_card_programs_available: false
+    }
     Pos::WorkspacePresenter.call(
       transaction: transaction,
       lines: lines,
@@ -415,7 +563,7 @@ class PosWorkspacePresenterTest < ActiveSupport::TestCase
       remaining_refund_cents: remaining_refund_cents || Pos::Support.remaining_refund_cents(transaction),
       command_value: command_value,
       feedback: feedback,
-      action_capabilities: action_capabilities
+      action_capabilities: defaults.merge(action_capabilities)
     )
   end
 

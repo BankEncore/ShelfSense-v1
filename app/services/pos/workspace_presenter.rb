@@ -87,8 +87,8 @@ module Pos
         tax_fallback: tax[:fallback],
         tender_rows: build_tender_rows,
         settlement_cues: build_settlement_cues,
-        close_session_available: close_session_available?,
-        issuance_remove_available: issuance_remove_available?,
+        close_session_available: capability?(:close_session_available),
+        issuance_remove_available: capability?(:issuance_remove_available),
         pickup_available: capability?(:pickup_available),
         gift_card_programs_available: capability?(:gift_card_programs_available),
         feedback: @feedback
@@ -111,14 +111,6 @@ module Pos
 
     def capability?(key)
       @action_capabilities.fetch(key, false) ? true : false
-    end
-
-    def close_session_available?
-      @ui_mode == "sale_entry" && @lines.empty? && @tenders.empty? && @issuances.empty?
-    end
-
-    def issuance_remove_available?
-      @ui_mode == "sale_entry"
     end
 
     def cash_selected?
@@ -302,18 +294,19 @@ module Pos
 
     def build_settlement_cues
       cues = []
-      cash_payment = @tenders.find { |tender| tender.cash? && tender.direction == "payment" }
 
-      if exact_settlement? && cash_payment
-        cues << SettlementCue.new(kind: :change, label: "CHANGE", amount_cents: cash_payment.change_cents.to_i)
-      elsif even_exchange? && @ui_mode == "sale_entry"
+      if even_exchange? && @ui_mode == "sale_entry"
         cues << SettlementCue.new(kind: :even_exchange, label: "Even exchange", amount_cents: nil)
+      elsif exact_settlement?
+        cues << SettlementCue.new(kind: :settled, label: "Settled", amount_cents: 0)
+        cash_payment = @tenders.find { |tender| tender.cash? && tender.direction == "payment" }
+        if cash_payment && cash_payment.change_cents.to_i.positive?
+          cues << SettlementCue.new(kind: :change, label: "CHANGE", amount_cents: cash_payment.change_cents.to_i)
+        end
       elsif refund_mode?
         cues << SettlementCue.new(kind: :refund_due, label: "Refund due", amount_cents: @remaining_refund_cents)
       elsif @settlement_direction == :payment
         cues << SettlementCue.new(kind: :amount_due, label: "Amount due", amount_cents: @remaining_payment_cents)
-      elsif exact_settlement?
-        cues << SettlementCue.new(kind: :settled, label: "Settled", amount_cents: 0)
       end
 
       cues

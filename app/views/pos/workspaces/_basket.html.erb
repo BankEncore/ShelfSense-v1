@@ -14,6 +14,7 @@
     <tbody>
       <% lines.each do |line| %>
         <% original = line.original_transaction_line&.pos_transaction %>
+        <% display_quantity = line.return? ? -line.quantity : line.quantity %>
         <tr class="<%= [ ("is-selected" if line.id == selected_id), ("is-controlled" if pos_line_controlled?(line)) ].compact.join(" ") %>"
             data-line-id="<%= line.id %>"
             data-quantity="<%= line.quantity %>"
@@ -29,7 +30,7 @@
             data-tax-class-id="<%= line.tax_class_id %>"
             data-pricing-method-snapshot="<%= line.pricing_method_snapshot %>"
             aria-selected="<%= line.id == selected_id %>">
-          <td><%= line.id == selected_id ? ">" : "" %> <%= line.quantity %></td>
+          <td><%= line.id == selected_id ? ">" : "" %> <%= display_quantity %></td>
           <td>
             <div class="pos-line__title">
               <%= line.return? ? "RETURN · " : "" %><%= pos_basket_line_title(line) %>

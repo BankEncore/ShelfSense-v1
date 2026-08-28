@@ -609,7 +609,8 @@ module Pos
         action_capabilities: {
           pickup_available: @pickup_allowed,
           gift_card_programs_available: @gift_card_programs.any?,
-          close_session_available: @ui_mode == "sale_entry" && @lines.empty? && @tenders.empty? && @issuances.empty?
+          close_session_available: @ui_mode == "sale_entry" && @lines.empty? && @tenders.empty? && @issuances.empty?,
+          issuance_remove_available: @ui_mode == "sale_entry"
         }
       )
     end

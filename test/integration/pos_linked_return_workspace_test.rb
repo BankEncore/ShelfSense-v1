@@ -57,6 +57,7 @@ class PosLinkedReturnWorkspaceTest < ActionDispatch::IntegrationTest
     get pos_register_workspace_path
     assert_response :success
     assert_select "tr[data-direction='return'][data-linked-return='true']"
+    assert_select "tr[data-direction='return'][data-quantity='1']", text: /-\s*1/
     assert_match "RETURN", response.body
     assert_match sale.transaction_reference, response.body
     assert_match "Refund due", response.body
