@@ -1,3 +1,4 @@
+<div data-register-shell-target="status">
 <% if @gate&.occupied? %>
   <div class="pos-banner" role="status">
     <strong>IN USE</strong>
@@ -33,3 +34,4 @@
     Selecting Register <%= pos_padded_register_number(@register) %> will not close it.
   </div>
 <% end %>
+</div>

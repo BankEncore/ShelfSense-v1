@@ -26,25 +26,25 @@
      data-register-workspace-pickup-allowed-value="<%= @pickup_allowed ? "true" : "false" %>"
      data-register-workspace-open-price-url-value="<%= pos_register_open_price_path(register_scope) %>"
      data-action="turbo:submit-end->register-workspace#onSubmitEnd">
-  <div data-register-workspace-target="chrome"></div>
+  <div data-register-workspace-target="background">
+    <%= render "pos/workspaces/command" %>
 
-  <%= render "pos/workspaces/command" %>
+    <div class="pos-main">
+      <section class="pos-basket-region">
+        <%= render "pos/workspaces/basket" %>
+        <%= render "pos/workspaces/issuances" %>
+        <%= render "pos/workspaces/customer" %>
+      </section>
 
-  <div class="pos-main">
-    <section class="pos-basket-region">
-      <%= render "pos/workspaces/basket" %>
-      <%= render "pos/workspaces/issuances" %>
-      <%= render "pos/workspaces/customer" %>
-    </section>
+      <aside class="pos-summary-rail">
+        <%= render "pos/workspaces/totals" %>
+        <%= render "pos/workspaces/tenders" %>
+      </aside>
+    </div>
 
-    <aside class="pos-summary-rail">
-      <%= render "pos/workspaces/totals" %>
-      <%= render "pos/workspaces/tenders" %>
-    </aside>
+    <%= render "pos/workspaces/actions" %>
+    <%= render "pos/workspaces/forms" %>
   </div>
-
-  <%= render "pos/workspaces/actions" %>
-  <%= render "pos/workspaces/forms" %>
 
   <%= render "pos/workspaces/overlays" %>
 </div>
