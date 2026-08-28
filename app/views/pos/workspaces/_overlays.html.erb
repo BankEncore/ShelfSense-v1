@@ -1,0 +1,331 @@
+  <div class="pos-overlay" data-register-blocking-overlay
+       id="pos_overlay"
+       hidden
+       data-register-workspace-target="overlay"
+       role="dialog"
+       aria-modal="true"
+       aria-labelledby="pos-cancel-title">
+    <div class="pos-overlay__panel">
+      <h2 id="pos-cancel-title">Cancel this transaction?</h2>
+      <p>Lines will not be sold or returned. No receipt. No inventory movement.</p>
+      <%= action_button "Don't cancel (Esc)", style: :outline, intent: :neutral, size: :standard,
+            data: { action: "register-workspace#closeOverlay", register_workspace_target: "dontCancel" } %>
+      <%= action_button "Cancel transaction (F9)", style: :solid, intent: :danger, size: :standard,
+            data: { action: "register-workspace#confirmCancel", register_workspace_target: "confirmCancel" } %>
+    </div>
+  </div>
+
+  <div class="pos-overlay" data-register-blocking-overlay
+       id="pos_control_overlay"
+       hidden
+       data-register-workspace-target="controlOverlay"
+       role="dialog"
+       aria-modal="true"
+       aria-labelledby="pos-control-title">
+    <div class="pos-overlay__panel pos-overlay__panel--control">
+      <h2 id="pos-control-title" data-register-workspace-target="controlTitle">Controlled action</h2>
+      <p data-register-workspace-target="controlLineLabel"></p>
+      <p id="pos-control-feedback" class="pos-overlay__error" data-overlay-error role="alert"></p>
+
+      <div data-register-workspace-target="controlPriceWrap">
+        <label for="pos-control-price">Selling price</label>
+        <input id="pos-control-price" class="pos-command__field" data-register-workspace-target="controlPriceField" inputmode="decimal" autocomplete="off">
+      </div>
+
+      <div data-register-workspace-target="controlDiscountWrap" hidden>
+        <label for="pos-control-discount">Discount percent</label>
+        <input id="pos-control-discount" class="pos-command__field" data-register-workspace-target="controlDiscountField" inputmode="decimal" autocomplete="off">
+      </div>
+
+      <div data-register-workspace-target="controlTaxWrap" hidden>
+        <label for="pos-control-tax-class">Tax Class</label>
+        <select id="pos-control-tax-class" class="pos-command__field" data-register-workspace-target="controlTaxField">
+          <% (@tax_classes || TaxClass.none).each do |tax_class| %>
+            <option value="<%= tax_class.id %>"><%= tax_class.admin_label %></option>
+          <% end %>
+        </select>
+      </div>
+
+      <label for="pos-control-reason">Reason</label>
+      <select id="pos-control-reason" class="pos-command__field" data-register-workspace-target="controlReasonField"></select>
+
+      <div data-register-workspace-target="controlNoteWrap" hidden>
+        <label for="pos-control-note">Note</label>
+        <input id="pos-control-note" class="pos-command__field" data-register-workspace-target="controlNoteField" maxlength="200" autocomplete="off">
+      </div>
+
+      <div data-register-workspace-target="controlApproverWrap" hidden>
+        <label for="pos-approver-username">Approver username</label>
+        <input id="pos-approver-username" class="pos-command__field" data-register-workspace-target="approverUsername" autocomplete="off">
+        <label for="pos-approver-password">Approver password</label>
+        <input id="pos-approver-password" class="pos-command__field" type="password" data-register-workspace-target="approverPassword" autocomplete="off">
+      </div>
+
+      <div class="pos-overlay__actions">
+        <%= action_button "Don't apply (Esc)", style: :outline, intent: :neutral, size: :standard,
+              data: { action: "register-workspace#closeControlOverlay", register_workspace_target: "controlCancel" } %>
+        <%= action_button "Apply", style: :solid, intent: :brand, size: :standard,
+              data: { action: "register-workspace#submitControlApply", register_workspace_target: "controlApply" } %>
+        <%= action_button "Remove", style: :outline, intent: :warning, size: :standard, hidden: true,
+              data: { action: "register-workspace#submitControlRemove", register_workspace_target: "controlRemove" } %>
+      </div>
+    </div>
+  </div>
+
+  <div class="pos-overlay" data-register-blocking-overlay
+       id="pos_unlinked_overlay"
+       hidden
+       data-register-workspace-target="unlinkedOverlay"
+       role="dialog"
+       aria-modal="true"
+       aria-labelledby="pos-unlinked-title">
+    <div class="pos-overlay__panel pos-overlay__panel--control">
+      <h2 id="pos-unlinked-title">Return without receipt</h2>
+      <p id="pos-unlinked-feedback" class="pos-overlay__error" data-register-workspace-target="unlinkedFeedback" data-overlay-error role="alert"></p>
+
+      <label for="pos-unlinked-identifier">Scan or identifier</label>
+      <input id="pos-unlinked-identifier" class="pos-command__field" data-register-workspace-target="unlinkedIdentifierField" autocomplete="off">
+
+      <div id="pos_unlinked_preview" data-register-workspace-target="unlinkedPreview" hidden>
+        <p data-register-workspace-target="unlinkedDescription"></p>
+        <p>Current price <span data-register-workspace-target="unlinkedReferenceLabel"></span></p>
+
+        <div data-register-workspace-target="unlinkedQuantityWrap">
+          <label for="pos-unlinked-quantity">Quantity</label>
+          <input id="pos-unlinked-quantity" class="pos-command__field" data-register-workspace-target="unlinkedQuantityField" inputmode="numeric" autocomplete="off" value="1">
+        </div>
+
+        <label for="pos-unlinked-reason">Return reason</label>
+        <select id="pos-unlinked-reason" class="pos-command__field" data-register-workspace-target="unlinkedReasonField"></select>
+
+        <div data-register-workspace-target="unlinkedNoteWrap" hidden>
+          <label for="pos-unlinked-note">Note</label>
+          <input id="pos-unlinked-note" class="pos-command__field" data-register-workspace-target="unlinkedNoteField" maxlength="200" autocomplete="off">
+        </div>
+
+        <label for="pos-unlinked-price">Return unit price</label>
+        <input id="pos-unlinked-price" class="pos-command__field" data-register-workspace-target="unlinkedPriceField" inputmode="decimal" autocomplete="off">
+
+        <div data-register-workspace-target="unlinkedApproverWrap" hidden>
+          <label for="pos-unlinked-approver-username">Approver username</label>
+          <input id="pos-unlinked-approver-username" class="pos-command__field" data-register-workspace-target="unlinkedApproverUsername" autocomplete="off">
+          <label for="pos-unlinked-approver-password">Approver password</label>
+          <input id="pos-unlinked-approver-password" class="pos-command__field" type="password" data-register-workspace-target="unlinkedApproverPassword" autocomplete="off">
+        </div>
+      </div>
+
+      <div class="pos-overlay__actions">
+        <%= action_button "Don't return (Esc)", style: :outline, intent: :neutral, size: :standard,
+              data: { action: "register-workspace#closeUnlinkedOverlay", register_workspace_target: "unlinkedCancel" } %>
+        <%= action_button "Add return", style: :solid, intent: :brand, size: :standard, hidden: true,
+              data: { action: "register-workspace#submitUnlinkedReturn", register_workspace_target: "unlinkedApply" } %>
+      </div>
+    </div>
+  </div>
+
+  <div class="pos-overlay" data-register-blocking-overlay
+       id="pos_other_overlay"
+       hidden
+       data-register-workspace-target="otherOverlay"
+       role="dialog"
+       aria-modal="true"
+       aria-labelledby="pos-other-title">
+    <div class="pos-overlay__panel">
+      <h2 id="pos-other-title">Other tender</h2>
+      <ul class="pos-picker" role="listbox" aria-labelledby="pos-other-title" data-register-workspace-target="otherList"></ul>
+      <p class="muted">Enter selects the highlighted tender. Esc cancels.</p>
+      <%= action_button "Cancel (Esc)", style: :outline, intent: :neutral, size: :standard,
+            data: { action: "register-workspace#closeOtherOverlay" } %>
+    </div>
+  </div>
+
+  <div class="pos-overlay" data-register-blocking-overlay
+       id="pos_search_overlay"
+       hidden
+       data-register-workspace-target="searchOverlay"
+       role="dialog"
+       aria-modal="true"
+       aria-labelledby="pos-search-title">
+    <div class="pos-overlay__panel">
+      <h2 id="pos-search-title">Search merchandise</h2>
+      <label class="field">
+        <span>SKU</span>
+        <input type="text" autocomplete="off" data-register-workspace-target="searchSkuField">
+      </label>
+      <label class="field">
+        <span>Product name</span>
+        <input type="text" autocomplete="off" data-register-workspace-target="searchNameField">
+      </label>
+      <p class="muted" data-register-workspace-target="searchQueryLabel"></p>
+      <ul class="pos-picker" role="listbox" aria-labelledby="pos-search-title" data-register-workspace-target="searchList"></ul>
+      <p class="muted">Enter searches, then Enter selects the highlighted item. Esc cancels.</p>
+      <%= action_button "Cancel (Esc)", style: :outline, intent: :neutral, size: :standard,
+            data: { action: "register-workspace#closeSearchOverlay" } %>
+    </div>
+  </div>
+
+  <div class="pos-overlay" data-register-blocking-overlay
+       id="pos_pickup_overlay"
+       hidden
+       data-register-workspace-target="pickupOverlay"
+       role="dialog"
+       aria-modal="true"
+       aria-labelledby="pos-pickup-title">
+    <div class="pos-overlay__panel">
+      <h2 id="pos-pickup-title">Customer request pickup</h2>
+      <label class="field">
+        <span>Name, phone, request #, or merchandise</span>
+        <input type="text" autocomplete="off" data-register-workspace-target="pickupQueryField">
+      </label>
+      <p class="muted" data-register-workspace-target="pickupQueryLabel"></p>
+      <ul class="pos-picker" role="listbox" aria-labelledby="pos-pickup-title" data-register-workspace-target="pickupList"></ul>
+      <p class="muted">Enter searches, then Enter selects the highlighted available request. Esc cancels.</p>
+      <%= action_button "Cancel (Esc)", style: :outline, intent: :neutral, size: :standard,
+            data: { action: "register-workspace#closePickupOverlay" } %>
+    </div>
+  </div>
+
+  <div class="pos-overlay" data-register-blocking-overlay
+       id="pos_customer_overlay"
+       hidden
+       data-register-workspace-target="customerOverlay"
+       role="dialog"
+       aria-modal="true"
+       aria-labelledby="pos-customer-title">
+    <div class="pos-overlay__panel">
+      <h2 id="pos-customer-title">Attach customer</h2>
+      <label class="field">
+        <span>Name, email, or phone</span>
+        <input type="text" autocomplete="off" data-register-workspace-target="customerQueryField">
+      </label>
+      <p class="muted" data-register-workspace-target="customerQueryLabel"></p>
+      <ul class="pos-picker" role="listbox" aria-labelledby="pos-customer-title" data-register-workspace-target="customerList"></ul>
+      <p class="muted">Enter searches, then Enter selects the highlighted customer. Esc cancels.</p>
+      <%= action_button "Cancel (Esc)", style: :outline, intent: :neutral, size: :standard,
+            data: { action: "register-workspace#closeCustomerOverlay" } %>
+    </div>
+  </div>
+
+  <div class="pos-overlay" data-register-blocking-overlay
+       id="pos_product_overlay"
+       hidden
+       data-register-workspace-target="productOverlay"
+       role="dialog"
+       aria-modal="true"
+       aria-labelledby="pos-product-title">
+    <div class="pos-overlay__panel">
+      <h2 id="pos-product-title">Choose product</h2>
+      <ul class="pos-picker" role="listbox" aria-labelledby="pos-product-title" data-register-workspace-target="productList"></ul>
+      <p class="muted">Several products share that lookup code. Enter selects the highlighted product. Esc cancels without adding merchandise.</p>
+      <%= action_button "Cancel (Esc)", style: :outline, intent: :neutral, size: :standard,
+            data: { action: "register-workspace#closeProductOverlay" } %>
+    </div>
+  </div>
+
+  <div class="pos-overlay" data-register-blocking-overlay
+       id="pos_variant_overlay"
+       hidden
+       data-register-workspace-target="variantOverlay"
+       role="dialog"
+       aria-modal="true"
+       aria-labelledby="pos-variant-title">
+    <div class="pos-overlay__panel">
+      <h2 id="pos-variant-title">Choose variant</h2>
+      <ul class="pos-picker" role="listbox" aria-labelledby="pos-variant-title" data-register-workspace-target="variantList"></ul>
+      <p class="muted">Enter selects the highlighted variant. Esc cancels.</p>
+      <%= action_button "Cancel (Esc)", style: :outline, intent: :neutral, size: :standard,
+            data: { action: "register-workspace#closeVariantOverlay" } %>
+    </div>
+  </div>
+
+  <div class="pos-overlay" data-register-blocking-overlay
+       id="pos_unit_overlay"
+       hidden
+       data-register-workspace-target="unitOverlay"
+       role="dialog"
+       aria-modal="true"
+       aria-labelledby="pos-unit-title">
+    <div class="pos-overlay__panel">
+      <h2 id="pos-unit-title">Choose unit</h2>
+      <ul class="pos-picker" role="listbox" aria-labelledby="pos-unit-title" data-register-workspace-target="unitList"></ul>
+      <p class="muted">Enter selects the highlighted unit. Esc cancels.</p>
+      <%= action_button "Cancel (Esc)", style: :outline, intent: :neutral, size: :standard,
+            data: { action: "register-workspace#closeUnitOverlay" } %>
+    </div>
+  </div>
+
+  <div class="pos-overlay" data-register-blocking-overlay
+       id="pos_open_price_overlay"
+       hidden
+       data-register-workspace-target="openPriceOverlay"
+       role="dialog"
+       aria-modal="true"
+       aria-labelledby="pos-open-price-title">
+    <div class="pos-overlay__panel">
+      <h2 id="pos-open-price-title">Open price</h2>
+      <p data-register-workspace-target="openPricePrompt"></p>
+      <p id="pos-open-price-feedback" class="pos-overlay__error" data-overlay-error role="alert"></p>
+      <label class="field">
+        <span>Price</span>
+        <input type="text" inputmode="decimal" autocomplete="off" data-register-workspace-target="openPriceField">
+      </label>
+      <div class="pos-overlay__actions">
+        <%= action_button "Cancel (Esc)", style: :outline, intent: :neutral, size: :standard,
+              data: { action: "register-workspace#closeOpenPriceOverlay" } %>
+        <%= action_button "Apply", style: :solid, intent: :brand, size: :standard,
+              data: { action: "register-workspace#submitOpenPricePrompt" } %>
+      </div>
+    </div>
+  </div>
+
+  <div class="pos-overlay" data-register-blocking-overlay
+       id="pos_return_chooser"
+       hidden
+       data-register-workspace-target="returnChooserOverlay"
+       role="dialog"
+       aria-modal="true"
+       aria-labelledby="pos-return-chooser-title">
+    <div class="pos-overlay__panel">
+      <h2 id="pos-return-chooser-title">RETURN</h2>
+      <ul class="pos-picker" role="listbox" aria-labelledby="pos-return-chooser-title" data-register-workspace-target="returnChooserList">
+        <li data-choice="linked" class="is-selected" role="option" tabindex="0" aria-selected="true">Linked return</li>
+        <li data-choice="unlinked" role="option" tabindex="-1" aria-selected="false">Unlinked return</li>
+      </ul>
+      <p class="muted">Enter chooses. Esc cancels.</p>
+      <%= action_button "Cancel (Esc)", style: :outline, intent: :neutral, size: :standard,
+            data: { action: "register-workspace#closeReturnChooser" } %>
+    </div>
+  </div>
+
+  <div class="pos-overlay" data-register-blocking-overlay
+       id="pos_linked_overlay"
+       hidden
+       data-register-workspace-target="linkedOverlay"
+       role="dialog"
+       aria-modal="true"
+       aria-labelledby="pos-linked-title">
+    <div class="pos-overlay__panel">
+      <h2 id="pos-linked-title">Linked return</h2>
+      <label class="field">
+        <span>Receipt, merchandise, or unit</span>
+        <input type="text" autocomplete="off" data-register-workspace-target="linkedLookupField">
+      </label>
+      <p id="pos-linked-feedback" class="pos-overlay__error" data-register-workspace-target="linkedFeedback" data-overlay-error role="alert"></p>
+      <ul class="pos-picker" role="listbox" aria-labelledby="pos-linked-title" data-register-workspace-target="linkedList"></ul>
+      <label class="field">
+        <span>Qty</span>
+        <input type="text" inputmode="numeric" autocomplete="off" value="1" data-register-workspace-target="linkedQuantityField">
+      </label>
+      <label class="field">
+        <span>Reason</span>
+        <select data-register-workspace-target="linkedReasonField"></select>
+      </label>
+      <label class="field" hidden data-register-workspace-target="linkedNoteWrap">
+        <span>Note</span>
+        <input type="text" maxlength="200" autocomplete="off" data-register-workspace-target="linkedNoteField">
+      </label>
+      <p class="muted">Enter in the lookup field searches. Enter on a highlighted line adds it. Esc cancels.</p>
+      <%= action_button "Cancel (Esc)", style: :outline, intent: :neutral, size: :standard,
+            data: { action: "register-workspace#closeLinkedOverlay" } %>
+    </div>
+  </div>
