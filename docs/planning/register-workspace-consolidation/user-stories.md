@@ -6,7 +6,7 @@ Tracker: [milestone Register workspace consolidation](https://github.com/BankEnc
 
 ## Slice 2 — Shell and state routing
 
-**Outcome:** `/pos` is state-aware Register entry. Generic POS Home is gone. Existing workspace is wrapped in the shared shell. Temporary destination cluster preserves eligible destinations.
+**Outcome:** `/pos` is state-aware Register entry. Generic POS Home is gone. Existing workspace is wrapped in the shared shell. Temporary destination cluster preserves eligible destinations. Shell containment keeps state bodies and the scan field reachable at workstation zoom.
 
 **Acceptance:**
 
@@ -19,8 +19,14 @@ Tracker: [milestone Register workspace consolidation](https://github.com/BankEnc
 - [ ] POST enter / occupied denial / leftover period unchanged
 - [ ] Generic `pos/homes/show` removed
 - [ ] Domain tests remain green
+- [ ] Header business-date language is state-aware (no calculated date presented as established)
+- [ ] Selector / enter / Switch Register content scrolls inside the shell at high zoom; last actions remain reachable
+- [ ] Same-tab **Return to ShelfSense** with custody confirmation when a session is owned
+- [ ] Authorized shell-containment interaction: command above basket, selected-row visibility, printable scan redirection, shell-wide Keyboard Lock reacquisition (no key remap)
+- [ ] Automated system coverage for focused controls, dialog text entry, scanner punctuation, completion modes, shell-to-scan recovery, and lock API unavailability
+- [ ] Manual verification evidence for screen-reader/form-control behavior, real browser navigation, high zoom, and workstation Keyboard Lock
 
-**Exclusions:** F10, composition, overlay migration, new inquiry surfaces.
+**Exclusions:** F10, overlay family migration, new inquiry surfaces, key remapping (7C). Shell-containment composition above is in scope; Slice 4 still owns splitting `_surface`.
 
 ## Slice 3 — F10 and navigation
 

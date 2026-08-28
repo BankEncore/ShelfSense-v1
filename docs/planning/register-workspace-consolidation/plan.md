@@ -32,7 +32,13 @@ This is presentation replacement. It must not introduce a second transaction, ca
 9. Delete replaced presentation in the same slice. Replace obsolete tests in the same PR. Never weaken financial, custody, stored-value, cash, auth, concurrency, receipt, or cross-store tests.
 10. Keyboard and overlay interaction tests are **system tests**. Do not add a JavaScript unit runner for this program.
 11. Wrap the **existing** workspace in the shell in Slice 2. Slice 4 only splits `_surface`.
-12. Slice 7 does not start until slices 2–6 are on the integration branch and green. Slice 7’s first merge is a packet amendment (SALE / TENDER / overlay tables), then 7A → 7B → 7C.
+12. **Slice 2 shell-containment interaction (authorized):** Once the Register shell is a fixed workstation viewport, Slice 2 may also change selling-chrome composition and scan input routing as required for containment—not as silent scope into Slice 4/7:
+    - Place feedback and the command area above the basket; give the basket an internal scroll region.
+    - Keep the selected basket line scrolled into view on add/rescan and ArrowUp/ArrowDown.
+    - Redirect printable scan/typed input into the command field when no overlay/dialog field owns the keystroke.
+    - Reacquire Keyboard Lock from shell-wide pointer/focus (header, status, cluster, workspace), and tolerate `navigator.keyboard.lock` absence or rejection.
+    - This does **not** authorize key remapping, new F-key bindings, or overlay family migration (Slices 3–5 / 7C).
+13. Slice 7 does not start until slices 2–6 are on the integration branch and green. Slice 7’s first merge is a packet amendment (SALE / TENDER / overlay tables), then 7A → 7B → 7C.
 
 ## States
 

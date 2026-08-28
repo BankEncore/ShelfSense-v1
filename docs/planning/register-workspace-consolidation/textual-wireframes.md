@@ -54,7 +54,7 @@ Behavior:
 
 - F10 opens the Register Menu and returns focus to its launcher when closed.
 - While a blocking overlay or approval dialog is open, F10 does not open another layer. The user must complete or leave the current layer first.
-- **ShelfSense** leaves the Register workspace; it does not close a session.
+- **Return to ShelfSense** leaves the Register workspace in the **same tab**; it does not close a session.
 - If leaving while the user owns an open session, the confirmation explicitly states that custody remains open.
 - The shell never substitutes the calculated current date for an established reporting-period business date.
 
@@ -62,39 +62,48 @@ Behavior:
 
 One partial with state-dependent facts—not separate headers per page.
 
+### Selector
+
+```text
+001 Main Street Books                                      [Return to ShelfSense]
+Business date not selected  ·  {cashier}
+```
+
 ### Closed
 
 ```text
-ShelfSense  Main Street Books  ·  Register 02                  [F10 Menu]
-Business date not open  ·  No active session                [ShelfSense ↗]
+001 Main Street Books  |  02 Front                         [Return to ShelfSense]
+Business date not open  ·  Proposed date: Thu 27 Aug 26  ·  {cashier}
 ```
 
 ### Between sessions
 
 ```text
-ShelfSense  Main Street Books  ·  Register 02                  [F10 Menu]
-Business date Aug 27, 2026  ·  Between sessions             [ShelfSense ↗]
+001 Main Street Books  |  02 Front                         [Return to ShelfSense]
+Business Date Thu 27 Aug 26  |  Opened: … (omitted)  ·  {cashier}
 ```
 
 ### Own session
 
 ```text
-ShelfSense  Main Street Books  ·  Register 02                  [F10 Menu]
-Aug 27, 2026  ·  Jane Smith  ·  Opened 9:04 AM              [ShelfSense ↗]
+001 Main Street Books  |  02 Front                         [Return to ShelfSense]
+Business Date Thu 27 Aug 26  |  Opened: 27 Aug 26 09:04 am  ·  Jane Smith
 ```
 
 ### Occupied
 
 ```text
-ShelfSense  Main Street Books  ·  Register 02                  [F10 Menu]
-Aug 27, 2026  ·  In use by Morgan Lee  ·  Opened 8:51 AM    [ShelfSense ↗]
+001 Main Street Books  |  02 Front                         [Return to ShelfSense]
+Business Date Thu 27 Aug 26  |  Opened: 27 Aug 26 08:51 am  ·  {viewer}
 ```
+
+Occupier identity stays in the status strip (**IN USE**), not as a substitute for the viewer cashier label.
 
 ### Supporting historical surface
 
 ```text
-ShelfSense  Main Street Books  ·  Register 02                  [F10 Menu]
-Viewing: Session closed Aug 27, 2026 6:12 PM                 [ShelfSense ↗]
+001 Main Street Books  |  02 Front                         [Return to ShelfSense]
+Viewing: Session closed Aug 27, 2026 6:12 PM
 ```
 
 ## P3. State/status strip

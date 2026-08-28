@@ -18,8 +18,31 @@ module PosRegisterShellHelper
     }
   end
 
+  def register_header_business_date_text
+    kind = register_header_state_kind
+    case kind
+    when "selector"
+      "Business date not selected"
+    when "closed"
+      proposed = (@gate&.business_date || BusinessDate.for_store(current_store)).strftime("%a %d %b %y")
+      "Business date not open · Proposed date: #{proposed}"
+    when "between_sessions", "own_session", "occupied"
+      date = @gate&.period&.business_date
+      if date.present?
+        "Business Date #{date.strftime("%a %d %b %y")}"
+      else
+        "Business date not open"
+      end
+    else
+      "Business date not selected"
+    end
+  end
+
+  # Backward-compatible alias for the established-date format used in older call sites/tests.
   def register_header_business_date_label
-    date = @gate&.business_date || BusinessDate.for_store(current_store)
+    date = @gate&.period&.business_date
+    return "—" if date.blank?
+
     date.strftime("%a %d %b %y")
   end
 
@@ -125,6 +148,17 @@ module PosRegisterShellHelper
 
   def pos_permission?(key)
     Authorization::PermissionEvaluator.allowed?(user: current_user, permission_key: key, store: current_store)
+  end
+
+  def register_header_state_kind
+    return "selector" if @switch_register
+    return @state.kind if @state.respond_to?(:kind) && @state.kind.present?
+    return "own_session" if @gate&.own_session?
+    return "occupied" if @gate&.occupied?
+    return "between_sessions" if @gate&.period.present?
+    return "closed" if @register.present?
+
+    "selector"
   end
 
   def register_selector_status_text(gate)

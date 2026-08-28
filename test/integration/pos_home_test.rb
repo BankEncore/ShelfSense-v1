@@ -261,12 +261,51 @@ class PosHomeTest < ActionDispatch::IntegrationTest
     assert_select "a", text: "X Report"
     assert_select "a", text: "Switch Register"
     assert_select "button, input[type=submit]", text: "Close Session"
-    assert_select "header.pos-header--register a[href='#{root_path}'][target=_blank]", text: "ShelfSense ↗"
+    assert_select "header.pos-header--register a[href='#{root_path}'][target=_blank]", count: 0
+    assert_select "header.pos-header--register a[href='#{root_path}']", text: "Return to ShelfSense"
     assert_match "#{Pos::ReceiptIdentity.pad(@store.store_number, 3)} #{@store.name}", response.body
     assert_match "#{Pos::ReceiptIdentity.pad(@register.register_number, 2)} #{@register.name}", response.body
-    assert_match "Business Date", response.body
+    assert_match(/Business Date \w{3} \d{2} \w{3} \d{2}/, response.body)
     assert_match "Opened:", response.body
     assert_select "header.pos-header--register", text: /#{Regexp.escape(@actor.display_name)}/
+  end
+
+  test "header business date language is state-aware" do
+    get pos_path
+    assert_response :success
+    assert_match "Business date not selected", response.body
+    refute_match(/Business Date \w{3}/, response.body)
+
+    post pos_preferred_register_path, params: { register_id: @register.id }
+    follow_redirect!
+    assert_match "Business date not open", response.body
+    assert_match "Proposed date:", response.body
+    assert_select "a", text: "Return to ShelfSense"
+
+    context = pos_open_context(store: @store, actor: @actor, register: @register, opening_float_cents: 0)
+    pos_close_session!(session: context[:session], actor: @actor, closing_count_cents: 0)
+
+    get pos_path(register_id: @register.id)
+    assert_response :success
+    assert_match "Open Session", response.body
+    assert_match(/Business Date \w{3}/, response.body)
+    refute_match "Proposed date:", response.body
+    refute_match "Business date not open", response.body
+    refute_match "Business date not selected", response.body
+
+    other = pos_transacting_user(store: @store, assigned_by: @actor, username: "header_clerk")
+    Pos::EnterRegister.call(store: @store, register: @register, actor: other, opening_float_cents: 0)
+    get pos_path(register_id: @register.id)
+    assert_response :success
+    assert_match(/Business Date \w{3}/, response.body)
+    assert_match(/open for|IN USE|In use/i, response.body)
+
+    delete session_path
+    sign_in_as("header_clerk")
+    get pos_path(register_id: @register.id)
+    follow_redirect! if response.redirect?
+    assert_match(/Business Date \w{3}/, response.body)
+    assert_match "Opened:", response.body
   end
 
   test "get pos does not mutate period session cash or transaction records" do

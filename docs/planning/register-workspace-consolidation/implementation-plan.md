@@ -1,6 +1,6 @@
 # Register workspace consolidation — Implementation plan
 
-Status: **Slice 2 in review** on `register-workspace-consolidation`. Slices 3–7 not started.
+Status: **Slice 2 completing review follow-ups** on `register-workspace-consolidation` (PR #96). Slices 3–7 not started.
 
 Authority: [plan.md](plan.md), [routing-and-authority.md](routing-and-authority.md).
 
