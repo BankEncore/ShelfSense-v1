@@ -3,7 +3,7 @@
     <strong>IN USE</strong>
     <%= @gate.occupier.display_name %> currently has custody of Register <%= pos_padded_register_number(@register) %>.
   </div>
-<% elsif @gate&.leftover_period? && @gate.session.nil? %>
+<% elsif @gate&.leftover_period? %>
   <div class="pos-banner pos-date-emphasis" role="status">
     <strong>PRIOR BUSINESS DATE STILL OPEN</strong>
     Register <%= pos_padded_register_number(@register) %> remains on <%= @gate.business_date.iso8601 %>. Opening a session will continue that date.

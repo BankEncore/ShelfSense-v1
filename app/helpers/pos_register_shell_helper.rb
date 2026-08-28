@@ -18,6 +18,19 @@ module PosRegisterShellHelper
     }
   end
 
+  def register_header_business_date_label
+    date = @gate&.business_date || BusinessDate.for_store(current_store)
+    date.strftime("%a %d %b %y")
+  end
+
+  def register_header_opened_at_label
+    opened_at = @gate&.session&.opened_at
+    return if opened_at.blank?
+
+    zone = ActiveSupport::TimeZone[current_store.timezone] || ActiveSupport::TimeZone["UTC"]
+    opened_at.in_time_zone(zone).strftime("%d %b %y %I:%M %P")
+  end
+
   def register_cluster_items
     kind = @state&.kind
     items = []

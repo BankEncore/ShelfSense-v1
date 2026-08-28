@@ -261,7 +261,12 @@ class PosHomeTest < ActionDispatch::IntegrationTest
     assert_select "a", text: "X Report"
     assert_select "a", text: "Switch Register"
     assert_select "button, input[type=submit]", text: "Close Session"
-    assert_match "ShelfSense", response.body
+    assert_select "header.pos-header--register a[href='#{root_path}'][target=_blank]", text: "ShelfSense ↗"
+    assert_match "#{Pos::ReceiptIdentity.pad(@store.store_number, 3)} #{@store.name}", response.body
+    assert_match "#{Pos::ReceiptIdentity.pad(@register.register_number, 2)} #{@register.name}", response.body
+    assert_match "Business Date", response.body
+    assert_match "Opened:", response.body
+    assert_select "header.pos-header--register", text: /#{Regexp.escape(@actor.display_name)}/
   end
 
   test "get pos does not mutate period session cash or transaction records" do

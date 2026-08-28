@@ -1545,7 +1545,31 @@ input[type="submit"]:disabled,
 .pos-header__row {
   display: flex;
   justify-content: space-between;
+  align-items: baseline;
   gap: var(--space-4);
+}
+
+.pos-header--register {
+  font-variant-numeric: tabular-nums;
+}
+
+.pos-header--register .pos-header__row + .pos-header__row {
+  margin-top: var(--space-1);
+}
+
+.pos-header__facts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  min-width: 0;
+}
+
+.pos-header__sep {
+  margin: 0 0.5em;
+}
+
+.pos-header__cashier {
+  flex-shrink: 0;
 }
 
 .pos-header__date,

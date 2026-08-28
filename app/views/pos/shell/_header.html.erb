@@ -1,28 +1,26 @@
-<header class="pos-header">
+<header class="pos-header pos-header--register">
   <div class="pos-header__row">
-    <span><%= current_store.admin_label %></span>
-    <% if @register %>
-      <span>Register <%= pos_padded_register_number(@register) %></span>
-    <% end %>
-    <%= link_to "ShelfSense ↗", root_path, class: "pos-header__link", **register_leave_confirm_options %>
-  </div>
-  <div class="pos-header__date">
-    <% if @gate %>
-      <% if @gate.own_session? %>
-        <%= @gate.business_date.iso8601 %>
-        · <%= @gate.session.cashier_user.display_name %>
-        · Opened <%= format_store_timestamp(@gate.session.opened_at, current_store) %>
-      <% elsif @gate.occupied? %>
-        <%= @gate.business_date.iso8601 %>
-        · In use by <%= @gate.occupier.display_name %>
-        · Opened <%= format_store_timestamp(@gate.session.opened_at, current_store) %>
-      <% elsif @gate.period.present? %>
-        Business date <%= @gate.business_date.iso8601 %> · Between sessions
-      <% else %>
-        Business date not open · No active session
+    <div class="pos-header__facts">
+      <span><%= pos_padded_store_number(current_store) %> <%= current_store.name %></span>
+      <% if @register %>
+        <span class="pos-header__sep" aria-hidden="true">|</span>
+        <span><%= pos_padded_register_number(@register) %> <%= @register.name %></span>
       <% end %>
-    <% else %>
-      <%= current_user.display_name %>
-    <% end %>
+    </div>
+    <%= link_to "ShelfSense ↗", root_path,
+          class: "pos-header__link",
+          target: "_blank",
+          rel: "noopener noreferrer",
+          **register_leave_confirm_options %>
+  </div>
+  <div class="pos-header__row">
+    <div class="pos-header__facts">
+      <span>Business Date <%= register_header_business_date_label %></span>
+      <% if (opened = register_header_opened_at_label) %>
+        <span class="pos-header__sep" aria-hidden="true">|</span>
+        <span>Opened: <%= opened %></span>
+      <% end %>
+    </div>
+    <span class="pos-header__cashier"><%= current_user.display_name %></span>
   </div>
 </header>

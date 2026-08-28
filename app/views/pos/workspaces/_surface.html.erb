@@ -10,7 +10,6 @@
   remaining_refund_cents = Pos::Support.remaining_refund_cents(@transaction) if remaining_refund_cents.nil?
   selected_id = @selected_line&.id
   locked = %w[completion_pending completion_failed].include?(@ui_mode)
-  leftover = @session_record.reporting_period.business_date != BusinessDate.for_store(current_store)
   refund_mode = settlement_direction == :refund
   even_exchange = @transaction.even_exchange?
   remaining_cents = refund_mode ? remaining_refund_cents : remaining_payment_cents
@@ -83,15 +82,7 @@
      data-register-workspace-pickup-allowed-value="<%= @pickup_allowed ? "true" : "false" %>"
      data-register-workspace-open-price-url-value="<%= pos_register_open_price_path(register_scope) %>"
      data-action="turbo:submit-end->register-workspace#onSubmitEnd">
-  <div data-register-workspace-target="chrome">
-    <header class="pos-header">
-      <div class="pos-header__date <%= "pos-date-emphasis" if leftover %>">
-        Business date  <%= @session_record.reporting_period.business_date.iso8601 %>
-      </div>
-      <% if leftover %>
-        <p class="pos-banner" role="status">This register is still on business date <%= @session_record.reporting_period.business_date.iso8601 %>.</p>
-      <% end %>
-    </header>
+  <div data-register-workspace-target="chrome"></div>
 
     <div class="pos-main">
       <div id="pos_basket" class="pos-basket">
