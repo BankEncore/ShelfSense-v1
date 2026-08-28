@@ -218,6 +218,7 @@ export default class extends Controller {
   }
 
   onKeydown(event) {
+    this.requestFunctionKeyLock()
     const functionKey = this.functionKey(event)
     const key = functionKey || event.key
     if (this.claimedFunctionKey(functionKey)) this.claimFunctionKey(event)
@@ -302,6 +303,8 @@ export default class extends Controller {
       if (key === "F9") this.confirmCancel()
       return
     }
+
+    this.redirectPrintableToCommandField(event)
 
     if (this.inFlight || this.modeValue === "completion_pending") {
       if (key === "Enter" && this.isActionableControl(event.target)) return
@@ -2358,6 +2361,38 @@ export default class extends Controller {
     })
   }
 
+  isCommandSurfaceInput(target) {
+    if (!target) return false
+    if (this.hasFieldTarget && target === this.fieldTarget) return true
+    if (this.hasReferenceFieldTarget && target === this.referenceFieldTarget) return true
+    if (this.hasGiftCardNumberFieldTarget && target === this.giftCardNumberFieldTarget) return true
+    return false
+  }
+
+  reservedCommandGlyph(key, event) {
+    return key === "*" || key === "+" || key === "/" || key === "." || key === "-" || event.code === "Minus"
+  }
+
+  redirectPrintableToCommandField(event) {
+    if (event.defaultPrevented) return
+    if (!this.hasFieldTarget || this.fieldTarget.disabled) return
+    if (this.isCommandSurfaceInput(event.target)) return
+    if (event.isComposing) return
+    if (event.metaKey || event.ctrlKey || event.altKey) return
+    const key = event.key
+    if (typeof key !== "string" || key.length !== 1 || key === " ") return
+    if (this.commandFieldEmpty() && this.reservedCommandGlyph(key, event)) return
+
+    event.preventDefault()
+    const field = this.fieldTarget
+    field.focus()
+    const start = field.selectionStart ?? field.value.length
+    const end = field.selectionEnd ?? field.value.length
+    field.value = `${field.value.slice(0, start)}${key}${field.value.slice(end)}`
+    const caret = start + key.length
+    if (typeof field.setSelectionRange === "function") field.setSelectionRange(caret, caret)
+  }
+
   setMode(mode, heading) {
     this.modeValue = mode
     this.element.dataset.registerWorkspaceModeValue = mode
@@ -2405,7 +2440,8 @@ export default class extends Controller {
     this.onWorkspacePointerDown = () => this.requestFunctionKeyLock()
     window.addEventListener("keydown", this.onWindowKeydown, true)
     window.addEventListener("keyup", this.onWindowKeyup, true)
-    this.element.addEventListener("pointerdown", this.onWorkspacePointerDown)
+    document.addEventListener("pointerdown", this.onWorkspacePointerDown, true)
+    document.addEventListener("focusin", this.onWorkspacePointerDown, true)
     this.requestFunctionKeyLock()
   }
 
@@ -2414,7 +2450,8 @@ export default class extends Controller {
     this.functionKeyListenersBound = false
     window.removeEventListener("keydown", this.onWindowKeydown, true)
     window.removeEventListener("keyup", this.onWindowKeyup, true)
-    this.element.removeEventListener("pointerdown", this.onWorkspacePointerDown)
+    document.removeEventListener("pointerdown", this.onWorkspacePointerDown, true)
+    document.removeEventListener("focusin", this.onWorkspacePointerDown, true)
     this.releaseFunctionKeyLock()
   }
 

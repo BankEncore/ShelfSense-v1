@@ -1988,11 +1988,56 @@ input[type="submit"]:disabled,
 }
 
 .pos-register-shell .pos-shell {
+  display: flex;
+  flex-direction: column;
   flex: 1 1 0;
   width: 100%;
   min-width: 0;
   min-height: 0;
   overflow: hidden;
+}
+
+.pos-register-shell .pos-shell > #pos_feedback {
+  flex: 0 0 auto;
+  min-height: 2.5rem;
+  padding-block: var(--space-2);
+  border-top: none;
+}
+
+.pos-register-shell .pos-shell > #pos_command {
+  flex: 0 0 auto;
+  padding-block: var(--space-2);
+  border-top: none;
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.pos-register-shell .pos-shell > #pos_command .pos-command__field {
+  font-size: 1.1rem;
+  padding: var(--space-1) var(--space-2);
+  margin-top: var(--space-1);
+}
+
+.pos-register-shell .pos-shell > .pos-main {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: hidden;
+  grid-template-rows: minmax(0, 1fr);
+  align-items: stretch;
+}
+
+.pos-register-shell .pos-shell > .pos-actions {
+  flex: 0 0 auto;
+  padding-block: var(--space-2);
+}
+
+.pos-register-shell .pos-shell > .pos-actions .btn {
+  padding-block: 0.4rem;
+}
+
+.pos-register-shell .pos-basket,
+.pos-register-shell .pos-totals {
+  min-height: 0;
+  overflow: auto;
 }
 
 .pos-register-shell .pos-enter {
@@ -2006,10 +2051,13 @@ input[type="submit"]:disabled,
 .pos-register-cluster {
   display: flex;
   flex-wrap: wrap;
-  flex-shrink: 0;
-  gap: var(--space-3);
-  padding: var(--space-4) var(--space-5);
+  flex: 0 1 auto;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-5);
   border-top: 1px solid var(--color-border);
+  min-height: 0;
+  max-height: 5.5rem;
+  overflow: auto;
 }
 
 .pos-register-selector {

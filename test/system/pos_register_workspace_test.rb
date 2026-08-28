@@ -287,6 +287,16 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     field.click
     field.send_keys @variant.sku, :enter
     assert_selector "tbody tr.is-selected", text: "Example Book", wait: 10
+    command_top = command_field_top
+    basket_top = page.evaluate_script("document.getElementById('pos_basket').getBoundingClientRect().top")
+    assert command_top < basket_top, "command field must sit above the basket"
+  end
+
+  test "typed identifiers reach the command field after clicking the header" do
+    open_register
+    find(".pos-header__cashier").click
+    send_keys @variant.sku, :enter
+    assert_selector "tbody tr.is-selected", text: "Example Book", wait: 10
   end
 
   test "quantity mode prefills and invalid quantity stays in quantity" do
