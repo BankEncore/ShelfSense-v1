@@ -1941,20 +1941,47 @@ input[type="submit"]:disabled,
 }
 
 .pos-register-shell {
-  width: min(100% - 2rem, 72rem);
-  margin: var(--space-4) auto var(--space-8);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-width: min(1280px, 100%);
+  min-height: 100vh;
+}
+
+.pos-register-shell > .pos-banner,
+.pos-register-shell > .pos-feedback,
+.pos-register-shell > .pos-enter__alert {
+  margin-inline: var(--space-5);
+}
+
+.pos-register-shell__body {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
 }
 
 .pos-register-shell .pos-shell {
+  flex: 1 1 auto;
   width: 100%;
+  min-width: 0;
+  min-height: 0;
+}
+
+.pos-register-shell .pos-enter {
+  flex: 1 1 auto;
+  width: auto;
+  max-width: none;
+  min-width: 0;
+  margin: var(--space-5);
 }
 
 .pos-register-cluster {
   display: flex;
   flex-wrap: wrap;
+  flex-shrink: 0;
   gap: var(--space-3);
-  margin-top: var(--space-6);
-  padding-top: var(--space-4);
+  padding: var(--space-4) var(--space-5);
   border-top: 1px solid var(--color-border);
 }
 
