@@ -1964,6 +1964,18 @@ input[type="submit"]:disabled,
   margin-left: auto;
 }
 
+.pos-header__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: auto;
+}
+
+.pos-header__actions .pos-header__link {
+  margin-left: 0;
+}
+
 .pos-register-shell {
   box-sizing: border-box;
   display: flex;
@@ -1977,9 +1989,18 @@ input[type="submit"]:disabled,
   overflow: hidden;
 }
 
-.pos-register-shell > .pos-banner,
-.pos-register-shell > .pos-feedback,
-.pos-register-shell > .pos-enter__alert {
+.pos-register-shell__background {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.pos-register-shell__background > .pos-banner,
+.pos-register-shell__background > .pos-feedback,
+.pos-register-shell__background > .pos-enter__alert {
   margin-inline: var(--space-5);
 }
 
@@ -2044,7 +2065,7 @@ input[type="submit"]:disabled,
 }
 
 .pos-register-shell .pos-enter,
-.pos-register-shell > .pos-enter {
+.pos-register-shell__background .pos-enter {
   flex: 1 1 auto;
   width: auto;
   max-width: none;
@@ -2054,16 +2075,47 @@ input[type="submit"]:disabled,
   overflow: auto;
 }
 
-.pos-register-cluster {
+.pos-register-menu {
+  z-index: 1100;
+}
+
+.pos-register-menu__panel {
+  width: min(100%, 48rem);
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - (2 * var(--space-5)));
+}
+
+.pos-register-menu__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.pos-register-menu__header h2 {
+  margin: 0;
+}
+
+.pos-register-menu__body {
+  display: grid;
+  gap: var(--space-4);
+  overflow: auto;
+  min-height: 0;
+}
+
+.pos-register-menu__group h3 {
+  margin: 0 0 var(--space-2);
+}
+
+.pos-register-menu__items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
   display: flex;
   flex-wrap: wrap;
-  flex: 0 1 auto;
   gap: var(--space-2);
-  padding: var(--space-2) var(--space-5);
-  border-top: 1px solid var(--color-border);
-  min-height: 0;
-  max-height: 5.5rem;
-  overflow: auto;
 }
 
 .pos-register-selector {

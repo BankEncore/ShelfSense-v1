@@ -27,7 +27,7 @@ class PosHomeTest < ActionDispatch::IntegrationTest
     get pos_path
     assert_response :success
     assert_select "h1", text: "Select a Register"
-    assert_select "a", text: "Transactions"
+    assert_select "a", text: "Transactions & Receipts"
     assert_select "a", text: "Session / Z Reports"
     assert_select "a", text: "Switch Register"
     assert_select "a", text: "X Report", count: 0
@@ -113,6 +113,9 @@ class PosHomeTest < ActionDispatch::IntegrationTest
     get pos_switch_register_path
     assert_response :success
     assert_match "Register 01 is still open under your Session. Changing your preferred Register will not close it.", response.body
+    assert_select "#register-menu a", text: "Transactions & Receipts"
+    assert_select "#register-menu a", text: "Switch Register", count: 0
+    assert_select "#register-menu a", text: "X Report", count: 0
 
     post pos_preferred_register_path, params: { register_id: @back.id }
     assert_redirected_to pos_path
@@ -257,7 +260,8 @@ class PosHomeTest < ActionDispatch::IntegrationTest
     follow_redirect!
     assert_response :success
     assert_select "a", text: "POS Home", count: 0
-    assert_select "a", text: "Transactions"
+    assert_select "button", text: "F10 Menu"
+    assert_select "a", text: "Transactions & Receipts"
     assert_select "a", text: "X Report"
     assert_select "a", text: "Switch Register"
     assert_select "button, input[type=submit]", text: "Close Session"
@@ -398,7 +402,7 @@ class PosHomeTest < ActionDispatch::IntegrationTest
     assert_match "Open a register before recording cash activity.", response.body
   end
 
-  test "closed and between sessions omit x report from the cluster" do
+  test "closed and between sessions omit x report from the menu" do
     get pos_path, params: { register_id: @register.id }
     assert_select "a", text: "X Report", count: 0
     assert_select "a", text: "Session / Z Reports"

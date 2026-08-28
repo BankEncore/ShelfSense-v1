@@ -272,7 +272,7 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     assert_button "Close Session"
   end
 
-  test "command field stays clickable above the destination cluster" do
+  test "command field stays clickable above the basket" do
     open_register
     field = find("#pos-command-field")
     hit = page.evaluate_script(<<~JS.squish)
@@ -333,6 +333,11 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     open_register
     add_current_sku
     click_on "Quantity (*)"
+    assert_text "QUANTITY"
+    send_keys :f10
+    assert_selector "#register-menu", visible: true
+    send_keys :escape
+    assert_selector "#register-menu", visible: :hidden
     assert_text "QUANTITY"
     field = find("#pos-command-field")
     assert_equal "1", field.value
@@ -590,6 +595,13 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     refute_equal "", field.value
 
     send_keys :f10
+    assert_selector "#register-menu", visible: true
+    send_keys :escape
+    assert_selector "#register-menu", visible: :hidden
+    assert_text "CASH TENDER"
+    assert page.evaluate_script("document.activeElement === document.getElementById('pos-command-field')")
+
+    choose_register_menu "Transactions & Receipts"
     assert_text "Transactions"
     click_on "Register"
     assert_text "Example Book"
@@ -601,7 +613,7 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     field.fill_in with: "10.00"
     field.send_keys :enter
     assert_selector ".pos-totals", text: "External Card"
-    send_keys :f10
+    choose_register_menu "Transactions & Receipts"
     assert_text "Transactions"
     click_on "Register"
     assert_selector ".pos-totals", text: "External Card"
@@ -650,9 +662,27 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     send_keys :f6
     assert_selector "#pos_control_overlay", visible: true
     send_keys :f10
-    assert_text "Finish or cancel the current dialog before opening Transactions."
+    assert_text "Finish or cancel the current dialog before opening the Register Menu."
     assert_selector "#pos_control_overlay", visible: true
+    assert_selector "#register-menu", visible: :hidden
     assert_no_selector "h1", text: "Transactions"
+
+    click_launcher_menu
+    assert_text "Finish or cancel the current dialog before opening the Register Menu."
+    assert_selector "#pos_control_overlay", visible: true
+    assert_selector "#register-menu", visible: :hidden
+  end
+
+  test "nonempty basket hides close session in the register menu" do
+    open_register
+    assert_button "Close Session"
+    open_register_menu
+    assert_button "Close Session"
+    send_keys :escape
+    add_current_sku
+    assert_no_button "Close Session"
+    open_register_menu
+    assert_no_button "Close Session"
   end
 
   test "slash search always lists results and enter adds the highlighted item" do
@@ -786,6 +816,11 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     field.fill_in with: @variant.sku
     field.send_keys :enter
     assert_selector "tbody tr.is-selected", text: "Example Book", wait: 10
+  end
+
+  def click_launcher_menu
+    launcher = find("[data-register-shell-target='launcher']")
+    page.execute_script("arguments[0].click()", launcher.native)
   end
 
   def command_field_top

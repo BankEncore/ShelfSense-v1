@@ -94,7 +94,7 @@ class PosLinkedReturnTest < ApplicationSystemTestCase
     line = sale.pos_transaction_lines.first
     click_on "New transaction"
     assert_text "SALE ENTRY"
-    click_on "Transactions"
+    choose_register_menu "Transactions & Receipts"
     click_on sale.transaction_reference
     click_on "Return items"
     check "item_#{line.id}_selected"

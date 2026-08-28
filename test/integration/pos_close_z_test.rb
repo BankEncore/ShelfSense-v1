@@ -59,7 +59,7 @@ class PosCloseZTest < ActionDispatch::IntegrationTest
   test "empty sale entry can initiate close and cancel the empty ticket" do
     post pos_register_enter_path, params: enter_params(opening_float: "100.00")
     follow_redirect!
-    assert_match "Close Session", response.body
+    assert_select "[data-register-shell-proxy='close-session']"
     transaction = PosTransaction.working.find_by!(register: @register)
     session_record = transaction.pos_session
 
@@ -82,7 +82,8 @@ class PosCloseZTest < ActionDispatch::IntegrationTest
     transaction = PosTransaction.working.find_by!(register: @register)
     post pos_register_merchandise_path, params: { identifier: @variant.sku, lock_version: transaction.lock_version }
     get pos_register_workspace_path
-    assert_no_match "Close Session", response.body
+    assert_select "[data-register-shell-proxy='close-session']", count: 0
+    assert_select "#pos_workspace", text: /Close Session/, count: 0
 
     post pos_register_close_path, params: { session_id: transaction.pos_session_id }
     assert_redirected_to pos_register_workspace_path

@@ -57,9 +57,11 @@ F10 working-basket preservation is already covered in [test/system/pos_register_
 | `test/integration/pos_mvp_closeout_test.rb` | Request still required | Preserve |
 | `test/integration/pos_gift_card_voucher_test.rb` | Domain/print | Preserve |
 | `test/helpers/pos_helper_test.rb` | Presentation helpers | Replace with presenter tests in Slice 4 as helpers move |
-| `test/system/pos_register_workspace_test.rb` | Keyboard, F10→Transactions, overlays, scan | Slice 3 replaces F10→history; keep other 6.7 keys until 7C |
-| `test/system/pos_linked_return_test.rb` | “click Transactions” | Slice 3: F10 menu then Transactions |
-| `test/system/pos_mixed_return_test.rb` | “click Transactions” | Slice 3 |
+| `test/system/pos_register_workspace_test.rb` | Keyboard, F10→menu, overlays, scan | Slice 3 F10→Register Menu; keep other 6.7 keys until 7C |
+| `test/system/pos_register_shell_test.rb` | Shell zoom, F10 lifecycle on all compositions | Slice 3 |
+| `test/system/pos_linked_return_test.rb` | F10 menu then Transactions & Receipts | Slice 3 |
+| `test/system/pos_mixed_return_test.rb` | F10 menu then Transactions & Receipts | Slice 3 |
+| `test/services/pos/register_menu_test.rb` | Menu capability keys | Slice 3 |
 | `test/system/pos_unlinked_return_test.rb` | Interaction | Preserve; retarget if chrome changes |
 | `test/system/pos_close_z_test.rb` | Interaction | Preserve |
 

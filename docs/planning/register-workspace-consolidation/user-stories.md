@@ -32,7 +32,7 @@ Tracker: [milestone Register workspace consolidation](https://github.com/BankEnc
 
 **Outcome:** F10 is Register Menu on every Register state. Destination cluster and duplicate nav are gone.
 
-**Planning:** [slice3-f10-plan.md](slice3-f10-plan.md) (packet amendment, MVP menu matrix, task breakdown).
+**Planning:** [slice3-f10-plan.md](slice3-f10-plan.md) (implementation-ready contract).
 
 **Acceptance:**
 
@@ -44,7 +44,7 @@ Tracker: [milestone Register workspace consolidation](https://github.com/BankEnc
 - [ ] Other 6.7 keys unchanged
 - [ ] Destination cluster and duplicate Register nav deleted
 - [ ] System tests retarget cluster clicks → menu; F10 opens menu not history
-- [ ] Keyboard Lock still covers F10 on Register shell states
+- [ ] Keyboard Lock: F1–F10 on workspace, F10 only on other Register surfaces
 
 ## Slice 4 — Transaction composition
 

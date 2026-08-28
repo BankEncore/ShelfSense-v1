@@ -12,7 +12,7 @@ This program **replaces** the current POS presentation. It does not run a parall
 |---|---|
 | [plan.md](plan.md) | Goal, locked decisions, states, slices 1–7 |
 | [implementation-plan.md](implementation-plan.md) | Merge policy, slice status, GitHub tracker |
-| [routing-and-authority.md](routing-and-authority.md) | 6.7 supersession, resolver, destination cluster, routes, stored-value, expected cash |
+| [routing-and-authority.md](routing-and-authority.md) | 6.7 supersession, resolver, Register Menu, routes, stored-value, expected cash |
 | [test-matrix.md](test-matrix.md) | Classification of existing POS tests; gap tests |
 | [user-stories.md](user-stories.md) | GitHub-issue-ready slice stories |
 | [closeout-plan.md](closeout-plan.md) | End-to-end and manual evidence before `main` merge |

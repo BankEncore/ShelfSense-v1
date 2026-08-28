@@ -50,6 +50,16 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
     assert_text "Signed in successfully"
   end
 
+  def open_register_menu
+    send_keys :f10
+    assert_selector "#register-menu", visible: true
+  end
+
+  def choose_register_menu(label)
+    open_register_menu
+    click_on label
+  end
+
   def teardown
     reset_uds_viewport!
   end
