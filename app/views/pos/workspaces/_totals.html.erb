@@ -2,10 +2,12 @@
 
 <aside id="pos_totals" class="pos-totals" aria-labelledby="pos-totals-title">
   <h2 id="pos-totals-title" class="pos-totals__title">Summary</h2>
-  <% workspace.summary_rows.each do |row| %>
-    <div class="<%= "pos-totals__net" if row.key == :net %>">
-      <%= row.label %>
-      <%= format_signed_money_cents(row.signed_cents) %>
-    </div>
-  <% end %>
+  <div class="pos-money-rows">
+    <% workspace.summary_rows.each do |row| %>
+      <div class="pos-money-row<%= " pos-money-row--net" if row.key == :net %>">
+        <span class="pos-money-row__label"><%= row.label %></span>
+        <span class="pos-money-row__amount"><%= format_money_cents(row.signed_cents) %></span>
+      </div>
+    <% end %>
+  </div>
 </aside>

@@ -1624,6 +1624,44 @@ input[type="submit"]:disabled,
   margin: 0 0 var(--space-2);
 }
 
+.pos-money-rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.pos-money-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.pos-money-row__label {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.pos-money-row__amount {
+  flex: 0 0 auto;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.pos-money-row--net {
+  font-weight: 700;
+  margin-top: var(--space-2);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--color-border-subtle);
+}
+
+.pos-money-row--emphasis {
+  font-size: 1.75rem;
+  font-weight: 700;
+}
+
 .pos-tenders__list {
   list-style: none;
   margin: 0;
@@ -1638,6 +1676,11 @@ input[type="submit"]:disabled,
 .pos-tenders__empty {
   font-size: 0.85rem;
   color: var(--color-text-muted, inherit);
+}
+
+.pos-tenders__detail {
+  margin-top: var(--space-1);
+  padding-left: 0;
 }
 
 .pos-settlement {
@@ -1747,11 +1790,8 @@ input[type="submit"]:disabled,
   color: var(--color-text-primary);
 }
 
-.pos-totals__due,
-.pos-totals__change {
-  font-size: 1.75rem;
-  font-weight: 700;
-  margin-top: var(--space-4);
+.pos-settlement .pos-money-row--emphasis {
+  margin-top: var(--space-2);
   color: var(--color-text-primary);
 }
 

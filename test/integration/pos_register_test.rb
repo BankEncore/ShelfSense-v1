@@ -59,6 +59,9 @@ class PosRegisterTest < ActionDispatch::IntegrationTest
     assert_equal 1, transaction.pos_transaction_lines.count
     assert_select "#pos_totals", text: /Merchandise/
     assert_select "#pos_totals", text: /Illinois State/
+    assert_select "#pos_totals .pos-money-row--net", text: /Net/
+    assert_select "#pos_totals .pos-money-row__amount", minimum: 1
+    refute_match(/\+\$/, css_select("#pos_totals").text)
     assert_select "#pos_tenders ~ .pos-settlement"
     assert_match "Amount due", css_select(".pos-settlement").text
     refute_match(/\bSales\b/, css_select("#pos_totals").text)
