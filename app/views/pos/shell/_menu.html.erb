@@ -17,12 +17,12 @@
           <h3><%= register_menu_group_label(group.key) %></h3>
           <ul class="pos-register-menu__items">
             <% register_menu_presentation(group).each do |item| %>
-              <li>
+              <li<%= " hidden" if item[:proxy] %>>
                 <% if item[:href] %>
                   <% leave_options = item[:leave] ? register_leave_confirm_options : {} %>
                   <%= action_link_to item[:label], item[:href], style: :outline, intent: :neutral, **leave_options %>
                 <% else %>
-                  <%= action_button item[:label], style: :outline, intent: :neutral, size: :standard,
+                  <%= action_button item[:label], style: :outline, intent: :neutral, size: :standard, hidden: true,
                         data: {
                           action: "register-shell#activateProxy",
                           register_shell_target: "proxyItem",

@@ -65,6 +65,26 @@ class PosRegisterShellTest < ApplicationSystemTestCase
     end
   end
 
+  test "shell requests f10 keyboard lock outside the workspace" do
+    sign_in_admin(actor: @actor)
+    visit pos_path
+    assert_text "Select a Register"
+    install_keyboard_lock_recorder
+    find("[data-register-shell-target='launcher']").click
+    assert_equal [ "F10" ], last_keyboard_lock_keys
+  end
+
+  test "shell requests f1 through f10 keyboard lock on the workspace" do
+    sign_in_admin(actor: @actor)
+    visit pos_register_enter_path(register_id: @register.id)
+    fill_in "Opening float", with: "0.00"
+    click_on "Open register"
+    assert_text "SALE ENTRY", wait: 10
+    install_keyboard_lock_recorder
+    find("#pos-command-field").click
+    assert_equal %w[F1 F2 F3 F4 F5 F6 F7 F8 F9 F10], last_keyboard_lock_keys
+  end
+
   test "typed identifiers still work when keyboard lock rejects" do
     sign_in_admin(actor: @actor)
     visit pos_register_enter_path(register_id: @register.id)
@@ -170,6 +190,30 @@ class PosRegisterShellTest < ApplicationSystemTestCase
   end
 
   private
+
+  def install_keyboard_lock_recorder
+    page.execute_script(<<~JS)
+      window.__keyboardLockCalls = [];
+      Object.defineProperty(navigator, "keyboard", {
+        configurable: true,
+        value: {
+          lock: function(keys) {
+            window.__keyboardLockCalls.push(Array.from(keys));
+            return Promise.resolve();
+          },
+          unlock: function() {}
+        }
+      });
+    JS
+  end
+
+  def keyboard_lock_calls
+    page.evaluate_script("window.__keyboardLockCalls || []")
+  end
+
+  def last_keyboard_lock_keys
+    keyboard_lock_calls.last
+  end
 
   def assert_f10_menu_lifecycle
     assert_selector "[data-register-shell-target='launcher']"

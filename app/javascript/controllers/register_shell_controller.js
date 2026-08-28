@@ -19,6 +19,7 @@ export default class extends Controller {
     document.addEventListener("focusin", this.onPointerOrFocus, true)
     document.addEventListener("visibilitychange", this.onVisibilityChange)
     document.addEventListener("turbo:before-render", this.onBeforeRender)
+    this.syncContextualItems()
     this.requestFunctionKeyLock()
   }
 
@@ -38,7 +39,7 @@ export default class extends Controller {
       this.closeMenu()
       return
     }
-    this.openMenu()
+    this.requestMenuOpen()
   }
 
   closeMenu(event) {
@@ -78,11 +79,7 @@ export default class extends Controller {
 
     if (key !== "F10") return
     this.claim(event)
-    if (this.blockingOverlay()) {
-      this.announce("Finish or cancel the current dialog before opening the Register Menu.")
-      return
-    }
-    this.openMenu()
+    this.requestMenuOpen()
   }
 
   onKeyup(event) {
@@ -102,6 +99,15 @@ export default class extends Controller {
   closeMenuOnRender() {
     if (!this.menuIsOpen()) return
     this.closeMenu()
+  }
+
+  requestMenuOpen() {
+    if (this.blockingOverlay()) {
+      this.announce("Finish or cancel the current dialog before opening the Register Menu.")
+      return
+    }
+
+    this.openMenu()
   }
 
   openMenu() {
