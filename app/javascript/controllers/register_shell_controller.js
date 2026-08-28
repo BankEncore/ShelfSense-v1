@@ -4,7 +4,7 @@ const WORKSPACE_LOCK_KEYS = [ "F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F
 const MENU_LOCK_KEYS = [ "F10" ]
 
 export default class extends Controller {
-  static targets = [ "background", "menu", "launcher", "close", "announce", "group", "proxyItem" ]
+  static targets = [ "background", "menu", "launcher", "close", "announce", "group", "proxyItem", "header", "status" ]
 
   connect() {
     this.returnFocusElement = null
@@ -20,6 +20,8 @@ export default class extends Controller {
     document.addEventListener("visibilitychange", this.onVisibilityChange)
     document.addEventListener("turbo:before-render", this.onBeforeRender)
     this.syncContextualItems()
+    this.observeBlockingOverlays()
+    this.syncHeaderStatusInert()
     this.requestFunctionKeyLock()
   }
 
@@ -30,6 +32,7 @@ export default class extends Controller {
     document.removeEventListener("focusin", this.onPointerOrFocus, true)
     document.removeEventListener("visibilitychange", this.onVisibilityChange)
     document.removeEventListener("turbo:before-render", this.onBeforeRender)
+    if (this.blockingObserver) this.blockingObserver.disconnect()
     this.releaseFunctionKeyLock()
   }
 
@@ -126,6 +129,23 @@ export default class extends Controller {
 
   blockingOverlay() {
     return this.backgroundTarget.querySelector("[data-register-blocking-overlay]:not([hidden])")
+  }
+
+  observeBlockingOverlays() {
+    if (!this.hasBackgroundTarget || typeof MutationObserver === "undefined") return
+    this.blockingObserver = new MutationObserver(() => this.syncHeaderStatusInert())
+    this.blockingObserver.observe(this.backgroundTarget, {
+      attributes: true,
+      attributeFilter: [ "hidden" ],
+      subtree: true,
+      childList: true
+    })
+  }
+
+  syncHeaderStatusInert() {
+    const blocking = Boolean(this.blockingOverlay())
+    if (this.hasHeaderTarget) this.headerTarget.inert = blocking
+    if (this.hasStatusTarget) this.statusTarget.inert = blocking
   }
 
   syncContextualItems() {

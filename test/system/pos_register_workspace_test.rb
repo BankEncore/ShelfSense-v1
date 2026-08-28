@@ -694,12 +694,306 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     field = find("#pos-command-field")
     field.send_keys "/"
     assert_selector "#pos_search_overlay", visible: true
+    assert page.evaluate_script("document.activeElement === document.querySelector('[data-register-workspace-target=searchSkuField]')")
+    assert page.evaluate_script("document.querySelector('[data-register-workspace-target=background]').inert === true")
     fill_in "SKU", with: @variant.sku
     find("[data-register-workspace-target='searchSkuField']").send_keys :enter
     assert_selector "#pos_search_overlay li", minimum: 1
     find("[data-register-workspace-target='searchList'] li.is-selected").send_keys :enter
     assert_text "Example Book"
     assert_no_selector "#pos_search_overlay", visible: true
+  end
+
+  test "slash search can be completed with pointer confirmation" do
+    open_register
+    find("#pos-command-field").send_keys "/"
+    fill_in "SKU", with: @variant.sku
+    find("[data-register-workspace-target='searchSkuField']").send_keys :enter
+    assert_selector "#pos_search_overlay li.is-selected", wait: 10
+    find("#pos_search_overlay li.is-selected").click
+    click_on "Choose Product"
+    assert_text "Example Book"
+    assert_no_selector "#pos_search_overlay", visible: true
+  end
+
+  test "open-price add focuses an empty price field" do
+    open_price = pos_sellable_variant(actor: @actor, tax_class: @tax, pricing_method: "open_price", name: "Open Book")
+    open_quantity_stock(store: @store, variant: open_price, actor: @actor, quantity: 3)
+    open_register
+    field = find("#pos-command-field")
+    field.fill_in with: open_price.sku
+    field.send_keys :enter
+    assert_selector "#pos_open_price_overlay", visible: true
+    assert_equal "Open price", find("#pos-open-price-title").text
+    price = find("[data-register-workspace-target='openPriceField']")
+    assert_equal "", price.value
+    assert page.evaluate_script("document.activeElement === document.querySelector('[data-register-workspace-target=openPriceField]')")
+  end
+
+  test "open-price edit selects a zero price value" do
+    open_price = pos_sellable_variant(actor: @actor, tax_class: @tax, pricing_method: "open_price", name: "Zero Book")
+    open_quantity_stock(store: @store, variant: open_price, actor: @actor, quantity: 3)
+    open_register
+    # Anchor the basket with a paid line so a $0.00 open-price line does not auto-complete.
+    add_current_sku
+    field = find("#pos-command-field")
+    field.fill_in with: open_price.sku
+    field.send_keys :enter
+    assert_selector "#pos_open_price_overlay", visible: true
+    price = find("[data-register-workspace-target='openPriceField']")
+    price.fill_in with: "0.00"
+    click_on "Apply"
+    assert_selector "tbody tr.is-selected", text: "Zero Book", wait: 10
+    send_keys :f6
+    assert_selector "#pos_open_price_overlay", visible: true
+    assert_equal "0.00", find("[data-register-workspace-target='openPriceField']").value
+    assert_equal "Edit open price", find("#pos-open-price-title").text
+    selected = page.evaluate_script(<<~JS.squish)
+      (function() {
+        var field = document.querySelector("[data-register-workspace-target='openPriceField']");
+        return field && document.activeElement === field &&
+          field.selectionStart === 0 && field.selectionEnd === field.value.length;
+      })()
+    JS
+    assert selected, "zero open price must be fully selected for overwrite"
+  end
+
+  test "product then variant Escape restores the product stage" do
+    other = pos_sellable_variant(actor: @actor, tax_class: @tax, name: "Beta Shared")
+    open_quantity_stock(store: @store, variant: other, actor: @actor, quantity: 3)
+    ProductVariants::Create.call(
+      product: @variant.product,
+      attributes: {
+        variant_type: "standard",
+        status: "active",
+        merchandise_class_id: @variant.merchandise_class_id,
+        regular_price_cents: 1500
+      },
+      actor: @actor
+    )
+    open_quantity_stock(store: @store, variant: @variant.product.product_variants.order(:created_at).last, actor: @actor, quantity: 3)
+    @variant.product.update!(lookup_code: "NESTED")
+    other.product.update!(lookup_code: "NESTED")
+
+    open_register
+    field = find("#pos-command-field")
+    field.fill_in with: "nested"
+    field.send_keys :enter
+    assert_selector "#pos_product_overlay", visible: true
+    assert page.evaluate_script("document.querySelector('[data-register-workspace-target=background]').inert === true")
+    find("#pos_product_overlay li", text: /Example Book/).click
+    click_on "Choose Product"
+    assert_selector "#pos_variant_overlay", visible: true, wait: 10
+    assert page.evaluate_script("document.querySelector('#pos_product_overlay').inert === true")
+    assert page.evaluate_script("document.querySelector('[data-register-shell-target=header]').inert === true")
+    send_keys :escape
+    assert_no_selector "#pos_variant_overlay", visible: true
+    assert_selector "#pos_product_overlay", visible: true
+    assert page.evaluate_script("document.querySelector('#pos_product_overlay').inert === false")
+    assert page.evaluate_script("document.activeElement === document.querySelector('#pos_product_overlay li.is-selected')")
+    click_on "Choose Product"
+    assert_selector "#pos_variant_overlay", visible: true, wait: 10
+    click_on "Back to Products"
+    assert_no_selector "#pos_variant_overlay", visible: true
+    assert_selector "#pos_product_overlay", visible: true
+    send_keys :escape
+    assert_no_selector "#pos_product_overlay", visible: true
+    assert page.evaluate_script("document.activeElement === document.getElementById('pos-command-field')")
+  end
+
+  test "escape during search leaves a late response ignored" do
+    open_register
+    find("#pos-command-field").send_keys "/"
+    assert_selector "#pos_search_overlay", visible: true
+    page.evaluate_script(<<~JS.squish)
+      (function() {
+        window.__ssSearchFetch = window.fetch.bind(window);
+        window.fetch = function(input, init) {
+          var url = typeof input === "string" ? input : (input && input.url) || "";
+          if (String(url).indexOf("merchandise_search") !== -1) {
+            return new Promise(function(resolve) {
+              window.__ssDelayedSearch = { resolve: resolve, init: init, input: input };
+            });
+          }
+          return window.__ssSearchFetch(input, init);
+        };
+      })()
+    JS
+    fill_in "SKU", with: @variant.sku
+    find("[data-register-workspace-target='searchSkuField']").send_keys :enter
+    assert_text "Searching…", wait: 5
+    send_keys :escape
+    assert_no_selector "#pos_search_overlay", visible: true
+    assert page.evaluate_script("document.activeElement === document.getElementById('pos-command-field')")
+    page.execute_script(<<~JS.squish)
+      (function() {
+        if (!window.__ssDelayedSearch) return;
+        window.__ssSearchFetch(window.__ssDelayedSearch.input, window.__ssDelayedSearch.init).then(function(response) {
+          window.__ssDelayedSearch.resolve(response);
+        });
+        window.fetch = window.__ssSearchFetch;
+      })()
+    JS
+    sleep 0.5
+    assert_no_selector "#pos_search_overlay", visible: true
+    assert page.evaluate_script("document.activeElement === document.getElementById('pos-command-field')")
+    assert_no_selector "#pos_search_overlay li"
+  ensure
+    page.execute_script("if (window.__ssSearchFetch) { window.fetch = window.__ssSearchFetch; }")
+  end
+
+  test "late search response after close does not populate a reopened overlay" do
+    open_register
+    find("#pos-command-field").send_keys "/"
+    assert_selector "#pos_search_overlay", visible: true
+    page.evaluate_script(<<~JS.squish)
+      (function() {
+        window.__ssSearchFetch = window.fetch.bind(window);
+        window.fetch = function(input, init) {
+          var url = typeof input === "string" ? input : (input && input.url) || "";
+          if (String(url).indexOf("merchandise_search") !== -1) {
+            return new Promise(function(resolve) {
+              window.__ssDelayedSearch = { resolve: resolve, init: init, input: input };
+            });
+          }
+          return window.__ssSearchFetch(input, init);
+        };
+      })()
+    JS
+    fill_in "SKU", with: @variant.sku
+    find("[data-register-workspace-target='searchSkuField']").send_keys :enter
+    assert_text "Searching…", wait: 5
+    send_keys :escape
+    assert_no_selector "#pos_search_overlay", visible: true
+    find("#pos-command-field").send_keys "/"
+    assert_selector "#pos_search_overlay", visible: true
+    assert_no_selector "#pos_search_overlay li"
+    page.execute_script(<<~JS.squish)
+      (function() {
+        if (!window.__ssDelayedSearch) return;
+        window.__ssSearchFetch(window.__ssDelayedSearch.input, window.__ssDelayedSearch.init).then(function(response) {
+          window.__ssDelayedSearch.resolve(response);
+        });
+        window.fetch = window.__ssSearchFetch;
+      })()
+    JS
+    sleep 0.5
+    assert_selector "#pos_search_overlay", visible: true
+    assert_no_selector "#pos_search_overlay li"
+    assert page.evaluate_script("document.activeElement === document.querySelector('[data-register-workspace-target=searchSkuField]')")
+  ensure
+    page.execute_script("if (window.__ssSearchFetch) { window.fetch = window.__ssSearchFetch; }")
+  end
+
+  test "editing merchandise search query then enter searches again" do
+    other = pos_sellable_variant(actor: @actor, tax_class: @tax, name: "Other Search Book")
+    open_quantity_stock(store: @store, variant: other, actor: @actor, quantity: 3)
+    open_register
+    find("#pos-command-field").send_keys "/"
+    fill_in "SKU", with: @variant.sku
+    find("[data-register-workspace-target='searchSkuField']").send_keys :enter
+    assert_selector "#pos_search_overlay li.is-selected", text: /Example Book/, wait: 10
+    sku = find("[data-register-workspace-target='searchSkuField']")
+    sku.click
+    sku.fill_in with: other.sku
+    assert_no_selector "#pos_search_overlay li"
+    sku.send_keys :enter
+    assert_selector "#pos_search_overlay li.is-selected", text: /Other Search Book/, wait: 10
+    assert_no_selector "#pos_search_overlay li.is-selected", text: /Example Book/
+  end
+
+  test "editing customer search query then enter searches again" do
+    Customer.create!(display_name: "Alpha Customer", email: "alpha@example.com")
+    Customer.create!(display_name: "Beta Customer", email: "beta@example.com")
+    open_register
+    click_on "Attach customer"
+    field = find("[data-register-workspace-target='customerQueryField']")
+    field.fill_in with: "Alpha"
+    field.send_keys :enter
+    assert_selector "#pos_customer_overlay li.is-selected", text: "Alpha Customer", wait: 10
+    field.click
+    field.fill_in with: "Beta"
+    assert_no_selector "#pos_customer_overlay li"
+    field.send_keys :enter
+    assert_selector "#pos_customer_overlay li.is-selected", text: "Beta Customer", wait: 10
+    assert_no_selector "#pos_customer_overlay li.is-selected", text: "Alpha Customer"
+  end
+
+  test "editing pickup search query then enter searches again" do
+    alpha = Customer.create!(display_name: "Alpha Pickup", phone: "555-0101")
+    beta = Customer.create!(display_name: "Beta Pickup", phone: "555-0102")
+    alpha_request = Customers::CreateRequest.call(
+      store: @store,
+      customer: alpha,
+      product_variant: @variant,
+      actor: @actor
+    )
+    Customers::ConfirmLocation.call(customer_request: alpha_request, actor: @actor)
+    beta_variant = pos_sellable_variant(actor: @actor, tax_class: @tax, name: "Beta Pickup Book")
+    open_quantity_stock(store: @store, variant: beta_variant, actor: @actor, quantity: 1)
+    beta_request = Customers::CreateRequest.call(
+      store: @store,
+      customer: beta,
+      product_variant: beta_variant,
+      actor: @actor
+    )
+    Customers::ConfirmLocation.call(customer_request: beta_request, actor: @actor)
+    open_register
+    click_on "Pickup"
+    field = find("[data-register-workspace-target='pickupQueryField']")
+    field.fill_in with: "Alpha"
+    field.send_keys :enter
+    assert_selector "#pos_pickup_overlay li.is-selected", text: /Alpha Pickup/, wait: 10
+    field.click
+    field.fill_in with: "Beta"
+    assert_no_selector "#pos_pickup_overlay li"
+    field.send_keys :enter
+    assert_selector "#pos_pickup_overlay li.is-selected", text: /Beta Pickup/, wait: 10
+    assert_no_selector "#pos_pickup_overlay li.is-selected", text: /Alpha Pickup/
+  end
+
+  test "search arrow keys skip disabled merchandise results" do
+    retired = pos_sellable_variant(actor: @actor, tax_class: @tax, name: "Mid Disabled Book")
+    retired.update_columns(status: "discontinued")
+    other = pos_sellable_variant(actor: @actor, tax_class: @tax, name: "Zed Enabled Book")
+    open_quantity_stock(store: @store, variant: other, actor: @actor, quantity: 2)
+    open_register
+    find("#pos-command-field").send_keys "/"
+    fill_in "Product name", with: "Book"
+    find("[data-register-workspace-target='searchNameField']").send_keys :enter
+    assert_selector "#pos_search_overlay li.is-selected:not(.is-disabled)", wait: 10
+    assert_selector "#pos_search_overlay li.is-disabled", text: /Mid Disabled Book/, wait: 10
+    first_label = find("#pos_search_overlay li.is-selected").text
+    send_keys :arrow_down
+    second = find("#pos_search_overlay li.is-selected")
+    refute second[:class].include?("is-disabled")
+    refute_match(/Mid Disabled Book/, second.text)
+    refute_equal first_label, second.text
+    send_keys :arrow_up
+    assert_selector "#pos_search_overlay li.is-selected", text: first_label
+    refute find("#pos_search_overlay li.is-selected")[:class].include?("is-disabled")
+  end
+
+  test "pickup lookup can be completed with pointer confirmation" do
+    customer = Customer.create!(display_name: "Alex Pickup", phone: "555-0100")
+    request = Customers::CreateRequest.call(
+      store: @store,
+      customer: customer,
+      product_variant: @variant,
+      actor: @actor
+    )
+    Customers::ConfirmLocation.call(customer_request: request, actor: @actor)
+    open_register
+    click_on "Pickup"
+    assert_selector "#pos_pickup_overlay", visible: true
+    field = find("[data-register-workspace-target='pickupQueryField']")
+    field.fill_in with: "Alex"
+    field.send_keys :enter
+    assert_selector "#pos_pickup_overlay li.is-selected", wait: 10
+    find("#pos_pickup_overlay li.is-selected").click
+    click_on "Add Pickup Items"
+    assert_no_selector "#pos_pickup_overlay", visible: true, wait: 10
+    assert_text "Example Book"
   end
 
   test "open-price prompt escape does not add a line" do
@@ -775,11 +1069,12 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     open_register
     click_on "Attach customer"
     assert_selector "#pos_customer_overlay", visible: true
+    assert page.evaluate_script("document.activeElement === document.querySelector('[data-register-workspace-target=customerQueryField]')")
     field = find("[data-register-workspace-target='customerQueryField']")
     field.fill_in with: "Overlay Customer"
     field.send_keys :enter
     assert_selector "#pos_customer_overlay li", text: "Overlay Customer", wait: 10
-    field.send_keys :enter
+    click_on "Attach Customer"
     assert_no_selector "#pos_customer_overlay", visible: true, wait: 10
     assert_text "Customer · Overlay Customer"
   end

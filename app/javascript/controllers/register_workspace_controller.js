@@ -5,7 +5,7 @@ export default class extends Controller {
     "field",
     "fieldLabel",
     "modeLabel",
-    "chrome",
+    "background",
     "overlay",
     "controlOverlay",
     "unlinkedOverlay",
@@ -137,6 +137,7 @@ export default class extends Controller {
     "unitOverlay",
     "unitList",
     "openPriceOverlay",
+    "openPriceTitle",
     "openPricePrompt",
     "openPriceField",
     "openPriceForm",
@@ -189,6 +190,13 @@ export default class extends Controller {
 
   connect() {
     this.inFlight = false
+    this.overlayStack = []
+    this.searchRequestToken = 0
+    this.pickupRequestToken = 0
+    this.customerRequestToken = 0
+    this.searchAbort = null
+    this.pickupAbort = null
+    this.customerAbort = null
     this.bindFunctionKeyCapture()
     if (this.hasControlReasonFieldTarget) {
       this.controlReasonFieldTarget.addEventListener("change", () => {
@@ -214,7 +222,9 @@ export default class extends Controller {
 
   disconnect() {
     this.unbindFunctionKeyCapture()
-    if (this.hasChromeTarget) this.chromeTarget.inert = false
+    this.abortPendingLookups()
+    this.clearOverlayStack({ restoreCommand: false })
+    if (this.hasBackgroundTarget) this.backgroundTarget.inert = false
   }
 
   onKeydown(event) {
@@ -229,72 +239,8 @@ export default class extends Controller {
       return
     }
 
-    // Child pickers (product/variant/unit/open-price) must beat parent overlays
-    // (unlinked/search) when stacked on top.
-    if (this.productOverlayOpen()) {
-      this.onProductOverlayKeydown(event, key)
-      return
-    }
-
-    if (this.variantOverlayOpen()) {
-      this.onVariantOverlayKeydown(event, key)
-      return
-    }
-
-    if (this.unitOverlayOpen()) {
-      this.onUnitOverlayKeydown(event, key)
-      return
-    }
-
-    if (this.openPriceOverlayOpen()) {
-      this.onOpenPriceOverlayKeydown(event, key)
-      return
-    }
-
-    if (this.unlinkedOverlayOpen()) {
-      this.onUnlinkedOverlayKeydown(event, key)
-      return
-    }
-
-    if (this.returnChooserOpen()) {
-      this.onReturnChooserKeydown(event, key)
-      return
-    }
-
-    if (this.linkedOverlayOpen()) {
-      this.onLinkedOverlayKeydown(event, key)
-      return
-    }
-
-    if (this.controlOverlayOpen()) {
-      this.onControlOverlayKeydown(event, key)
-      return
-    }
-
-    if (this.otherOverlayOpen()) {
-      this.onOtherOverlayKeydown(event, key)
-      return
-    }
-
-    if (this.searchOverlayOpen()) {
-      this.onSearchOverlayKeydown(event, key)
-      return
-    }
-
-    if (this.pickupOverlayOpen()) {
-      this.onPickupOverlayKeydown(event, key)
-      return
-    }
-
-    if (this.customerOverlayOpen()) {
-      this.onCustomerOverlayKeydown(event, key)
-      return
-    }
-
-    if (this.cancelOverlayOpen()) {
-      event.preventDefault()
-      if (key === "Escape") this.closeOverlay()
-      if (key === "F9") this.confirmCancel()
+    if (overlay) {
+      this.dispatchOverlayKeydown(overlay, event, key)
       return
     }
 
@@ -858,9 +804,11 @@ export default class extends Controller {
   handleResolution(result) {
     switch (result.outcome) {
       case "addable_variant":
+        this.clearOverlayStack({ restoreCommand: false })
         this.postAddMerchandise({ variantId: result.variant.id })
         return
       case "addable_unit":
+        this.clearOverlayStack({ restoreCommand: false })
         this.postAddMerchandise({ unitId: result.unit.id })
         return
       case "product_choice_required":
@@ -907,7 +855,7 @@ export default class extends Controller {
   openSearchOverlay() {
     if (this.inFlight || this.modeValue !== "sale_entry") return
     if (!this.hasSearchOverlayTarget) return
-    this.searchResultsReady = false
+    this.invalidateSearchLookup()
     if (this.hasSearchSkuFieldTarget) this.searchSkuFieldTarget.value = ""
     if (this.hasSearchNameFieldTarget) this.searchNameFieldTarget.value = ""
     if (this.hasSearchListTarget) this.searchListTarget.replaceChildren()
@@ -916,7 +864,22 @@ export default class extends Controller {
   }
 
   closeSearchOverlay() {
+    this.invalidateSearchLookup()
     this.hideOverlay(this.hasSearchOverlayTarget && this.searchOverlayTarget)
+  }
+
+  invalidateSearchLookup() {
+    if (this.searchAbort) this.searchAbort.abort()
+    this.searchAbort = null
+    this.searchRequestToken += 1
+    this.searchResultsReady = false
+  }
+
+  invalidateSearchResultsOnInput() {
+    if (!this.searchResultsReady && !(this.hasSearchListTarget && this.searchListTarget.children.length > 0)) return
+    if (this.hasSearchListTarget) this.searchListTarget.replaceChildren()
+    this.searchResultsReady = false
+    if (this.hasSearchQueryLabelTarget) this.searchQueryLabelTarget.textContent = ""
   }
 
   onSearchOverlayKeydown(event, key) {
@@ -933,11 +896,8 @@ export default class extends Controller {
     if (key !== "Enter") return
     event.preventDefault()
     const inField = event.target === this.searchSkuFieldTarget || event.target === this.searchNameFieldTarget
-    if (inField && !this.searchResultsReady) {
-      this.runMerchandiseSearch()
-      return
-    }
-    if (inField) {
+    const selected = this.hasSearchListTarget && this.searchListTarget.querySelector("li.is-selected:not(.is-disabled)")
+    if (inField && (!this.searchResultsReady || !selected)) {
       this.runMerchandiseSearch()
       return
     }
@@ -948,27 +908,55 @@ export default class extends Controller {
     const sku = this.hasSearchSkuFieldTarget ? this.searchSkuFieldTarget.value.trim() : ""
     const name = this.hasSearchNameFieldTarget ? this.searchNameFieldTarget.value.trim() : ""
     if (!sku && !name) return
+    if (this.searchAbort) this.searchAbort.abort()
+    this.searchAbort = new AbortController()
+    const token = ++this.searchRequestToken
+    if (this.hasSearchQueryLabelTarget) this.searchQueryLabelTarget.textContent = "Searching…"
     const url = new URL(this.searchUrlValue, window.location.origin)
     if (sku) url.searchParams.set("sku", sku)
     if (name) url.searchParams.set("name", name)
     try {
-      const response = await fetch(url, { headers: { Accept: "application/json" }, credentials: "same-origin" })
+      const response = await fetch(url, {
+        headers: { Accept: "application/json" },
+        credentials: "same-origin",
+        signal: this.searchAbort.signal
+      })
       const payload = await response.json()
+      if (!this.lookupResponseCurrent("search", token)) return
       this.renderSearchResults(payload.results || [])
-    } catch (_error) {
+    } catch (error) {
+      if (error?.name === "AbortError") return
+      if (!this.lookupResponseCurrent("search", token)) return
       this.renderSearchResults([])
       if (this.hasSearchQueryLabelTarget) this.searchQueryLabelTarget.textContent = "Search failed."
+      this.focusOverlayEntry(this.searchSkuFieldTarget || this.searchNameFieldTarget)
     }
+  }
+
+  lookupResponseCurrent(family, token) {
+    if (!this.element.isConnected) return false
+    if (family === "search") {
+      return token === this.searchRequestToken && this.searchOverlayOpen()
+    }
+    if (family === "pickup") {
+      return token === this.pickupRequestToken && this.pickupOverlayOpen()
+    }
+    if (family === "customer") {
+      return token === this.customerRequestToken && this.customerOverlayOpen()
+    }
+    return false
   }
 
   renderSearchResults(rows) {
     if (!this.hasSearchListTarget) return
     this.searchListTarget.replaceChildren()
     this.searchResultsReady = true
+    const enabledRows = rows.filter((row) => !row.disabled)
     if (this.hasSearchQueryLabelTarget) {
       this.searchQueryLabelTarget.textContent = rows.length === 0 ? "No matching merchandise." : ""
     }
-    rows.forEach((row, index) => {
+    let firstEnabled = null
+    rows.forEach((row) => {
       const item = document.createElement("li")
       item.dataset.variantId = row.id
       item.dataset.disabled = row.disabled ? "true" : "false"
@@ -976,11 +964,18 @@ export default class extends Controller {
       const availability = row.available == null ? "" : ` · ${row.available}`
       const reason = row.disabled && row.reason ? ` — ${row.reason}` : ""
       item.textContent = [row.sku, row.name, row.condition, row.price_label].filter(Boolean).join(" · ") + availability + reason
-      this.decoratePickerItem(item, { selected: index === 0, disabled: Boolean(row.disabled) })
+      const selected = !row.disabled && firstEnabled == null
+      if (selected) firstEnabled = item
+      this.decoratePickerItem(item, { selected, disabled: Boolean(row.disabled) })
+      item.addEventListener("click", () => this.onPickerItemClick(this.searchListTarget, item))
       this.searchListTarget.append(item)
     })
-    const first = this.searchListTarget.querySelector("li.is-selected")
-    if (first) first.focus()
+    if (firstEnabled) {
+      this.focusOverlayEntry(firstEnabled)
+    } else {
+      const query = this.searchSkuFieldTarget || this.searchNameFieldTarget
+      this.focusOverlayEntry(query)
+    }
   }
 
   selectHighlightedSearch() {
@@ -991,14 +986,37 @@ export default class extends Controller {
       return
     }
     const variantId = selected.dataset.variantId
-    this.closeSearchOverlay()
+    // Keep search open so resolve children (variant / unit / open-price) stack on top.
     this.resolveAndHandle({ product_variant_id: variantId })
+  }
+
+  keepSearching() {
+    if (this.hasSearchListTarget) this.searchListTarget.replaceChildren()
+    this.searchResultsReady = false
+    if (this.hasSearchQueryLabelTarget) this.searchQueryLabelTarget.textContent = ""
+    this.focusOverlayEntry(this.searchSkuFieldTarget || this.searchNameFieldTarget)
+  }
+
+  confirmSearchSelection(event) {
+    if (event) event.preventDefault()
+    this.selectHighlightedSearch()
+  }
+
+  onPickerItemClick(list, item) {
+    if (!list || !item || item.classList.contains("is-disabled")) return
+    Array.from(list.querySelectorAll("li")).forEach((row) => {
+      const selected = row === item
+      row.classList.toggle("is-selected", selected)
+      row.setAttribute("aria-selected", selected ? "true" : "false")
+      row.tabIndex = selected ? 0 : -1
+    })
+    this.focusOverlayEntry(item)
   }
 
   openPickupOverlay() {
     if (!this.pickupAllowedValue) return
     if (!this.hasPickupOverlayTarget) return
-    this.pickupResultsReady = false
+    this.invalidatePickupLookup()
     if (this.hasPickupQueryFieldTarget) this.pickupQueryFieldTarget.value = ""
     if (this.hasPickupListTarget) this.pickupListTarget.replaceChildren()
     if (this.hasPickupQueryLabelTarget) this.pickupQueryLabelTarget.textContent = ""
@@ -1006,7 +1024,22 @@ export default class extends Controller {
   }
 
   closePickupOverlay() {
+    this.invalidatePickupLookup()
     this.hideOverlay(this.hasPickupOverlayTarget && this.pickupOverlayTarget)
+  }
+
+  invalidatePickupLookup() {
+    if (this.pickupAbort) this.pickupAbort.abort()
+    this.pickupAbort = null
+    this.pickupRequestToken += 1
+    this.pickupResultsReady = false
+  }
+
+  invalidatePickupResultsOnInput() {
+    if (!this.pickupResultsReady && !(this.hasPickupListTarget && this.pickupListTarget.children.length > 0)) return
+    if (this.hasPickupListTarget) this.pickupListTarget.replaceChildren()
+    this.pickupResultsReady = false
+    if (this.hasPickupQueryLabelTarget) this.pickupQueryLabelTarget.textContent = ""
   }
 
   onPickupOverlayKeydown(event, key) {
@@ -1023,11 +1056,8 @@ export default class extends Controller {
     if (key !== "Enter") return
     event.preventDefault()
     const inField = event.target === this.pickupQueryFieldTarget
-    if (inField && !this.pickupResultsReady) {
-      this.runPickupSearch()
-      return
-    }
-    if (inField && this.pickupListTarget.querySelectorAll("li").length === 0) {
+    const selected = this.hasPickupListTarget && this.pickupListTarget.querySelector("li.is-selected:not(.is-disabled)")
+    if (inField && (!this.pickupResultsReady || !selected)) {
       this.runPickupSearch()
       return
     }
@@ -1039,18 +1069,30 @@ export default class extends Controller {
     if (!query) {
       this.renderPickupResults([])
       if (this.hasPickupQueryLabelTarget) this.pickupQueryLabelTarget.textContent = "Enter a search."
+      this.focusOverlayEntry(this.pickupQueryFieldTarget)
       return
     }
+    if (this.pickupAbort) this.pickupAbort.abort()
+    this.pickupAbort = new AbortController()
+    const token = ++this.pickupRequestToken
+    if (this.hasPickupQueryLabelTarget) this.pickupQueryLabelTarget.textContent = "Searching…"
     const url = new URL(this.pickupSearchUrlValue, window.location.origin)
     url.searchParams.set("q", query)
     try {
-      const response = await fetch(url, { headers: { Accept: "application/json" } })
+      const response = await fetch(url, {
+        headers: { Accept: "application/json" },
+        signal: this.pickupAbort.signal
+      })
       const payload = await response.json()
+      if (!this.lookupResponseCurrent("pickup", token)) return
       if (!response.ok) throw new Error(payload.error || "pickup search failed")
       this.renderPickupResults(payload.results || [])
-    } catch (_error) {
+    } catch (error) {
+      if (error?.name === "AbortError") return
+      if (!this.lookupResponseCurrent("pickup", token)) return
       this.renderPickupResults([])
       if (this.hasPickupQueryLabelTarget) this.pickupQueryLabelTarget.textContent = "Search failed."
+      this.focusOverlayEntry(this.pickupQueryFieldTarget)
     }
   }
 
@@ -1061,32 +1103,47 @@ export default class extends Controller {
     if (this.hasPickupQueryLabelTarget) {
       this.pickupQueryLabelTarget.textContent = rows.length === 0 ? "No available customer requests." : ""
     }
-    rows.forEach((row, index) => {
+    let firstEnabled = null
+    rows.forEach((row) => {
       const item = document.createElement("li")
-      item.setAttribute("role", "option")
-      item.className = index === 0 ? "is-selected" : ""
       item.dataset.requestId = row.customer_request_id
       item.dataset.allocationType = row.allocation_type || ""
       const detail = row.allocation_type === "used_unit"
         ? `Used unit ${row.unit_identifier || ""}`.trim()
         : "Standard reserved copy"
       item.textContent = `${row.label} · ${detail}`
+      const selected = firstEnabled == null
+      if (selected) firstEnabled = item
+      this.decoratePickerItem(item, { selected, disabled: false })
+      item.addEventListener("click", () => this.onPickerItemClick(this.pickupListTarget, item))
       this.pickupListTarget.append(item)
     })
+    if (firstEnabled) this.focusOverlayEntry(firstEnabled)
+    else this.focusOverlayEntry(this.pickupQueryFieldTarget)
   }
 
   selectHighlightedPickup() {
     const selected = this.hasPickupListTarget && this.pickupListTarget.querySelector("li.is-selected")
-    if (!selected) return
-    this.closePickupOverlay()
+    if (!selected || selected.classList.contains("is-disabled")) return
     if (!this.hasPickupFormTarget || !this.hasPickupRequestInputTarget) return
     this.pickupRequestInputTarget.value = selected.dataset.requestId
+    this.closePickupOverlay()
     this.pickupFormTarget.requestSubmit()
+  }
+
+  confirmPickupSelection(event) {
+    if (event) event.preventDefault()
+    this.selectHighlightedPickup()
+  }
+
+  keepTransactionUnchanged(event) {
+    if (event) event.preventDefault()
+    this.closePickupOverlay()
   }
 
   openCustomerOverlay() {
     if (!this.hasCustomerOverlayTarget) return
-    this.customerResultsReady = false
+    this.invalidateCustomerLookup()
     if (this.hasCustomerQueryFieldTarget) this.customerQueryFieldTarget.value = ""
     if (this.hasCustomerListTarget) this.customerListTarget.replaceChildren()
     if (this.hasCustomerQueryLabelTarget) this.customerQueryLabelTarget.textContent = ""
@@ -1094,7 +1151,22 @@ export default class extends Controller {
   }
 
   closeCustomerOverlay() {
+    this.invalidateCustomerLookup()
     this.hideOverlay(this.hasCustomerOverlayTarget && this.customerOverlayTarget)
+  }
+
+  invalidateCustomerLookup() {
+    if (this.customerAbort) this.customerAbort.abort()
+    this.customerAbort = null
+    this.customerRequestToken += 1
+    this.customerResultsReady = false
+  }
+
+  invalidateCustomerResultsOnInput() {
+    if (!this.customerResultsReady && !(this.hasCustomerListTarget && this.customerListTarget.children.length > 0)) return
+    if (this.hasCustomerListTarget) this.customerListTarget.replaceChildren()
+    this.customerResultsReady = false
+    if (this.hasCustomerQueryLabelTarget) this.customerQueryLabelTarget.textContent = ""
   }
 
   onCustomerOverlayKeydown(event, key) {
@@ -1111,11 +1183,8 @@ export default class extends Controller {
     if (key !== "Enter") return
     event.preventDefault()
     const inField = event.target === this.customerQueryFieldTarget
-    if (inField && !this.customerResultsReady) {
-      this.runCustomerSearch()
-      return
-    }
-    if (inField && this.customerListTarget.querySelectorAll("li").length === 0) {
+    const selected = this.hasCustomerListTarget && this.customerListTarget.querySelector("li.is-selected:not(.is-disabled)")
+    if (inField && (!this.customerResultsReady || !selected)) {
       this.runCustomerSearch()
       return
     }
@@ -1127,18 +1196,30 @@ export default class extends Controller {
     if (!query) {
       this.renderCustomerResults([])
       if (this.hasCustomerQueryLabelTarget) this.customerQueryLabelTarget.textContent = "Enter a search."
+      this.focusOverlayEntry(this.customerQueryFieldTarget)
       return
     }
+    if (this.customerAbort) this.customerAbort.abort()
+    this.customerAbort = new AbortController()
+    const token = ++this.customerRequestToken
+    if (this.hasCustomerQueryLabelTarget) this.customerQueryLabelTarget.textContent = "Searching…"
     const url = new URL(this.customerSearchUrlValue, window.location.origin)
     url.searchParams.set("q", query)
     try {
-      const response = await fetch(url, { headers: { Accept: "application/json" } })
+      const response = await fetch(url, {
+        headers: { Accept: "application/json" },
+        signal: this.customerAbort.signal
+      })
       const payload = await response.json()
+      if (!this.lookupResponseCurrent("customer", token)) return
       if (!response.ok) throw new Error(payload.error || "customer search failed")
       this.renderCustomerResults(payload.results || [])
-    } catch (_error) {
+    } catch (error) {
+      if (error?.name === "AbortError") return
+      if (!this.lookupResponseCurrent("customer", token)) return
       this.renderCustomerResults([])
       if (this.hasCustomerQueryLabelTarget) this.customerQueryLabelTarget.textContent = "Search failed."
+      this.focusOverlayEntry(this.customerQueryFieldTarget)
     }
   }
 
@@ -1149,14 +1230,19 @@ export default class extends Controller {
     if (this.hasCustomerQueryLabelTarget) {
       this.customerQueryLabelTarget.textContent = rows.length === 0 ? "No matching customers." : ""
     }
-    rows.forEach((row, index) => {
+    let firstEnabled = null
+    rows.forEach((row) => {
       const item = document.createElement("li")
-      item.setAttribute("role", "option")
-      item.className = index === 0 ? "is-selected" : ""
       item.dataset.customerId = row.id
       item.textContent = row.label
+      const selected = firstEnabled == null
+      if (selected) firstEnabled = item
+      this.decoratePickerItem(item, { selected, disabled: false })
+      item.addEventListener("click", () => this.onPickerItemClick(this.customerListTarget, item))
       this.customerListTarget.append(item)
     })
+    if (firstEnabled) this.focusOverlayEntry(firstEnabled)
+    else this.focusOverlayEntry(this.customerQueryFieldTarget)
   }
 
   selectHighlightedCustomer() {
@@ -1168,6 +1254,17 @@ export default class extends Controller {
     this.attachCustomerFormTarget.requestSubmit()
   }
 
+  confirmCustomerSelection(event) {
+    if (event) event.preventDefault()
+    this.selectHighlightedCustomer()
+  }
+
+  keepCurrentCustomer(event) {
+    if (event) event.preventDefault()
+    this.closeCustomerOverlay()
+  }
+
+
   openProductPicker(products) {
     if (!this.hasProductOverlayTarget || !this.hasProductListTarget) return
     this.productListTarget.replaceChildren()
@@ -1178,6 +1275,7 @@ export default class extends Controller {
       const descriptor = [product.name, product.subtitle, product.brand_name].filter(Boolean).join(" — ")
       item.textContent = [descriptor, identity].filter(Boolean).join(" · ")
       this.decoratePickerItem(item, { selected: index === 0 })
+      item.addEventListener("click", () => this.onPickerItemClick(this.productListTarget, item))
       this.productListTarget.append(item)
     })
     this.showOverlay(this.productOverlayTarget, this.productListTarget.querySelector("li.is-selected"))
@@ -1207,15 +1305,25 @@ export default class extends Controller {
 
   selectHighlightedProduct() {
     const selected = this.hasProductListTarget && this.productListTarget.querySelector("li.is-selected")
-    if (!selected || !selected.dataset.productId) return
+    if (!selected || !selected.dataset.productId || selected.classList.contains("is-disabled")) return
     const productId = selected.dataset.productId
-    this.closeProductOverlay()
     if (this.unlinkedPickerActive) {
       this.unlinkedPickerActive = false
+      this.closeProductOverlay()
       this.fetchUnlinkedResolution({ product_id: productId })
       return
     }
     this.resolveAndHandle({ product_id: productId })
+  }
+
+  confirmProductSelection(event) {
+    if (event) event.preventDefault()
+    this.selectHighlightedProduct()
+  }
+
+  backFromProductOverlay(event) {
+    if (event) event.preventDefault()
+    this.closeProductOverlay()
   }
 
   openVariantPicker(variants) {
@@ -1228,6 +1336,7 @@ export default class extends Controller {
       const availability = variant.available == null ? "" : ` · ${variant.available}`
       item.textContent = [variant.sku, variant.name, variant.condition, price].filter(Boolean).join(" · ") + availability
       this.decoratePickerItem(item, { selected: index === 0 })
+      item.addEventListener("click", () => this.onPickerItemClick(this.variantListTarget, item))
       this.variantListTarget.append(item)
     })
     this.showOverlay(this.variantOverlayTarget, this.variantListTarget.querySelector("li.is-selected"))
@@ -1257,15 +1366,25 @@ export default class extends Controller {
 
   selectHighlightedVariant() {
     const selected = this.hasVariantListTarget && this.variantListTarget.querySelector("li.is-selected")
-    if (!selected) return
+    if (!selected || selected.classList.contains("is-disabled")) return
     const variantId = selected.dataset.variantId
-    this.closeVariantOverlay()
     if (this.unlinkedPickerActive) {
       this.unlinkedPickerActive = false
+      this.closeVariantOverlay()
       this.fetchUnlinkedResolution({ product_variant_id: variantId })
       return
     }
     this.resolveAndHandle({ product_variant_id: variantId })
+  }
+
+  confirmVariantSelection(event) {
+    if (event) event.preventDefault()
+    this.selectHighlightedVariant()
+  }
+
+  backToProducts(event) {
+    if (event) event.preventDefault()
+    this.closeVariantOverlay()
   }
 
   openUnitPicker(units) {
@@ -1282,6 +1401,7 @@ export default class extends Controller {
       item.dataset.unitId = unit.id
       item.textContent = [unit.unit_identifier, unit.condition, this.formatCents(unit.price_cents)].filter(Boolean).join(" · ")
       this.decoratePickerItem(item, { selected: index === 0 })
+      item.addEventListener("click", () => this.onPickerItemClick(this.unitListTarget, item))
       this.unitListTarget.append(item)
     })
     this.showOverlay(this.unitOverlayTarget, this.unitListTarget.querySelector("li.is-selected"))
@@ -1311,25 +1431,36 @@ export default class extends Controller {
 
   selectHighlightedUnit() {
     const selected = this.hasUnitListTarget && this.unitListTarget.querySelector("li.is-selected")
-    if (!selected || !selected.dataset.unitId) return
+    if (!selected || !selected.dataset.unitId || selected.classList.contains("is-disabled")) return
     const unitId = selected.dataset.unitId
-    this.closeUnitOverlay()
     if (this.unlinkedPickerActive) {
       this.unlinkedPickerActive = false
+      this.closeUnitOverlay()
       this.fetchUnlinkedResolution({ inventory_unit_id: unitId })
       return
     }
     this.resolveAndHandle({ inventory_unit_id: unitId })
   }
 
+  confirmUnitSelection(event) {
+    if (event) event.preventDefault()
+    this.selectHighlightedUnit()
+  }
+
+  backToVariants(event) {
+    if (event) event.preventDefault()
+    this.closeUnitOverlay()
+  }
+
   movePickerList(list, delta) {
     if (!list) return
-    const items = Array.from(list.querySelectorAll("li")).filter((item) => !item.classList.contains("is-disabled") || item.dataset.variantId)
+    const all = Array.from(list.querySelectorAll("li"))
+    const items = all.filter((item) => !item.classList.contains("is-disabled"))
     if (items.length === 0) return
     const current = items.findIndex((item) => item.classList.contains("is-selected"))
     const nextIndex = Math.min(items.length - 1, Math.max(0, (current < 0 ? 0 : current) + delta))
-    items.forEach((item, index) => {
-      const selected = index === nextIndex
+    all.forEach((item) => {
+      const selected = item === items[nextIndex]
       item.classList.toggle("is-selected", selected)
       item.setAttribute("aria-selected", selected ? "true" : "false")
       item.tabIndex = selected ? 0 : -1
@@ -1342,7 +1473,10 @@ export default class extends Controller {
     this.pendingOpenPrice = { kind, variantId, lineId }
     if (this.hasOpenPricePromptTarget) this.openPricePromptTarget.textContent = prompt || "Enter the selling price."
     if (this.hasOpenPriceFieldTarget) {
-      this.openPriceFieldTarget.value = currentCents ? this.formatCents(currentCents) : ""
+      this.openPriceFieldTarget.value = currentCents != null ? this.formatCents(currentCents) : ""
+    }
+    if (this.hasOpenPriceTitleTarget) {
+      this.openPriceTitleTarget.textContent = kind === "edit" ? "Edit open price" : "Open price"
     }
     this.showOverlay(this.openPriceOverlayTarget, this.hasOpenPriceFieldTarget && this.openPriceFieldTarget)
   }
@@ -1370,14 +1504,17 @@ export default class extends Controller {
     const value = this.hasOpenPriceFieldTarget ? this.openPriceFieldTarget.value.trim() : ""
     if (value === "") return
     const pending = this.pendingOpenPrice
+    this.pendingOpenPrice = null
     this.clearOverlayError(this.openPriceOverlayTarget)
     if (pending.kind === "edit") {
+      this.clearOverlayStack({ restoreCommand: false })
       if (this.hasOpenPriceLineInputTarget) this.openPriceLineInputTarget.value = pending.lineId
       if (this.hasOpenPriceEditInputTarget) this.openPriceEditInputTarget.value = value
       this.beginFlight()
       this.openPriceFormTarget.requestSubmit()
       return
     }
+    this.clearOverlayStack({ restoreCommand: false })
     this.postAddMerchandise({ variantId: pending.variantId, sellingPrice: value })
   }
 
@@ -2089,46 +2226,178 @@ export default class extends Controller {
   }
 
   overlayOpen() {
-    return this.activeOverlayElement() != null
+    return this.topOverlay() != null
   }
 
   activeOverlayElement() {
-    // Topmost child pickers first so Tab/focus traps match visible stacking when
-    // a picker opens above unlinked/search parents.
-    const overlays = [
-      this.hasProductOverlayTarget && this.productOverlayTarget,
-      this.hasVariantOverlayTarget && this.variantOverlayTarget,
-      this.hasUnitOverlayTarget && this.unitOverlayTarget,
-      this.hasOpenPriceOverlayTarget && this.openPriceOverlayTarget,
-      this.hasUnlinkedOverlayTarget && this.unlinkedOverlayTarget,
-      this.hasReturnChooserOverlayTarget && this.returnChooserOverlayTarget,
-      this.hasLinkedOverlayTarget && this.linkedOverlayTarget,
-      this.hasControlOverlayTarget && this.controlOverlayTarget,
-      this.hasOtherOverlayTarget && this.otherOverlayTarget,
-      this.hasSearchOverlayTarget && this.searchOverlayTarget,
-      this.hasPickupOverlayTarget && this.pickupOverlayTarget,
-      this.hasCustomerOverlayTarget && this.customerOverlayTarget,
-      this.hasOverlayTarget && this.overlayTarget
-    ]
-    return overlays.find((el) => el && !el.hidden) || null
+    return this.topOverlay()
   }
 
-  showOverlay(overlay, initial) {
+  dispatchOverlayKeydown(overlay, event, key) {
+    if (this.hasProductOverlayTarget && overlay === this.productOverlayTarget) {
+      this.onProductOverlayKeydown(event, key)
+      return
+    }
+    if (this.hasVariantOverlayTarget && overlay === this.variantOverlayTarget) {
+      this.onVariantOverlayKeydown(event, key)
+      return
+    }
+    if (this.hasUnitOverlayTarget && overlay === this.unitOverlayTarget) {
+      this.onUnitOverlayKeydown(event, key)
+      return
+    }
+    if (this.hasOpenPriceOverlayTarget && overlay === this.openPriceOverlayTarget) {
+      this.onOpenPriceOverlayKeydown(event, key)
+      return
+    }
+    if (this.hasUnlinkedOverlayTarget && overlay === this.unlinkedOverlayTarget) {
+      this.onUnlinkedOverlayKeydown(event, key)
+      return
+    }
+    if (this.hasReturnChooserOverlayTarget && overlay === this.returnChooserOverlayTarget) {
+      this.onReturnChooserKeydown(event, key)
+      return
+    }
+    if (this.hasLinkedOverlayTarget && overlay === this.linkedOverlayTarget) {
+      this.onLinkedOverlayKeydown(event, key)
+      return
+    }
+    if (this.hasControlOverlayTarget && overlay === this.controlOverlayTarget) {
+      this.onControlOverlayKeydown(event, key)
+      return
+    }
+    if (this.hasOtherOverlayTarget && overlay === this.otherOverlayTarget) {
+      this.onOtherOverlayKeydown(event, key)
+      return
+    }
+    if (this.hasSearchOverlayTarget && overlay === this.searchOverlayTarget) {
+      this.onSearchOverlayKeydown(event, key)
+      return
+    }
+    if (this.hasPickupOverlayTarget && overlay === this.pickupOverlayTarget) {
+      this.onPickupOverlayKeydown(event, key)
+      return
+    }
+    if (this.hasCustomerOverlayTarget && overlay === this.customerOverlayTarget) {
+      this.onCustomerOverlayKeydown(event, key)
+      return
+    }
+    if (this.hasOverlayTarget && overlay === this.overlayTarget) {
+      event.preventDefault()
+      if (key === "Escape") this.closeOverlay()
+      if (key === "F9") this.confirmCancel()
+    }
+  }
+
+  topOverlay() {
+    for (let index = this.overlayStack.length - 1; index >= 0; index -= 1) {
+      const entry = this.overlayStack[index]
+      if (entry?.overlay && !entry.overlay.hidden) return entry.overlay
+    }
+    return null
+  }
+
+  showOverlay(overlay, options = {}) {
     if (!overlay) return
+    const opts = options && options.nodeType ? { initialFocus: options } : (options || {})
     this.clearOverlayError(overlay)
+    const parent = opts.parent || this.topOverlay()
+    const opener = opts.opener || document.activeElement
+    const initialFocus = opts.initialFocus || this.overlayFocusables(overlay)[0]
+    this.overlayStack = this.overlayStack.filter((entry) => entry.overlay !== overlay)
+    this.overlayStack.push({
+      overlay,
+      opener,
+      parent: parent && parent !== overlay ? parent : null,
+      entryFocus: initialFocus
+    })
     overlay.hidden = false
-    if (this.hasChromeTarget) this.chromeTarget.inert = true
-    const target = initial || this.overlayFocusables(overlay)[0]
-    if (target) target.focus()
+    overlay.setAttribute("aria-modal", "true")
+    if (parent && parent !== overlay) {
+      parent.inert = true
+      parent.setAttribute("aria-modal", "false")
+    }
+    this.syncWorkspaceBackgroundInert()
+    this.focusOverlayEntry(initialFocus)
   }
 
   hideOverlay(overlay) {
     if (!overlay) return
-    overlay.hidden = true
-    if (this.activeOverlayElement() == null) {
-      if (this.hasChromeTarget) this.chromeTarget.inert = false
-      this.restoreFocus()
+    const index = this.overlayStack.findIndex((entry) => entry.overlay === overlay)
+    if (index < 0) {
+      this.hideOverlayNode(overlay)
+      this.syncWorkspaceBackgroundInert()
+      if (this.topOverlay() == null) this.restoreFocus()
+      return
     }
+    const entry = this.overlayStack[index]
+    const descendants = this.overlayStack.slice(index + 1)
+    descendants.reverse().forEach((child) => this.hideOverlayNode(child.overlay))
+    this.hideOverlayNode(overlay)
+    this.overlayStack.splice(index)
+    this.syncWorkspaceBackgroundInert()
+    this.restoreOverlayFocus(entry)
+  }
+
+  hideOverlayNode(overlay) {
+    if (!overlay) return
+    overlay.hidden = true
+    overlay.inert = false
+    overlay.setAttribute("aria-modal", "true")
+    this.clearOverlayError(overlay)
+  }
+
+  clearOverlayStack({ restoreCommand = true } = {}) {
+    this.abortPendingLookups()
+    const entries = [ ...this.overlayStack ]
+    this.overlayStack = []
+    entries.reverse().forEach((entry) => this.hideOverlayNode(entry.overlay))
+    this.syncWorkspaceBackgroundInert()
+    if (restoreCommand) this.restoreFocus()
+  }
+
+  syncWorkspaceBackgroundInert() {
+    if (!this.hasBackgroundTarget) return
+    this.backgroundTarget.inert = this.topOverlay() != null
+  }
+
+  restoreOverlayFocus(closedEntry) {
+    if (!closedEntry) {
+      if (this.topOverlay() == null) this.restoreFocus()
+      return
+    }
+    const parent = closedEntry.parent
+    if (parent && !parent.hidden) {
+      parent.inert = false
+      parent.setAttribute("aria-modal", "true")
+      const parentEntry = this.overlayStack.find((entry) => entry.overlay === parent)
+      const focusTarget = parent.querySelector("li.is-selected:not(.is-disabled)") ||
+        parentEntry?.entryFocus ||
+        this.overlayFocusables(parent)[0]
+      this.focusOverlayEntry(focusTarget)
+      return
+    }
+    if (this.topOverlay() == null) this.restoreFocus()
+  }
+
+  focusOverlayEntry(el) {
+    if (!el || typeof el.focus !== "function") return
+    el.focus()
+    if (typeof el.select === "function" && "value" in el && String(el.value || "").length > 0) {
+      el.select()
+    }
+  }
+
+  abortPendingLookups() {
+    if (this.searchAbort) this.searchAbort.abort()
+    if (this.pickupAbort) this.pickupAbort.abort()
+    if (this.customerAbort) this.customerAbort.abort()
+    this.searchAbort = null
+    this.pickupAbort = null
+    this.customerAbort = null
+    this.searchRequestToken += 1
+    this.pickupRequestToken += 1
+    this.customerRequestToken += 1
   }
 
   clearOverlayError(overlay) {
@@ -2139,7 +2408,7 @@ export default class extends Controller {
   overlayFocusables(overlay) {
     if (!overlay) return []
     return Array.from(overlay.querySelectorAll("input, select, textarea, button, [tabindex]:not([tabindex='-1'])")).filter((el) => {
-      if (el.disabled || el.hidden) return false
+      if (el.disabled || el.hidden || el.closest("[inert]")) return false
       return !el.closest("[hidden]")
     })
   }
@@ -2164,6 +2433,8 @@ export default class extends Controller {
     item.classList.toggle("is-disabled", disabled)
     item.setAttribute("aria-selected", selected ? "true" : "false")
     item.tabIndex = selected ? 0 : -1
+    if (disabled) item.setAttribute("aria-disabled", "true")
+    else item.removeAttribute("aria-disabled")
   }
 
   recoverDialogRejection() {
@@ -2367,6 +2638,7 @@ export default class extends Controller {
   redirectPrintableToCommandField(event) {
     if (event.defaultPrevented) return
     if (!this.hasFieldTarget || this.fieldTarget.disabled) return
+    if (this.overlayOpen() && this.topOverlay()?.contains(event.target)) return
     if (this.isCommandSurfaceInput(event.target)) return
     if (event.isComposing) return
     if (event.metaKey || event.ctrlKey || event.altKey) return
