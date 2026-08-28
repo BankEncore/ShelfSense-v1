@@ -57,9 +57,10 @@ class PosLinkedReturnWorkspaceTest < ActionDispatch::IntegrationTest
     get pos_register_workspace_path
     assert_response :success
     assert_select "tr[data-direction='return'][data-linked-return='true']"
+    assert_select "tr[data-direction='return'][data-quantity='1']", text: /-\s*1/
     assert_match "RETURN", response.body
     assert_match sale.transaction_reference, response.body
-    assert_match "Refund due", response.body
+    assert_match "Refund remaining", response.body
     assert_match "Refund (+)", response.body
 
     post pos_register_quantity_path, params: {
@@ -217,7 +218,7 @@ class PosLinkedReturnWorkspaceTest < ActionDispatch::IntegrationTest
     working.reload
     assert working.working?
     assert working.signed_net_cents.positive?
-    assert_match "Amount due", response.body
+    assert_match "Balance due", response.body
   end
 
   test "even exchange completes with no tender after confirm" do

@@ -46,7 +46,7 @@ class PosUnlinkedReturnTest < ApplicationSystemTestCase
 
     assert_text "RETURN", wait: 10
     assert_text "Unlinked return"
-    assert_text "Refund due"
+    assert_text "Refund remaining"
     refute_text "Override"
 
     click_on "Refund (+)"

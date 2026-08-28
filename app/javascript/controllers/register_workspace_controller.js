@@ -1586,7 +1586,7 @@ export default class extends Controller {
     const name = type.name || (cash ? "Cash" : "Tender")
     this.setMode("tender", refund ? "REFUND" : (cash ? "CASH TENDER" : "TENDER"))
     const due = this.element.querySelector(".pos-totals__due")
-    const dueText = due ? due.textContent.trim() : (refund ? "Refund due" : "Amount due")
+    const dueText = due ? due.textContent.trim() : (refund ? "Refund remaining" : "Balance due")
     if (refund) {
       this.setFieldLabel(cash ? `${dueText}. Refund amount` : `${dueText}. ${name} amount`)
     } else {

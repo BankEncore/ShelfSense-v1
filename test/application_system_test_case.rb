@@ -12,7 +12,7 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
   CHROMEDRIVERS = %w[/usr/bin/chromedriver /usr/lib/chromium/chromedriver].freeze
 
   # Parallel CI workers routinely need more than Capybara's 2s default for Turbo
-  # register enter / workspace morphs. "SALE ENTRY" / "Refund due" also appear in
+  # register enter / workspace morphs. "SALE ENTRY" / "Refund remaining" also appear in
   # the POS JS bundle, so failed asserts report misleading non-visible matches.
   Capybara.default_max_wait_time = 5
 

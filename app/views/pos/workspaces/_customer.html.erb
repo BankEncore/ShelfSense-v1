@@ -1,0 +1,23 @@
+<% register_scope = { register_id: @register.id } %>
+
+<% if @transaction.customer %>
+  <div class="pos-customer">
+    <p>Customer · <%= @transaction.customer.display_name %></p>
+    <% if @ui_mode == "sale_entry" %>
+      <div class="pos-customer__actions">
+        <%= action_button "Change", style: :outline, intent: :neutral, size: :standard,
+              data: { action: "register-workspace#openCustomerOverlay", register_workspace_target: "attachCustomerButton" } %>
+        <%= form_with url: pos_register_detach_customer_path(register_scope), method: :post, class: "pos-customer-form" do %>
+          <%= hidden_field_tag :register_id, @register.id %>
+          <%= hidden_field_tag :lock_version, @transaction.lock_version %>
+          <%= submit_tag "Clear", class: "btn btn--outline" %>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+<% elsif @ui_mode == "sale_entry" %>
+  <div class="pos-customer">
+    <%= action_button "Attach customer", style: :outline, intent: :neutral, size: :standard,
+          data: { action: "register-workspace#openCustomerOverlay", register_workspace_target: "attachCustomerButton" } %>
+  </div>
+<% end %>

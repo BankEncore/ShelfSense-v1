@@ -1,6 +1,6 @@
 # Register workspace consolidation — Implementation plan
 
-Status: **Slice 3 merged** to `register-workspace-consolidation`. Next: Slice 4 ([#85](https://github.com/BankEncore/ShelfSense-v1/issues/85)).
+Status: **Slice 4 merged** to `register-workspace-consolidation` ([PR #98](https://github.com/BankEncore/ShelfSense-v1/pull/98) / [#85](https://github.com/BankEncore/ShelfSense-v1/issues/85)). Next: Slice 5A.
 
 Authority: [plan.md](plan.md), [routing-and-authority.md](routing-and-authority.md).
 
@@ -23,7 +23,7 @@ This program uses a long-lived integration branch because an incomplete Register
 | 1 Packet / test matrix | **Accepted** on `main` (this change) | — |
 | 2 Shell and state routing | Merged to integration ([#83](https://github.com/BankEncore/ShelfSense-v1/issues/83) / PR #96) | [#83](https://github.com/BankEncore/ShelfSense-v1/issues/83) |
 | 3 F10 and navigation | Merged to integration ([#84](https://github.com/BankEncore/ShelfSense-v1/issues/84) / PR #97) | [#84](https://github.com/BankEncore/ShelfSense-v1/issues/84) |
-| 4 Transaction composition | Not started | [#85](https://github.com/BankEncore/ShelfSense-v1/issues/85) |
+| 4 Transaction composition | Merged to integration ([#85](https://github.com/BankEncore/ShelfSense-v1/issues/85) / PR #98) | [#85](https://github.com/BankEncore/ShelfSense-v1/issues/85) |
 | 5A Lookup overlays | Not started | [#86](https://github.com/BankEncore/ShelfSense-v1/issues/86) |
 | 5B Return overlays | Not started | [#87](https://github.com/BankEncore/ShelfSense-v1/issues/87) |
 | 5C Controlled-action overlays | Not started | [#88](https://github.com/BankEncore/ShelfSense-v1/issues/88) |

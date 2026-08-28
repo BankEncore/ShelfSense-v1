@@ -1,0 +1,47 @@
+<% workspace = @workspace %>
+
+<section id="pos_tenders" class="pos-tenders" aria-labelledby="pos-tenders-title">
+  <h2 id="pos-tenders-title" class="pos-tenders__title">Applied tenders</h2>
+  <% if workspace.tender_rows.any? %>
+    <ul class="pos-tenders__list">
+      <% workspace.tender_rows.each do |tender| %>
+        <li class="pos-tenders__item">
+          <div class="pos-money-row">
+            <span class="pos-money-row__label"><%= tender.label %></span>
+            <span class="pos-money-row__amount"><%= format_money_cents(tender.amount_cents) %></span>
+          </div>
+          <% if tender.presented_cents.present? %>
+            <div class="pos-tenders__detail">
+              Presented <%= format_money_cents(tender.presented_cents) %>
+              <% if tender.change_cents.to_i.positive? %>
+                · Change <%= format_money_cents(tender.change_cents) %>
+              <% end %>
+            </div>
+          <% end %>
+        </li>
+      <% end %>
+    </ul>
+  <% else %>
+    <p class="pos-tenders__empty">No tenders applied</p>
+  <% end %>
+</section>
+
+<div class="pos-settlement">
+  <% workspace.settlement_cues.each do |cue| %>
+    <% if cue.kind == :change %>
+      <div class="pos-money-row pos-money-row--emphasis pos-totals__change">
+        <span class="pos-money-row__label"><%= cue.label %></span>
+        <span class="pos-money-row__amount"><%= format_money_cents(cue.amount_cents) %></span>
+      </div>
+    <% elsif cue.kind == :even_exchange || cue.kind == :settled %>
+      <div class="pos-money-row pos-money-row--emphasis">
+        <span class="pos-money-row__label"><%= cue.label %></span>
+      </div>
+    <% elsif cue.kind == :refund_remaining || cue.kind == :balance_due %>
+      <div class="pos-money-row pos-money-row--emphasis pos-totals__due">
+        <span class="pos-money-row__label"><%= cue.label %></span>
+        <span class="pos-money-row__amount"><%= format_money_cents(cue.amount_cents) %></span>
+      </div>
+    <% end %>
+  <% end %>
+</div>

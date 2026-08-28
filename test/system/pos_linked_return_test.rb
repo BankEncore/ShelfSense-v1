@@ -42,7 +42,7 @@ class PosLinkedReturnTest < ApplicationSystemTestCase
     click_on "Add to register"
 
     assert_text "RETURN", wait: 10
-    assert_text "Refund due"
+    assert_text "Refund remaining"
     click_on "Refund (+)"
     assert_text "REFUND"
     send_keys :f2
@@ -100,7 +100,7 @@ class PosLinkedReturnTest < ApplicationSystemTestCase
     check "item_#{line.id}_selected"
     select "Changed mind", from: "items_#{line.id}_reason_code"
     click_on "Add to register"
-    assert_text "Refund due", wait: 10
+    assert_text "Refund remaining", wait: 10
     assert_selector "tr[data-direction='return']"
 
     field = find("#pos-command-field")
