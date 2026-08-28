@@ -69,7 +69,6 @@
      data-register-workspace-refund-remaining-value="<%= remaining_refund_cents %>"
      data-register-workspace-payment-remaining-value="<%= remaining_payment_cents %>"
      data-register-workspace-cash-out-allowed-value="<%= effective_permissions.include?("gift_cards.cash_out") ? "true" : "false" %>"
-     data-register-workspace-transactions-url-value="<%= pos_transactions_path %>"
      data-register-workspace-policies-value="<%= h((@control_policies || {}).to_json) %>"
      data-register-workspace-reasons-value="<%= h(Pos::ControlledActionReasons::CATALOGS.to_json) %>"
      data-register-workspace-return-reasons-value="<%= h(Pos::ReturnReasons::ENTRIES.to_json) %>"
@@ -379,7 +378,8 @@
       <% if @ui_mode == "sale_entry" && lines.empty? && tenders.empty? && issuances.empty? %>
         <div class="pos-actions__group" role="group" aria-label="Session">
           <%= action_button_to "Close Session", pos_register_close_path, style: :outline, intent: :neutral, size: :standard, method: :post,
-                params: { session_id: @session_record.id, register_id: @register.id } %>
+                params: { session_id: @session_record.id, register_id: @register.id },
+                data: { register_shell_proxy: "close-session" } %>
         </div>
       <% end %>
     </div>
@@ -504,7 +504,7 @@
       <%= hidden_field_tag :lock_version, @transaction.lock_version %>
     <% end %>
 
-  <div class="pos-overlay"
+  <div class="pos-overlay" data-register-blocking-overlay
        id="pos_overlay"
        hidden
        data-register-workspace-target="overlay"
@@ -521,7 +521,7 @@
     </div>
   </div>
 
-  <div class="pos-overlay"
+  <div class="pos-overlay" data-register-blocking-overlay
        id="pos_control_overlay"
        hidden
        data-register-workspace-target="controlOverlay"
@@ -578,7 +578,7 @@
     </div>
   </div>
 
-  <div class="pos-overlay"
+  <div class="pos-overlay" data-register-blocking-overlay
        id="pos_unlinked_overlay"
        hidden
        data-register-workspace-target="unlinkedOverlay"
@@ -629,7 +629,7 @@
     </div>
   </div>
 
-  <div class="pos-overlay"
+  <div class="pos-overlay" data-register-blocking-overlay
        id="pos_other_overlay"
        hidden
        data-register-workspace-target="otherOverlay"
@@ -645,7 +645,7 @@
     </div>
   </div>
 
-  <div class="pos-overlay"
+  <div class="pos-overlay" data-register-blocking-overlay
        id="pos_search_overlay"
        hidden
        data-register-workspace-target="searchOverlay"
@@ -670,7 +670,7 @@
     </div>
   </div>
 
-  <div class="pos-overlay"
+  <div class="pos-overlay" data-register-blocking-overlay
        id="pos_pickup_overlay"
        hidden
        data-register-workspace-target="pickupOverlay"
@@ -691,7 +691,7 @@
     </div>
   </div>
 
-  <div class="pos-overlay"
+  <div class="pos-overlay" data-register-blocking-overlay
        id="pos_customer_overlay"
        hidden
        data-register-workspace-target="customerOverlay"
@@ -712,7 +712,7 @@
     </div>
   </div>
 
-  <div class="pos-overlay"
+  <div class="pos-overlay" data-register-blocking-overlay
        id="pos_product_overlay"
        hidden
        data-register-workspace-target="productOverlay"
@@ -728,7 +728,7 @@
     </div>
   </div>
 
-  <div class="pos-overlay"
+  <div class="pos-overlay" data-register-blocking-overlay
        id="pos_variant_overlay"
        hidden
        data-register-workspace-target="variantOverlay"
@@ -744,7 +744,7 @@
     </div>
   </div>
 
-  <div class="pos-overlay"
+  <div class="pos-overlay" data-register-blocking-overlay
        id="pos_unit_overlay"
        hidden
        data-register-workspace-target="unitOverlay"
@@ -760,7 +760,7 @@
     </div>
   </div>
 
-  <div class="pos-overlay"
+  <div class="pos-overlay" data-register-blocking-overlay
        id="pos_open_price_overlay"
        hidden
        data-register-workspace-target="openPriceOverlay"
@@ -784,7 +784,7 @@
     </div>
   </div>
 
-  <div class="pos-overlay"
+  <div class="pos-overlay" data-register-blocking-overlay
        id="pos_return_chooser"
        hidden
        data-register-workspace-target="returnChooserOverlay"
@@ -803,7 +803,7 @@
     </div>
   </div>
 
-  <div class="pos-overlay"
+  <div class="pos-overlay" data-register-blocking-overlay
        id="pos_linked_overlay"
        hidden
        data-register-workspace-target="linkedOverlay"

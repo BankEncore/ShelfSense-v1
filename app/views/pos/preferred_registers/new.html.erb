@@ -1,7 +1,5 @@
 <% content_for :title, "Switch register" %>
-<div class="pos-register-shell">
-  <%= render "pos/shell/header" %>
-  <%= render "pos/shell/status" %>
+<%= render layout: "pos/shell/frame" do %>
   <%= render "pos/shell/feedback" %>
   <div class="pos-register-shell__body">
     <section class="pos-enter">
@@ -45,5 +43,4 @@
       <%= action_link_to "Cancel", pos_path, style: :ghost, intent: :neutral %>
     </section>
   </div>
-  <%= render "pos/shell/cluster" %>
-</div>
+<% end %>

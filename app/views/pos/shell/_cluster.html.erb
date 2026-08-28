@@ -1,6 +1,0 @@
-<%# Slice 3 deletes this destination cluster when F10 Register Menu exists. %>
-<nav class="pos-register-cluster" aria-label="Register destinations">
-  <% register_cluster_items.each do |item| %>
-    <%= action_link_to item[:label], item[:path], style: :outline, intent: :neutral %>
-  <% end %>
-</nav>

@@ -82,6 +82,78 @@ class PosRegisterShellTest < ApplicationSystemTestCase
     assert_selector "tbody tr.is-selected", text: "Example Book", wait: 10
   end
 
+  test "f10 opens and closes the register menu on selector" do
+    sign_in_admin(actor: @actor)
+    visit pos_path
+    assert_text "Select a Register"
+    assert_f10_menu_lifecycle
+  end
+
+  test "f10 opens and closes the register menu on closed" do
+    sign_in_admin(actor: @actor)
+    visit pos_path(register_id: @register.id)
+    assert_text "Open Register"
+    assert_f10_menu_lifecycle
+  end
+
+  test "f10 opens and closes the register menu between sessions" do
+    sign_in_admin(actor: @actor)
+    context = pos_open_context(store: @store, actor: @actor, register: @register, opening_float_cents: 0)
+    pos_close_session!(session: context[:session], actor: @actor, closing_count_cents: 0)
+    visit pos_path(register_id: @register.id)
+    assert_text "Open Session"
+    assert_f10_menu_lifecycle
+    open_register_menu
+    assert_button "Open Session"
+    assert_button "Finalize Z"
+    send_keys :escape
+  end
+
+  test "f10 opens and closes the register menu on occupied" do
+    other = pos_transacting_user(store: @store, assigned_by: @actor, username: "shell_occ")
+    pos_open_context(store: @store, actor: other, register: @register, opening_float_cents: 0)
+    sign_in_admin(actor: @actor)
+    visit pos_path(register_id: @register.id)
+    assert_text(/IN USE|open for/i)
+    assert_f10_menu_lifecycle
+    open_register_menu
+    assert_link "X Report"
+    send_keys :escape
+  end
+
+  test "f10 opens and closes the register menu on switch register" do
+    sign_in_admin(actor: @actor)
+    visit pos_switch_register_path
+    assert_text "Switch Register"
+    assert_f10_menu_lifecycle
+    open_register_menu
+    assert_no_selector "#register-menu a", text: "Switch Register"
+    assert_no_selector "#register-menu a", text: "X Report"
+    send_keys :escape
+  end
+
+  test "f10 opens and closes the register menu on the workspace" do
+    sign_in_admin(actor: @actor)
+    visit pos_register_enter_path(register_id: @register.id)
+    fill_in "Opening float", with: "0.00"
+    click_on "Open register"
+    assert_text "SALE ENTRY", wait: 10
+    find("#pos-command-field").click
+    assert_f10_menu_lifecycle
+    assert page.evaluate_script("document.activeElement === document.getElementById('pos-command-field')")
+  end
+
+  test "high zoom reaches the last register menu item" do
+    sign_in_admin(actor: @actor)
+    visit pos_path
+    with_viewport(width: 1280, height: 720, zoom: 2) do
+      open_register_menu
+      last_item = all("#register-menu a, #register-menu button", visible: true).last
+      scroll_to last_item
+      assert last_item.visible?
+    end
+  end
+
   test "overlay text fields keep typed characters" do
     sign_in_admin(actor: @actor)
     visit pos_register_enter_path(register_id: @register.id)
@@ -98,6 +170,19 @@ class PosRegisterShellTest < ApplicationSystemTestCase
   end
 
   private
+
+  def assert_f10_menu_lifecycle
+    assert_selector "[data-register-shell-target='launcher']"
+    send_keys :f10
+    assert_selector "#register-menu", visible: true
+    assert_equal "true", find("[data-register-shell-target='launcher']")["aria-expanded"]
+    assert page.evaluate_script("document.querySelector('.pos-register-shell__background').inert === true")
+    assert page.evaluate_script("Boolean(document.activeElement && document.getElementById('register-menu').contains(document.activeElement))")
+    send_keys :escape
+    assert_selector "#register-menu", visible: :hidden
+    assert_equal "false", find("[data-register-shell-target='launcher']")["aria-expanded"]
+    assert page.evaluate_script("document.querySelector('.pos-register-shell__background').inert === false")
+  end
 
   def shell_body_scrollable?
     page.evaluate_script(<<~JS.squish)

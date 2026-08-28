@@ -272,7 +272,7 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     assert_button "Close Session"
   end
 
-  test "command field stays clickable above the destination cluster" do
+  test "command field stays clickable above the basket" do
     open_register
     field = find("#pos-command-field")
     hit = page.evaluate_script(<<~JS.squish)
@@ -333,6 +333,11 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     open_register
     add_current_sku
     click_on "Quantity (*)"
+    assert_text "QUANTITY"
+    send_keys :f10
+    assert_selector "#register-menu", visible: true
+    send_keys :escape
+    assert_selector "#register-menu", visible: :hidden
     assert_text "QUANTITY"
     field = find("#pos-command-field")
     assert_equal "1", field.value
@@ -590,6 +595,13 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     refute_equal "", field.value
 
     send_keys :f10
+    assert_selector "#register-menu", visible: true
+    send_keys :escape
+    assert_selector "#register-menu", visible: :hidden
+    assert_text "CASH TENDER"
+    assert page.evaluate_script("document.activeElement === document.getElementById('pos-command-field')")
+
+    choose_register_menu "Transactions & Receipts"
     assert_text "Transactions"
     click_on "Register"
     assert_text "Example Book"
@@ -601,7 +613,7 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     field.fill_in with: "10.00"
     field.send_keys :enter
     assert_selector ".pos-totals", text: "External Card"
-    send_keys :f10
+    choose_register_menu "Transactions & Receipts"
     assert_text "Transactions"
     click_on "Register"
     assert_selector ".pos-totals", text: "External Card"
@@ -650,8 +662,9 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     send_keys :f6
     assert_selector "#pos_control_overlay", visible: true
     send_keys :f10
-    assert_text "Finish or cancel the current dialog before opening Transactions."
+    assert_text "Finish or cancel the current dialog before opening the Register Menu."
     assert_selector "#pos_control_overlay", visible: true
+    assert_selector "#register-menu", visible: :hidden
     assert_no_selector "h1", text: "Transactions"
   end
 

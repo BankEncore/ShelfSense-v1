@@ -1,0 +1,39 @@
+<div class="pos-overlay pos-register-menu"
+     id="register-menu"
+     hidden
+     data-register-shell-target="menu"
+     role="dialog"
+     aria-modal="true"
+     aria-labelledby="register-menu-title">
+  <div class="pos-overlay__panel pos-register-menu__panel">
+    <div class="pos-register-menu__header">
+      <h2 id="register-menu-title">Register Menu</h2>
+      <%= action_button "Close", style: :outline, intent: :neutral, size: :standard,
+            data: { action: "register-shell#closeMenu", register_shell_target: "close" } %>
+    </div>
+    <div class="pos-register-menu__body">
+      <% register_menu_groups.each do |group| %>
+        <section class="pos-register-menu__group" data-register-shell-target="group">
+          <h3><%= register_menu_group_label(group.key) %></h3>
+          <ul class="pos-register-menu__items">
+            <% register_menu_presentation(group).each do |item| %>
+              <li>
+                <% if item[:href] %>
+                  <% leave_options = item[:leave] ? register_leave_confirm_options : {} %>
+                  <%= action_link_to item[:label], item[:href], style: :outline, intent: :neutral, **leave_options %>
+                <% else %>
+                  <%= action_button item[:label], style: :outline, intent: :neutral, size: :standard,
+                        data: {
+                          action: "register-shell#activateProxy",
+                          register_shell_target: "proxyItem",
+                          register_shell_proxy_param: item[:proxy]
+                        } %>
+                <% end %>
+              </li>
+            <% end %>
+          </ul>
+        </section>
+      <% end %>
+    </div>
+  </div>
+</div>

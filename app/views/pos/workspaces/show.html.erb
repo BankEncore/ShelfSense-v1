@@ -1,7 +1,4 @@
 <% content_for :title, "Register #{@register.register_number}" %>
-<div class="pos-register-shell">
-  <%= render "pos/shell/header" %>
-  <%= render "pos/shell/status" %>
+<%= render layout: "pos/shell/frame" do %>
   <%= render "pos/workspaces/surface" %>
-  <%= render "pos/shell/cluster" %>
-</div>
+<% end %>

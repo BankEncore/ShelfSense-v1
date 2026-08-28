@@ -54,23 +54,25 @@ module PosRegisterShellHelper
     opened_at.in_time_zone(zone).strftime("%d %b %y %I:%M %P")
   end
 
-  def register_cluster_items
-    kind = @state&.kind
-    items = []
-    items << { label: "Transactions", path: pos_transactions_path }
-    if register_cluster_session_z?(kind)
-      items << { label: "Session / Z Reports", path: pos_reports_path }
-    end
-    x_path = register_cluster_x_path(kind)
-    items << { label: "X Report", path: x_path } if x_path
-    if kind == "own_session"
-      items.concat(register_cluster_till_items)
-    end
-    if can_view_other_sessions?
-      items << { label: "Active Sessions", path: pos_active_sessions_path }
-    end
-    items << { label: "Switch Register", path: pos_switch_register_path }
-    items
+  def register_menu_groups
+    Pos::RegisterMenu.call(
+      kind: register_menu_kind,
+      surface: register_menu_surface,
+      permissions: register_menu_permissions,
+      gate: @gate
+    ).groups
+  end
+
+  def register_menu_presentation(group)
+    group.item_keys.filter_map { |key| register_menu_item(key) }
+  end
+
+  def register_menu_group_label(key)
+    {
+      customer_service: "Customer service",
+      till: "Till",
+      session_and_register: "Session & Register"
+    }.fetch(key)
   end
 
   def register_selector_rows
@@ -107,43 +109,81 @@ module PosRegisterShellHelper
     "Open register"
   end
 
+  def register_enter_proxy_name
+    return "open-session" if @gate&.period.present? && @gate.session.nil?
+    return "resume-register" if @gate&.own_session?
+
+    "open-register"
+  end
+
   private
 
-  def register_cluster_session_z?(kind)
-    return true if %w[closed between_sessions own_session].include?(kind)
-    return can_view_other_sessions? if kind == "occupied"
+  MENU_PERMISSION_KEYS = %w[
+    pos.sessions.view
+    gift_cards.cash_out
+    cash.paid_in
+    cash.paid_out
+    cash.move
+  ].freeze
 
-    true
+  def register_menu_kind
+    @state&.kind.presence || "selector"
   end
 
-  def register_cluster_x_path(kind)
-    case kind
-    when "own_session"
-      pos_x_report_path
-    when "occupied"
-      return unless can_view_other_sessions?
-      return if @gate&.session.blank?
+  def register_menu_surface
+    return :switch_register if @switch_register
+    return :workspace if controller_path == "pos/workspaces"
 
-      pos_session_x_report_path(@gate.session)
+    :state_landing
+  end
+
+  def register_menu_permissions
+    MENU_PERMISSION_KEYS.select { |key| pos_permission?(key) }
+  end
+
+  def register_menu_item(key)
+    case key
+    when :transactions
+      { key:, label: "Transactions & Receipts", href: pos_transactions_path }
+    when :gift_card_cash_out
+      { key:, label: "Gift-card cash-out", href: new_pos_cash_out_path }
+    when :paid_in
+      { key:, label: "Paid-in", href: new_pos_cash_paid_in_path }
+    when :paid_out
+      { key:, label: "Paid-out", href: new_pos_cash_paid_out_path }
+    when :drop
+      { key:, label: "Drop", href: new_pos_cash_drop_path }
+    when :replenish
+      { key:, label: "Replenish", href: new_pos_cash_replenishment_path }
+    when :x_report
+      href = register_menu_x_path
+      return if href.blank?
+
+      { key:, label: "X Report", href: href }
+    when :session_z_reports
+      { key:, label: "Session / Z Reports", href: pos_reports_path }
+    when :active_sessions
+      { key:, label: "Active Sessions", href: pos_active_sessions_path }
+    when :switch_register
+      { key:, label: "Switch Register", href: pos_switch_register_path }
+    when :open_register
+      { key:, label: "Open Register", proxy: "open-register" }
+    when :open_session
+      { key:, label: "Open Session", proxy: "open-session" }
+    when :finalize_z
+      { key:, label: "Finalize Z", proxy: "finalize-z" }
+    when :close_session
+      { key:, label: "Close Session", proxy: "close-session" }
+    when :return_to_shelfsense
+      { key:, label: "Return to ShelfSense", href: root_path, leave: true }
     end
   end
 
-  def register_cluster_till_items
-    items = []
-    if pos_permission?("gift_cards.cash_out")
-      items << { label: "Gift-card cash-out", path: new_pos_cash_out_path }
-    end
-    if pos_permission?("cash.paid_in")
-      items << { label: "Paid-in", path: new_pos_cash_paid_in_path }
-    end
-    if pos_permission?("cash.paid_out")
-      items << { label: "Paid-out", path: new_pos_cash_paid_out_path }
-    end
-    items << { label: "Drop", path: new_pos_cash_drop_path }
-    if pos_permission?("cash.move")
-      items << { label: "Replenish", path: new_pos_cash_replenishment_path }
-    end
-    items
+  def register_menu_x_path
+    return pos_x_report_path if register_menu_kind == "own_session"
+    return if @gate&.session.blank?
+
+    pos_session_x_report_path(@gate.session)
   end
 
   def pos_permission?(key)

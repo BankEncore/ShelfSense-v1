@@ -1,10 +1,7 @@
 <% content_for :title, register_shell_title %>
-<div class="pos-register-shell">
-  <%= render "pos/shell/header" %>
-  <%= render "pos/shell/status" %>
+<%= render layout: "pos/shell/frame" do %>
   <%= render "pos/shell/feedback" %>
   <div class="pos-register-shell__body">
     <%= render "pos/shell/#{@state.kind}" %>
   </div>
-  <%= render "pos/shell/cluster" %>
-</div>
+<% end %>

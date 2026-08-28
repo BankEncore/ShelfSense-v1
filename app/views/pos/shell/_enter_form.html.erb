@@ -27,7 +27,8 @@
     <% end %>
 
     <div class="pos-enter__actions">
-      <%= submit_tag register_enter_submit_label, disabled: @gate.occupied?, class: "btn" %>
+      <%= submit_tag register_enter_submit_label, disabled: @gate.occupied?, class: "btn",
+            data: { register_shell_proxy: register_enter_proxy_name } %>
       <%= action_link_to "Select Another Register", pos_path, style: :outline, intent: :neutral %>
     </div>
   <% end %>
@@ -36,7 +37,7 @@
       <%= hidden_field_tag :expected_lock_version, @gate.period.lock_version %>
       <%= hidden_field_tag :return_to, "enter" %>
       <%= hidden_field_tag :register_id, @register.id %>
-      <%= submit_tag "Finalize Z", class: "btn btn--secondary" %>
+      <%= submit_tag "Finalize Z", class: "btn btn--secondary", data: { register_shell_proxy: "finalize-z" } %>
     <% end %>
   <% end %>
 <% elsif @registers.blank? %>

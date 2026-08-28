@@ -184,7 +184,6 @@ export default class extends Controller {
     settlement: String,
     refundRemaining: Number,
     paymentRemaining: Number,
-    transactionsUrl: String,
     cashOutAllowed: Boolean
   }
 
@@ -219,16 +218,10 @@ export default class extends Controller {
   }
 
   onKeydown(event) {
-    this.requestFunctionKeyLock()
     const functionKey = this.functionKey(event)
     const key = functionKey || event.key
+    if (key === "F10") return
     if (this.claimedFunctionKey(functionKey)) this.claimFunctionKey(event)
-
-    if (key === "F10") {
-      event.preventDefault()
-      this.openTransactions()
-      return
-    }
 
     const overlay = this.activeOverlayElement()
     if (overlay && key === "Tab") {
@@ -781,16 +774,6 @@ export default class extends Controller {
     const types = this.cashierTenderTypes()
     const id = this.hasTenderTypeInputTarget ? this.tenderTypeInputTarget.value : null
     return types.find((type) => type.id === id) || types[0]
-  }
-
-  openTransactions() {
-    if (this.overlayOpen()) {
-      this.showFeedback("Finish or cancel the current dialog before opening Transactions.")
-      return
-    }
-    if (this.modeValue !== "sale_entry" && this.modeValue !== "tender") return
-    if (!this.transactionsUrlValue) return
-    window.location.assign(this.transactionsUrlValue)
   }
 
   showFeedback(message) {
@@ -2445,12 +2428,8 @@ export default class extends Controller {
     this.functionKeyListenersBound = true
     this.onWindowKeydown = (event) => this.onKeydown(event)
     this.onWindowKeyup = (event) => this.suppressBrowserFunctionKeys(event)
-    this.onWorkspacePointerDown = () => this.requestFunctionKeyLock()
     window.addEventListener("keydown", this.onWindowKeydown, true)
     window.addEventListener("keyup", this.onWindowKeyup, true)
-    document.addEventListener("pointerdown", this.onWorkspacePointerDown, true)
-    document.addEventListener("focusin", this.onWorkspacePointerDown, true)
-    this.requestFunctionKeyLock()
   }
 
   unbindFunctionKeyCapture() {
@@ -2458,21 +2437,6 @@ export default class extends Controller {
     this.functionKeyListenersBound = false
     window.removeEventListener("keydown", this.onWindowKeydown, true)
     window.removeEventListener("keyup", this.onWindowKeyup, true)
-    document.removeEventListener("pointerdown", this.onWorkspacePointerDown, true)
-    document.removeEventListener("focusin", this.onWorkspacePointerDown, true)
-    this.releaseFunctionKeyLock()
-  }
-
-  requestFunctionKeyLock() {
-    const keyboard = navigator.keyboard
-    if (!keyboard || typeof keyboard.lock !== "function") return
-    keyboard.lock(["F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10"]).catch(() => {})
-  }
-
-  releaseFunctionKeyLock() {
-    const keyboard = navigator.keyboard
-    if (!keyboard || typeof keyboard.unlock !== "function") return
-    keyboard.unlock()
   }
 
   functionKey(event) {
@@ -2482,7 +2446,7 @@ export default class extends Controller {
   }
 
   claimedFunctionKey(key) {
-    return key === "F1" || key === "F2" || key === "F3" || key === "F4" || key === "F5" || key === "F6" || key === "F7" || key === "F8" || key === "F9" || key === "F10"
+    return key === "F1" || key === "F2" || key === "F3" || key === "F4" || key === "F5" || key === "F6" || key === "F7" || key === "F8" || key === "F9"
   }
 
   claimFunctionKey(event) {
