@@ -1,6 +1,6 @@
 # Slice 4 — Transaction composition
 
-Status: **Implementation-ready.** Slice 3 is on `register-workspace-consolidation` ([#84](https://github.com/BankEncore/ShelfSense-v1/issues/84) / PR #97).
+Status: **Accepted on integration** via [PR #98](https://github.com/BankEncore/ShelfSense-v1/pull/98) (`register-workspace-consolidation`). Issue [#85](https://github.com/BankEncore/ShelfSense-v1/issues/85).
 
 Authority: [plan.md](plan.md), [routing-and-authority.md](routing-and-authority.md), [textual-wireframes.md](textual-wireframes.md) §S4 / P7–P11, [user-stories.md](user-stories.md), Phase 6.7 keys except F10.
 
