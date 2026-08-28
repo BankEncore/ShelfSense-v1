@@ -33,8 +33,8 @@ Used by all four Register states and most Register-supporting surfaces.
 
 ```text
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│ ShelfSense  <Store name>  ·  Register <number>               [F10 Menu]    │
-│ <Business-date status>  ·  <Session/cashier status>       [ShelfSense ↗]   │
+│ <Store> · Register <number>                          [Return to ShelfSense] │
+│ <Business-date status> · Opened… (if any)                      {cashier}   │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │ {STATUS / PRIOR-DATE / BLOCKER STRIP}                                      │
 ├─────────────────────────────────────────────────────────────────────────────┤
@@ -438,7 +438,7 @@ Used when no preferred/selected Register can be resolved or when Switch Register
 
 ```text
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│ ShelfSense  Main Street Books                              [ShelfSense ↗]   │
+│ 001 Main Street Books                                  [Return to ShelfSense] │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │ SELECT A REGISTER                                                           │
 ├─────────────────────────────────────────────────────────────────────────────┤
