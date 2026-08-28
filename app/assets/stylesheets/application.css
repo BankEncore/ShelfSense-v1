@@ -1593,10 +1593,63 @@ input[type="submit"]:disabled,
   min-height: 0;
 }
 
+@media (max-width: 56rem) {
+  .pos-main {
+    grid-template-columns: 1fr;
+  }
+}
+
+.pos-basket-region {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.pos-summary-rail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  padding: var(--space-3);
+}
+
+.pos-totals__title,
+.pos-tenders__title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin: 0 0 var(--space-2);
+}
+
+.pos-tenders__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.pos-tenders__item {
+  margin-bottom: var(--space-2);
+}
+
+.pos-tenders__detail,
+.pos-tenders__empty {
+  font-size: 0.85rem;
+  color: var(--color-text-muted, inherit);
+}
+
+.pos-settlement {
+  margin-top: var(--space-3);
+}
+
 .pos-basket {
   overflow: auto;
   padding: var(--space-3);
   min-width: 0;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .pos-issuances {
@@ -2058,10 +2111,28 @@ input[type="submit"]:disabled,
   padding-block: 0.4rem;
 }
 
-.pos-register-shell .pos-basket,
-.pos-register-shell .pos-totals {
+.pos-register-shell .pos-basket-region,
+.pos-register-shell .pos-summary-rail {
+  min-height: 0;
+}
+
+.pos-register-shell .pos-basket-region {
+  overflow: hidden;
+}
+
+.pos-register-shell .pos-summary-rail {
+  overflow: auto;
+}
+
+.pos-register-shell .pos-basket {
   min-height: 0;
   overflow: auto;
+}
+
+.pos-register-shell .pos-totals,
+.pos-register-shell .pos-tenders {
+  min-height: 0;
+  overflow: visible;
 }
 
 .pos-register-shell .pos-enter,

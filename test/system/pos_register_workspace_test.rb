@@ -60,12 +60,13 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     field = find("#pos-command-field")
     field.fill_in with: "10.00"
     field.send_keys :enter
-    assert_selector ".pos-totals", text: "External Card"
+    assert_selector "#pos_tenders", text: "External Card"
+    assert_no_selector "#pos_totals", text: "External Card"
     assert_text "Amount due"
     assert_equal "pos-command-field", page.evaluate_script("document.activeElement && document.activeElement.id")
     click_on "Return to sale"
     assert_text "SALE ENTRY"
-    assert_no_selector ".pos-totals", text: "External Card"
+    assert_no_selector "#pos_tenders", text: "External Card"
 
     click_on "Tender (+)"
     send_keys :f2
@@ -73,7 +74,8 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     field = find("#pos-command-field")
     field.fill_in with: "10.00"
     field.send_keys :enter
-    assert_selector ".pos-totals", text: "External Card"
+    assert_selector "#pos_tenders", text: "External Card"
+    assert_no_selector "#pos_totals", text: "External Card"
     assert_text "Amount due"
     field = find("#pos-command-field")
     field.send_keys :f1
@@ -612,11 +614,13 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     field = find("#pos-command-field")
     field.fill_in with: "10.00"
     field.send_keys :enter
-    assert_selector ".pos-totals", text: "External Card"
+    assert_selector "#pos_tenders", text: "External Card"
+    assert_no_selector "#pos_totals", text: "External Card"
     choose_register_menu "Transactions & Receipts"
     assert_text "Transactions"
     click_on "Register"
-    assert_selector ".pos-totals", text: "External Card"
+    assert_selector "#pos_tenders", text: "External Card"
+    assert_no_selector "#pos_totals", text: "External Card"
     assert_text "Example Book"
   end
 

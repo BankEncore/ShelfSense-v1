@@ -43,6 +43,11 @@ class PosRegisterTest < ActionDispatch::IntegrationTest
     transaction = PosTransaction.working.find_by!(pos_session: PosSession.open.find_by!(register: @register))
     assert_match "SALE ENTRY", response.body
     assert_match "Scan or identifier", response.body
+    assert_select ".pos-summary-rail #pos_totals"
+    assert_select ".pos-summary-rail #pos_tenders"
+    assert_select "#pos_totals ~ #pos_tenders"
+    assert_select "#pos_totals", text: /Net/
+    refute_match(/\bSales\b/, css_select("#pos_totals").text)
 
     get pos_register_workspace_path
     assert_response :success
@@ -52,6 +57,11 @@ class PosRegisterTest < ActionDispatch::IntegrationTest
     assert_response :success
     transaction.reload
     assert_equal 1, transaction.pos_transaction_lines.count
+    assert_select "#pos_totals", text: /Merchandise/
+    assert_select "#pos_totals", text: /Illinois State/
+    assert_select "#pos_tenders ~ .pos-settlement"
+    assert_match "Amount due", css_select(".pos-settlement").text
+    refute_match(/\bSales\b/, css_select("#pos_totals").text)
 
     post pos_register_tender_path, params: { tender_amount: "25.00", lock_version: transaction.lock_version }
     assert_response :success

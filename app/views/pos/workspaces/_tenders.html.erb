@@ -1,0 +1,39 @@
+<% workspace = @workspace %>
+
+<section id="pos_tenders" class="pos-tenders" aria-labelledby="pos-tenders-title">
+  <h2 id="pos-tenders-title" class="pos-tenders__title">Applied tenders</h2>
+  <% if workspace.tender_rows.any? %>
+    <ul class="pos-tenders__list">
+      <% workspace.tender_rows.each do |tender| %>
+        <li class="pos-tenders__item">
+          <div class="pos-tenders__label"><%= tender.label %></div>
+          <div class="pos-tenders__amount"><%= format_money_cents(tender.amount_cents) %></div>
+          <% if tender.presented_cents.present? %>
+            <div class="pos-tenders__detail">
+              Presented <%= format_money_cents(tender.presented_cents) %>
+              <% if tender.change_cents.to_i.positive? %>
+                · Change <%= format_money_cents(tender.change_cents) %>
+              <% end %>
+            </div>
+          <% end %>
+        </li>
+      <% end %>
+    </ul>
+  <% else %>
+    <p class="pos-tenders__empty">No tenders applied</p>
+  <% end %>
+</section>
+
+<div class="pos-settlement">
+  <% workspace.settlement_cues.each do |cue| %>
+    <% if cue.kind == :change %>
+      <div class="pos-totals__change"><%= cue.label %> <%= format_money_cents(cue.amount_cents) %></div>
+    <% elsif cue.kind == :even_exchange || cue.kind == :settled %>
+      <div><%= cue.label %></div>
+    <% elsif cue.kind == :refund_due %>
+      <div class="pos-totals__due"><%= cue.label %> <%= format_money_cents(cue.amount_cents) %></div>
+    <% elsif cue.kind == :amount_due %>
+      <div class="pos-totals__due"><%= cue.label %> <%= format_money_cents(cue.amount_cents) %></div>
+    <% end %>
+  <% end %>
+</div>

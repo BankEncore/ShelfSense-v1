@@ -1,0 +1,81 @@
+<% lines = @lines %>
+<% selected_id = @selected_line&.id %>
+
+<div id="pos_basket" class="pos-basket">
+  <table class="pos-lines">
+    <thead>
+      <tr>
+        <th>Qty</th>
+        <th>Description</th>
+        <th class="numeric">Unit</th>
+        <th class="numeric">Ext</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% lines.each do |line| %>
+        <% original = line.original_transaction_line&.pos_transaction %>
+        <tr class="<%= [ ("is-selected" if line.id == selected_id), ("is-controlled" if pos_line_controlled?(line)) ].compact.join(" ") %>"
+            data-line-id="<%= line.id %>"
+            data-quantity="<%= line.quantity %>"
+            data-description="<%= pos_line_description(line) %>"
+            data-direction="<%= line.direction %>"
+            data-linked-return="<%= line.linked_return? %>"
+            data-unit-line="<%= line.unit_line? %>"
+            data-price-overridden="<%= line.price_overridden? %>"
+            data-discounted="<%= line.manually_discounted? %>"
+            data-tax-overridden="<%= line.tax_class_overridden? %>"
+            data-selling-cents="<%= line.selling_unit_price_cents %>"
+            data-discount-bp="<%= line.manual_discount_basis_points %>"
+            data-tax-class-id="<%= line.tax_class_id %>"
+            data-pricing-method-snapshot="<%= line.pricing_method_snapshot %>"
+            aria-selected="<%= line.id == selected_id %>">
+          <td><%= line.id == selected_id ? ">" : "" %> <%= line.quantity %></td>
+          <td>
+            <div class="pos-line__title">
+              <%= line.return? ? "RETURN · " : "" %><%= pos_basket_line_title(line) %>
+            </div>
+            <% metadata = pos_basket_line_metadata(line) %>
+            <% if metadata.any? %>
+              <div class="pos-line__meta">
+                <% metadata.each_with_index do |part, index| %>
+                  <%= " · " if index.positive? %>
+                  <% if part[:mono] %>
+                    <span class="pos-line__id"><%= part[:text] %></span>
+                  <% else %>
+                    <%= part[:text] %>
+                  <% end %>
+                <% end %>
+              </div>
+            <% end %>
+            <% if pos_line_controlled?(line) %>
+              <span class="pos-line-flags"><%= pos_line_control_flags(line) %></span>
+            <% end %>
+            <% if line.linked_return? %>
+              <div class="pos-line__provenance">
+                <% if original %>From <%= original.transaction_reference %><% end %>
+                <% if line.return_reason_name_snapshot.present? %>
+                  <%= original ? " · " : "" %><%= line.return_reason_name_snapshot %>
+                <% end %>
+              </div>
+            <% elsif line.unlinked_return? %>
+              <div class="pos-line__provenance">
+                Unlinked return
+                <% if line.return_reason_name_snapshot.present? %>
+                  · <%= line.return_reason_name_snapshot %>
+                <% end %>
+              </div>
+              <% if pos_unlinked_return_price_adjusted?(line) %>
+                <div class="pos-line__provenance">
+                  Reference <%= format_money_cents(line.reference_unit_price_cents) %>
+                  · Return <%= format_money_cents(line.selling_unit_price_cents) %>
+                </div>
+              <% end %>
+            <% end %>
+          </td>
+          <td class="numeric"><%= format_money_cents(line.selling_unit_price_cents) %></td>
+          <td class="numeric"><%= format_signed_money_cents(pos_line_amount_cents(line)) %></td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+</div>

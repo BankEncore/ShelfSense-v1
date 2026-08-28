@@ -1,0 +1,59 @@
+<% issuances = @issuances %>
+<% gift_card_programs = @gift_card_programs %>
+<% register_scope = { register_id: @register.id } %>
+<% workspace = @workspace %>
+
+<% if issuances.any? || (@ui_mode == "sale_entry" && gift_card_programs.any?) %>
+  <section class="pos-issuances" aria-label="Gift cards">
+    <h2 class="pos-issuances__title">Gift cards</h2>
+    <% issuances.each do |issuance| %>
+      <div class="pos-issuance">
+        <%= issuance.activation? ? "Activation" : "Reload" %>
+        · <%= format_money_cents(issuance.amount_cents) %>
+        <% if issuance.masked_card_snapshot.present? || issuance.pending_card_number_last_four.present? %>
+          · <%= issuance.masked_card_snapshot.presence || "#{issuance.pending_card_number_prefix}••••#{issuance.pending_card_number_last_four}" %>
+        <% elsif issuance.gift_card_program %>
+          · <%= issuance.gift_card_program.name %>
+        <% end %>
+        <% if workspace.issuance_remove_available %>
+          <%= button_to "Remove",
+                pos_register_remove_stored_value_issuance_path(register_scope),
+                method: :post,
+                params: { lock_version: @transaction.lock_version, register_id: @register.id, issuance_id: issuance.id },
+                form: { data: { turbo: true } },
+                class: "btn btn--ghost" %>
+        <% end %>
+      </div>
+    <% end %>
+    <% if @ui_mode == "sale_entry" && gift_card_programs.any? %>
+      <%= form_with url: pos_register_stored_value_issuance_path(register_scope), method: :post, class: "pos-issuance-form" do %>
+        <%= hidden_field_tag :register_id, @register.id %>
+        <%= hidden_field_tag :lock_version, @transaction.lock_version %>
+        <label>
+          Type
+          <select name="issuance_type">
+            <option value="activation">Activation</option>
+            <option value="reload">Reload</option>
+          </select>
+        </label>
+        <label>
+          Program
+          <select name="gift_card_program_id">
+            <% gift_card_programs.each do |program| %>
+              <option value="<%= program.id %>"><%= program.name %></option>
+            <% end %>
+          </select>
+        </label>
+        <label>
+          Amount
+          <input name="issuance_amount" inputmode="decimal" autocomplete="off">
+        </label>
+        <label>
+          Card number
+          <input name="card_number" autocomplete="off" data-register-workspace-target="issuanceCardNumber">
+        </label>
+        <%= submit_tag "Add gift card", class: "btn btn--solid btn--brand" %>
+      <% end %>
+    <% end %>
+  </section>
+<% end %>
