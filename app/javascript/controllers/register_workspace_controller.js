@@ -207,6 +207,7 @@ export default class extends Controller {
     }
     this.enableReadyActions()
     this.restoreFocus()
+    this.scrollSelectedRowIntoView()
     if (this.hasFeedbackTarget && /customer is required/i.test(this.feedbackTarget.textContent || "")) {
       this.openCustomerOverlay()
     }
@@ -2095,6 +2096,13 @@ export default class extends Controller {
     })
     this.syncSelectedLine()
     this.enableReadyActions()
+    this.scrollSelectedRowIntoView()
+  }
+
+  scrollSelectedRowIntoView() {
+    const row = this.selectedRow()
+    if (!row || typeof row.scrollIntoView !== "function") return
+    row.scrollIntoView({ block: "nearest", inline: "nearest" })
   }
 
   overlayOpen() {
