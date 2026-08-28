@@ -32,15 +32,19 @@ Tracker: [milestone Register workspace consolidation](https://github.com/BankEnc
 
 **Outcome:** F10 is Register Menu on every Register state. Destination cluster and duplicate nav are gone.
 
+**Planning:** [slice3-f10-plan.md](slice3-f10-plan.md) (packet amendment, MVP menu matrix, task breakdown).
+
 **Acceptance:**
 
-- [ ] Explicit supersession of 6.7 §6 F10 row and §14 F10 history entry
-- [ ] Transactions remains reachable; working basket preserved
+- [ ] Explicit supersession of 6.7 §6 F10 row and §14 F10 history entry (docs updated in the same PR)
+- [ ] Transactions remains reachable via menu; working basket preserved
 - [ ] F10 suppressed while a blocking overlay is open
-- [ ] Menu filtered by state and permission
+- [ ] Menu filtered by state and permission; wireframe items without routes deferred to 6A–6C
 - [ ] Reverse Cash nav removed; reverse route/service remain
 - [ ] Other 6.7 keys unchanged
-- [ ] System tests retarget “click Transactions” / F10→history
+- [ ] Destination cluster and duplicate Register nav deleted
+- [ ] System tests retarget cluster clicks → menu; F10 opens menu not history
+- [ ] Keyboard Lock still covers F10 on Register shell states
 
 ## Slice 4 — Transaction composition
 

@@ -22,7 +22,7 @@ This program uses a long-lived integration branch because an incomplete Register
 |---|---|---|
 | 1 Packet / test matrix | **Accepted** on `main` (this change) | — |
 | 2 Shell and state routing | This PR | [#83](https://github.com/BankEncore/ShelfSense-v1/issues/83) |
-| 3 F10 and navigation | Not started | [#84](https://github.com/BankEncore/ShelfSense-v1/issues/84) |
+| 3 F10 and navigation | Planning draft ([slice3-f10-plan.md](slice3-f10-plan.md)); blocked on Slice 2 merge | [#84](https://github.com/BankEncore/ShelfSense-v1/issues/84) |
 | 4 Transaction composition | Not started | [#85](https://github.com/BankEncore/ShelfSense-v1/issues/85) |
 | 5A Lookup overlays | Not started | [#86](https://github.com/BankEncore/ShelfSense-v1/issues/86) |
 | 5B Return overlays | Not started | [#87](https://github.com/BankEncore/ShelfSense-v1/issues/87) |
