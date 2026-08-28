@@ -6,7 +6,7 @@ Tracker: [milestone Register workspace consolidation](https://github.com/BankEnc
 
 ## Slice 2 — Shell and state routing
 
-**Outcome:** `/pos` is state-aware Register entry. Generic POS Home is gone. Existing workspace is wrapped in the shared shell. Temporary destination cluster preserves eligible destinations.
+**Outcome:** `/pos` is state-aware Register entry. Generic POS Home is gone. Existing workspace is wrapped in the shared shell. Temporary destination cluster preserves eligible destinations. Shell containment keeps state bodies and the scan field reachable at workstation zoom.
 
 **Acceptance:**
 
@@ -19,22 +19,32 @@ Tracker: [milestone Register workspace consolidation](https://github.com/BankEnc
 - [ ] POST enter / occupied denial / leftover period unchanged
 - [ ] Generic `pos/homes/show` removed
 - [ ] Domain tests remain green
+- [ ] Header business-date language is state-aware (no calculated date presented as established)
+- [ ] Selector / enter / Switch Register content scrolls inside the shell at high zoom; last actions remain reachable
+- [ ] Same-tab **Return to ShelfSense** with custody confirmation when a session is owned
+- [ ] Authorized shell-containment interaction: command above basket, selected-row visibility, printable scan redirection, shell-wide Keyboard Lock reacquisition (no key remap)
+- [ ] Automated system coverage for focused controls, dialog text entry, scanner punctuation, completion modes, shell-to-scan recovery, and lock API unavailability
+- [ ] Manual verification evidence for screen-reader/form-control behavior, real browser navigation, high zoom, and workstation Keyboard Lock
 
-**Exclusions:** F10, composition, overlay migration, new inquiry surfaces.
+**Exclusions:** F10, overlay family migration, new inquiry surfaces, key remapping (7C). Shell-containment composition above is in scope; Slice 4 still owns splitting `_surface`.
 
 ## Slice 3 — F10 and navigation
 
 **Outcome:** F10 is Register Menu on every Register state. Destination cluster and duplicate nav are gone.
 
+**Planning:** [slice3-f10-plan.md](slice3-f10-plan.md) (packet amendment, MVP menu matrix, task breakdown).
+
 **Acceptance:**
 
-- [ ] Explicit supersession of 6.7 §6 F10 row and §14 F10 history entry
-- [ ] Transactions remains reachable; working basket preserved
+- [ ] Explicit supersession of 6.7 §6 F10 row and §14 F10 history entry (docs updated in the same PR)
+- [ ] Transactions remains reachable via menu; working basket preserved
 - [ ] F10 suppressed while a blocking overlay is open
-- [ ] Menu filtered by state and permission
+- [ ] Menu filtered by state and permission; wireframe items without routes deferred to 6A–6C
 - [ ] Reverse Cash nav removed; reverse route/service remain
 - [ ] Other 6.7 keys unchanged
-- [ ] System tests retarget “click Transactions” / F10→history
+- [ ] Destination cluster and duplicate Register nav deleted
+- [ ] System tests retarget cluster clicks → menu; F10 opens menu not history
+- [ ] Keyboard Lock still covers F10 on Register shell states
 
 ## Slice 4 — Transaction composition
 

@@ -3,13 +3,8 @@
 module Pos
   class EntersController < BaseController
     def show
-      if current_store.legal_name.blank?
-        flash.now[:alert] = "This Store cannot use POS until its legal name is configured."
-      end
-      @registers = active_registers
-      @register = find_enter_register || (@registers.one? ? @registers.first : nil)
-      @gate = Pos::OpenGate.for(store: current_store, register: @register, actor: current_user) if @register
-      @opening_float = params[:opening_float]
+      flash.keep
+      redirect_to pos_path({ register_id: params[:register_id].presence }.compact)
     end
 
     def create
@@ -21,7 +16,7 @@ module Pos
       end
 
       float_cents = parse_opening_float
-      result = Pos::EnterRegister.call(
+      Pos::EnterRegister.call(
         store: current_store,
         register: @register,
         actor: current_user,
@@ -32,7 +27,7 @@ module Pos
       write_preferred_register!(@register)
       redirect_to pos_register_workspace_path
     rescue ActiveRecord::RecordNotFound
-      redirect_to pos_register_enter_path, alert: "Select an active register."
+      redirect_to pos_path, alert: "Select an active register."
     rescue Money::ParseCents::Error => e
       fail_enter(e.message)
     rescue Pos::Denied
@@ -42,11 +37,6 @@ module Pos
     end
 
     private
-
-    def find_enter_register
-      from_params = params[:register_id].presence && active_registers.find_by(id: params[:register_id])
-      from_params || preferred_register || find_register
-    end
 
     def parse_opening_float
       gate = Pos::OpenGate.for(store: current_store, register: @register, actor: current_user)
@@ -59,11 +49,10 @@ module Pos
     end
 
     def fail_enter(message)
-      @registers = active_registers
-      @gate = @register && Pos::OpenGate.for(store: current_store, register: @register, actor: current_user)
       @opening_float = params[:opening_float]
       flash.now[:alert] = message
-      render :show, status: :unprocessable_content
+      prepare_register_shell!(resolve_register_state(requested_register: @register))
+      render "pos/homes/show", status: :unprocessable_content
     end
   end
 end

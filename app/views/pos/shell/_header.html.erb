@@ -1,0 +1,24 @@
+<header class="pos-header pos-header--register">
+  <div class="pos-header__row">
+    <div class="pos-header__facts">
+      <span><%= pos_padded_store_number(current_store) %> <%= current_store.name %></span>
+      <% if @register %>
+        <span class="pos-header__sep" aria-hidden="true">|</span>
+        <span><%= pos_padded_register_number(@register) %> <%= @register.name %></span>
+      <% end %>
+    </div>
+    <%= link_to "Return to ShelfSense", root_path,
+          class: "pos-header__link",
+          **register_leave_confirm_options %>
+  </div>
+  <div class="pos-header__row">
+    <div class="pos-header__facts">
+      <span><%= register_header_business_date_text %></span>
+      <% if (opened = register_header_opened_at_label) %>
+        <span class="pos-header__sep" aria-hidden="true">|</span>
+        <span>Opened: <%= opened %></span>
+      <% end %>
+    </div>
+    <span class="pos-header__cashier"><%= current_user.display_name %></span>
+  </div>
+</header>

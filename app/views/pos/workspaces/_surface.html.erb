@@ -10,7 +10,6 @@
   remaining_refund_cents = Pos::Support.remaining_refund_cents(@transaction) if remaining_refund_cents.nil?
   selected_id = @selected_line&.id
   locked = %w[completion_pending completion_failed].include?(@ui_mode)
-  leftover = @session_record.reporting_period.business_date != BusinessDate.for_store(current_store)
   refund_mode = settlement_direction == :refund
   even_exchange = @transaction.even_exchange?
   remaining_cents = refund_mode ? remaining_refund_cents : remaining_payment_cents
@@ -83,29 +82,47 @@
      data-register-workspace-pickup-allowed-value="<%= @pickup_allowed ? "true" : "false" %>"
      data-register-workspace-open-price-url-value="<%= pos_register_open_price_path(register_scope) %>"
      data-action="turbo:submit-end->register-workspace#onSubmitEnd">
-  <div data-register-workspace-target="chrome">
-    <header class="pos-header">
-      <div class="pos-header__row">
-        <span>Store  <%= current_store.admin_label %></span>
-        <span>Register  <%= @register.register_number %></span>
-        <span><%= current_user.display_name %></span>
-        <nav class="pos-header__nav" aria-label="Register">
-          <%= link_to "POS Home", pos_path, class: "pos-header__link" %>
-          <%= link_to "Transactions", pos_transactions_path, class: "pos-header__link" %>
-          <%= link_to "X Report", pos_x_report_path, class: "pos-header__link" %>
-          <% if @ui_mode == "sale_entry" && lines.empty? && tenders.empty? && issuances.empty? %>
-            <%= action_button_to "Close register", pos_register_close_path, style: :outline, intent: :neutral, size: :standard, method: :post,
-                  params: { session_id: @session_record.id, register_id: @register.id } %>
-          <% end %>
-        </nav>
-      </div>
-      <div class="pos-header__date <%= "pos-date-emphasis" if leftover %>">
-        Business date  <%= @session_record.reporting_period.business_date.iso8601 %>
-      </div>
-      <% if leftover %>
-        <p class="pos-banner" role="status">This register is still on business date <%= @session_record.reporting_period.business_date.iso8601 %>.</p>
+  <div data-register-workspace-target="chrome"></div>
+
+    <div id="pos_feedback" class="pos-feedback" data-register-workspace-target="feedback" role="<%= @feedback.present? ? "alert" : "status" %>" aria-live="<%= @feedback.present? ? "assertive" : "polite" %>">
+      <% if @ui_mode == "completion_pending" && @feedback.blank? %>
+        Completing transaction…
+      <% elsif @feedback.present? %>
+        <%= @feedback %>
+        <% if @ui_mode == "completion_failed" %>
+          Tender is kept. Retry does not take it again.
+        <% end %>
       <% end %>
-    </header>
+    </div>
+
+    <div id="pos_command" class="pos-command">
+      <div class="pos-command__mode" data-register-workspace-target="modeLabel"><%= @ui_mode == "sale_entry" || @ui_mode == "quantity" ? pos_mode_label(@ui_mode) : tender_mode_label %></div>
+      <label for="pos-command-field" data-register-workspace-target="fieldLabel"><%= command_label %></label>
+      <input id="pos-command-field"
+             class="pos-command__field"
+             data-register-workspace-target="field"
+             value="<%= command_value %>"
+             inputmode="<%= command_inputmode %>"
+             autocomplete="off"
+             <%= "disabled" if locked || @ui_mode == "completion_pending" %>
+             <%= "autofocus" unless locked || @ui_mode == "completion_failed" || completion_recovery %>>
+      <div data-register-workspace-target="giftCardNumberWrap" hidden>
+        <label for="pos-gift-card-number-field">Gift card number</label>
+        <input id="pos-gift-card-number-field"
+               class="pos-command__field"
+               data-register-workspace-target="giftCardNumberField"
+               autocomplete="off">
+      </div>
+      <div data-register-workspace-target="referenceWrap" <%= "hidden" unless show_reference %>>
+        <label for="pos-reference-field" data-register-workspace-target="referenceLabel">
+          <%= selected_tender_type&.reference_field_label || "Reference" %>
+        </label>
+        <input id="pos-reference-field"
+               class="pos-command__field"
+               data-register-workspace-target="referenceField"
+               autocomplete="off">
+      </div>
+    </div>
 
     <div class="pos-main">
       <div id="pos_basket" class="pos-basket">
@@ -295,46 +312,6 @@
       </aside>
     </div>
 
-    <div id="pos_feedback" class="pos-feedback" data-register-workspace-target="feedback" role="<%= @feedback.present? ? "alert" : "status" %>" aria-live="<%= @feedback.present? ? "assertive" : "polite" %>">
-      <% if @ui_mode == "completion_pending" && @feedback.blank? %>
-        Completing transaction…
-      <% elsif @feedback.present? %>
-        <%= @feedback %>
-        <% if @ui_mode == "completion_failed" %>
-          Tender is kept. Retry does not take it again.
-        <% end %>
-      <% end %>
-    </div>
-
-    <div id="pos_command" class="pos-command">
-      <div class="pos-command__mode" data-register-workspace-target="modeLabel"><%= @ui_mode == "sale_entry" || @ui_mode == "quantity" ? pos_mode_label(@ui_mode) : tender_mode_label %></div>
-      <label for="pos-command-field" data-register-workspace-target="fieldLabel"><%= command_label %></label>
-      <input id="pos-command-field"
-             class="pos-command__field"
-             data-register-workspace-target="field"
-             value="<%= command_value %>"
-             inputmode="<%= command_inputmode %>"
-             autocomplete="off"
-             <%= "disabled" if locked || @ui_mode == "completion_pending" %>
-             <%= "autofocus" unless locked || @ui_mode == "completion_failed" || completion_recovery %>>
-      <div data-register-workspace-target="giftCardNumberWrap" hidden>
-        <label for="pos-gift-card-number-field">Gift card number</label>
-        <input id="pos-gift-card-number-field"
-               class="pos-command__field"
-               data-register-workspace-target="giftCardNumberField"
-               autocomplete="off">
-      </div>
-      <div data-register-workspace-target="referenceWrap" <%= "hidden" unless show_reference %>>
-        <label for="pos-reference-field" data-register-workspace-target="referenceLabel">
-          <%= selected_tender_type&.reference_field_label || "Reference" %>
-        </label>
-        <input id="pos-reference-field"
-               class="pos-command__field"
-               data-register-workspace-target="referenceField"
-               autocomplete="off">
-      </div>
-    </div>
-
     <div id="pos_actions" class="pos-actions">
       <% if completion_recovery %>
         <div class="pos-actions__group" role="group" aria-label="Completion recovery">
@@ -399,7 +376,14 @@
         <%= action_button "Cancel (F9)", style: :outline, intent: :danger, size: :large, disabled: true,
               data: { action: "register-workspace#openOverlay", register_workspace_target: "cancelButton" } %>
       </div>
+      <% if @ui_mode == "sale_entry" && lines.empty? && tenders.empty? && issuances.empty? %>
+        <div class="pos-actions__group" role="group" aria-label="Session">
+          <%= action_button_to "Close Session", pos_register_close_path, style: :outline, intent: :neutral, size: :standard, method: :post,
+                params: { session_id: @session_record.id, register_id: @register.id } %>
+        </div>
+      <% end %>
     </div>
+
 
     <% if effective_permissions.include?("gift_cards.cash_out") %>
       <%= form_with url: lookup_pos_cash_outs_path, method: :post, local: true, html: { class: "pos-hidden", data: { register_workspace_target: "cashOutForm" } } do %>
@@ -519,7 +503,6 @@
       <%= hidden_field_tag :register_id, @register.id %>
       <%= hidden_field_tag :lock_version, @transaction.lock_version %>
     <% end %>
-  </div>
 
   <div class="pos-overlay"
        id="pos_overlay"

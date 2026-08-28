@@ -57,12 +57,11 @@ module Pos
     end
 
     def render_enter(message)
-      @register = active_registers.find_by(id: params[:register_id]) || @period.register
-      @registers = active_registers
-      @gate = Pos::OpenGate.for(store: current_store, register: @register, actor: current_user)
       @opening_float = params[:opening_float]
       flash.now[:alert] = message
-      render "pos/enters/show", status: :unprocessable_content
+      register = active_registers.find_by(id: params[:register_id]) || @period.register
+      prepare_register_shell!(resolve_register_state(requested_register: register))
+      render "pos/homes/show", status: :unprocessable_content
     end
   end
 end

@@ -1545,7 +1545,31 @@ input[type="submit"]:disabled,
 .pos-header__row {
   display: flex;
   justify-content: space-between;
+  align-items: baseline;
   gap: var(--space-4);
+}
+
+.pos-header--register {
+  font-variant-numeric: tabular-nums;
+}
+
+.pos-header--register .pos-header__row + .pos-header__row {
+  margin-top: var(--space-1);
+}
+
+.pos-header__facts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  min-width: 0;
+}
+
+.pos-header__sep {
+  margin: 0 0.5em;
+}
+
+.pos-header__cashier {
+  flex-shrink: 0;
 }
 
 .pos-header__date,
@@ -1938,6 +1962,122 @@ input[type="submit"]:disabled,
 
 .pos-header__link {
   margin-left: auto;
+}
+
+.pos-register-shell {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-width: min(1280px, 100%);
+  height: 100vh;
+  height: 100dvh;
+  max-height: 100vh;
+  max-height: 100dvh;
+  overflow: hidden;
+}
+
+.pos-register-shell > .pos-banner,
+.pos-register-shell > .pos-feedback,
+.pos-register-shell > .pos-enter__alert {
+  margin-inline: var(--space-5);
+}
+
+.pos-register-shell__body {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+}
+
+.pos-register-shell .pos-shell {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.pos-register-shell .pos-shell > #pos_feedback {
+  flex: 0 0 auto;
+  min-height: 2.5rem;
+  padding-block: var(--space-2);
+  border-top: none;
+}
+
+.pos-register-shell .pos-shell > #pos_command {
+  flex: 0 0 auto;
+  padding-block: var(--space-2);
+  border-top: none;
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.pos-register-shell .pos-shell > #pos_command .pos-command__field {
+  font-size: 1.1rem;
+  padding: var(--space-1) var(--space-2);
+  margin-top: var(--space-1);
+}
+
+.pos-register-shell .pos-shell > .pos-main {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: hidden;
+  grid-template-rows: minmax(0, 1fr);
+  align-items: stretch;
+}
+
+.pos-register-shell .pos-shell > .pos-actions {
+  flex: 0 0 auto;
+  padding-block: var(--space-2);
+}
+
+.pos-register-shell .pos-shell > .pos-actions .btn {
+  padding-block: 0.4rem;
+}
+
+.pos-register-shell .pos-basket,
+.pos-register-shell .pos-totals {
+  min-height: 0;
+  overflow: auto;
+}
+
+.pos-register-shell .pos-enter,
+.pos-register-shell > .pos-enter {
+  flex: 1 1 auto;
+  width: auto;
+  max-width: none;
+  min-width: 0;
+  min-height: 0;
+  margin: var(--space-5);
+  overflow: auto;
+}
+
+.pos-register-cluster {
+  display: flex;
+  flex-wrap: wrap;
+  flex: 0 1 auto;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-5);
+  border-top: 1px solid var(--color-border);
+  min-height: 0;
+  max-height: 5.5rem;
+  overflow: auto;
+}
+
+.pos-register-selector {
+  width: 100%;
+  border-collapse: collapse;
+  margin: var(--space-4) 0;
+}
+
+.pos-register-selector th,
+.pos-register-selector td {
+  text-align: left;
+  padding: var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+  vertical-align: middle;
 }
 
 .pos-home {

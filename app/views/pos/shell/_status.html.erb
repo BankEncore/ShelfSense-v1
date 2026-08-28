@@ -1,0 +1,35 @@
+<% if @gate&.occupied? %>
+  <div class="pos-banner" role="status">
+    <strong>IN USE</strong>
+    <%= @gate.occupier.display_name %> currently has custody of Register <%= pos_padded_register_number(@register) %>.
+  </div>
+<% elsif @gate&.leftover_period? %>
+  <div class="pos-banner pos-date-emphasis" role="status">
+    <strong>PRIOR BUSINESS DATE STILL OPEN</strong>
+    Register <%= pos_padded_register_number(@register) %> remains on <%= @gate.business_date.iso8601 %>. Opening a session will continue that date.
+  </div>
+<% elsif @state&.kind == "between_sessions" %>
+  <div class="pos-banner" role="status">
+    <strong>BETWEEN SESSIONS</strong>
+    Business date <%= @gate.business_date.iso8601 %> remains open. Open another session or finalize Z.
+  </div>
+<% elsif @state&.kind == "closed" %>
+  <div class="pos-banner" role="status">
+    <strong>REGISTER CLOSED</strong>
+    Opening will establish the business date and begin cashier custody.
+  </div>
+<% elsif @state&.kind == "selector" %>
+  <div class="pos-banner" role="status">
+    <strong>SELECT A REGISTER</strong>
+  </div>
+<% end %>
+<% if register_multiple_owned_warning? %>
+  <div class="pos-banner" role="status">
+    You have more than one open session. Resume the Register you want to continue. Switching does not close the others.
+  </div>
+<% elsif register_custody_warning? %>
+  <div class="pos-banner" role="status">
+    Register <%= pos_padded_register_number(@owned_sessions.first.register) %> remains open under your session.
+    Selecting Register <%= pos_padded_register_number(@register) %> will not close it.
+  </div>
+<% end %>

@@ -17,7 +17,7 @@
 
     <div class="pos-close__actions">
       <button type="button" class="btn" data-action="pos-receipt#print">Print</button>
-      <%= link_to "POS Home", pos_path, class: "btn btn--secondary" %>
+      <%= link_to "Register", pos_path, class: "btn btn--secondary" %>
       <% if @session_record.cashier_user_id == current_user.id %>
         <%= link_to "Resume Register", pos_register_workspace_path(register_id: @register.id), class: "btn" %>
       <% end %>

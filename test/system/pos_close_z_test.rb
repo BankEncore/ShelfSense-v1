@@ -23,8 +23,8 @@ class PosCloseZTest < ApplicationSystemTestCase
 
   test "empty sale entry can close with a blind zero count and finalize z" do
     open_register(opening_float: "100.00")
-    assert_button "Close register"
-    click_on "Close register"
+    assert_button "Close Session"
+    click_on "Close Session"
     assert_text "Closing Cash count"
     assert_no_text "Expected"
     assert_no_text "Opening float"
@@ -53,7 +53,7 @@ class PosCloseZTest < ApplicationSystemTestCase
   test "completed sale can print and close the register" do
     open_register(opening_float: "100.00")
     add_current_sku
-    assert_no_button "Close register"
+    assert_no_button "Close Session"
     click_on "Tender (+)"
     field = find("#pos-command-field")
     field.fill_in with: "25.00"
@@ -86,11 +86,11 @@ class PosCloseZTest < ApplicationSystemTestCase
     add_current_sku
     click_on "Quantity (*)"
     assert_text "QUANTITY"
-    assert_no_button "Close register"
+    assert_no_button "Close Session"
     find("#pos-command-field").send_keys :escape
     click_on "Tender (+)"
     assert_text "CASH TENDER"
-    assert_no_button "Close register"
+    assert_no_button "Close Session"
   end
 
   test "cashier can complete the phase 5 open sell print close and z path" do

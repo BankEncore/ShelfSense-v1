@@ -3,9 +3,9 @@
 module Pos
   class PreferredRegistersController < BaseController
     def new
-      @registers = active_registers
-      @register = preferred_register || find_register || (@registers.one? ? @registers.first : nil)
+      @switch_register = true
       @open_session = cashier_target_session
+      prepare_register_shell!
     end
 
     def create

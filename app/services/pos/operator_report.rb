@@ -5,19 +5,20 @@ module Pos
     Group = Struct.new(:title, :rows, keyword_init: true)
     Row = Struct.new(:label, :cents, :format, keyword_init: true)
 
-    def self.session(totals:, session:, kind:)
-      new(kind: kind, totals: totals, session: session).groups
+    def self.session(totals:, session:, kind:, include_expected_cash: true)
+      new(kind: kind, totals: totals, session: session, include_expected_cash: include_expected_cash).groups
     end
 
     def self.period(period:)
       new(kind: :z, totals: Pos::PeriodTotals.for(period), period: period).groups
     end
 
-    def initialize(kind:, totals:, session: nil, period: nil)
+    def initialize(kind:, totals:, session: nil, period: nil, include_expected_cash: true)
       @kind = kind
       @totals = totals
       @session = session
       @period = period
+      @include_expected_cash = include_expected_cash
     end
 
     def groups
@@ -92,15 +93,16 @@ module Pos
     def cash_rows
       case @kind
       when :x
-        [
+        rows = [
           money_row("Opening float", @session.opening_float_cents),
           money_row("Cash payments", @totals.cash_payment_cents),
           money_row("Cash refunds", @totals.cash_refund_cents),
           money_row("Gift-card cash-outs", @totals.gift_card_cash_out_cents),
           money_row("Gift-card cash-out reversals", @totals.gift_card_cash_out_reversal_cents),
-          signed_row("Non-sale cash", @totals.cash_movement_cents),
-          signed_row("Expected Cash", @totals.expected_cash_cents)
+          signed_row("Non-sale cash", @totals.cash_movement_cents)
         ]
+        rows << signed_row("Expected Cash", @totals.expected_cash_cents) if @include_expected_cash
+        rows
       when :session
         [
           money_row("Opening float", @session.opening_float_cents),

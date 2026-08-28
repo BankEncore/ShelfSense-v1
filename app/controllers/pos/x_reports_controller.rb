@@ -16,7 +16,12 @@ module Pos
       @register = @session_record.register
       @period = @session_record.reporting_period
       @totals = Pos::SessionTotals.for(@session_record)
-      @report_groups = Pos::OperatorReport.session(totals: @totals, session: @session_record, kind: :x)
+      @report_groups = Pos::OperatorReport.session(
+        totals: @totals,
+        session: @session_record,
+        kind: :x,
+        include_expected_cash: can_view_expected_cash?
+      )
     end
 
     private

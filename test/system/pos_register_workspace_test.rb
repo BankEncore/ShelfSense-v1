@@ -269,7 +269,64 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
   test "empty basket disables cancel" do
     open_register
     assert_button "Cancel (F9)", disabled: true
-    assert_button "Close register"
+    assert_button "Close Session"
+  end
+
+  test "command field stays clickable above the destination cluster" do
+    open_register
+    field = find("#pos-command-field")
+    hit = page.evaluate_script(<<~JS.squish)
+      (function() {
+        var el = document.getElementById("pos-command-field");
+        var box = el.getBoundingClientRect();
+        var top = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
+        return Boolean(top && (top === el || el.contains(top)));
+      })()
+    JS
+    assert hit, "command field must not be covered by shell chrome"
+    field.click
+    field.send_keys @variant.sku, :enter
+    assert_selector "tbody tr.is-selected", text: "Example Book", wait: 10
+    command_top = command_field_top
+    basket_top = page.evaluate_script("document.getElementById('pos_basket').getBoundingClientRect().top")
+    assert command_top < basket_top, "command field must sit above the basket"
+  end
+
+  test "typed identifiers reach the command field after clicking the header" do
+    open_register
+    find(".pos-header__cashier").click
+    send_keys @variant.sku, :enter
+    assert_selector "tbody tr.is-selected", text: "Example Book", wait: 10
+  end
+
+  test "basket scrolls to keep the selected line in view" do
+    variants = 6.times.map do |index|
+      variant = pos_sellable_variant(actor: @actor, tax_class: @tax, name: "Scroll Book #{index}")
+      open_quantity_stock(store: @store, variant: variant, actor: @actor, quantity: 2)
+      variant
+    end
+
+    open_register
+    page.execute_script("var s=document.createElement('style'); s.id='pos-basket-scroll-probe'; s.textContent='#pos_basket{max-height:90px!important}'; document.head.appendChild(s);")
+    variants.each do |variant|
+      field = find("#pos-command-field")
+      field.fill_in with: variant.sku
+      field.send_keys :enter
+      assert_selector "tbody tr.is-selected", text: "Scroll Book", wait: 10
+    end
+    assert_selector "tbody tr.is-selected", text: "Scroll Book 5"
+    assert selected_row_fully_in_basket?, "newly selected line must stay in the basket viewport"
+
+    page.execute_script("document.getElementById('pos_basket').scrollTop = 0")
+    refute selected_row_fully_in_basket?, "precondition: selected line starts out of view"
+
+    send_keys :arrow_down
+    assert_selector "tbody tr.is-selected", text: "Scroll Book 5"
+    assert selected_row_fully_in_basket?, "selection change must scroll the highlighted line into view"
+
+    5.times { send_keys :arrow_up }
+    assert_selector "tbody tr.is-selected", text: "Scroll Book 0"
+    assert selected_row_fully_in_basket?, "arrow selection must scroll the highlighted line into view"
   end
 
   test "quantity mode prefills and invalid quantity stays in quantity" do
@@ -325,7 +382,7 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     send_keys :enter
     assert_text "Transaction complete"
     visit pos_register_workspace_path
-    assert_text "Open register"
+    assert_text "Resume Register"
   end
 
   test "unknown identifier feedback does not move the command field" do
@@ -733,6 +790,19 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
 
   def command_field_top
     page.evaluate_script("document.getElementById('pos-command-field').getBoundingClientRect().top")
+  end
+
+  def selected_row_fully_in_basket?
+    page.evaluate_script(<<~JS.squish)
+      (function() {
+        var basket = document.getElementById("pos_basket");
+        var row = document.querySelector(".pos-lines tbody tr.is-selected");
+        if (!basket || !row) return false;
+        var basketBox = basket.getBoundingClientRect();
+        var rowBox = row.getBoundingClientRect();
+        return rowBox.top >= basketBox.top - 1 && rowBox.bottom <= basketBox.bottom + 1;
+      })()
+    JS
   end
 
   def seed_in_flight_completion

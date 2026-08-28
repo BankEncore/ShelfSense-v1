@@ -1,33 +1,49 @@
 <% content_for :title, "Switch register" %>
+<div class="pos-register-shell">
+  <%= render "pos/shell/header" %>
+  <%= render "pos/shell/status" %>
+  <%= render "pos/shell/feedback" %>
+  <div class="pos-register-shell__body">
+    <section class="pos-enter">
+      <h1>Switch Register</h1>
+      <% if @open_session %>
+        <p class="pos-banner" role="status">
+          <strong>Register <%= pos_padded_register_number(@open_session.register) %> is still open under your Session. Changing your preferred Register will not close it.</strong>
+        </p>
+      <% end %>
 
-<main class="pos-home">
-  <h1>Switch register</h1>
-
-  <% if alert.present? %>
-    <p class="pos-enter__alert" role="alert"><%= alert %></p>
-  <% end %>
-
-  <% if @open_session %>
-    <p class="pos-banner" role="status">
-      <strong>Register <%= pos_padded_register_number(@open_session.register) %> is still open under your Session. Changing your preferred Register will not close it.</strong>
-    </p>
-  <% end %>
-
-  <% if @registers.blank? %>
-    <p>No active register is available in this store.</p>
-    <%= link_to "Cancel", pos_path, class: "btn btn--secondary" %>
-  <% else %>
-    <%= form_with url: pos_preferred_register_path, method: :post, class: "pos-enter__form" do %>
-      <div class="form-field">
-        <label for="register_id">Preferred register</label>
-        <%= select_tag :register_id,
-              options_from_collection_for_select(@registers, :id, :admin_label, @register&.id),
-              include_blank: (@registers.many? ? "Select a register" : false) %>
-      </div>
-      <div class="pos-enter__actions">
-        <%= submit_tag "Change Preferred Register", class: "btn" %>
-        <%= link_to "Cancel", pos_path, class: "btn btn--secondary" %>
-      </div>
-    <% end %>
-  <% end %>
-</main>
+      <% if @registers.blank? %>
+        <p>No active register is available in this store.</p>
+      <% else %>
+        <table class="pos-register-selector">
+          <thead>
+            <tr>
+              <th>Register</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% register_selector_rows.each do |row| %>
+              <tr>
+                <td>
+                  <%= row[:register].admin_label %>
+                  <% if preferred_register&.id == row[:register].id %>
+                    · Current preference
+                  <% end %>
+                </td>
+                <td><%= row[:status] %></td>
+                <td>
+                  <%= action_link_to "View", row[:view_path], style: :outline, intent: :neutral %>
+                  <%= button_to "Make Preferred", pos_preferred_register_path, method: :post, params: { register_id: row[:register].id }, class: "btn btn--secondary" %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      <% end %>
+      <%= action_link_to "Cancel", pos_path, style: :ghost, intent: :neutral %>
+    </section>
+  </div>
+  <%= render "pos/shell/cluster" %>
+</div>

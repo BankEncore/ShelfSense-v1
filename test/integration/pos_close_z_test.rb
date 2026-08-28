@@ -59,7 +59,7 @@ class PosCloseZTest < ActionDispatch::IntegrationTest
   test "empty sale entry can initiate close and cancel the empty ticket" do
     post pos_register_enter_path, params: enter_params(opening_float: "100.00")
     follow_redirect!
-    assert_match "Close register", response.body
+    assert_match "Close Session", response.body
     transaction = PosTransaction.working.find_by!(register: @register)
     session_record = transaction.pos_session
 
@@ -82,7 +82,7 @@ class PosCloseZTest < ActionDispatch::IntegrationTest
     transaction = PosTransaction.working.find_by!(register: @register)
     post pos_register_merchandise_path, params: { identifier: @variant.sku, lock_version: transaction.lock_version }
     get pos_register_workspace_path
-    assert_no_match "Close register", response.body
+    assert_no_match "Close Session", response.body
 
     post pos_register_close_path, params: { session_id: transaction.pos_session_id }
     assert_redirected_to pos_register_workspace_path
@@ -217,6 +217,7 @@ class PosCloseZTest < ActionDispatch::IntegrationTest
     assert_select "a[href='#{pos_register_enter_path(register_id: @register.id)}']", text: "Leave period open"
 
     get pos_register_enter_path(register_id: @register.id)
+    follow_redirect!
     assert_response :success
     assert_match "Finalize Z", response.body
     assert_match "Open session", response.body
@@ -227,6 +228,7 @@ class PosCloseZTest < ActionDispatch::IntegrationTest
   test "open current-date period with no session offers finalize z and open session" do
     Pos::OpenReportingPeriod.call(store: @store, register: @register, actor: @actor)
     get pos_register_enter_path, params: { register_id: @register.id }
+    follow_redirect!
     assert_response :success
     assert_match "Finalize Z", response.body
     assert_match "Open session", response.body
@@ -239,6 +241,7 @@ class PosCloseZTest < ActionDispatch::IntegrationTest
     travel_to Time.current + 1.day do
       UserSession.where(user: @actor).update_all(last_seen_at: Time.current)
       get pos_register_enter_path, params: { register_id: @register.id }
+      follow_redirect!
       assert_response :success
       assert_match "This register is still on business date #{leftover_date.iso8601}.", response.body
       assert_match "Finalize Z", response.body
@@ -314,8 +317,9 @@ class PosCloseZTest < ActionDispatch::IntegrationTest
       register_id: @register.id
     }
     assert_response :unprocessable_content
+    assert_select "h1", text: "Open Session"
     assert_match "Open session", response.body
-    refute_match(/Z report/i, response.body)
+    assert_select "h1", text: /Z report/i, count: 0
     assert period.reload.open?
     assert_nil period.finalized_transaction_count
   end
@@ -359,6 +363,7 @@ class PosCloseZTest < ActionDispatch::IntegrationTest
     assert_response :not_found
 
     get pos_register_enter_path, params: { register_id: @register.id }
+    follow_redirect!
     assert_match "Finalize Z", response.body
     post pos_reporting_period_finalize_path(period), params: {
       expected_lock_version: period.lock_version,

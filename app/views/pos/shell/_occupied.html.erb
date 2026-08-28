@@ -1,0 +1,16 @@
+<section class="pos-enter" aria-labelledby="register-occupied-heading">
+  <h1 id="register-occupied-heading">Register in use</h1>
+  <dl class="pos-home__facts">
+    <div><dt>Register</dt><dd><%= @register.admin_label %></dd></div>
+    <div><dt>Business date</dt><dd><%= @gate.business_date.iso8601 %></dd></div>
+    <div><dt>Accountable cashier</dt><dd><%= @gate.occupier.display_name %></dd></div>
+    <div><dt>Session opened</dt><dd><%= format_store_timestamp(@gate.session.opened_at, current_store) %></dd></div>
+  </dl>
+  <p id="occupied-register" role="alert">
+    Register <%= @register.admin_label %> is open for <%= @gate.occupier.display_name %>.
+  </p>
+  <div class="pos-enter__actions">
+    <%= action_link_to "Select Another Register", pos_path, style: :outline, intent: :neutral %>
+    <%= action_link_to "Return to ShelfSense", root_path, style: :ghost, intent: :neutral, **register_leave_confirm_options %>
+  </div>
+</section>

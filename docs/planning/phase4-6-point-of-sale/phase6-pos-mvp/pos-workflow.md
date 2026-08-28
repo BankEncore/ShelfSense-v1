@@ -106,6 +106,10 @@ Selling stays on the dedicated POS layout. GET still does not mutate.
 
 ## 4. POS Home and Register chrome
 
+**Superseded by Register workspace consolidation Slice 2.** `GET /pos` is state-aware Register entry (selector / closed / between sessions / occupied; own session uses the existing workspace). Generic POS Home markup is gone. Preferred Register remains a signed cookie and never confers a session. X Report remains live open-session totals and is not offered without an open session. Switch Register remains an explicit POST preference change.
+
+Historical 6.7 §4 text below is not implementation authority after Slice 2.
+
 ### 4.1 `GET /pos` — `POS_HOME`
 
 POS layout, no selling scan field. Independent of Session.

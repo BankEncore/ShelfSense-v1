@@ -82,19 +82,21 @@ Preserve every **currently eligible** destination:
 | Destination | Closed | Between sessions | Own session | Occupied |
 |---|---|---|---|---|
 | Transactions | Yes | Yes | Yes | Yes |
-| Session/Z Reports | Yes | Yes | Yes | Permission-controlled |
-| X Report | No current X | Historical/report entry | Own X | Permission-controlled |
+| Session/Z Reports | Yes | Yes | Yes | `pos.sessions.view` |
+| X Report | No | No | Own X | `pos.sessions.view` |
 | Till operations | No | No | Yes | No |
 | Active Sessions | Permission-controlled | Permission-controlled | Permission-controlled | Permission-controlled |
 | Switch Register | Yes | Yes | Yes | Yes |
+
+**X Report exists only for an open session.** Between sessions has no current X. Historical totals stay under Session/Z Reports, never labeled X.
 
 Reverse Cash is **not** in the cluster (overexposure). Keep the reverse **route and service** until Slice 6B.
 
 ## Expected cash
 
-Hide expected till/session cash totals unless `Authorization::PermissionEvaluator.allowed?(user:, permission_key: "cash.view_expected_before_count", store:)`.
+Hide **before-count** expected till/session totals unless `Authorization::PermissionEvaluator.allowed?(user:, permission_key: "cash.view_expected_before_count", store:)`.
 
-Introduce `can_view_expected_cash?` (helper wrapping that check) and use it on the shell, Till Activity, X/session details, cash forms, and close. Known operation effects (drop −$300 / safe +$300) may still show. Availability errors may say the amount exceeds available session cash without revealing expected totals.
+`can_view_expected_cash?` is a POS controller `helper_method`. Open-session X omits Expected Cash without that permission. Closed-session and finalized Z reconciliation snapshots stay visible after count. Known operation effects (drop −$300 / safe +$300) may still show. Availability errors may say the amount exceeds available session cash without revealing expected totals.
 
 ## Stored-value inquiry (Slice 6A)
 
