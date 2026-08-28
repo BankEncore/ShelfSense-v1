@@ -65,7 +65,7 @@ class PosRegisterTest < ActionDispatch::IntegrationTest
     assert_select "#pos_totals .pos-money-row__amount", minimum: 1
     refute_match(/\+\$/, css_select("#pos_totals").text)
     assert_select "#pos_tenders ~ .pos-settlement"
-    assert_match "Amount due", css_select(".pos-settlement").text
+    assert_match "Balance due", css_select(".pos-settlement").text
     refute_match(/\bSales\b/, css_select("#pos_totals").text)
 
     post pos_register_tender_path, params: { tender_amount: "25.00", lock_version: transaction.lock_version }
@@ -162,7 +162,7 @@ class PosRegisterTest < ActionDispatch::IntegrationTest
     }
     assert_response :success
     assert_match "External Card", response.body
-    assert_match "Amount due", response.body
+    assert_match "Balance due", response.body
     transaction.reload
     cash = TenderType.find_by!(code: "cash")
     post pos_register_tender_path, params: {

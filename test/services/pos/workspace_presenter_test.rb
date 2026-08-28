@@ -101,7 +101,7 @@ class PosWorkspacePresenterTest < ActiveSupport::TestCase
     assert returns_row.signed_cents.negative?
     assert(result.tax_groups.all? { |group| group.signed_cents.negative? })
     assert_equal "SALE ENTRY", result.mode_label
-    assert_equal "Refund due", result.settlement_cues.first.label
+    assert_equal "Refund remaining", result.settlement_cues.first.label
 
     tender_result = present(transaction, ui_mode: "tender", settlement_direction: :refund,
                             remaining_refund_cents: -transaction.signed_net_cents)
@@ -315,7 +315,7 @@ class PosWorkspacePresenterTest < ActiveSupport::TestCase
 
     assert_equal [ :settled ], result.settlement_cues.map(&:kind)
     assert_equal "Settled", result.settlement_cues.first.label
-    refute(result.settlement_cues.any? { |cue| cue.kind == :amount_due || cue.kind == :change })
+    refute(result.settlement_cues.any? { |cue| cue.kind == :balance_due || cue.kind == :change })
   end
 
   test "exact refund shows Settled" do
@@ -350,7 +350,7 @@ class PosWorkspacePresenterTest < ActiveSupport::TestCase
     assert_equal "Settled", result.settlement_cues.first.label
   end
 
-  test "partial payment shows Amount due" do
+  test "partial payment shows Balance due" do
     transaction = start_sale
     Pos::AddTender.call(
       transaction: transaction,
@@ -369,11 +369,11 @@ class PosWorkspacePresenterTest < ActiveSupport::TestCase
       settlement_direction: :payment,
       remaining_payment_cents: remaining
     )
-    assert_equal [ :amount_due ], payment.settlement_cues.map(&:kind)
+    assert_equal [ :balance_due ], payment.settlement_cues.map(&:kind)
     assert_equal remaining, payment.settlement_cues.first.amount_cents
   end
 
-  test "partial refund shows Refund due" do
+  test "partial refund shows Refund remaining" do
     original = complete_cash_sale!
     refund_txn = Pos::StartTransaction.call(session: @context[:session], actor: @actor)
     Pos::ExecuteUnlinkedReturn.call(
@@ -403,7 +403,7 @@ class PosWorkspacePresenterTest < ActiveSupport::TestCase
       settlement_direction: :refund,
       remaining_refund_cents: remaining_refund
     )
-    assert_equal [ :refund_due ], refund.settlement_cues.map(&:kind)
+    assert_equal [ :refund_remaining ], refund.settlement_cues.map(&:kind)
     assert_equal remaining_refund, refund.settlement_cues.first.amount_cents
   end
 
@@ -491,7 +491,7 @@ class PosWorkspacePresenterTest < ActiveSupport::TestCase
 
     assert_reconciles!(result, transaction)
     assert_equal "Even exchange", result.settlement_cues.first.label
-    refute(result.settlement_cues.any? { |cue| cue.kind == :amount_due || cue.kind == :refund_due })
+    refute(result.settlement_cues.any? { |cue| cue.kind == :balance_due || cue.kind == :refund_remaining })
   end
 
   private

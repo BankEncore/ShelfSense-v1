@@ -62,7 +62,7 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     field.send_keys :enter
     assert_selector "#pos_tenders", text: "External Card"
     assert_no_selector "#pos_totals", text: "External Card"
-    assert_text "Amount due"
+    assert_text "Balance due"
     assert_equal "pos-command-field", page.evaluate_script("document.activeElement && document.activeElement.id")
     click_on "Return to sale"
     assert_text "SALE ENTRY"
@@ -76,7 +76,7 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     field.send_keys :enter
     assert_selector "#pos_tenders", text: "External Card"
     assert_no_selector "#pos_totals", text: "External Card"
-    assert_text "Amount due"
+    assert_text "Balance due"
     field = find("#pos-command-field")
     field.send_keys :f1
     assert_selector "[data-register-workspace-target='fieldLabel']", text: /Cash presented/

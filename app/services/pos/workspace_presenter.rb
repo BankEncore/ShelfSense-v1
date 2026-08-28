@@ -135,7 +135,7 @@ module Pos
 
     def remaining_label
       amount = format_money(remaining_cents)
-      refund_mode? ? "Refund due #{amount}" : "Amount due #{amount}"
+      refund_mode? ? "Refund remaining #{amount}" : "Balance due #{amount}"
     end
 
     def command_label
@@ -304,9 +304,9 @@ module Pos
           cues << SettlementCue.new(kind: :change, label: "CHANGE", amount_cents: cash_payment.change_cents.to_i)
         end
       elsif refund_mode?
-        cues << SettlementCue.new(kind: :refund_due, label: "Refund due", amount_cents: @remaining_refund_cents)
+        cues << SettlementCue.new(kind: :refund_remaining, label: "Refund remaining", amount_cents: @remaining_refund_cents)
       elsif @settlement_direction == :payment
-        cues << SettlementCue.new(kind: :amount_due, label: "Amount due", amount_cents: @remaining_payment_cents)
+        cues << SettlementCue.new(kind: :balance_due, label: "Balance due", amount_cents: @remaining_payment_cents)
       end
 
       cues

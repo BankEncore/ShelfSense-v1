@@ -37,7 +37,7 @@
       <div class="pos-money-row pos-money-row--emphasis">
         <span class="pos-money-row__label"><%= cue.label %></span>
       </div>
-    <% elsif cue.kind == :refund_due || cue.kind == :amount_due %>
+    <% elsif cue.kind == :refund_remaining || cue.kind == :balance_due %>
       <div class="pos-money-row pos-money-row--emphasis pos-totals__due">
         <span class="pos-money-row__label"><%= cue.label %></span>
         <span class="pos-money-row__amount"><%= format_money_cents(cue.amount_cents) %></span>
