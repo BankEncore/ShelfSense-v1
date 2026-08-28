@@ -2,7 +2,7 @@
 
 **Status:** Implemented. Implementation authority for cashier interaction: POS Home, preferred Register, X Report, keyboard contract, merchandise pickers, `/` search, open-price Standard, return entry, and tender selection **until the Register workspace consolidation owning slice merges**.
 
-Staged supersession is locked in [routing-and-authority.md](../../register-workspace-consolidation/routing-and-authority.md): Slice 2 replaces §4 (POS Home); Slice 3 replaces the §6 F10 binding and §14 F10 history entry (not history behavior); Slice 7C may replace the remainder of §6 after an accepted keyboard contract. Until those slices merge, this document remains lock.
+Staged supersession is locked in [routing-and-authority.md](../../register-workspace-consolidation/routing-and-authority.md): Slice 2 replaces §4 (POS Home); Slice 3 replaces the §6 F10 binding and §14 F10 history entry (not history behavior); Slice 7C may replace the remainder of §6 after an accepted keyboard contract. Until Slice 7C, remaining §6 keys remain lock.
 
 **Authority:** How the cashier operates MVP capabilities that 6.1–6.6 already made commercially true. Completion, inventory posting, settlement math, controlled-action *policy*, linked/unlinked return *engines*, and post-void *facts* remain those contracts. Receipt *print layout* is 6.8 ([receipt-presentation.md](receipt-presentation.md) / [mvp-closeout.md](mvp-closeout.md)).
 
@@ -211,12 +211,12 @@ The cookie confers neither authorization nor Session ownership.
 | F7 | line discount on selected sale line |
 | F8 | remove selected line or selected tender |
 | F9 | cancel confirmation; second F9 confirms cancel |
-| F10 | Transactions (§14) |
+| F10 | Register Menu (Slice 3). Transactions & Receipts is a menu destination; working basket unchanged. |
 | ↑ / ↓ | move highlight in lists / selected line in `SALE_ENTRY` |
 
 Intercept `/`, `*`, `-`, `+` only when the primary field is **empty** (same pattern as today’s `*` / `+`). A hyphen or slash inside a typed/scanned identifier is not Return or Search.
 
-Extend Keyboard Lock to F1–F10. Phase 10.4 binds F5 to stored-value tenders (6.7 left it unbound). Postpone Ctrl/Cmd/Alt.
+Extend Keyboard Lock to F1–F10 **on the selling workspace**. Other Register shell surfaces lock F10 only (Slice 3). Phase 10.4 binds F5 to stored-value tenders (6.7 left it unbound). Postpone Ctrl/Cmd/Alt.
 
 Every shortcut has a visible, focusable control. Unavailable keys explain why (§12.2) — no silent no-op for F1–F5 / F6 / F7 / F8 / `*` / `+` when the cashier has reason to think they should work.
 
@@ -553,9 +553,9 @@ Errors: transient above scan (next input replaces); blocking inside the current 
 
 Recoverable field/action errors (invalid price, missing reason/note, approver credentials, policy denial until approval is supplied) keep the current dialog open: same non-secret values, error inside the overlay, password fields cleared and never echoed. Stale lock, completed transaction, or other invalidated commercial basis close the dialog and refresh the workspace.
 
-Disable F10 while a blocking modal is open:
+Disable F10 while a blocking modal is open (does not open the Register Menu):
 
-> Finish or cancel the current dialog before opening Transactions.
+> Finish or cancel the current dialog before opening the Register Menu.
 
 ---
 
@@ -563,7 +563,9 @@ Disable F10 while a blocking modal is open:
 
 **Post-void remains history-only in 6.7.** No selling-workspace hotkey and no POS Home shortcut to initiate post-void.
 
-**F10** (and visible Transactions): completed transaction history; current working basket remains untouched. Does not cancel, suspend, clear, or complete. Returning to the Register resumes the same persisted working transaction.
+**Superseded by Register workspace consolidation Slice 3.** F10 opens the Register Menu. **Transactions & Receipts** is a menu destination. History search, linked-return, and working-basket preservation are unchanged. F10 never cancels, suspends, clears, or completes the working transaction. While a blocking overlay is open, F10 does not open the menu.
+
+Historical 6.7 F10→Transactions entry below is not implementation authority after Slice 3.
 
 ---
 
@@ -611,7 +613,7 @@ Merge gate each letter: Phase 5 all-Cash Standard path still green; GET still do
 14. Receipt barcode lookup is exact `transaction_reference`; lines are chosen, not auto-returned.
 15. F1–F4 select tenders; unavailable keys explain why; `+` is Cash (or Cash refund) with remaining prefilled.
 16. Cancel confirmation ignores Enter.
-17. F10 leaves the working basket intact; F10 is disabled while a blocking modal is open.
+17. F10 opens the Register Menu and leaves the working basket intact; F10 is disabled while a blocking modal is open.
 18. Post-void is not offered from Home or the selling keymap.
 19. Phase 5 all-Cash Standard path remains green.
 

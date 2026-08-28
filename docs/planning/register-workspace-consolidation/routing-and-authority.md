@@ -9,10 +9,10 @@ Status: **Accepted** with Slice 1.
 | Slice | Supersedes |
 |---|---|
 | 2 | Phase 6.7 **§4** POS Home and Register-entry chrome |
-| 3 | Phase 6.7 **§6 F10 binding** and **§14 F10 transaction-history entry** |
+| 3 | Phase 6.7 **§6 F10 binding** and **§14 F10 transaction-history entry** (done in this slice) |
 | 7C | The remainder of Phase 6.7 **§6** and any affected Enter/Escape/modal sections, after acceptance of the replacement keyboard contract |
 
-Slice 3 supersedes **F10 as the direct entry to Transactions**. It does **not** supersede transaction-history behavior, search, linked-return workflow, or working-basket preservation.
+Slice 3 supersedes **F10 as the direct entry to Transactions**. It does **not** supersede transaction-history behavior, search, linked-return workflow, or working-basket preservation. F10 opens the Register Menu; Transactions & Receipts remains a menu destination.
 
 Until Slice 7C, all other 6.7 keys (`F1`–`F9`, `/`, `-`, `.`, `*`, `+`, Enter, Escape) remain lock.
 
@@ -73,9 +73,11 @@ Helpers/presenters own user-facing language (including **Your session — Resume
 | Register from another store | ignore/reject |
 | Missing `pos.transact` | existing POS authorization denial |
 
-## Temporary destination cluster (Slice 2 only)
+## Register Menu (Slice 3)
 
-One partial, one eligibility policy, **deleted in Slice 3**. Not a literal copy of POS Home buttons on every state.
+One shell overlay, one eligibility policy (`Pos::RegisterMenu`). Capability keys by `kind`, `surface` (`:state_landing`, `:workspace`, `:switch_register`), and permission. Helper owns labels and routes. In-page Open/Close/Finalize are live proxies to existing forms.
+
+Keyboard Lock is owned by the Register shell: F1–F10 when `#pos_workspace` is present, otherwise F10 only.
 
 Preserve every **currently eligible** destination:
 
@@ -90,7 +92,7 @@ Preserve every **currently eligible** destination:
 
 **X Report exists only for an open session.** Between sessions has no current X. Historical totals stay under Session/Z Reports, never labeled X.
 
-Reverse Cash is **not** in the cluster (overexposure). Keep the reverse **route and service** until Slice 6B.
+Reverse Cash is **not** in the menu (overexposure). Keep the reverse **route and service** until Slice 6B.
 
 ## Expected cash
 
@@ -115,12 +117,12 @@ Three labeled find paths — not one field that might accept a complete number o
 | `pos_path` | Slice 2: state resolver. Stop treating as POS Home. |
 | `pos_register_enter_path` GET/POST | Keep; POST remains mutating entry. GET may be absorbed into closed/between bodies. |
 | `pos_register_workspace_path` | Keep; wrap in shell (Slice 2); recompose `_surface` (Slice 4). |
-| `pos_transactions_path` / show | Keep; F10 destination (Slice 3); compose as Transactions & Receipts (Slice 6A). |
-| `pos_x_report_path`, session X | Keep; cluster then F10; shell integration Slice 6C. |
-| `pos_reports_path`, closed session, Z | Keep; cluster then F10; Slice 6C. |
+| `pos_transactions_path` / show | Keep; F10 menu destination; compose as Transactions & Receipts (Slice 6A). |
+| `pos_x_report_path`, session X | Keep; F10; shell integration Slice 6C. |
+| `pos_reports_path`, closed session, Z | Keep; F10; Slice 6C. |
 | `pos_active_sessions_path` | Keep; permission-filtered; Slice 6B enhancements. |
 | `pos_switch_register_path` | Keep; selector. |
-| Cash paid-in/out, drop, replenish, cash-out | Keep services; cluster (own session) then F10 Till; frames later. |
+| Cash paid-in/out, drop, replenish, cash-out | Keep services; F10 Till (own session); frames later. |
 | `pos_cash_reversals_path` | Remove **nav** Slice 3; remove generic launcher Slice 6B if no other caller. Keep service. |
 | Workspace merchandise/tender/return posts | Keep endpoints; migrate overlay markup in 5A–5D. |
 | Session close, period finalize | Keep full surfaces; F10 launches them. |
