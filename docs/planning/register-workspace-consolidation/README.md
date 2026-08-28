@@ -19,6 +19,8 @@ This program **replaces** the current POS presentation. It does not run a parall
 | [textual-wireframes.md](textual-wireframes.md) | Companion composition contracts (not 6.7 authority) |
 | [slice4-composition-plan.md](slice4-composition-plan.md) | Locked Slice 4 presenter / summary / DOM contracts |
 | [slice4-manual-verification.md](slice4-manual-verification.md) | Slice 4 workstation evidence |
+| [slice5a-lookup-overlays-plan.md](slice5a-lookup-overlays-plan.md) | Locked Slice 5A overlay lifecycle / lookup contracts |
+| [slice5a-manual-verification.md](slice5a-manual-verification.md) | Slice 5A workstation evidence |
 
 UX adoption: follow [ux-adoption-template.md](../ux-design-system/ux-adoption-template.md) in the slice that materially changes a screen. Printed receipts stay locked unless a slice explicitly owns print.
 
