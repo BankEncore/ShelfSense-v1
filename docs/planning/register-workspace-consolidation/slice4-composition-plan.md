@@ -60,7 +60,11 @@ Invariant: `summary_rows.sum(&:signed_cents) == transaction.signed_net_cents`.
 
 Omit zero rows only when the formula remains understandable. Omit zero-net tax groups unless needed to explain a nonzero formula.
 
+**Forbidden:** label `Sales`; using `sale_total_cents` as a summary row (it already includes tax).
+
 ### Tax grouping
+
+Working sale/return lines persist provisional `pos_line_tax_components` through `Pos::Support.apply_provisional_tax!` so the presenter stays query-free and can group tax without calling `Pos::Tax::Calculate`.
 
 `PosLineTaxComponent#tax_cents` is nonnegative; direction lives on the line:
 

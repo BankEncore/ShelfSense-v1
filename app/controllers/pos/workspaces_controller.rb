@@ -541,11 +541,12 @@ module Pos
       @lines = @transaction.pos_transaction_lines.includes(
         :inventory_unit,
         :pos_controlled_actions,
+        :pos_line_tax_components,
         product_variant: [ :product, :merchandise_condition ],
         original_transaction_line: :pos_transaction
-      )
+      ).to_a
       @tenders = @transaction.pos_tenders.ordered.to_a
-      @issuances = @transaction.pos_stored_value_issuances.ordered.to_a
+      @issuances = @transaction.pos_stored_value_issuances.ordered.includes(:gift_card_program).to_a
       @gift_card_programs = GiftCardProgram.active.admin_ordered.to_a
       @tender = @tenders.find { |tender| pos_workspace_cash_payment?(tender) }
       @settlement_direction = Pos::Support.settlement_direction(@transaction)
@@ -571,7 +572,7 @@ module Pos
         permission_key: "customer_requests.pickup",
         store: current_store
       )
-      @feedback ||= nil
+      @feedback ||= flash[:alert].presence || flash.now[:alert].presence
       @command_value ||= nil
       if Pos::Support.exact_settlement?(@transaction)
         mint_or_restore_completion!
@@ -588,6 +589,29 @@ module Pos
         @ui_mode ||= "sale_entry"
         @auto_complete = false
       end
+      @workspace = build_workspace_presenter
+    end
+
+    def build_workspace_presenter
+      Pos::WorkspacePresenter.call(
+        transaction: @transaction,
+        lines: @lines,
+        tenders: @tenders,
+        issuances: @issuances,
+        selected_line: @selected_line,
+        selected_tender_type: @selected_tender_type,
+        ui_mode: @ui_mode,
+        settlement_direction: @settlement_direction,
+        remaining_payment_cents: @remaining_payment_cents,
+        remaining_refund_cents: @remaining_refund_cents,
+        command_value: @command_value,
+        feedback: @feedback,
+        action_capabilities: {
+          pickup_available: @pickup_allowed,
+          gift_card_programs_available: @gift_card_programs.any?,
+          close_session_available: @ui_mode == "sale_entry" && @lines.empty? && @tenders.empty? && @issuances.empty?
+        }
+      )
     end
 
     def apply_completion_view_state
