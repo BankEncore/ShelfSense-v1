@@ -1475,41 +1475,99 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     open_register
     click_on "Add gift card"
     assert_selector "#pos_issuance_overlay", visible: true
+    assert page.evaluate_script("document.activeElement === document.getElementById('pos-issuance-amount')")
     select "Store generated", from: "pos-issuance-program"
     assert_selector "[data-register-workspace-target='issuanceCardWrap']", visible: :hidden
-    click_on "Add Gift Card"
+    find("#pos-issuance-amount").send_keys :enter
     assert_selector "#pos-issuance-feedback", text: /issuance amount/i
     assert_selector "#pos_issuance_overlay", visible: true
     find("#pos-issuance-amount").fill_in with: "25.00"
-    click_on "Add Gift Card"
+    find("#pos-issuance-amount").send_keys :enter
     assert_no_selector "#pos_issuance_overlay", visible: true, wait: 10
     assert_selector ".pos-issuance", text: /Activation/
     assert_selector ".pos-issuance", text: "$25.00"
     assert_equal 1, PosTransaction.working.find_by!(register: @register).pos_stored_value_issuances.count
   end
 
-  test "O10 manual program shows card field and scan while open populates it" do
+  test "O10 card visibility follows program authority and reload" do
+    GiftCards::Programs.seed!
+    open_register
+    click_on "Add gift card"
+    assert_selector "#pos_issuance_overlay", visible: true
+
+    select "Store generated", from: "pos-issuance-program"
+    select "Activation", from: "pos-issuance-type"
+    assert_selector "[data-register-workspace-target='issuanceCardWrap']", visible: :hidden
+
+    select "Reload", from: "pos-issuance-type"
+    assert_selector "#pos-issuance-card", visible: true
+    assert page.evaluate_script("document.activeElement === document.getElementById('pos-issuance-card')")
+
+    find("#pos-issuance-card").fill_in with: "80100000000000000001"
+    select "Activation", from: "pos-issuance-type"
+    assert_selector "[data-register-workspace-target='issuanceCardWrap']", visible: :hidden
+    assert_equal "", find("#pos-issuance-card", visible: :all).value
+
+    select "Physical / external", from: "pos-issuance-program"
+    select "Activation", from: "pos-issuance-type"
+    assert_selector "#pos-issuance-card", visible: true
+    select "Reload", from: "pos-issuance-type"
+    assert_selector "#pos-issuance-card", visible: true
+  end
+
+  test "O10 reload of system-generated card succeeds through scan-or-enter field" do
+    GiftCards::Programs.seed!
+    program = GiftCardProgram.find_by!(code: "generated")
+    card = GiftCards::ProvisionInstrument.call(program: program, store: @store)
+    GiftCards::Fund.call(gift_card: card, amount_cents: 500, store: @store, performed_by: @actor)
+    number = card.number
+
+    open_register
+    click_on "Add gift card"
+    find("#pos-issuance-amount").fill_in with: "10.00"
+    select "Store generated", from: "pos-issuance-program"
+    select "Reload", from: "pos-issuance-type"
+    assert_selector "#pos-issuance-card", visible: true
+    card_field = find("#pos-issuance-card")
+    card_field.click
+    card_field.send_keys number
+    assert_equal number, card_field.value
+    card_field.send_keys :enter
+    assert_no_selector "#pos_issuance_overlay", visible: true, wait: 10
+    assert_selector ".pos-issuance", text: /Reload/
+    assert_selector ".pos-issuance", text: "$10.00"
+    issuance = PosTransaction.working.find_by!(register: @register).pos_stored_value_issuances.sole
+    assert_equal "reload", issuance.issuance_type
+    assert_equal card.id, issuance.gift_card_id
+  end
+
+  test "O10 manual activation accepts card typed into focused scan field" do
     GiftCards::Programs.seed!
     program = GiftCardProgram.find_by!(code: "manual")
     number = GiftCards::Number.generate(program)
     open_register
     click_on "Add gift card"
     assert_selector "#pos_issuance_overlay", visible: true
+    find("#pos-issuance-amount").fill_in with: "15.00"
     select "Physical / external", from: "pos-issuance-program"
     assert_selector "#pos-issuance-card", visible: true
-    find("#pos-command-field", visible: :all)
-    # Scan while O10 open routes into the overlay card field.
-    page.execute_script(<<~JS)
-      const el = document.getElementById("pos_workspace")
-      const controller = window.Stimulus.getControllerForElementAndIdentifier(el, "register-workspace")
-      controller.fieldTarget.value = #{number.to_json}
-      controller.handleGiftCardScan({ found: false, number_authority: "manual_external" })
-    JS
-    assert_equal number, find("#pos-issuance-card").value
-    find("#pos-issuance-amount").fill_in with: "15.00"
-    click_on "Add Gift Card"
+    card_field = find("#pos-issuance-card")
+    card_field.click
+    card_field.send_keys number, :enter
     assert_no_selector "#pos_issuance_overlay", visible: true, wait: 10
     assert_selector ".pos-issuance", text: /Activation/
+    assert_equal 1, PosTransaction.working.find_by!(register: @register).pos_stored_value_issuances.count
+  end
+
+  test "O11 tender rows are numbered for selection without scrolling" do
+    open_register
+    add_current_sku
+    click_on "Tender (+)"
+    assert_selector "#pos_other_overlay", visible: true
+    assert_selector "#pos_other_overlay li.is-selected", text: /\A1\s+Cash\z/
+    assert_selector "#pos_other_overlay li", text: /\A2\s+External Card\z/
+    choose_tender_from_overlay("Cash")
+    assert_text "CASH TENDER"
   end
 
   private

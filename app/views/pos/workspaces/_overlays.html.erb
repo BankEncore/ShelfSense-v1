@@ -169,7 +169,7 @@
       <h2 id="pos-other-title" data-register-workspace-target="otherTitle">Add tender</h2>
       <p class="muted" data-register-workspace-target="otherSettlementLabel"></p>
       <ul class="pos-picker" role="listbox" aria-labelledby="pos-other-title" data-register-workspace-target="otherList"></ul>
-      <p class="muted">Enter or Choose Tender selects the highlighted type. Esc goes back.</p>
+      <p class="muted">Numbered rows identify types. Enter or Choose Tender selects the highlighted type. Esc goes back.</p>
       <div class="pos-overlay__actions">
         <%= action_button "Back", style: :outline, intent: :neutral, size: :standard,
               data: { action: "register-workspace#dismissTenderPicker", register_workspace_target: "otherCancel" } %>
@@ -189,15 +189,12 @@
     <div class="pos-overlay__panel pos-overlay__panel--control">
       <h2 id="pos-issuance-title">Add gift card</h2>
       <p id="pos-issuance-feedback" class="pos-overlay__error" data-overlay-error role="alert"></p>
-      <label for="pos-issuance-type">Type</label>
-      <select id="pos-issuance-type" class="pos-command__field" data-register-workspace-target="issuanceTypeField"
-              data-action="change->register-workspace#syncIssuanceCardVisibility">
-        <option value="activation">Activation</option>
-        <option value="reload">Reload</option>
-      </select>
+      <label for="pos-issuance-amount">Amount</label>
+      <input id="pos-issuance-amount" class="pos-command__field" data-register-workspace-target="issuanceAmountField"
+             inputmode="decimal" autocomplete="off">
       <label for="pos-issuance-program">Program</label>
       <select id="pos-issuance-program" class="pos-command__field" data-register-workspace-target="issuanceProgramField"
-              data-action="change->register-workspace#syncIssuanceCardVisibility">
+              data-action="change->register-workspace#onIssuanceFieldChange">
         <option value="">Select program</option>
         <% (@gift_card_programs || []).each do |program| %>
           <option value="<%= program.id %>"
@@ -205,13 +202,16 @@
                   data-reload-allowed="<%= program.reload_allowed? %>"><%= program.name %></option>
         <% end %>
       </select>
-      <label for="pos-issuance-amount">Amount</label>
-      <input id="pos-issuance-amount" class="pos-command__field" data-register-workspace-target="issuanceAmountField"
-             inputmode="decimal" autocomplete="off">
+      <label for="pos-issuance-type">Type</label>
+      <select id="pos-issuance-type" class="pos-command__field" data-register-workspace-target="issuanceTypeField"
+              data-action="change->register-workspace#onIssuanceFieldChange">
+        <option value="activation">Activation</option>
+        <option value="reload">Reload</option>
+      </select>
       <div data-register-workspace-target="issuanceCardWrap">
-        <label for="pos-issuance-card">Card number</label>
+        <label for="pos-issuance-card">Scan or enter card</label>
         <input id="pos-issuance-card" class="pos-command__field" data-register-workspace-target="issuanceCardNumber"
-               autocomplete="off">
+               autocomplete="off" inputmode="numeric">
       </div>
       <p class="muted" data-register-workspace-target="issuanceResultLabel"></p>
       <div class="pos-overlay__actions">

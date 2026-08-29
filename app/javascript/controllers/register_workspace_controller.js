@@ -788,7 +788,8 @@ export default class extends Controller {
     types.forEach((type, index) => {
       const item = document.createElement("li")
       item.dataset.tenderTypeId = type.id
-      item.textContent = type.name
+      item.dataset.tenderIndex = String(index + 1)
+      item.textContent = `${index + 1}  ${type.name}`
       this.decoratePickerItem(item, { selected: index === 0 })
       item.addEventListener("click", () => this.onPickerItemClick(this.otherListTarget, item))
       this.otherListTarget.append(item)
@@ -2145,6 +2146,11 @@ export default class extends Controller {
     this.selectIssuanceProgram({ preferManual, cardNumber })
     this.syncIssuanceCardVisibility({ preserveCard: Boolean(cardNumber) })
     this.showOverlay(this.issuanceOverlayTarget, this.hasIssuanceAmountFieldTarget && this.issuanceAmountFieldTarget)
+    if (cardNumber && this.issuanceNeedsCard() && this.hasIssuanceCardNumberTarget) {
+      // Pre-scanned cards keep Amount as entry start; card value is already present.
+      this.issuanceAmountFieldTarget?.focus()
+      this.issuanceAmountFieldTarget?.select()
+    }
   }
 
   selectIssuanceProgram({ preferManual = false } = {}) {
@@ -2170,16 +2176,32 @@ export default class extends Controller {
     this.issuanceProgramFieldTarget.value = options[0].value
   }
 
-  syncIssuanceCardVisibility({ preserveCard = false } = {}) {
+  issuanceNeedsCard() {
+    if (!this.hasIssuanceProgramFieldTarget) return true
+    const option = this.issuanceProgramFieldTarget.selectedOptions[0]
+    const reload = this.hasIssuanceTypeFieldTarget && this.issuanceTypeFieldTarget.value === "reload"
+    return reload || !option || !option.value || option.dataset.numberAuthority !== "system_generated"
+  }
+
+  onIssuanceFieldChange() {
+    this.syncIssuanceCardVisibility({ focusCardWhenShown: true })
+  }
+
+  syncIssuanceCardVisibility({ preserveCard = false, focusCardWhenShown = false } = {}) {
     if (!this.hasIssuanceProgramFieldTarget || !this.hasIssuanceCardWrapTarget) return
     const option = this.issuanceProgramFieldTarget.selectedOptions[0]
-    const needsCard = !option || option.dataset.numberAuthority !== "system_generated"
+    if (this.hasIssuanceTypeFieldTarget && option && option.dataset.reloadAllowed === "false" && this.issuanceTypeFieldTarget.value === "reload") {
+      this.issuanceTypeFieldTarget.value = "activation"
+    }
+    const needsCard = this.issuanceNeedsCard()
+    const wasHidden = this.issuanceCardWrapTarget.hidden
     this.issuanceCardWrapTarget.hidden = !needsCard
     if (!needsCard && this.hasIssuanceCardNumberTarget && !preserveCard) {
       this.issuanceCardNumberTarget.value = ""
     }
-    if (this.hasIssuanceTypeFieldTarget && option && option.dataset.reloadAllowed === "false" && this.issuanceTypeFieldTarget.value === "reload") {
-      this.issuanceTypeFieldTarget.value = "activation"
+    if (needsCard && focusCardWhenShown && wasHidden && this.hasIssuanceCardNumberTarget) {
+      this.issuanceCardNumberTarget.focus()
+      this.issuanceCardNumberTarget.select()
     }
   }
 
@@ -2195,7 +2217,16 @@ export default class extends Controller {
     if (key === "Escape") {
       event.preventDefault()
       this.closeIssuanceOverlay()
+      return
     }
+    if (key === "F9" || key === "F10") {
+      event.preventDefault()
+      return
+    }
+    if (key !== "Enter") return
+    if (this.isActionableControl(event.target)) return
+    event.preventDefault()
+    this.submitIssuance()
   }
 
   submitIssuance() {
@@ -2204,17 +2235,19 @@ export default class extends Controller {
     const programId = this.hasIssuanceProgramFieldTarget ? this.issuanceProgramFieldTarget.value : ""
     if (!amount) {
       this.showOverlayLocalError(this.issuanceOverlayTarget, "issuance amount is required")
+      this.issuanceAmountFieldTarget?.focus()
       return
     }
     if (!programId) {
       this.showOverlayLocalError(this.issuanceOverlayTarget, "Select a gift-card program.")
+      this.issuanceProgramFieldTarget?.focus()
       return
     }
-    const option = this.issuanceProgramFieldTarget.selectedOptions[0]
-    const needsCard = option && option.dataset.numberAuthority !== "system_generated"
+    const needsCard = this.issuanceNeedsCard()
     const cardNumber = this.hasIssuanceCardNumberTarget ? this.issuanceCardNumberTarget.value.trim() : ""
     if (needsCard && !cardNumber) {
       this.showOverlayLocalError(this.issuanceOverlayTarget, "Card number is required for this program.")
+      this.issuanceCardNumberTarget?.focus()
       return
     }
     this.clearOverlayError(this.issuanceOverlayTarget)
