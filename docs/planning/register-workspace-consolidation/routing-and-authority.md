@@ -10,11 +10,14 @@ Status: **Accepted** with Slice 1.
 |---|---|
 | 2 | Phase 6.7 **§4** POS Home and Register-entry chrome |
 | 3 | Phase 6.7 **§6 F10 binding** and **§14 F10 transaction-history entry** (done in this slice) |
+| 5D | Phase 6.7 **§6 `+` destination only**: empty-field `+` / Tender opens O11 tender selection after existing tenderability checks ([slice5d-tender-issuance-plan.md](slice5d-tender-issuance-plan.md)). F1–F5 unchanged. |
 | 7C | The remainder of Phase 6.7 **§6** and any affected Enter/Escape/modal sections, after acceptance of the replacement keyboard contract |
 
 Slice 3 supersedes **F10 as the direct entry to Transactions**. It does **not** supersede transaction-history behavior, search, linked-return workflow, or working-basket preservation. F10 opens the Register Menu; Transactions & Receipts remains a menu destination.
 
-Until Slice 7C, all other 6.7 keys (`F1`–`F9`, `/`, `-`, `.`, `*`, `+`, Enter, Escape) remain lock.
+Slice 5D supersedes **only** the Phase 6.7 `+` destination (Cash-with-remaining / even-exchange entry via `+`). It does **not** remap F1–F5 or complete the SALE/TENDER keyboard redesign.
+
+Until Slice 7C, all other 6.7 keys (`F1`–`F9`, `/`, `-`, `.`, `*`, Enter, Escape) remain lock. `+` follows the Slice 5D contract above once 5D is on the integration branch.
 
 ## GET versus POST
 
