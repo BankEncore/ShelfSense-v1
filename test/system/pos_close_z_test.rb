@@ -54,7 +54,7 @@ class PosCloseZTest < ApplicationSystemTestCase
     open_register(opening_float: "100.00")
     add_current_sku
     assert_no_button "Close Session"
-    click_on "Tender (+)"
+    start_cash_tender_via_plus
     field = find("#pos-command-field")
     field.fill_in with: "25.00"
     field.send_keys :enter
@@ -88,7 +88,7 @@ class PosCloseZTest < ApplicationSystemTestCase
     assert_text "QUANTITY"
     assert_no_button "Close Session"
     find("#pos-command-field").send_keys :escape
-    click_on "Tender (+)"
+    start_cash_tender_via_plus
     assert_text "CASH TENDER"
     assert_no_button "Close Session"
   end
@@ -115,7 +115,7 @@ class PosCloseZTest < ApplicationSystemTestCase
     assert_text "SALE ENTRY"
     assert_selector "tr.is-selected[data-quantity='1']"
 
-    click_on "Tender (+)"
+    start_cash_tender_via_plus
     assert_text "CASH TENDER"
     field = find("#pos-command-field")
     field.fill_in with: "25.00"

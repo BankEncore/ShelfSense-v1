@@ -51,7 +51,7 @@ class PosUnlinkedReturnTest < ApplicationSystemTestCase
     assert_text "Refund remaining"
     refute_text "Override"
 
-    click_on "Refund (+)"
+    start_cash_refund_via_plus
     assert_text "REFUND"
     field = find("#pos-command-field")
     field.send_keys :enter
@@ -69,7 +69,7 @@ class PosUnlinkedReturnTest < ApplicationSystemTestCase
     field.fill_in with: unit.unit_identifier
     field.send_keys :enter
     assert_text used_variant.product.name
-    click_on "Tender (+)"
+    start_cash_tender_via_plus
     field = find("#pos-command-field")
     field.fill_in with: "20.00"
     field.send_keys :enter
@@ -89,7 +89,7 @@ class PosUnlinkedReturnTest < ApplicationSystemTestCase
     click_on "Add Unlinked Return"
     assert_text "Unlinked return", wait: 10
 
-    click_on "Refund (+)"
+    start_cash_refund_via_plus
     field = find("#pos-command-field")
     field.send_keys :enter
     send_keys :enter

@@ -52,7 +52,7 @@ class UdsRegisterReferenceTest < ApplicationSystemTestCase
     field.send_keys :enter
     assert_selector "tr.is-selected[data-quantity='2']", wait: 5
 
-    click_on "Tender (+)"
+    start_cash_tender_via_plus
     field = find("#pos-command-field")
     field.fill_in with: "50.00"
     field.send_keys :enter

@@ -25,7 +25,7 @@ class PosMixedReturnTest < ApplicationSystemTestCase
     add_sku(@thirty.sku)
     add_unlinked_return(@twenty.sku, price: "20.00")
     assert_text "Balance due"
-    click_on "Tender (+)"
+    start_cash_tender_via_plus
     field = find("#pos-command-field")
     field.fill_in with: "10.00"
     field.send_keys :enter
@@ -47,7 +47,7 @@ class PosMixedReturnTest < ApplicationSystemTestCase
     add_sku(@twenty.sku)
     add_unlinked_return(@thirty.sku, price: "30.00")
     assert_text "Refund remaining"
-    click_on "Refund (+)"
+    start_cash_refund_via_plus
     assert_text "REFUND"
     send_keys :f2
     assert_selector "[data-register-workspace-target='fieldLabel']", text: /External Card/

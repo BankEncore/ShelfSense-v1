@@ -29,6 +29,19 @@ export default class extends Controller {
     "giftCardNumberField",
     "cardNumberInput",
     "issuanceCardNumber",
+    "issuanceOverlay",
+    "issuanceTypeField",
+    "issuanceProgramField",
+    "issuanceAmountField",
+    "issuanceCardWrap",
+    "issuanceResultLabel",
+    "issuanceCancel",
+    "issuanceApply",
+    "issuanceForm",
+    "issuanceTypeInput",
+    "issuanceProgramInput",
+    "issuanceAmountInput",
+    "issuanceCardInput",
     "cashOutForm",
     "cashOutCardInput",
     "destinationModeInput",
@@ -126,6 +139,10 @@ export default class extends Controller {
     "storedValueButton",
     "otherOverlay",
     "otherList",
+    "otherTitle",
+    "otherSettlementLabel",
+    "otherCancel",
+    "otherChoose",
     "searchOverlay",
     "searchList",
     "searchSkuField",
@@ -217,6 +234,7 @@ export default class extends Controller {
     this.inFlight = false
     this.overlayStack = []
     this.confirmationInvocation = null
+    this.tenderPickerInvocation = null
     this.searchRequestToken = 0
     this.pickupRequestToken = 0
     this.customerRequestToken = 0
@@ -588,9 +606,12 @@ export default class extends Controller {
       this.submitComplete()
       return
     }
-    this.beginTenderMode()
-    this.applyTenderType(this.typesForCategory("cash")[0] || this.cashierTenderTypes()[this.cashTenderIndex()])
-    this.prefillRemaining()
+    const types = this.cashierTenderTypes()
+    if (types.length === 0) {
+      this.showFeedback(this.settlementValue === "refund" ? "No refund tender types are available." : "No tender types are available.")
+      return
+    }
+    this.openTenderPicker(types, { source: "plus" })
   }
 
   chooseCash() {
@@ -620,7 +641,7 @@ export default class extends Controller {
       this.prefillRemaining()
       return
     }
-    this.openOtherPicker(types)
+    this.openTenderPicker(types, { source: "other_key" })
   }
 
   chooseStoredValue() {
@@ -638,7 +659,7 @@ export default class extends Controller {
       this.prefillRemaining()
       return
     }
-    this.openOtherPicker(types)
+    this.openTenderPicker(types, { source: "stored_value_key" })
   }
 
   chooseTenderCategory(category) {
@@ -742,27 +763,90 @@ export default class extends Controller {
     this.feedbackTarget.setAttribute("role", "alert")
   }
 
-  openOtherPicker(types) {
+  openTenderPicker(types, { source }) {
     if (!this.hasOtherOverlayTarget || !this.hasOtherListTarget) return
+    this.tenderPickerInvocation = {
+      source,
+      priorMode: this.modeValue === "tender" ? "tender" : "sale_entry",
+      priorTenderTypeId: this.hasTenderTypeInputTarget ? this.tenderTypeInputTarget.value : null,
+      priorCommandValue: this.hasFieldTarget ? this.fieldTarget.value : "",
+      priorReferenceValue: this.hasReferenceFieldTarget ? this.referenceFieldTarget.value : "",
+      priorGiftCardNumber: this.hasGiftCardNumberFieldTarget ? this.giftCardNumberFieldTarget.value : "",
+      opener: document.activeElement
+    }
+    if (this.hasOtherSettlementLabelTarget) {
+      const remaining = this.formatCents(this.remainingCents())
+      this.otherSettlementLabelTarget.textContent = this.settlementValue === "refund"
+        ? `Refund remaining $${remaining}`
+        : `Balance due $${remaining}`
+    }
+    if (this.hasOtherCancelTarget) {
+      const restoreTender = this.tenderPickerInvocation.priorMode === "tender"
+      this.otherCancelTarget.textContent = restoreTender ? "Back to Tender" : "Back to Sale"
+    }
     this.otherListTarget.replaceChildren()
     types.forEach((type, index) => {
       const item = document.createElement("li")
       item.dataset.tenderTypeId = type.id
       item.textContent = type.name
       this.decoratePickerItem(item, { selected: index === 0 })
+      item.addEventListener("click", () => this.onPickerItemClick(this.otherListTarget, item))
       this.otherListTarget.append(item)
     })
     this.showOverlay(this.otherOverlayTarget, this.otherListTarget.querySelector("li.is-selected"))
   }
 
+  openOtherPicker(types) {
+    this.openTenderPicker(types, { source: "other_key" })
+  }
+
   closeOtherOverlay() {
+    this.tenderPickerInvocation = null
     this.hideOverlay(this.hasOtherOverlayTarget && this.otherOverlayTarget)
+  }
+
+  dismissTenderPicker() {
+    if (!this.otherOverlayOpen()) return
+    const invocation = this.tenderPickerInvocation
+    this.tenderPickerInvocation = null
+    this.hideOverlay(this.otherOverlayTarget)
+    if (!invocation) {
+      this.restoreFocus()
+      return
+    }
+    this.restoreTenderPickerInvocation(invocation)
+  }
+
+  restoreTenderPickerInvocation(invocation) {
+    if (invocation.priorMode === "tender") {
+      this.beginTenderMode()
+      const type = this.cashierTenderTypes().find((item) => item.id === invocation.priorTenderTypeId)
+      if (type) this.applyTenderType(type)
+      if (this.hasFieldTarget) this.fieldTarget.value = invocation.priorCommandValue || ""
+      if (this.hasReferenceFieldTarget) this.referenceFieldTarget.value = invocation.priorReferenceValue || ""
+      if (this.hasGiftCardNumberFieldTarget) this.giftCardNumberFieldTarget.value = invocation.priorGiftCardNumber || ""
+      this.fieldTarget.focus()
+      this.fieldTarget.select()
+      return
+    }
+    if (this.modeValue === "tender") {
+      this.setMode("sale_entry", "SALE ENTRY")
+      this.setFieldLabel("Scan or identifier")
+      this.fieldTarget.inputMode = "text"
+      this.toggleReferenceField("omitted")
+      this.toggleGiftCardNumberField(null)
+      this.enableReadyActions()
+    }
+    if (this.hasFieldTarget) {
+      this.fieldTarget.value = invocation.priorCommandValue || ""
+      this.fieldTarget.focus()
+    }
   }
 
   onOtherOverlayKeydown(event, key) {
     if (key === "Escape") {
       event.preventDefault()
-      this.closeOtherOverlay()
+      this.dismissTenderPicker()
       return
     }
     if (key === "ArrowUp" || key === "ArrowDown") {
@@ -781,7 +865,8 @@ export default class extends Controller {
     const selected = this.otherListTarget.querySelector("li.is-selected")
     if (!selected) return
     const type = this.cashierTenderTypes().find((item) => item.id === selected.dataset.tenderTypeId)
-    this.closeOtherOverlay()
+    this.tenderPickerInvocation = null
+    this.hideOverlay(this.otherOverlayTarget)
     if (!type) return
     this.beginTenderMode()
     this.applyTenderType(type)
@@ -1992,6 +2077,17 @@ export default class extends Controller {
     if (this.hasIdentifierInputTarget) this.identifierInputTarget.value = ""
     if (this.hasFieldTarget) this.fieldTarget.value = ""
 
+    if (this.issuanceOverlayOpen()) {
+      if (this.hasIssuanceCardNumberTarget) this.issuanceCardNumberTarget.value = scanned
+      this.syncIssuanceCardVisibility({ preserveCard: true })
+      this.clearOverlayError(this.issuanceOverlayTarget)
+      this.enableReadyActions()
+      if (this.hasIssuanceCardNumberTarget && !this.issuanceCardWrapTarget?.hidden) {
+        this.issuanceCardNumberTarget.focus()
+      }
+      return
+    }
+
     if (result.found) {
       if (this.settlementValue === "payment" && this.remainingCents() > 0) {
         const gift = this.typesForCategory("stored_value").find((type) => type.stored_value_account_type === "gift_card")
@@ -2021,14 +2117,124 @@ export default class extends Controller {
       return
     }
 
-    if (result.number_authority === "manual_external" && this.hasIssuanceCardNumberTarget) {
-      this.issuanceCardNumberTarget.value = scanned
+    if (result.number_authority === "manual_external" && this.modeValue === "sale_entry") {
+      this.openIssuanceOverlay({ cardNumber: scanned, preferManual: true })
       this.showFeedback("Gift card not on file. Enter an activation amount.")
-    } else {
-      this.showFeedback(result.message || "gift card not on file")
+      this.enableReadyActions()
+      return
     }
+
+    this.showFeedback(result.message || "gift card not on file")
     this.enableReadyActions()
     this.restoreFocus()
+  }
+
+  openIssuanceOverlay({ cardNumber = "", preferManual = false } = {}) {
+    if (!this.hasIssuanceOverlayTarget) return
+    const programs = this.hasIssuanceProgramFieldTarget
+      ? Array.from(this.issuanceProgramFieldTarget.options).filter((option) => option.value)
+      : []
+    if (programs.length === 0) {
+      this.showFeedback("No gift-card programs are available.")
+      return
+    }
+    if (this.hasIssuanceTypeFieldTarget) this.issuanceTypeFieldTarget.value = "activation"
+    if (this.hasIssuanceAmountFieldTarget) this.issuanceAmountFieldTarget.value = ""
+    if (this.hasIssuanceCardNumberTarget) this.issuanceCardNumberTarget.value = cardNumber || ""
+    if (this.hasIssuanceResultLabelTarget) this.issuanceResultLabelTarget.textContent = ""
+    this.selectIssuanceProgram({ preferManual, cardNumber })
+    this.syncIssuanceCardVisibility({ preserveCard: Boolean(cardNumber) })
+    this.showOverlay(this.issuanceOverlayTarget, this.hasIssuanceAmountFieldTarget && this.issuanceAmountFieldTarget)
+  }
+
+  selectIssuanceProgram({ preferManual = false } = {}) {
+    if (!this.hasIssuanceProgramFieldTarget) return
+    const options = Array.from(this.issuanceProgramFieldTarget.options).filter((option) => option.value)
+    if (options.length === 0) return
+
+    if (preferManual) {
+      const manuals = options.filter((option) => option.dataset.numberAuthority === "manual_external")
+      if (manuals.length === 1) {
+        this.issuanceProgramFieldTarget.value = manuals[0].value
+        return
+      }
+      if (manuals.length > 1) {
+        this.issuanceProgramFieldTarget.value = ""
+        if (this.hasIssuanceResultLabelTarget) {
+          this.issuanceResultLabelTarget.textContent = "Select the program for this card number."
+        }
+        return
+      }
+    }
+
+    this.issuanceProgramFieldTarget.value = options[0].value
+  }
+
+  syncIssuanceCardVisibility({ preserveCard = false } = {}) {
+    if (!this.hasIssuanceProgramFieldTarget || !this.hasIssuanceCardWrapTarget) return
+    const option = this.issuanceProgramFieldTarget.selectedOptions[0]
+    const needsCard = !option || option.dataset.numberAuthority !== "system_generated"
+    this.issuanceCardWrapTarget.hidden = !needsCard
+    if (!needsCard && this.hasIssuanceCardNumberTarget && !preserveCard) {
+      this.issuanceCardNumberTarget.value = ""
+    }
+    if (this.hasIssuanceTypeFieldTarget && option && option.dataset.reloadAllowed === "false" && this.issuanceTypeFieldTarget.value === "reload") {
+      this.issuanceTypeFieldTarget.value = "activation"
+    }
+  }
+
+  closeIssuanceOverlay() {
+    if (!this.hasIssuanceOverlayTarget) return
+    if (this.hasIssuanceAmountFieldTarget) this.issuanceAmountFieldTarget.value = ""
+    if (this.hasIssuanceCardNumberTarget) this.issuanceCardNumberTarget.value = ""
+    if (this.hasIssuanceResultLabelTarget) this.issuanceResultLabelTarget.textContent = ""
+    this.hideOverlay(this.issuanceOverlayTarget)
+  }
+
+  onIssuanceOverlayKeydown(event, key) {
+    if (key === "Escape") {
+      event.preventDefault()
+      this.closeIssuanceOverlay()
+    }
+  }
+
+  submitIssuance() {
+    if (this.inFlight || !this.hasIssuanceFormTarget) return
+    const amount = this.hasIssuanceAmountFieldTarget ? this.issuanceAmountFieldTarget.value.trim() : ""
+    const programId = this.hasIssuanceProgramFieldTarget ? this.issuanceProgramFieldTarget.value : ""
+    if (!amount) {
+      this.showOverlayLocalError(this.issuanceOverlayTarget, "issuance amount is required")
+      return
+    }
+    if (!programId) {
+      this.showOverlayLocalError(this.issuanceOverlayTarget, "Select a gift-card program.")
+      return
+    }
+    const option = this.issuanceProgramFieldTarget.selectedOptions[0]
+    const needsCard = option && option.dataset.numberAuthority !== "system_generated"
+    const cardNumber = this.hasIssuanceCardNumberTarget ? this.issuanceCardNumberTarget.value.trim() : ""
+    if (needsCard && !cardNumber) {
+      this.showOverlayLocalError(this.issuanceOverlayTarget, "Card number is required for this program.")
+      return
+    }
+    this.clearOverlayError(this.issuanceOverlayTarget)
+    if (this.hasIssuanceTypeInputTarget) this.issuanceTypeInputTarget.value = this.issuanceTypeFieldTarget.value
+    if (this.hasIssuanceProgramInputTarget) this.issuanceProgramInputTarget.value = programId
+    if (this.hasIssuanceAmountInputTarget) this.issuanceAmountInputTarget.value = amount
+    if (this.hasIssuanceCardInputTarget) this.issuanceCardInputTarget.value = needsCard ? cardNumber : ""
+    this.beginFlight()
+    this.issuanceFormTarget.requestSubmit()
+  }
+
+  showOverlayLocalError(overlay, message) {
+    if (!overlay) return
+    const node = overlay.querySelector("[data-overlay-error]")
+    if (!node) {
+      this.showFeedback(message)
+      return
+    }
+    node.textContent = message
+    node.setAttribute("role", "alert")
   }
 
   cashTenderIndex() {
@@ -2932,6 +3138,10 @@ export default class extends Controller {
       this.onOtherOverlayKeydown(event, key)
       return
     }
+    if (this.hasIssuanceOverlayTarget && overlay === this.issuanceOverlayTarget) {
+      this.onIssuanceOverlayKeydown(event, key)
+      return
+    }
     if (this.hasSearchOverlayTarget && overlay === this.searchOverlayTarget) {
       this.onSearchOverlayKeydown(event, key)
       return
@@ -3008,6 +3218,9 @@ export default class extends Controller {
       this.clearApprovalCredentials({ keepUsername: false })
       this.confirmationInvocation = null
     }
+    if (this.hasOtherOverlayTarget && overlay === this.otherOverlayTarget) {
+      this.tenderPickerInvocation = null
+    }
     overlay.hidden = true
     overlay.inert = false
     overlay.style.zIndex = ""
@@ -3019,6 +3232,7 @@ export default class extends Controller {
     this.abortPendingLookups()
     this.clearConfirmationCredentials()
     this.confirmationInvocation = null
+    this.tenderPickerInvocation = null
     const entries = [ ...this.overlayStack ]
     this.overlayStack = []
     entries.reverse().forEach((entry) => this.hideOverlayNode(entry.overlay))
@@ -3201,6 +3415,10 @@ export default class extends Controller {
 
   otherOverlayOpen() {
     return this.hasOtherOverlayTarget && !this.otherOverlayTarget.hidden
+  }
+
+  issuanceOverlayOpen() {
+    return this.hasIssuanceOverlayTarget && !this.issuanceOverlayTarget.hidden
   }
 
   searchOverlayOpen() {

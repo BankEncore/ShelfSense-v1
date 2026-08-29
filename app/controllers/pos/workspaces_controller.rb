@@ -6,7 +6,8 @@ module Pos
       "controlled_action" => "pos-control-feedback",
       "unlinked_return" => "pos-unlinked-feedback",
       "open_price" => "pos-open-price-feedback",
-      "linked_return" => "pos-linked-feedback"
+      "linked_return" => "pos-linked-feedback",
+      "stored_value_issuance" => "pos-issuance-feedback"
     }.freeze
     APPROVAL_FEEDBACK_ID = "pos-approval-feedback"
 
