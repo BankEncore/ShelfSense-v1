@@ -38,11 +38,13 @@ class PosUnlinkedReturnTest < ApplicationSystemTestCase
 
     fill_in "Return unit price", with: "18.00"
     select "Defective", from: "Return reason"
-    find("#pos-unlinked-approver-username", visible: true).fill_in with: "mgr_sys65c"
-    password = find("#pos-unlinked-approver-password", visible: :all)
+    click_on "Add Unlinked Return"
+    assert_selector "#pos_approval_overlay", visible: true
+    fill_in "Approver username", with: "mgr_sys65c"
+    password = find("#pos-approver-password", visible: :all)
     scroll_to password
     password.fill_in with: "correct-horse-battery"
-    click_on "Add Unlinked Return"
+    click_on "Authorize and Add Return"
 
     assert_text "RETURN", wait: 10
     assert_text "Unlinked return"
@@ -163,20 +165,24 @@ class PosUnlinkedReturnTest < ApplicationSystemTestCase
     assert_text "Example Book", wait: 5
     fill_in "Return unit price", with: "18.00"
     select "Defective", from: "Return reason"
-    find("#pos-unlinked-approver-username", visible: true).fill_in with: "mgr_sys65c"
-    password = find("#pos-unlinked-approver-password", visible: :all)
+    click_on "Add Unlinked Return"
+    assert_selector "#pos_approval_overlay", visible: true
+    fill_in "Approver username", with: "mgr_sys65c"
+    password = find("#pos-approver-password", visible: :all)
     scroll_to password
     password.fill_in with: "wrong-password"
-    click_on "Add Unlinked Return"
+    click_on "Authorize and Add Return"
 
-    assert_selector "#pos-unlinked-feedback", text: /approver/i, wait: 10
+    assert_selector "#pos-approval-feedback", text: /Manager credentials were not accepted/, wait: 10
+    assert_selector "#pos_approval_overlay", visible: true
     assert_selector "#pos_unlinked_overlay", visible: true
     assert_selector "#pos_return_chooser", visible: :all
     assert page.evaluate_script("document.querySelector('#pos_return_chooser').inert === true")
+    assert page.evaluate_script("document.querySelector('#pos_unlinked_overlay').inert === true")
     assert_equal "18.00", find("#pos-unlinked-price").value
     assert_equal "defective", find("#pos-unlinked-reason").value
-    assert_equal "mgr_sys65c", find("#pos-unlinked-approver-username").value
-    assert_equal "", find("#pos-unlinked-approver-password", visible: :all).value
+    assert_equal "mgr_sys65c", find("#pos-approver-username").value
+    assert_equal "", find("#pos-approver-password", visible: :all).value
   end
 
   test "pointer Back on nested product picker restores unlinked overlay" do

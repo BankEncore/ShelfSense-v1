@@ -82,7 +82,7 @@ class PosUnlinkedReturnWorkspaceTest < ActionDispatch::IntegrationTest
       return_price: "19.99"
     }
     assert_response :success
-    assert_match "approver credentials are required", response.body
+    assert_match "Manager credentials were not accepted", response.body
     assert_equal 0, transaction.reload.pos_transaction_lines.count
 
     post pos_register_unlinked_return_path, params: {

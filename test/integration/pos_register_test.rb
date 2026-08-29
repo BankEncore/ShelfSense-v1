@@ -564,7 +564,7 @@ class PosRegisterTest < ActionDispatch::IntegrationTest
     }
     assert_response :success
     assert_equal 1999, line.reload.selling_unit_price_cents
-    assert_match(/approver credentials/, response.body)
+    assert_match(/Manager credentials were not accepted/, response.body)
     assert_equal associate.id, User.find_by!(username: "clerk_ui").id
 
     post pos_register_controlled_action_path, params: {
@@ -608,13 +608,16 @@ class PosRegisterTest < ActionDispatch::IntegrationTest
 
     assert_response :unprocessable_entity
     assert_equal 1999, line.reload.selling_unit_price_cents
-    assert_match(/approver credentials/, response.body)
-    assert_includes response.body, 'target="pos-control-feedback"'
+    assert_match(/Manager credentials were not accepted/, response.body)
+    assert_includes response.body, 'target="pos-approval-feedback"'
+    assert_includes response.body, 'data-overlay-error-kind="authorization_failed"'
     refute_includes response.body, 'target="pos_workspace"'
     refute_includes response.body, "wrong-password-secret"
   end
 
-  test "stale overlay submission still replaces the workspace" do
+  test "stale overlay submission replaces the workspace per amended packet" do
+    # Packet: proposed values against a changed lock_version are unsafe — clear overlays
+    # and require the cashier to reopen the action on the refreshed workspace.
     post pos_register_enter_path, params: enter_params
     follow_redirect!
     transaction = PosTransaction.working.find_by!(register: @register)
@@ -633,6 +636,8 @@ class PosRegisterTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_includes response.body, 'target="pos_workspace"'
     assert_match(/This sale was changed/, response.body)
+    refute_includes response.body, 'target="pos-control-feedback"'
+    refute_includes response.body, 'target="pos-approval-feedback"'
   end
 
   test "discount apply ignores a leftover malformed selling_price" do

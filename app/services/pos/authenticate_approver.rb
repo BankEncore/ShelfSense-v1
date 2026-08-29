@@ -16,20 +16,26 @@ module Pos
     end
 
     def call
-      raise Pos::Denied, "approver credentials are required" if @username.blank? || @password.blank?
+      if @username.blank? || @password.blank?
+        raise Pos::ApproverAuthenticationFailed, "approver credentials are required"
+      end
 
       user = User.find_by("lower(username) = ?", @username.downcase)
-      raise Pos::Denied, "approver credentials are invalid" unless user&.authenticatable?
-      raise Pos::Denied, "approver credentials are invalid" unless user.authenticate(@password)
-      raise Pos::Denied, "approver cannot be the performer" if user.id == @performer.id
-      raise Pos::Denied, "approver cannot be the system actor" if user.system_actor?
+      unless user&.authenticatable?
+        raise Pos::ApproverAuthenticationFailed, "approver credentials are invalid"
+      end
+      unless user.authenticate(@password)
+        raise Pos::ApproverAuthenticationFailed, "approver credentials are invalid"
+      end
+      raise Pos::SelfApprovalProhibited, "approver cannot be the performer" if user.id == @performer.id
+      raise Pos::ApproverNotAuthorized, "approver cannot be the system actor" if user.system_actor?
 
       unless Authorization::PermissionEvaluator.allowed?(
         user: user,
         permission_key: @permission_key,
         store: @store
       )
-        raise Pos::Denied, "approver is not authorized at this store"
+        raise Pos::ApproverNotAuthorized, "approver is not authorized at this store"
       end
 
       user

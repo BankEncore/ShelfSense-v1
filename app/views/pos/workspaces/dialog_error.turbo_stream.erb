@@ -1,3 +1,5 @@
 <%= turbo_stream.update @overlay_error_dom_id do %>
-  <%= @feedback %>
+  <span data-overlay-error-kind="<%= @overlay_failure.kind %>"
+        data-overlay-error-field="<%= @overlay_failure.field %>"
+        data-register-workspace-target="overlayFailureMeta"><%= @overlay_failure.message %></span>
 <% end %>

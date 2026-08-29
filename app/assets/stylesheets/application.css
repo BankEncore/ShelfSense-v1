@@ -1906,6 +1906,28 @@ input[type="submit"]:disabled,
   margin-top: var(--space-3);
 }
 
+.pos-overlay__context {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.pos-overlay__context > div {
+  display: grid;
+  grid-template-columns: 7rem 1fr;
+  gap: var(--space-2);
+}
+
+.pos-overlay__context dt {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-weight: 500;
+}
+
+.pos-overlay__context dd {
+  margin: 0;
+}
+
 .pos-overlay__error {
   min-height: 1.25em;
   margin: var(--space-2) 0 0;

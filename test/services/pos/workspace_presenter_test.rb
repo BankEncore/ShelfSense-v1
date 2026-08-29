@@ -33,6 +33,13 @@ class PosWorkspacePresenterTest < ActiveSupport::TestCase
     assert_equal "text", result.command_inputmode
     assert result.close_session_available
     refute result.completion_recovery
+    assert_equal "All working content will be discarded.", result.cancel_consequence
+  end
+
+  test "cancel consequence lists sale quantities" do
+    transaction = start_sale
+    result = present(transaction, ui_mode: "sale_entry")
+    assert_equal "1 item for sale will be discarded.", result.cancel_consequence
   end
 
   test "quantity mode labels the selected line" do
@@ -155,6 +162,7 @@ class PosWorkspacePresenterTest < ActiveSupport::TestCase
     assert_equal 2500, issuance_row.signed_cents
     assert_empty result.tender_rows
     assert result.issuance_remove_available
+    assert_equal "1 gift card activation will be discarded.", result.cancel_consequence
   end
 
   test "multiple tax groups group and order stably" do
