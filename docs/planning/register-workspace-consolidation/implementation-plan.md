@@ -1,6 +1,6 @@
 # Register workspace consolidation — Implementation plan
 
-Status: **Slice 5D merged** on `register-workspace-consolidation` ([#89](https://github.com/BankEncore/ShelfSense-v1/issues/89) / PR [#102](https://github.com/BankEncore/ShelfSense-v1/pull/102)). Next: Slice 6 inquiry surfaces.
+Status: **Slice 5D complete** on `register-workspace-consolidation` ([#89](https://github.com/BankEncore/ShelfSense-v1/issues/89) / PR [#102](https://github.com/BankEncore/ShelfSense-v1/pull/102); remediation PR [#103](https://github.com/BankEncore/ShelfSense-v1/pull/103)). Next: Slice 6 inquiry surfaces.
 
 Authority: [plan.md](plan.md), [routing-and-authority.md](routing-and-authority.md).
 
@@ -27,7 +27,7 @@ This program uses a long-lived integration branch because an incomplete Register
 | 5A Lookup overlays | Merged to integration ([#86](https://github.com/BankEncore/ShelfSense-v1/issues/86) / PR [#99](https://github.com/BankEncore/ShelfSense-v1/pull/99)) | [#86](https://github.com/BankEncore/ShelfSense-v1/issues/86) |
 | 5B Return overlays | Merged to integration ([#87](https://github.com/BankEncore/ShelfSense-v1/issues/87) / PR [#100](https://github.com/BankEncore/ShelfSense-v1/pull/100)) | [#87](https://github.com/BankEncore/ShelfSense-v1/issues/87) |
 | 5C Controlled-action overlays | Merged to integration ([#88](https://github.com/BankEncore/ShelfSense-v1/issues/88) / PR [#101](https://github.com/BankEncore/ShelfSense-v1/pull/101)) | [#88](https://github.com/BankEncore/ShelfSense-v1/issues/88) |
-| 5D Tender/issuance overlays | Merged to integration ([#89](https://github.com/BankEncore/ShelfSense-v1/issues/89) / PR [#102](https://github.com/BankEncore/ShelfSense-v1/pull/102)) | [#89](https://github.com/BankEncore/ShelfSense-v1/issues/89) |
+| 5D Tender/issuance overlays | Complete on integration ([#89](https://github.com/BankEncore/ShelfSense-v1/issues/89) / PR [#102](https://github.com/BankEncore/ShelfSense-v1/pull/102); remediation PR [#103](https://github.com/BankEncore/ShelfSense-v1/pull/103)) | [#89](https://github.com/BankEncore/ShelfSense-v1/issues/89) |
 | 6A Customer-service surfaces | Not started | [#90](https://github.com/BankEncore/ShelfSense-v1/issues/90) |
 | 6B Till and session detail | Not started | [#91](https://github.com/BankEncore/ShelfSense-v1/issues/91) |
 | 6C Reporting-period surfaces | Not started | [#92](https://github.com/BankEncore/ShelfSense-v1/issues/92) |
