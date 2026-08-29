@@ -1,6 +1,6 @@
 # Slice 5B — Return overlays
 
-Status: **Implementation-ready.** Slice 5A is on `register-workspace-consolidation` ([#86](https://github.com/BankEncore/ShelfSense-v1/issues/86) / PR [#99](https://github.com/BankEncore/ShelfSense-v1/pull/99)).
+Status: **Accepted** on `register-workspace-consolidation` ([#87](https://github.com/BankEncore/ShelfSense-v1/issues/87) / PR [#100](https://github.com/BankEncore/ShelfSense-v1/pull/100)).
 
 Authority: [plan.md](plan.md), [routing-and-authority.md](routing-and-authority.md), [textual-wireframes.md](textual-wireframes.md) O6–O8 / Part IV, [user-stories.md](user-stories.md), [slice5a-lookup-overlays-plan.md](slice5a-lookup-overlays-plan.md) (lifecycle), Phase 6.7 launch key (`−`) until 7C.
 
