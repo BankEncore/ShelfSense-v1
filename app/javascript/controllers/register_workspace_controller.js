@@ -2579,6 +2579,7 @@ export default class extends Controller {
   submitControlApply(event) {
     if (event) event.preventDefault()
     if (this.inFlight || !this.hasControlFormTarget) return
+    if (!this.ensureControlReady("apply")) return
     if (this.policyFor(this.currentControlAction) === "approval_required") {
       this.openControlAuthorization("apply")
       return
@@ -2589,11 +2590,70 @@ export default class extends Controller {
   submitControlRemove(event) {
     if (event) event.preventDefault()
     if (this.inFlight || !this.hasControlFormTarget) return
+    if (!this.ensureControlReady("remove")) return
     if (this.policyFor(this.currentControlAction) === "approval_required") {
       this.openControlAuthorization("remove")
       return
     }
     this.commitControlOperation("remove")
+  }
+
+  ensureControlReady(operation) {
+    const action = this.currentControlAction
+    const row = this.selectedRow()
+    if (operation === "remove") {
+      if (!row || !this.lineHasAction(row, action)) {
+        this.showControlFeedback("There is no adjustment to remove.")
+        if (this.hasControlCancelTarget) this.controlCancelTarget.focus()
+        return false
+      }
+      return true
+    }
+
+    if (action === "price_override") {
+      const value = this.hasControlPriceFieldTarget ? this.controlPriceFieldTarget.value.trim() : ""
+      if (!value) {
+        this.showControlFeedback("Enter a selling price.")
+        if (this.hasControlPriceFieldTarget) this.controlPriceFieldTarget.focus()
+        return false
+      }
+    } else if (action === "line_discount") {
+      const value = this.hasControlDiscountFieldTarget ? this.controlDiscountFieldTarget.value.trim() : ""
+      if (!value) {
+        this.showControlFeedback("Enter a discount percent.")
+        if (this.hasControlDiscountFieldTarget) this.controlDiscountFieldTarget.focus()
+        return false
+      }
+    } else if (action === "tax_class_override") {
+      const value = this.hasControlTaxFieldTarget ? this.controlTaxFieldTarget.value : ""
+      if (!value) {
+        this.showControlFeedback("Choose a Tax Class.")
+        if (this.hasControlTaxFieldTarget) this.controlTaxFieldTarget.focus()
+        return false
+      }
+    }
+
+    const reason = this.hasControlReasonFieldTarget ? this.controlReasonFieldTarget.value : ""
+    if (!reason) {
+      this.showControlFeedback("Choose a reason.")
+      if (this.hasControlReasonFieldTarget) this.controlReasonFieldTarget.focus()
+      return false
+    }
+    if (reason === "other") {
+      const note = this.hasControlNoteFieldTarget ? this.controlNoteFieldTarget.value.trim() : ""
+      if (!note) {
+        this.showControlFeedback("Enter a note for Other.")
+        this.toggleHidden(this.hasControlNoteWrapTarget && this.controlNoteWrapTarget, false)
+        if (this.hasControlNoteFieldTarget) this.controlNoteFieldTarget.focus()
+        return false
+      }
+    }
+    return true
+  }
+
+  showControlFeedback(message) {
+    const node = this.controlOverlayTarget?.querySelector("[data-overlay-error]")
+    if (node) node.textContent = message
   }
 
   openControlAuthorization(operation) {
@@ -3067,7 +3127,7 @@ export default class extends Controller {
 
     if (kind === "authorization_failed" || kind === "authorization_prohibited") {
       if (this.hasApproverPasswordTarget) this.approverPasswordTarget.value = ""
-      const focusField = kind === "authorization_prohibited" && this.hasApproverUsernameTarget
+      const focusField = (kind === "authorization_prohibited" || failure?.field === "approver_username") && this.hasApproverUsernameTarget
         ? this.approverUsernameTarget
         : (this.hasApproverPasswordTarget && this.approverPasswordTarget)
       if (focusField) {
@@ -3077,7 +3137,7 @@ export default class extends Controller {
       return
     }
 
-    if (kind === "parent_validation_failed" || kind === "stale_transaction") {
+    if (kind === "parent_validation_failed") {
       if (this.approvalOverlayOpen()) this.closeApprovalOverlay({ clearInvocation: true })
       const parent = this.activeOverlayElement()
       if (!parent) return
@@ -3090,6 +3150,9 @@ export default class extends Controller {
       if (focusables[0]) focusables[0].focus()
       return
     }
+
+    // stale_transaction replaces the workspace via Turbo — no overlay to recover.
+    if (kind === "stale_transaction") return
 
     const overlay = this.activeOverlayElement()
     if (!overlay) return

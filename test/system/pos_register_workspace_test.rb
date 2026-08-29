@@ -190,6 +190,30 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     assert_equal 1500, line.reload.selling_unit_price_cents
   end
 
+  test "incomplete price overlay does not open authorization" do
+    pos_transacting_user(store: @store, assigned_by: @actor, username: "clerk_ready5c")
+    pos_store_manager(store: @store, assigned_by: @actor, username: "mgr_ready5c")
+    visit new_session_path
+    fill_in "session_username", with: "clerk_ready5c"
+    fill_in "session_password", with: "correct-horse-battery"
+    find_field("session_password").send_keys :enter
+    assert_text "Signed in successfully"
+    visit pos_register_enter_path(register_id: @register.id)
+    fill_in "Opening float", with: "0.00"
+    click_on "Open register"
+    assert_text "SALE ENTRY"
+    add_current_sku
+
+    click_on "Price (F6)"
+    assert_selector "#pos_control_overlay", visible: true
+    fill_in "New selling price", with: "15.00"
+    click_on "Apply"
+    assert_no_selector "#pos_approval_overlay", visible: true
+    assert_selector "#pos_control_overlay", visible: true
+    assert_selector "#pos-control-feedback", text: /Choose a reason/
+    assert_equal "pos-control-reason", page.evaluate_script("document.activeElement && document.activeElement.id")
+  end
+
   test "enter from a direct price field applies the override" do
     open_register
     add_current_sku

@@ -61,7 +61,7 @@ module Pos
       end
     rescue Pos::Denied => e
       record_denied!(e.message)
-      failure = Pos::OverlayFailure.from_denied(e)
+      failure = Pos::OverlayFailure.from_approver_error(e)
       raise failure if failure
 
       raise

@@ -87,8 +87,8 @@ class PosControlledActionsTest < ActiveSupport::TestCase
         approver_password: "correct-horse-battery"
       )
     end
-    assert_equal :authorization_failed, error.kind
-    assert_match(/Manager credentials were not accepted/, error.message)
+    assert_equal :authorization_prohibited, error.kind
+    assert_match(/You cannot approve your own action/, error.message)
     assert_equal 1999, line.reload.selling_unit_price_cents
     assert AuditEvent.exists?(action: "pos.controlled_action.denied")
   end

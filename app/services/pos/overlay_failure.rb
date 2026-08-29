@@ -2,7 +2,7 @@
 
 module Pos
   # Typed workspace-overlay failure for Turbo dialog recovery.
-  # Maps domain exceptions at the response boundary — clients must not parse English copy.
+  # Maps domain exception classes at the response boundary — never English copy.
   class OverlayFailure < StandardError
     KINDS = %i[
       authorization_failed
@@ -22,16 +22,21 @@ module Pos
       super(message)
     end
 
-    def self.from_denied(error)
-      message = error.message.to_s
-      case message
-      when /\Aapprover credentials/, /approver cannot be the performer/, /approver cannot be the system actor/
+    def self.from_approver_error(error)
+      case error
+      when Pos::ApproverAuthenticationFailed
         new(
           kind: :authorization_failed,
           field: :approver_password,
           message: "Manager credentials were not accepted."
         )
-      when /approver is not authorized/
+      when Pos::SelfApprovalProhibited
+        new(
+          kind: :authorization_prohibited,
+          field: :approver_username,
+          message: "You cannot approve your own action."
+        )
+      when Pos::ApproverNotAuthorized
         new(
           kind: :authorization_prohibited,
           field: :approver_username,

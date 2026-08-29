@@ -110,11 +110,11 @@ Tax-class **names** and formatted money—never internal IDs. Escape/Back closes
 
 ### 6. Cancel transaction
 
-Presenter-authored consequences using **quantities**, not DOM row counts. Include gift-card issuances when present; omit absent components. Do not invent tender reversal; honor existing cancel gates.
+Presenter-authored consequences using **quantities**, not DOM row counts. Include gift-card issuances when present, counting **activations** and **reloads** separately; omit absent components. Do not invent tender reversal; honor existing cancel gates.
 
 ### 7. Typed failure classification
 
-Closed vocabulary (no message-prefix UI routing):
+Closed vocabulary (no message-prefix / English-copy UI routing):
 
 ```text
 authorization_failed
@@ -124,16 +124,22 @@ stale_transaction
 transport_uncertain
 ```
 
-Turbo / dialog error exposes `data-overlay-error-kind` and `data-overlay-error-field`. Adapter at workspace response boundary maps domain exceptions.
+Approver denials are typed at their source (`Pos::ApproverAuthenticationFailed`, `Pos::SelfApprovalProhibited`, `Pos::ApproverNotAuthorized`). The workspace boundary maps those classes onto `OverlayFailure` kinds. Human-readable messages are independent of routing.
+
+Turbo / dialog error exposes `data-overlay-error-kind` and `data-overlay-error-field`.
 
 | Kind | Visible layer | Focus |
 |---|---|---|
 | `authorization_failed` | O18 | Password |
 | `authorization_prohibited` | O18 | Username or safe dismiss |
 | `parent_validation_failed` | Parent (pop O18) | Invalid field |
-| `stale_transaction` | Parent (pop O18) | Local error |
+| `stale_transaction` | **Refreshed workspace** (overlay ancestry cleared) | Command / selected line when it still exists |
 | `transport_uncertain` | Existing recovery | Retry |
 | Success | Refreshed workspace | Command / selected line |
+
+**Stale policy (amended):** When the working transaction’s `lock_version` no longer matches, do **not** preserve O9/O18 with proposed values. Reload the workspace, keep the refreshed line selected when it still exists, surface the stale message prominently, and require the cashier to reopen the action. Preserving a proposed override against a concurrently changed line is unsafe.
+
+O9 must be client-ready (proposed value, managed reason, required note; existing adjustment for remove) before opening O18. Server validation remains authoritative.
 
 ### 8. Stack transitions
 

@@ -162,6 +162,7 @@ class PosWorkspacePresenterTest < ActiveSupport::TestCase
     assert_equal 2500, issuance_row.signed_cents
     assert_empty result.tender_rows
     assert result.issuance_remove_available
+    assert_equal "1 gift card activation will be discarded.", result.cancel_consequence
   end
 
   test "multiple tax groups group and order stably" do

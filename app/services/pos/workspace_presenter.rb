@@ -103,11 +103,15 @@ module Pos
       parts = []
       sale_qty = @lines.select(&:sale?).sum { |line| line.quantity.to_i }
       return_qty = @lines.select(&:return?).sum { |line| line.quantity.to_i.abs }
-      issuance_count = @issuances.size
+      activation_count = @issuances.count(&:activation?)
+      reload_count = @issuances.count(&:reload_issuance?)
       parts << "#{sale_qty} #{sale_qty == 1 ? "item" : "items"} for sale" if sale_qty.positive?
       parts << "#{return_qty} #{return_qty == 1 ? "returned item" : "returned items"}" if return_qty.positive?
-      if issuance_count.positive?
-        parts << "#{issuance_count} gift card #{issuance_count == 1 ? "activation" : "activations"}"
+      if activation_count.positive?
+        parts << "#{activation_count} gift card #{activation_count == 1 ? "activation" : "activations"}"
+      end
+      if reload_count.positive?
+        parts << "#{reload_count} gift card #{reload_count == 1 ? "reload" : "reloads"}"
       end
       return "All working content will be discarded." if parts.empty?
 

@@ -667,11 +667,16 @@ module Pos
 
     def rescue_workspace(error_mode: "sale_entry")
       yield
+    rescue Pos::ApproverAuthenticationFailed, Pos::ApproverNotAuthorized, Pos::SelfApprovalProhibited => e
+      # Safety net if a service raises typed approver errors without converting first.
+      recover_from_overlay_failure(Pos::OverlayFailure.from_approver_error(e), error_mode)
     rescue Pos::Denied
       redirect_to root_path, alert: "You are not authorized to perform that action."
     rescue Pos::OverlayFailure => e
       recover_from_overlay_failure(e, error_mode)
     rescue Pos::StaleObject
+      # Stale working state replaces the workspace (packet: proposed values against a
+      # changed line are unsafe). Cashier reopens the action on the refreshed line.
       recover_from_overlay_failure(Pos::OverlayFailure.stale, error_mode, persist_overlay: false)
     rescue Pos::InvalidatedDialogBasis => e
       recover_from_overlay_failure(Pos::OverlayFailure.parent_validation(e.message), error_mode, persist_overlay: false)

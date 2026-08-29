@@ -615,7 +615,9 @@ class PosRegisterTest < ActionDispatch::IntegrationTest
     refute_includes response.body, "wrong-password-secret"
   end
 
-  test "stale overlay submission still replaces the workspace" do
+  test "stale overlay submission replaces the workspace per amended packet" do
+    # Packet: proposed values against a changed lock_version are unsafe — clear overlays
+    # and require the cashier to reopen the action on the refreshed workspace.
     post pos_register_enter_path, params: enter_params
     follow_redirect!
     transaction = PosTransaction.working.find_by!(register: @register)
@@ -634,6 +636,8 @@ class PosRegisterTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_includes response.body, 'target="pos_workspace"'
     assert_match(/This sale was changed/, response.body)
+    refute_includes response.body, 'target="pos-control-feedback"'
+    refute_includes response.body, 'target="pos-approval-feedback"'
   end
 
   test "discount apply ignores a leftover malformed selling_price" do
