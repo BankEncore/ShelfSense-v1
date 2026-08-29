@@ -1944,6 +1944,12 @@ input[type="submit"]:disabled,
   font-weight: 600;
 }
 
+.pos-picker li .muted {
+  display: block;
+  margin-top: 0.25rem;
+  font-weight: 400;
+}
+
 .pos-line-flags {
   display: block;
   margin-top: 0.15rem;

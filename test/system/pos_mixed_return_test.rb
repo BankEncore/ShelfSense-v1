@@ -88,7 +88,7 @@ class PosMixedReturnTest < ApplicationSystemTestCase
     click_on "Return (-)"
     send_keys :arrow_down
     send_keys :enter
-    assert_text "Return without receipt"
+    assert_text "Unlinked return"
     identifier = find("#pos-unlinked-identifier")
     identifier.fill_in with: @twenty.sku
     identifier.send_keys :enter
@@ -96,6 +96,9 @@ class PosMixedReturnTest < ApplicationSystemTestCase
     assert_equal 0, PosTransaction.working.find_by!(register: @register).pos_transaction_lines.count
     send_keys :escape
     assert_no_selector "#pos_unlinked_overlay", visible: true
+    assert_selector "#pos_return_chooser", visible: true
+    send_keys :escape
+    assert_no_selector "#pos_return_chooser", visible: true
     assert_equal "pos-command-field", page.evaluate_script("document.activeElement && document.activeElement.id")
 
     add_sku(@thirty.sku)
@@ -168,7 +171,7 @@ class PosMixedReturnTest < ApplicationSystemTestCase
     assert_text "Priced", wait: 5
     fill_in "Return unit price", with: price
     select "Changed mind", from: "Return reason"
-    click_on "Add return"
+    click_on "Add Unlinked Return"
     assert_text "Unlinked return", wait: 10
   end
 

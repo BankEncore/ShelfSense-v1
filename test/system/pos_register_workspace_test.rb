@@ -1047,21 +1047,97 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     open_register
     click_on "Return (-)"
     assert_selector "#pos_return_chooser", visible: true
-    assert_selector "#pos_return_chooser li.is-selected", text: "Linked return"
+    assert_selector "#pos_return_chooser li.is-selected", text: /Find Original Receipt/
     assert page.evaluate_script("document.activeElement === document.querySelector('#pos_return_chooser li.is-selected')")
+    assert page.evaluate_script("document.querySelector('[data-register-workspace-target=background]').inert === true")
     send_keys :arrow_down
     send_keys :enter
     assert_selector "#pos_unlinked_overlay", visible: true
+    assert_selector "#pos_return_chooser", visible: :all
+    assert page.evaluate_script("document.querySelector('#pos_return_chooser').inert === true")
     send_keys :escape
     assert_no_selector "#pos_unlinked_overlay", visible: true
+    assert_selector "#pos_return_chooser", visible: true
+    send_keys :escape
+    assert_no_selector "#pos_return_chooser", visible: true
     click_on "Return (-)"
-    send_keys :enter
+    click_on "Continue"
     assert_selector "#pos_linked_overlay", visible: true
     assert_field "Receipt, merchandise, or unit"
     send_keys :escape
     assert_no_selector "#pos_linked_overlay", visible: true
+    assert_selector "#pos_return_chooser", visible: true
     send_keys "-"
     assert_selector "#pos_return_chooser", visible: true
+  end
+
+  test "linked return Escape ladder restores stages then chooser" do
+    open_register
+    2.times do
+      field = find("#pos-command-field")
+      field.fill_in with: @variant.sku
+      field.send_keys :enter
+      click_on "Tender (+)"
+      field = find("#pos-command-field")
+      field.fill_in with: "25.00"
+      field.send_keys :enter
+      send_keys :enter
+      assert_text "Transaction complete", wait: 10
+      click_on "New transaction"
+      assert_text "SALE ENTRY", wait: 10
+    end
+
+    click_on "Return (-)"
+    click_on "Continue"
+    assert_selector "#pos_linked_overlay", visible: true
+    field = find("[data-register-workspace-target='linkedLookupField']")
+    field.fill_in with: @variant.sku
+    click_on "Find Receipt"
+    assert_selector "#pos_linked_overlay li", minimum: 2, wait: 10
+    assert_button "View Returnable Items"
+    click_on "View Returnable Items"
+    assert_selector "[data-register-workspace-target='linkedPrimary']", text: "Add Return", wait: 10
+    assert_selector "#pos_linked_overlay li", minimum: 1
+    send_keys :escape
+    assert_button "View Returnable Items"
+    send_keys :escape
+    assert_button "Find Receipt"
+    assert_field "Receipt, merchandise, or unit"
+    send_keys :escape
+    assert_no_selector "#pos_linked_overlay", visible: true
+    assert_selector "#pos_return_chooser", visible: true
+    send_keys :escape
+    assert_no_selector "#pos_return_chooser", visible: true
+    assert_equal "pos-command-field", page.evaluate_script("document.activeElement && document.activeElement.id")
+  end
+
+  test "linked return add via overlay clears return overlay ancestry" do
+    open_register
+    field = find("#pos-command-field")
+    field.fill_in with: @variant.sku
+    field.send_keys :enter
+    click_on "Tender (+)"
+    field = find("#pos-command-field")
+    field.fill_in with: "25.00"
+    field.send_keys :enter
+    send_keys :enter
+    assert_text "Transaction complete", wait: 10
+    sale = PosTransaction.completed.find_by!(register: @register)
+    click_on "New transaction"
+    assert_text "SALE ENTRY", wait: 10
+
+    click_on "Return (-)"
+    click_on "Continue"
+    field = find("[data-register-workspace-target='linkedLookupField']")
+    field.fill_in with: sale.transaction_reference
+    click_on "Find Receipt"
+    assert_selector "#pos_linked_overlay li.is-selected", wait: 10
+    find("[data-register-workspace-target='linkedReasonField']").select "Changed mind"
+    click_on "Add Return"
+    assert_text "RETURN", wait: 10
+    assert_no_selector "#pos_linked_overlay", visible: true
+    assert_no_selector "#pos_return_chooser", visible: true
+    assert_selector "tr.is-selected[data-direction='return']"
   end
 
   test "cashier attaches a customer from operational search overlay" do

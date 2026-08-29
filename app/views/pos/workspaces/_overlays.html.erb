@@ -80,11 +80,16 @@
        aria-modal="true"
        aria-labelledby="pos-unlinked-title">
     <div class="pos-overlay__panel pos-overlay__panel--control">
-      <h2 id="pos-unlinked-title">Return without receipt</h2>
+      <h2 id="pos-unlinked-title">Unlinked return</h2>
+      <p>Scan or look up merchandise to return without a receipt.</p>
       <p id="pos-unlinked-feedback" class="pos-overlay__error" data-register-workspace-target="unlinkedFeedback" data-overlay-error role="alert"></p>
+      <p class="muted" data-register-workspace-target="unlinkedQueryLabel" role="status" aria-live="polite"></p>
 
-      <label for="pos-unlinked-identifier">Scan or identifier</label>
-      <input id="pos-unlinked-identifier" class="pos-command__field" data-register-workspace-target="unlinkedIdentifierField" autocomplete="off">
+      <label for="pos-unlinked-identifier">Scan or enter item</label>
+      <input id="pos-unlinked-identifier" class="pos-command__field"
+             data-register-workspace-target="unlinkedIdentifierField"
+             data-action="input->register-workspace#invalidateUnlinkedResultsOnInput"
+             autocomplete="off">
 
       <div id="pos_unlinked_preview" data-register-workspace-target="unlinkedPreview" hidden>
         <p data-register-workspace-target="unlinkedDescription"></p>
@@ -92,32 +97,44 @@
 
         <div data-register-workspace-target="unlinkedQuantityWrap">
           <label for="pos-unlinked-quantity">Quantity</label>
-          <input id="pos-unlinked-quantity" class="pos-command__field" data-register-workspace-target="unlinkedQuantityField" inputmode="numeric" autocomplete="off" value="1">
+          <input id="pos-unlinked-quantity" class="pos-command__field" data-register-workspace-target="unlinkedQuantityField"
+                 data-action="input->register-workspace#syncUnlinkedPrimaryEnabled change->register-workspace#syncUnlinkedPrimaryEnabled"
+                 inputmode="numeric" autocomplete="off" value="1">
         </div>
 
         <label for="pos-unlinked-reason">Return reason</label>
-        <select id="pos-unlinked-reason" class="pos-command__field" data-register-workspace-target="unlinkedReasonField"></select>
+        <select id="pos-unlinked-reason" class="pos-command__field" data-register-workspace-target="unlinkedReasonField"
+                data-action="change->register-workspace#onUnlinkedReasonChange"></select>
 
         <div data-register-workspace-target="unlinkedNoteWrap" hidden>
           <label for="pos-unlinked-note">Note</label>
-          <input id="pos-unlinked-note" class="pos-command__field" data-register-workspace-target="unlinkedNoteField" maxlength="200" autocomplete="off">
+          <input id="pos-unlinked-note" class="pos-command__field" data-register-workspace-target="unlinkedNoteField"
+                 data-action="input->register-workspace#syncUnlinkedPrimaryEnabled"
+                 maxlength="200" autocomplete="off">
         </div>
 
         <label for="pos-unlinked-price">Return unit price</label>
-        <input id="pos-unlinked-price" class="pos-command__field" data-register-workspace-target="unlinkedPriceField" inputmode="decimal" autocomplete="off">
+        <input id="pos-unlinked-price" class="pos-command__field" data-register-workspace-target="unlinkedPriceField"
+               data-action="input->register-workspace#syncUnlinkedPrimaryEnabled"
+               inputmode="decimal" autocomplete="off">
 
         <div data-register-workspace-target="unlinkedApproverWrap" hidden>
           <label for="pos-unlinked-approver-username">Approver username</label>
-          <input id="pos-unlinked-approver-username" class="pos-command__field" data-register-workspace-target="unlinkedApproverUsername" autocomplete="off">
+          <input id="pos-unlinked-approver-username" class="pos-command__field" data-register-workspace-target="unlinkedApproverUsername"
+                 data-action="input->register-workspace#syncUnlinkedPrimaryEnabled" autocomplete="off">
           <label for="pos-unlinked-approver-password">Approver password</label>
-          <input id="pos-unlinked-approver-password" class="pos-command__field" type="password" data-register-workspace-target="unlinkedApproverPassword" autocomplete="off">
+          <input id="pos-unlinked-approver-password" class="pos-command__field" type="password"
+                 data-register-workspace-target="unlinkedApproverPassword"
+                 data-action="input->register-workspace#syncUnlinkedPrimaryEnabled" autocomplete="off">
         </div>
       </div>
 
       <div class="pos-overlay__actions">
-        <%= action_button "Don't return (Esc)", style: :outline, intent: :neutral, size: :standard,
-              data: { action: "register-workspace#closeUnlinkedOverlay", register_workspace_target: "unlinkedCancel" } %>
-        <%= action_button "Add return", style: :solid, intent: :brand, size: :standard, hidden: true,
+        <%= action_button "Back to Return Options", style: :outline, intent: :neutral, size: :standard,
+              data: { action: "register-workspace#backFromUnlinkedOverlay", register_workspace_target: "unlinkedCancel" } %>
+        <%= action_button "Look Up Item", style: :outline, intent: :neutral, size: :standard,
+              data: { action: "register-workspace#lookUpUnlinkedItem", register_workspace_target: "unlinkedLookup" } %>
+        <%= action_button "Add Unlinked Return", style: :solid, intent: :brand, size: :standard, disabled: true,
               data: { action: "register-workspace#submitUnlinkedReturn", register_workspace_target: "unlinkedApply" } %>
       </div>
     </div>
@@ -316,14 +333,24 @@
        aria-modal="true"
        aria-labelledby="pos-return-chooser-title">
     <div class="pos-overlay__panel">
-      <h2 id="pos-return-chooser-title">RETURN</h2>
+      <h2 id="pos-return-chooser-title">Start return</h2>
+      <p>Choose how to find the original purchase.</p>
       <ul class="pos-picker" role="listbox" aria-labelledby="pos-return-chooser-title" data-register-workspace-target="returnChooserList">
-        <li data-choice="linked" class="is-selected" role="option" tabindex="0" aria-selected="true">Linked return</li>
-        <li data-choice="unlinked" role="option" tabindex="-1" aria-selected="false">Unlinked return</li>
+        <li data-choice="linked" class="is-selected" role="option" tabindex="0" aria-selected="true">
+          Find Original Receipt
+          <span class="muted">Best when the customer's purchase can be identified.</span>
+        </li>
+        <li data-choice="unlinked" role="option" tabindex="-1" aria-selected="false">
+          Unlinked Return
+          <span class="muted">Requires a reason and may require authorization.</span>
+        </li>
       </ul>
-      <p class="muted">Enter chooses. Esc cancels.</p>
-      <%= action_button "Cancel (Esc)", style: :outline, intent: :neutral, size: :standard,
-            data: { action: "register-workspace#closeReturnChooser" } %>
+      <div class="pos-overlay__actions">
+        <%= action_button "Keep Sale Mode", style: :outline, intent: :neutral, size: :standard,
+              data: { action: "register-workspace#keepSaleMode", register_workspace_target: "returnChooserCancel" } %>
+        <%= action_button "Continue", style: :solid, intent: :brand, size: :standard,
+              data: { action: "register-workspace#confirmReturnChooser", register_workspace_target: "returnChooserContinue" } %>
+      </div>
     </div>
   </div>
 
@@ -335,27 +362,39 @@
        aria-modal="true"
        aria-labelledby="pos-linked-title">
     <div class="pos-overlay__panel">
-      <h2 id="pos-linked-title">Linked return</h2>
-      <label class="field">
+      <h2 id="pos-linked-title">Return from original receipt</h2>
+      <p data-register-workspace-target="linkedInstruction">Find a receipt, then choose returnable items.</p>
+      <label class="field" data-register-workspace-target="linkedLookupWrap">
         <span>Receipt, merchandise, or unit</span>
-        <input type="text" autocomplete="off" data-register-workspace-target="linkedLookupField">
+        <input type="text" autocomplete="off" data-register-workspace-target="linkedLookupField"
+               data-action="input->register-workspace#invalidateLinkedResultsOnInput">
       </label>
       <p id="pos-linked-feedback" class="pos-overlay__error" data-register-workspace-target="linkedFeedback" data-overlay-error role="alert"></p>
+      <p class="muted" data-register-workspace-target="linkedQueryLabel" role="status" aria-live="polite"></p>
       <ul class="pos-picker" role="listbox" aria-labelledby="pos-linked-title" data-register-workspace-target="linkedList"></ul>
-      <label class="field">
-        <span>Qty</span>
-        <input type="text" inputmode="numeric" autocomplete="off" value="1" data-register-workspace-target="linkedQuantityField">
-      </label>
-      <label class="field">
-        <span>Reason</span>
-        <select data-register-workspace-target="linkedReasonField"></select>
-      </label>
-      <label class="field" hidden data-register-workspace-target="linkedNoteWrap">
-        <span>Note</span>
-        <input type="text" maxlength="200" autocomplete="off" data-register-workspace-target="linkedNoteField">
-      </label>
-      <p class="muted">Enter in the lookup field searches. Enter on a highlighted line adds it. Esc cancels.</p>
-      <%= action_button "Cancel (Esc)", style: :outline, intent: :neutral, size: :standard,
-            data: { action: "register-workspace#closeLinkedOverlay" } %>
+      <div data-register-workspace-target="linkedDetailsWrap" hidden>
+        <label class="field">
+          <span>Qty</span>
+          <input type="text" inputmode="numeric" autocomplete="off" value="1"
+                 data-register-workspace-target="linkedQuantityField"
+                 data-action="input->register-workspace#syncLinkedPrimaryEnabled">
+        </label>
+        <label class="field">
+          <span>Reason</span>
+          <select data-register-workspace-target="linkedReasonField"
+                  data-action="change->register-workspace#onLinkedReasonChange"></select>
+        </label>
+        <label class="field" hidden data-register-workspace-target="linkedNoteWrap">
+          <span>Note</span>
+          <input type="text" maxlength="200" autocomplete="off" data-register-workspace-target="linkedNoteField"
+                 data-action="input->register-workspace#syncLinkedPrimaryEnabled">
+        </label>
+      </div>
+      <div class="pos-overlay__actions">
+        <%= action_button "Back to Return Options", style: :outline, intent: :neutral, size: :standard,
+              data: { action: "register-workspace#linkedSecondaryAction", register_workspace_target: "linkedSecondary" } %>
+        <%= action_button "Find Receipt", style: :solid, intent: :brand, size: :standard,
+              data: { action: "register-workspace#linkedPrimaryAction", register_workspace_target: "linkedPrimary" } %>
+      </div>
     </div>
   </div>
