@@ -136,8 +136,10 @@ export default class extends Controller {
     "productList",
     "variantOverlay",
     "variantList",
+    "variantBack",
     "unitOverlay",
     "unitList",
+    "unitBack",
     "openPriceOverlay",
     "openPriceTitle",
     "openPricePrompt",
@@ -1331,6 +1333,7 @@ export default class extends Controller {
 
   openVariantPicker(variants) {
     if (!this.hasVariantOverlayTarget || !this.hasVariantListTarget) return
+    this.syncNestedPickerBackLabels()
     this.variantListTarget.replaceChildren()
     variants.forEach((variant, index) => {
       const item = document.createElement("li")
@@ -1391,8 +1394,19 @@ export default class extends Controller {
     this.abortUnlinkedPicker()
   }
 
+  syncNestedPickerBackLabels() {
+    const unlinked = Boolean(this.unlinkedPickerActive)
+    if (this.hasVariantBackTarget) {
+      this.variantBackTarget.textContent = unlinked ? "Back to Item Lookup" : "Back to Products"
+    }
+    if (this.hasUnitBackTarget) {
+      this.unitBackTarget.textContent = unlinked ? "Back to Item Lookup" : "Back to Variants"
+    }
+  }
+
   openUnitPicker(units) {
     if (!this.hasUnitOverlayTarget || !this.hasUnitListTarget) return
+    this.syncNestedPickerBackLabels()
     this.unitListTarget.replaceChildren()
     if (units.length === 0) {
       const item = document.createElement("li")
@@ -1534,14 +1548,25 @@ export default class extends Controller {
     if (this.inFlight || this.modeValue !== "sale_entry") return
     if (!this.hasReturnChooserOverlayTarget) return
     const items = Array.from(this.returnChooserListTarget.querySelectorAll("li"))
-    items.forEach((item, index) => {
-      this.decoratePickerItem(item, { selected: index === 0 })
+    const unlinkedProhibited = this.policyFor("unlinked_return") === "prohibited"
+    let firstEnabled = null
+    items.forEach((item) => {
+      const disabled = item.dataset.choice === "unlinked" && unlinkedProhibited
+      const muted = item.querySelector(".muted")
+      if (item.dataset.choice === "unlinked" && muted) {
+        muted.textContent = disabled
+          ? "Not available for your role."
+          : "Requires a reason and may require authorization."
+      }
+      const selected = !disabled && firstEnabled == null
+      if (selected) firstEnabled = item
+      this.decoratePickerItem(item, { selected, disabled })
       item.onclick = () => {
         this.onPickerItemClick(this.returnChooserListTarget, item)
         this.syncReturnChooserContinue()
       }
     })
-    this.showOverlay(this.returnChooserOverlayTarget, this.returnChooserListTarget.querySelector("li.is-selected"))
+    this.showOverlay(this.returnChooserOverlayTarget, firstEnabled || items[0])
     this.syncReturnChooserContinue()
   }
 
@@ -1591,10 +1616,7 @@ export default class extends Controller {
     const choice = selected.dataset.choice
     // Keep chooser on the stack as parent of linked/unlinked.
     if (choice === "unlinked") {
-      if (this.policyFor("unlinked_return") === "prohibited") {
-        this.showFeedback("Return without receipt is not available.")
-        return
-      }
+      if (this.policyFor("unlinked_return") === "prohibited") return
       this.openUnlinkedOverlay()
       return
     }
@@ -1761,6 +1783,9 @@ export default class extends Controller {
     if (this.inFlight) return
     const stage = this.linkedStage || "lookup"
     if (stage === "lines") {
+      // Abandon any in-flight lookup/lines request before reversing stage.
+      this.invalidateLinkedLookup()
+      if (this.hasLinkedQueryLabelTarget) this.linkedQueryLabelTarget.textContent = ""
       if (this.linkedReceiptCacheHtml) {
         this.linkedStage = "receipts"
         if (this.hasLinkedListTarget) this.linkedListTarget.innerHTML = this.linkedReceiptCacheHtml
@@ -1783,6 +1808,8 @@ export default class extends Controller {
       return
     }
     if (stage === "receipts") {
+      this.invalidateLinkedLookup()
+      if (this.hasLinkedQueryLabelTarget) this.linkedQueryLabelTarget.textContent = ""
       this.linkedStage = "lookup"
       this.linkedReceiptCacheHtml = null
       if (this.hasLinkedListTarget) this.linkedListTarget.replaceChildren()

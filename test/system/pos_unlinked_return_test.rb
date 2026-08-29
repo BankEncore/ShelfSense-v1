@@ -197,6 +197,32 @@ class PosUnlinkedReturnTest < ApplicationSystemTestCase
     assert_field "pos-unlinked-identifier"
   end
 
+  test "unlinked variant picker Back label returns to item lookup" do
+    ProductVariants::Create.call(
+      product: @variant.product,
+      attributes: {
+        variant_type: "standard",
+        status: "active",
+        merchandise_class_id: @variant.merchandise_class_id,
+        regular_price_cents: 1500
+      },
+      actor: @actor
+    )
+    open_quantity_stock(store: @store, variant: @variant.product.product_variants.order(:created_at).last, actor: @actor, quantity: 2)
+
+    open_register_as("admin")
+    open_unlinked_overlay
+    identifier = find("#pos-unlinked-identifier")
+    identifier.fill_in with: @variant.product.primary_identifier
+    identifier.send_keys :enter
+    assert_selector "#pos_variant_overlay", visible: true, wait: 5
+    assert_button "Back to Item Lookup"
+    click_on "Back to Item Lookup"
+    assert_no_selector "#pos_variant_overlay", visible: true
+    assert_selector "#pos_unlinked_overlay", visible: true
+    assert_field "pos-unlinked-identifier"
+  end
+
   private
 
   def open_register_as(username)

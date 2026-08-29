@@ -274,7 +274,7 @@
       <ul class="pos-picker" role="listbox" aria-labelledby="pos-variant-title" data-register-workspace-target="variantList"></ul>
       <div class="pos-overlay__actions">
         <%= action_button "Back to Products", style: :outline, intent: :neutral, size: :standard,
-              data: { action: "register-workspace#backToProducts" } %>
+              data: { action: "register-workspace#backToProducts", register_workspace_target: "variantBack" } %>
         <%= action_button "Choose Variant", style: :solid, intent: :brand, size: :standard,
               data: { action: "register-workspace#confirmVariantSelection" } %>
       </div>
@@ -294,7 +294,7 @@
       <ul class="pos-picker" role="listbox" aria-labelledby="pos-unit-title" data-register-workspace-target="unitList"></ul>
       <div class="pos-overlay__actions">
         <%= action_button "Back to Variants", style: :outline, intent: :neutral, size: :standard,
-              data: { action: "register-workspace#backToVariants" } %>
+              data: { action: "register-workspace#backToVariants", register_workspace_target: "unitBack" } %>
         <%= action_button "Add to Sale", style: :solid, intent: :brand, size: :standard,
               data: { action: "register-workspace#confirmUnitSelection" } %>
       </div>
