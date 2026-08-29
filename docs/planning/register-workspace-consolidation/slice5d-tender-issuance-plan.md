@@ -1,6 +1,6 @@
 # Slice 5D — Tender selection and issuance host migration
 
-Status: **Merged** to `register-workspace-consolidation` ([#89](https://github.com/BankEncore/ShelfSense-v1/issues/89) / PR [#102](https://github.com/BankEncore/ShelfSense-v1/pull/102)).
+Status: **Merged** to `register-workspace-consolidation` ([#89](https://github.com/BankEncore/ShelfSense-v1/issues/89) / PR [#102](https://github.com/BankEncore/ShelfSense-v1/pull/102)). Post-merge remediation: O10 reload always requires a card field; Amount → Program → Type → Card order; Enter submits; Scan-or-enter field is the real O10 scan path; O11 rows are visually numbered.
 
 Authority: [plan.md](plan.md), [routing-and-authority.md](routing-and-authority.md), [textual-wireframes.md](textual-wireframes.md) O10 / O11 / P8 / P12, [user-stories.md](user-stories.md), [slice5a-lookup-overlays-plan.md](slice5a-lookup-overlays-plan.md) (lifecycle), Phase 6.7 [pos-workflow.md](../phase4-6-point-of-sale/phase6-pos-mvp/pos-workflow.md) (keyboard — with intentional `+` supersession below).
 
