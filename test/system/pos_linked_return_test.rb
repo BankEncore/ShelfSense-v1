@@ -24,7 +24,7 @@ class PosLinkedReturnTest < ApplicationSystemTestCase
   test "cashier returns from history, refunds cash, and sees session totals" do
     open_register
     add_current_sku
-    click_on "Tender (+)"
+    start_cash_tender_via_plus
     field = find("#pos-command-field")
     field.fill_in with: "25.00"
     field.send_keys :enter
@@ -43,7 +43,7 @@ class PosLinkedReturnTest < ApplicationSystemTestCase
 
     assert_text "RETURN", wait: 10
     assert_text "Refund remaining"
-    click_on "Refund (+)"
+    start_cash_refund_via_plus
     assert_text "REFUND"
     send_keys :f2
     assert_selector "[data-register-workspace-target='fieldLabel']", text: /External Card/
@@ -83,7 +83,7 @@ class PosLinkedReturnTest < ApplicationSystemTestCase
   test "even exchange stays in sale entry until plus confirms complete" do
     open_register
     add_current_sku
-    click_on "Tender (+)"
+    start_cash_tender_via_plus
     field = find("#pos-command-field")
     field.fill_in with: "25.00"
     field.send_keys :enter

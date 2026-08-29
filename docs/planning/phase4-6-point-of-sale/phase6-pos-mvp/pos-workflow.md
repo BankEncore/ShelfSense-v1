@@ -2,7 +2,7 @@
 
 **Status:** Implemented. Implementation authority for cashier interaction: POS Home, preferred Register, X Report, keyboard contract, merchandise pickers, `/` search, open-price Standard, return entry, and tender selection **until the Register workspace consolidation owning slice merges**.
 
-Staged supersession is locked in [routing-and-authority.md](../../register-workspace-consolidation/routing-and-authority.md): Slice 2 replaces §4 (POS Home); Slice 3 replaces the §6 F10 binding and §14 F10 history entry (not history behavior); Slice 7C may replace the remainder of §6 after an accepted keyboard contract. Until Slice 7C, remaining §6 keys remain lock.
+Staged supersession is locked in [routing-and-authority.md](../../register-workspace-consolidation/routing-and-authority.md): Slice 2 replaces §4 (POS Home); Slice 3 replaces the §6 F10 binding and §14 F10 history entry (not history behavior); Slice 5D replaces **only** the §6 / §12 `+` destination (empty-field `+` opens O11 tender selection after tenderability checks — see [slice5d-tender-issuance-plan.md](../../register-workspace-consolidation/slice5d-tender-issuance-plan.md)); Slice 7C may replace the remainder of §6 after an accepted keyboard contract. Until Slice 7C, remaining §6 keys other than the Slice 5D `+` exception remain lock.
 
 **Authority:** How the cashier operates MVP capabilities that 6.1–6.6 already made commercially true. Completion, inventory posting, settlement math, controlled-action *policy*, linked/unlinked return *engines*, and post-void *facts* remain those contracts. Receipt *print layout* is 6.8 ([receipt-presentation.md](receipt-presentation.md) / [mvp-closeout.md](mvp-closeout.md)).
 
@@ -201,7 +201,7 @@ The cookie confers neither authorization nor Session ownership.
 | `/` | `MERCHANDISE_SEARCH` (empty scan field only) |
 | `*` | `QUANTITY` on selected quantity-tracked sale line |
 | `-` | `RETURN` chooser (empty scan field only) |
-| `+` | Cash settlement with remaining prefilled (§12); even-exchange complete (§12.4) |
+| `+` | **Slice 5D:** empty-field `+` opens O11 tender selection after tenderability checks ([slice5d-tender-issuance-plan.md](../../register-workspace-consolidation/slice5d-tender-issuance-plan.md)). Historical 6.7 behavior was Cash-with-remaining (§12.3) / even-exchange complete (§12.4); even-exchange and empty-basket preconditions remain. |
 | F1 | Cash |
 | F2 | Card |
 | F3 | Check |
@@ -520,6 +520,8 @@ No silent no-op.
 
 ### 12.3 `+` (payment)
 
+**Historical 6.7 (superseded for destination by Slice 5D):**
+
 ```text
 Due $26.72
 +
@@ -527,15 +529,15 @@ Due $26.72
   Amount: [26.72]
 ```
 
-Exact Cash: `+` then Enter. Customer gives $40: `+` then `40` then Enter.
+**Slice 5D:** empty-field `+` with payment or refund remaining opens O11 (eligible tender types). Choosing Cash (or F1) still reaches command-field amount entry with remaining prefilled. Exact Cash: choose Cash then Enter. Customer gives $40: choose Cash, `40`, Enter.
 
-Refund-direction: `+` is **Cash refund** with remaining refund prefilled.
+Refund-direction: eligible refund types in O11; F1 remains Cash refund with remaining refund prefilled.
 
 ### 12.4 Even exchange
 
-Mixed sale+return `signed_net = 0`: `+` confirms complete with no tender ([returns.md](returns.md)). Do not open a $0.00 Cash tender.
+Mixed sale+return `signed_net = 0`: `+` confirms complete with no tender ([returns.md](returns.md)). Do not open a $0.00 Cash tender. **Slice 5D keeps this precondition** — do not open an empty O11.
 
-`+` with no merchandise: explain why (not a silent no-op).
+`+` with no merchandise: explain why (not a silent no-op). **Slice 5D keeps this precondition.**
 
 ---
 

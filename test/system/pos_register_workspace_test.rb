@@ -30,7 +30,7 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     assert_selector "tr.is-selected[data-quantity='2']"
     assert_text "SALE ENTRY"
 
-    click_on "Tender (+)"
+    start_cash_tender_via_plus
     assert_text "CASH TENDER"
     field = find("#pos-command-field")
     field.fill_in with: "50.00"
@@ -50,7 +50,7 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
   test "cashier can take Card then Cash and return to sale abandons working tenders" do
     open_register
     add_current_sku
-    click_on "Tender (+)"
+    start_cash_tender_via_plus
     assert_text "CASH TENDER"
     assert_no_selector "[data-register-workspace-target='referenceWrap']", visible: true
     send_keys :f2
@@ -68,7 +68,7 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     assert_text "SALE ENTRY"
     assert_no_selector "#pos_tenders", text: "External Card"
 
-    click_on "Tender (+)"
+    start_cash_tender_via_plus
     send_keys :f2
     assert_selector "[data-register-workspace-target='fieldLabel']", text: /External Card/
     field = find("#pos-command-field")
@@ -383,7 +383,7 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
   test "insufficient cash stays in tender and escape returns to sale entry" do
     open_register
     add_current_sku
-    click_on "Tender (+)"
+    start_cash_tender_via_plus
     assert_text "CASH TENDER"
     field = find("#pos-command-field")
     field.fill_in with: "0.01"
@@ -483,7 +483,7 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
   test "completed receipt enter is a no-op and workspace without a working sale returns to enter" do
     open_register
     add_current_sku
-    click_on "Tender (+)"
+    start_cash_tender_via_plus
     field = find("#pos-command-field")
     field.fill_in with: "50.00"
     field.send_keys :enter
@@ -543,7 +543,7 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     open_register
     add_current_sku
     shrink_current_sku(5)
-    click_on "Tender (+)"
+    start_cash_tender_via_plus
     field = find("#pos-command-field")
     field.fill_in with: "50.00"
     field.send_keys :enter
@@ -573,7 +573,7 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     open_register
     add_current_sku
     shrink_current_sku(5)
-    click_on "Tender (+)"
+    start_cash_tender_via_plus
     field = find("#pos-command-field")
     field.fill_in with: "50.00"
     field.send_keys :enter
@@ -595,7 +595,7 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     open_register
     add_current_sku
     shrink_current_sku(5)
-    click_on "Tender (+)"
+    start_cash_tender_via_plus
     field = find("#pos-command-field")
     field.fill_in with: "50.00"
     field.send_keys :enter
@@ -642,7 +642,7 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     field.send_keys :enter
     assert_text "Store Service"
 
-    click_on "Tender (+)"
+    start_cash_tender_via_plus
     field = find("#pos-command-field")
     field.fill_in with: "100.00"
     field.send_keys :enter
@@ -659,7 +659,7 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
   test "cashier can open completed history and reprint without changing the sale" do
     open_register
     add_current_sku
-    click_on "Tender (+)"
+    start_cash_tender_via_plus
     field = find("#pos-command-field")
     field.fill_in with: "50.00"
     field.send_keys :enter
@@ -711,7 +711,7 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     assert_text "Example Book"
     assert_text "SALE ENTRY"
 
-    click_on "Tender (+)"
+    start_cash_tender_via_plus
     send_keys :f2
     field = find("#pos-command-field")
     field.fill_in with: "10.00"
@@ -1179,7 +1179,7 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
       field = find("#pos-command-field")
       field.fill_in with: @variant.sku
       field.send_keys :enter
-      click_on "Tender (+)"
+      start_cash_tender_via_plus
       field = find("#pos-command-field")
       field.fill_in with: "25.00"
       field.send_keys :enter
@@ -1219,7 +1219,7 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
       field = find("#pos-command-field")
       field.fill_in with: @variant.sku
       field.send_keys :enter
-      click_on "Tender (+)"
+      start_cash_tender_via_plus
       field = find("#pos-command-field")
       field.fill_in with: "25.00"
       field.send_keys :enter
@@ -1328,7 +1328,7 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     field = find("#pos-command-field")
     field.fill_in with: @variant.sku
     field.send_keys :enter
-    click_on "Tender (+)"
+    start_cash_tender_via_plus
     field = find("#pos-command-field")
     field.fill_in with: "25.00"
     field.send_keys :enter
@@ -1365,6 +1365,151 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     click_on "Attach Customer"
     assert_no_selector "#pos_customer_overlay", visible: true, wait: 10
     assert_text "Customer · Overlay Customer"
+  end
+
+  test "plus opens O11 after tenderability checks and restores sale on escape" do
+    open_register
+    find("#pos-command-field").send_keys "+"
+    assert_text "Add merchandise before taking a tender."
+    assert_no_selector "#pos_other_overlay", visible: true
+
+    add_current_sku
+    find("#pos-command-field").send_keys "+"
+    assert_selector "#pos_other_overlay", visible: true
+    assert_selector "#pos-other-title", text: "Add tender"
+    assert_text "Back to Sale"
+    assert_text "SALE ENTRY"
+    send_keys :escape
+    assert_no_selector "#pos_other_overlay", visible: true
+    assert_text "SALE ENTRY"
+    assert_equal "pos-command-field", page.evaluate_script("document.activeElement && document.activeElement.id")
+  end
+
+  test "O11 choose tender changes entry chrome only and F1 still bypasses O11" do
+    open_register
+    add_current_sku
+    send_keys :f1
+    assert_text "CASH TENDER"
+    assert_no_selector "#pos_other_overlay", visible: true
+    send_keys :escape
+    assert_text "SALE ENTRY"
+
+    click_on "Tender (+)"
+    assert_selector "#pos_other_overlay", visible: true
+    assert_selector "#pos_other_overlay li", text: "Cash"
+    assert_selector "#pos_other_overlay li", text: "External Card"
+    choose_tender_from_overlay("External Card")
+    assert_text "TENDER"
+    assert_selector "[data-register-workspace-target='fieldLabel']", text: /External Card/
+    assert_equal 0, PosTransaction.working.find_by!(register: @register).pos_tenders.count
+  end
+
+  test "O11 escape from tender entry restores prior type and amount" do
+    TenderType.create!(
+      code: "voucher_restore",
+      name: "Restore Voucher",
+      behavioral_category: "other",
+      external_reference_policy: "omitted",
+      active: true
+    )
+    TenderType.create!(
+      code: "campus_restore",
+      name: "Restore Campus",
+      behavioral_category: "other",
+      external_reference_policy: "required",
+      active: true
+    )
+    open_register
+    add_current_sku
+    send_keys :f4
+    assert_selector "#pos_other_overlay", visible: true
+    choose_tender_from_overlay("Restore Campus")
+    assert_text "TENDER"
+    field = find("#pos-command-field")
+    field.fill_in with: "12.34"
+    find("#pos-reference-field").fill_in with: "REF-9"
+    send_keys :f4
+    assert_selector "#pos_other_overlay", visible: true
+    assert_text "Back to Tender"
+    send_keys :escape
+    assert_no_selector "#pos_other_overlay", visible: true
+    assert_text "TENDER"
+    assert_selector "[data-register-workspace-target='fieldLabel']", text: /Restore Campus/
+    assert_equal "12.34", find("#pos-command-field").value
+    assert_equal "REF-9", find("#pos-reference-field").value
+  end
+
+  test "applied split tenders survive O11 open and close" do
+    TenderType.create!(
+      code: "split_voucher",
+      name: "Split Voucher",
+      behavioral_category: "other",
+      external_reference_policy: "omitted",
+      active: true
+    )
+    TenderType.create!(
+      code: "split_campus",
+      name: "Split Campus",
+      behavioral_category: "other",
+      external_reference_policy: "omitted",
+      active: true
+    )
+    open_register
+    add_current_sku
+    start_cash_tender_via_plus
+    send_keys :f2
+    field = find("#pos-command-field")
+    field.fill_in with: "10.00"
+    field.send_keys :enter
+    assert_selector "#pos_tenders", text: "External Card"
+    send_keys :f4
+    assert_selector "#pos_other_overlay", visible: true
+    send_keys :escape
+    assert_no_selector "#pos_other_overlay", visible: true
+    assert_selector "#pos_tenders", text: "External Card"
+    assert_equal 1, PosTransaction.working.find_by!(register: @register).pos_tenders.count
+  end
+
+  test "O10 gift-card issuance add validates and persists activation" do
+    GiftCards::Programs.seed!
+    open_register
+    click_on "Add gift card"
+    assert_selector "#pos_issuance_overlay", visible: true
+    select "Store generated", from: "pos-issuance-program"
+    assert_selector "[data-register-workspace-target='issuanceCardWrap']", visible: :hidden
+    click_on "Add Gift Card"
+    assert_selector "#pos-issuance-feedback", text: /issuance amount/i
+    assert_selector "#pos_issuance_overlay", visible: true
+    find("#pos-issuance-amount").fill_in with: "25.00"
+    click_on "Add Gift Card"
+    assert_no_selector "#pos_issuance_overlay", visible: true, wait: 10
+    assert_selector ".pos-issuance", text: /Activation/
+    assert_selector ".pos-issuance", text: "$25.00"
+    assert_equal 1, PosTransaction.working.find_by!(register: @register).pos_stored_value_issuances.count
+  end
+
+  test "O10 manual program shows card field and scan while open populates it" do
+    GiftCards::Programs.seed!
+    program = GiftCardProgram.find_by!(code: "manual")
+    number = GiftCards::Number.generate(program)
+    open_register
+    click_on "Add gift card"
+    assert_selector "#pos_issuance_overlay", visible: true
+    select "Physical / external", from: "pos-issuance-program"
+    assert_selector "#pos-issuance-card", visible: true
+    find("#pos-command-field", visible: :all)
+    # Scan while O10 open routes into the overlay card field.
+    page.execute_script(<<~JS)
+      const el = document.getElementById("pos_workspace")
+      const controller = window.Stimulus.getControllerForElementAndIdentifier(el, "register-workspace")
+      controller.fieldTarget.value = #{number.to_json}
+      controller.handleGiftCardScan({ found: false, number_authority: "manual_external" })
+    JS
+    assert_equal number, find("#pos-issuance-card").value
+    find("#pos-issuance-amount").fill_in with: "15.00"
+    click_on "Add Gift Card"
+    assert_no_selector "#pos_issuance_overlay", visible: true, wait: 10
+    assert_selector ".pos-issuance", text: /Activation/
   end
 
   private

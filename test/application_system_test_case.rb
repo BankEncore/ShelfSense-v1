@@ -60,6 +60,29 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
     click_on label
   end
 
+  # Slice 5D: empty-field Tender (+) / Refund (+) opens O11; Cash is first in cashier_selectable order.
+  def choose_tender_from_overlay(name = "Cash")
+    assert_selector "#pos_other_overlay", visible: true
+    find("#pos_other_overlay li", text: name).click
+    within("#pos_other_overlay") { click_button "Choose Tender" }
+    assert_no_selector "#pos_other_overlay", visible: true
+  end
+
+  def start_cash_tender_via_plus
+    click_on "Tender (+)"
+    choose_tender_from_overlay("Cash")
+    assert_text "CASH TENDER"
+  end
+
+  def start_cash_refund_via_plus
+    click_on "Refund (+)"
+    choose_tender_from_overlay("Cash")
+    assert_text "REFUND"
+    field = find("#pos-command-field")
+    refute_equal "", field.value
+    field.click
+  end
+
   def teardown
     reset_uds_viewport!
   end

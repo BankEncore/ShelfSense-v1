@@ -26,34 +26,8 @@
       </div>
     <% end %>
     <% if @ui_mode == "sale_entry" && gift_card_programs.any? %>
-      <%= form_with url: pos_register_stored_value_issuance_path(register_scope), method: :post, class: "pos-issuance-form" do %>
-        <%= hidden_field_tag :register_id, @register.id %>
-        <%= hidden_field_tag :lock_version, @transaction.lock_version %>
-        <label>
-          Type
-          <select name="issuance_type">
-            <option value="activation">Activation</option>
-            <option value="reload">Reload</option>
-          </select>
-        </label>
-        <label>
-          Program
-          <select name="gift_card_program_id">
-            <% gift_card_programs.each do |program| %>
-              <option value="<%= program.id %>"><%= program.name %></option>
-            <% end %>
-          </select>
-        </label>
-        <label>
-          Amount
-          <input name="issuance_amount" inputmode="decimal" autocomplete="off">
-        </label>
-        <label>
-          Card number
-          <input name="card_number" autocomplete="off" data-register-workspace-target="issuanceCardNumber">
-        </label>
-        <%= submit_tag "Add gift card", class: "btn btn--solid btn--brand" %>
-      <% end %>
+      <%= action_button "Add gift card", style: :solid, intent: :brand, size: :standard,
+            data: { action: "register-workspace#openIssuanceOverlay" } %>
     <% end %>
   </section>
 <% end %>
