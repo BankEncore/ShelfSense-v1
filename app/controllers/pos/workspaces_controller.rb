@@ -8,6 +8,7 @@ module Pos
       "open_price" => "pos-open-price-feedback",
       "linked_return" => "pos-linked-feedback"
     }.freeze
+    APPROVAL_FEEDBACK_ID = "pos-approval-feedback"
 
     before_action :require_register!, except: :complete
     before_action :prepare_workspace!, except: %i[show continue complete]
@@ -668,16 +669,19 @@ module Pos
       yield
     rescue Pos::Denied
       redirect_to root_path, alert: "You are not authorized to perform that action."
+    rescue Pos::OverlayFailure => e
+      recover_from_overlay_failure(e, error_mode)
     rescue Pos::StaleObject
-      recover_from_workspace_error("This sale was changed. Reload and try again.", error_mode, persist_overlay: false)
+      recover_from_overlay_failure(Pos::OverlayFailure.stale, error_mode, persist_overlay: false)
     rescue Pos::InvalidatedDialogBasis => e
-      recover_from_workspace_error(e.message, error_mode, persist_overlay: false)
+      recover_from_overlay_failure(Pos::OverlayFailure.parent_validation(e.message), error_mode, persist_overlay: false)
     rescue Money::ParseCents::Error, Pos::Error => e
-      recover_from_workspace_error(e.message, error_mode)
+      recover_from_overlay_failure(Pos::OverlayFailure.parent_validation(e.message), error_mode)
     end
 
-    def recover_from_workspace_error(message, error_mode, persist_overlay: persist_overlay_error?)
-      @feedback = message
+    def recover_from_overlay_failure(failure, error_mode, persist_overlay: nil)
+      @overlay_failure = failure
+      @feedback = failure.message
       @transaction.reload
       @command_value = params[:identifier] || params[:quantity] || params[:tender_amount]
       if @transaction.completed?
@@ -685,7 +689,8 @@ module Pos
         return
       end
 
-      if persist_overlay
+      persist = persist_overlay.nil? ? overlay_error_dom_id.present? : persist_overlay
+      if persist
         respond_overlay_error(error_mode)
         return
       end
@@ -694,11 +699,20 @@ module Pos
       respond_workspace
     end
 
+    def recover_from_workspace_error(message, error_mode, persist_overlay: persist_overlay_error?)
+      recover_from_overlay_failure(Pos::OverlayFailure.parent_validation(message), error_mode, persist_overlay: persist_overlay)
+    end
+
     def persist_overlay_error?
       overlay_error_dom_id.present?
     end
 
     def overlay_error_dom_id
+      failure = @overlay_failure
+      if failure&.authorization?
+        return APPROVAL_FEEDBACK_ID
+      end
+
       return OVERLAY_ERROR_TARGETS[action_name] if OVERLAY_ERROR_TARGETS.key?(action_name)
       return "pos-open-price-feedback" if action_name == "merchandise" && params[:selling_price].present?
 
@@ -707,6 +721,7 @@ module Pos
 
     def respond_overlay_error(error_mode)
       @overlay_error_dom_id = overlay_error_dom_id
+      @overlay_failure ||= Pos::OverlayFailure.parent_validation(@feedback)
       respond_to do |format|
         format.turbo_stream { render "pos/workspaces/dialog_error", status: :unprocessable_entity }
         format.html do

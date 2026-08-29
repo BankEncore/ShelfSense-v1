@@ -28,6 +28,7 @@
             data-selling-cents="<%= line.selling_unit_price_cents %>"
             data-discount-bp="<%= line.manual_discount_basis_points %>"
             data-tax-class-id="<%= line.tax_class_id %>"
+            data-tax-class-name="<%= line.tax_class_name_snapshot %>"
             data-pricing-method-snapshot="<%= line.pricing_method_snapshot %>"
             aria-selected="<%= line.id == selected_id %>">
           <td><%= line.id == selected_id ? ">" : "" %> <%= display_quantity %></td>

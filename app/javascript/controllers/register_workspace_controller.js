@@ -48,6 +48,7 @@ export default class extends Controller {
     "controlApproverPasswordInput",
     "controlTitle",
     "controlLineLabel",
+    "controlCurrentLabel",
     "controlPriceWrap",
     "controlDiscountWrap",
     "controlTaxWrap",
@@ -57,12 +58,27 @@ export default class extends Controller {
     "controlReasonField",
     "controlNoteWrap",
     "controlNoteField",
-    "controlApproverWrap",
-    "approverUsername",
-    "approverPassword",
     "controlCancel",
     "controlApply",
     "controlRemove",
+    "approvalOverlay",
+    "approvalActionLabel",
+    "approvalItemLabel",
+    "approvalCurrentWrap",
+    "approvalCurrentHeading",
+    "approvalCurrentLabel",
+    "approvalProposedWrap",
+    "approvalProposedHeading",
+    "approvalProposedLabel",
+    "approvalQtyWrap",
+    "approvalQtyLabel",
+    "approvalReasonLabel",
+    "approvalBack",
+    "approvalAuthorize",
+    "approverUsername",
+    "approverPassword",
+    "overlayFailureMeta",
+    "cancelConsequence",
     "unlinkedIdentifierField",
     "unlinkedIdentifierInput",
     "unlinkedProductIdInput",
@@ -89,9 +105,6 @@ export default class extends Controller {
     "unlinkedNoteWrap",
     "unlinkedNoteField",
     "unlinkedPriceField",
-    "unlinkedApproverWrap",
-    "unlinkedApproverUsername",
-    "unlinkedApproverPassword",
     "unlinkedCancel",
     "unlinkedLookup",
     "unlinkedApply",
@@ -203,6 +216,7 @@ export default class extends Controller {
   connect() {
     this.inFlight = false
     this.overlayStack = []
+    this.confirmationInvocation = null
     this.searchRequestToken = 0
     this.pickupRequestToken = 0
     this.customerRequestToken = 0
@@ -246,6 +260,8 @@ export default class extends Controller {
   disconnect() {
     this.unbindFunctionKeyCapture()
     this.abortPendingLookups()
+    this.clearConfirmationCredentials()
+    this.confirmationInvocation = null
     this.clearOverlayStack({ restoreCommand: false })
     if (this.hasBackgroundTarget) this.backgroundTarget.inert = false
   }
@@ -382,46 +398,22 @@ export default class extends Controller {
       this.closeControlOverlay()
       return
     }
-    if (key === "F9") {
+    if (key === "F9" || key === "F10") {
       event.preventDefault()
       return
     }
     if (key !== "Enter") return
 
     const target = event.target
-    if (this.hasApproverUsernameTarget && target === this.approverUsernameTarget) {
-      event.preventDefault()
-      if (this.hasApproverPasswordTarget) this.approverPasswordTarget.focus()
-      return
-    }
-    if (this.hasApproverPasswordTarget && target === this.approverPasswordTarget) {
-      event.preventDefault()
-      if (this.approverPasswordTarget.value.trim() !== "") this.submitControlApply()
-      return
-    }
     if (this.isActionableControl(target)) return
     event.preventDefault()
     this.advanceOrApplyControlOverlay()
   }
 
   advanceOrApplyControlOverlay() {
-    if (this.policyFor(this.currentControlAction) !== "approval_required") {
-      this.submitControlApply()
-      return
-    }
     if (this.controlReasonNeedsNote()) {
       this.controlNoteFieldTarget.focus()
       return
-    }
-    if (this.hasApproverUsernameTarget && !this.controlApproverWrapTarget?.hidden) {
-      if (this.approverUsernameTarget.value.trim() === "") {
-        this.approverUsernameTarget.focus()
-        return
-      }
-      if (this.hasApproverPasswordTarget) {
-        this.approverPasswordTarget.focus()
-        return
-      }
     }
     this.submitControlApply()
   }
@@ -435,13 +427,41 @@ export default class extends Controller {
       !this.controlNoteWrapTarget.hidden
   }
 
+  onApprovalOverlayKeydown(event, key = this.functionKey(event) || event.key) {
+    if (key === "Escape") {
+      event.preventDefault()
+      this.backFromApprovalOverlay()
+      return
+    }
+    if (key === "F9" || key === "F10") {
+      event.preventDefault()
+      return
+    }
+    if (key !== "Enter") return
+
+    const target = event.target
+    if (this.hasApproverUsernameTarget && target === this.approverUsernameTarget) {
+      event.preventDefault()
+      if (this.hasApproverPasswordTarget) this.approverPasswordTarget.focus()
+      return
+    }
+    if (this.hasApproverPasswordTarget && target === this.approverPasswordTarget) {
+      event.preventDefault()
+      if (this.approverPasswordTarget.value.trim() !== "") this.authorizeAndSubmit()
+      return
+    }
+    if (this.isActionableControl(target)) return
+    event.preventDefault()
+    this.authorizeAndSubmit()
+  }
+
   onUnlinkedOverlayKeydown(event, key = this.functionKey(event) || event.key) {
     if (key === "Escape") {
       event.preventDefault()
       this.backFromUnlinkedOverlay()
       return
     }
-    if (key === "F9") {
+    if (key === "F9" || key === "F10") {
       event.preventDefault()
       return
     }
@@ -451,16 +471,6 @@ export default class extends Controller {
     if (this.hasUnlinkedIdentifierFieldTarget && target === this.unlinkedIdentifierFieldTarget) {
       event.preventDefault()
       this.lookUpUnlinkedItem()
-      return
-    }
-    if (this.hasUnlinkedApproverUsernameTarget && target === this.unlinkedApproverUsernameTarget) {
-      event.preventDefault()
-      if (this.hasUnlinkedApproverPasswordTarget) this.unlinkedApproverPasswordTarget.focus()
-      return
-    }
-    if (this.hasUnlinkedApproverPasswordTarget && target === this.unlinkedApproverPasswordTarget) {
-      event.preventDefault()
-      if (this.unlinkedApproverPasswordTarget.value.trim() !== "" && this.unlinkedAddReady()) this.submitUnlinkedReturn()
       return
     }
     if (this.isActionableControl(target)) return
@@ -2110,26 +2120,61 @@ export default class extends Controller {
       })
       return
     }
-    this.openControlOverlay("price_override", "Price override")
+    this.openControlOverlay("price_override")
   }
 
   openLineDiscount() {
-    this.openControlOverlay("line_discount", "Line discount")
+    this.openControlOverlay("line_discount")
   }
 
   openTaxClassOverride() {
-    this.openControlOverlay("tax_class_override", "Tax Class override")
+    this.openControlOverlay("tax_class_override")
   }
 
-  openControlOverlay(actionType, title) {
+  controlChromeFor(actionType) {
+    if (actionType === "price_override") {
+      return {
+        title: "Change Selling Price",
+        keepLabel: "Keep Current Price",
+        removeLabel: "Remove Price Override",
+        currentPrefix: "Current price",
+        backLabel: "Back to Price Change",
+        authorizeLabel: "Authorize and Apply",
+        actionLabel: "Price change"
+      }
+    }
+    if (actionType === "line_discount") {
+      return {
+        title: "Apply Line Discount",
+        keepLabel: "Keep Current Discount",
+        removeLabel: "Remove Line Discount",
+        currentPrefix: "Current discount",
+        backLabel: "Back to Discount",
+        authorizeLabel: "Authorize and Apply",
+        actionLabel: "Line discount"
+      }
+    }
+    return {
+      title: "Change Tax Class",
+      keepLabel: "Keep Current Tax Class",
+      removeLabel: "Restore Original Tax Class",
+      currentPrefix: "Current tax class",
+      backLabel: "Back to Tax Class",
+      authorizeLabel: "Authorize and Apply",
+      actionLabel: "Tax class change"
+    }
+  }
+
+  openControlOverlay(actionType) {
     if (this.inFlight) return
     if (this.modeValue !== "sale_entry") return
+    const chrome = this.controlChromeFor(actionType)
     if (this.policyFor(actionType) === "prohibited") {
-      this.showFeedback(`${title} is not available.`)
+      this.showFeedback(`${chrome.title} is not available.`)
       return
     }
     if (this.selectedReturnLine()) {
-      this.showFeedback(`${title} is not available on a return line.`)
+      this.showFeedback(`${chrome.title} is not available on a return line.`)
       return
     }
     const row = this.selectedRow()
@@ -2139,8 +2184,13 @@ export default class extends Controller {
     }
 
     this.currentControlAction = actionType
-    if (this.hasControlTitleTarget) this.controlTitleTarget.textContent = title
+    if (this.hasControlTitleTarget) this.controlTitleTarget.textContent = chrome.title
+    if (this.hasControlCancelTarget) this.controlCancelTarget.textContent = chrome.keepLabel
+    if (this.hasControlRemoveTarget) this.controlRemoveTarget.textContent = chrome.removeLabel
     if (this.hasControlLineLabelTarget) this.controlLineLabelTarget.textContent = row.dataset.description || "Selected line"
+    if (this.hasControlCurrentLabelTarget) {
+      this.controlCurrentLabelTarget.textContent = this.controlCurrentSummary(row, actionType, chrome)
+    }
     this.toggleHidden(this.hasControlPriceWrapTarget && this.controlPriceWrapTarget, actionType !== "price_override")
     this.toggleHidden(this.hasControlDiscountWrapTarget && this.controlDiscountWrapTarget, actionType !== "line_discount")
     this.toggleHidden(this.hasControlTaxWrapTarget && this.controlTaxWrapTarget, actionType !== "tax_class_override")
@@ -2150,7 +2200,7 @@ export default class extends Controller {
       this.controlPriceFieldTarget.value = this.formatCents(row.dataset.sellingCents)
     }
     if (actionType === "line_discount" && this.hasControlDiscountFieldTarget) {
-      this.controlDiscountFieldTarget.value = row.dataset.discountBp ? this.formatCents(row.dataset.discountBp) : ""
+      this.controlDiscountFieldTarget.value = row.dataset.discountBp ? this.formatBasisPoints(row.dataset.discountBp) : ""
     }
     if (actionType === "tax_class_override" && this.hasControlTaxFieldTarget && row.dataset.taxClassId) {
       this.controlTaxFieldTarget.value = row.dataset.taxClassId
@@ -2158,17 +2208,37 @@ export default class extends Controller {
     this.populateReasons(actionType)
     this.toggleHidden(this.hasControlNoteWrapTarget && this.controlNoteWrapTarget, true)
     if (this.hasControlNoteFieldTarget) this.controlNoteFieldTarget.value = ""
-    const needsApprover = this.policyFor(actionType) === "approval_required"
-    this.toggleHidden(this.hasControlApproverWrapTarget && this.controlApproverWrapTarget, !needsApprover)
-    if (this.hasApproverUsernameTarget) this.approverUsernameTarget.value = ""
-    if (this.hasApproverPasswordTarget) this.approverPasswordTarget.value = ""
     const hasExisting = this.lineHasAction(row, actionType)
     if (this.hasControlRemoveTarget) this.controlRemoveTarget.hidden = !hasExisting
 
     this.showOverlay(this.controlOverlayTarget)
   }
 
+  controlCurrentSummary(row, actionType, chrome) {
+    if (actionType === "price_override") {
+      return `${chrome.currentPrefix} $${this.formatCents(row.dataset.sellingCents)}`
+    }
+    if (actionType === "line_discount") {
+      const bp = row.dataset.discountBp
+      return bp ? `${chrome.currentPrefix} ${this.formatBasisPoints(bp)}%` : `${chrome.currentPrefix} none`
+    }
+    const name = this.taxClassOptionLabel(row.dataset.taxClassId) || row.dataset.taxClassName || "—"
+    return `${chrome.currentPrefix} ${name}`
+  }
+
+  taxClassOptionLabel(id) {
+    if (!this.hasControlTaxFieldTarget || !id) return null
+    const option = Array.from(this.controlTaxFieldTarget.options).find((entry) => entry.value === String(id))
+    return option ? option.textContent : null
+  }
+
+  formatBasisPoints(bp) {
+    const value = Number(bp || 0)
+    return (value / 100).toFixed(value % 100 === 0 ? 0 : 2)
+  }
+
   closeControlOverlay() {
+    if (this.approvalOverlayOpen()) this.closeApprovalOverlay({ clearInvocation: true })
     this.hideOverlay(this.hasControlOverlayTarget && this.controlOverlayTarget)
   }
 
@@ -2181,13 +2251,12 @@ export default class extends Controller {
     this.invalidateUnlinkedLookup()
     this.resetUnlinkedOverlay()
     this.populateUnlinkedReasons()
-    const needsApprover = this.policyFor("unlinked_return") === "approval_required"
-    this.toggleHidden(this.hasUnlinkedApproverWrapTarget && this.unlinkedApproverWrapTarget, !needsApprover)
     this.syncUnlinkedPrimaryEnabled()
     this.showOverlay(this.unlinkedOverlayTarget, this.hasUnlinkedIdentifierFieldTarget && this.unlinkedIdentifierFieldTarget)
   }
 
   closeUnlinkedOverlay() {
+    if (this.approvalOverlayOpen()) this.closeApprovalOverlay({ clearInvocation: true })
     this.invalidateUnlinkedLookup()
     this.unlinkedPickerActive = false
     this.hideOverlay(this.hasUnlinkedOverlayTarget && this.unlinkedOverlayTarget)
@@ -2227,8 +2296,6 @@ export default class extends Controller {
     this.toggleHidden(this.hasUnlinkedPreviewTarget && this.unlinkedPreviewTarget, true)
     if (this.hasUnlinkedNoteFieldTarget) this.unlinkedNoteFieldTarget.value = ""
     this.toggleHidden(this.hasUnlinkedNoteWrapTarget && this.unlinkedNoteWrapTarget, true)
-    if (this.hasUnlinkedApproverUsernameTarget) this.unlinkedApproverUsernameTarget.value = ""
-    if (this.hasUnlinkedApproverPasswordTarget) this.unlinkedApproverPasswordTarget.value = ""
     this.syncUnlinkedPrimaryEnabled()
   }
 
@@ -2386,11 +2453,6 @@ export default class extends Controller {
       const qty = this.hasUnlinkedQuantityFieldTarget ? this.unlinkedQuantityFieldTarget.value.trim() : ""
       if (!qty || Number(qty) <= 0) return false
     }
-    if (this.policyFor("unlinked_return") === "approval_required") {
-      const user = this.hasUnlinkedApproverUsernameTarget ? this.unlinkedApproverUsernameTarget.value.trim() : ""
-      const pass = this.hasUnlinkedApproverPasswordTarget ? this.unlinkedApproverPasswordTarget.value : ""
-      if (!user || !pass) return false
-    }
     return true
   }
 
@@ -2421,6 +2483,53 @@ export default class extends Controller {
     if (event) event.preventDefault()
     if (this.inFlight || !this.hasUnlinkedFormTarget) return
     if (!this.unlinkedAddReady()) return
+    if (this.policyFor("unlinked_return") === "approval_required") {
+      this.openUnlinkedAuthorization()
+      return
+    }
+    this.commitUnlinkedReturn()
+  }
+
+  openUnlinkedAuthorization() {
+    const reasonCode = this.hasUnlinkedReasonFieldTarget ? this.unlinkedReasonFieldTarget.value : ""
+    const reasonName = this.reasonDisplayName(this.returnReasonsValue, reasonCode)
+    const qty = this.unlinkedPreviewPayload.quantity_fixed
+      ? "1"
+      : (this.hasUnlinkedQuantityFieldTarget ? this.unlinkedQuantityFieldTarget.value.trim() : "1")
+    const price = this.hasUnlinkedPriceFieldTarget ? this.unlinkedPriceFieldTarget.value.trim() : ""
+    this.openAuthorizationOverlay({
+      consumer: "unlinked_return",
+      operation: "apply",
+      parentOverlay: this.unlinkedOverlayTarget,
+      formTarget: "unlinkedForm",
+      context: {
+        actionLabel: "Unlinked return",
+        itemLabel: this.hasUnlinkedDescriptionTarget ? this.unlinkedDescriptionTarget.textContent : "",
+        currentLabel: "",
+        proposedLabel: `$${price}`,
+        qtyLabel: qty,
+        reasonLabel: reasonName,
+        backLabel: "Back to Unlinked Return",
+        authorizeLabel: "Authorize and Add Return",
+        showQty: true,
+        showCurrent: false,
+        proposedHeading: "Return amount"
+      }
+    })
+  }
+
+  commitUnlinkedReturn({ credentials = null } = {}) {
+    if (this.inFlight || !this.hasUnlinkedFormTarget) return
+    this.fillUnlinkedForm(credentials)
+    this.clearOverlayError(this.unlinkedOverlayTarget)
+    if (this.approvalOverlayOpen()) this.clearOverlayError(this.approvalOverlayTarget)
+    this.beginFlight()
+    this.syncUnlinkedPrimaryEnabled()
+    this.unlinkedFormTarget.requestSubmit()
+    this.clearHiddenApproverPasswords()
+  }
+
+  fillUnlinkedForm(credentials = null) {
     if (this.hasUnlinkedIdentifierInputTarget) {
       this.unlinkedIdentifierInputTarget.value = this.hasUnlinkedIdentifierFieldTarget
         ? this.unlinkedIdentifierFieldTarget.value.trim()
@@ -2461,46 +2570,125 @@ export default class extends Controller {
     if (this.hasUnlinkedExpectedTaxInputTarget) {
       this.unlinkedExpectedTaxInputTarget.value = this.unlinkedPreviewPayload.tax_class_id || ""
     }
-    if (this.hasUnlinkedApproverUserInputTarget) {
-      this.unlinkedApproverUserInputTarget.value = this.hasUnlinkedApproverUsernameTarget
-        ? this.unlinkedApproverUsernameTarget.value.trim()
-        : ""
-    }
-    if (this.hasUnlinkedApproverPasswordInputTarget) {
-      this.unlinkedApproverPasswordInputTarget.value = this.hasUnlinkedApproverPasswordTarget
-        ? this.unlinkedApproverPasswordTarget.value
-        : ""
-    }
-    this.clearOverlayError(this.unlinkedOverlayTarget)
-    this.beginFlight()
-    this.syncUnlinkedPrimaryEnabled()
-    this.unlinkedFormTarget.requestSubmit()
+    const username = credentials?.username || ""
+    const password = credentials?.password || ""
+    if (this.hasUnlinkedApproverUserInputTarget) this.unlinkedApproverUserInputTarget.value = username
+    if (this.hasUnlinkedApproverPasswordInputTarget) this.unlinkedApproverPasswordInputTarget.value = password
   }
 
-  submitControlApply() {
+  submitControlApply(event) {
+    if (event) event.preventDefault()
     if (this.inFlight || !this.hasControlFormTarget) return
-    this.fillControlForm("apply")
+    if (this.policyFor(this.currentControlAction) === "approval_required") {
+      this.openControlAuthorization("apply")
+      return
+    }
+    this.commitControlOperation("apply")
+  }
+
+  submitControlRemove(event) {
+    if (event) event.preventDefault()
+    if (this.inFlight || !this.hasControlFormTarget) return
+    if (this.policyFor(this.currentControlAction) === "approval_required") {
+      this.openControlAuthorization("remove")
+      return
+    }
+    this.commitControlOperation("remove")
+  }
+
+  openControlAuthorization(operation) {
+    const action = this.currentControlAction
+    const chrome = this.controlChromeFor(action)
+    const row = this.selectedRow()
+    const reasonCode = this.hasControlReasonFieldTarget ? this.controlReasonFieldTarget.value : ""
+    const reasonName = operation === "remove"
+      ? "Remove existing adjustment"
+      : this.reasonDisplayName(this.reasonsValue?.[action], reasonCode)
+    const proposed = operation === "remove"
+      ? "Restore original"
+      : this.controlProposedLabel(action)
+    this.openAuthorizationOverlay({
+      consumer: action,
+      operation,
+      parentOverlay: this.controlOverlayTarget,
+      formTarget: "controlForm",
+      context: {
+        actionLabel: operation === "remove" ? `${chrome.actionLabel} removal` : chrome.actionLabel,
+        itemLabel: this.hasControlLineLabelTarget ? this.controlLineLabelTarget.textContent : "",
+        currentLabel: this.controlCurrentValueLabel(row, action),
+        proposedLabel: proposed,
+        reasonLabel: reasonName,
+        backLabel: chrome.backLabel,
+        authorizeLabel: chrome.authorizeLabel,
+        showQty: false,
+        showCurrent: true,
+        proposedHeading: "Proposed"
+      }
+    })
+  }
+
+  controlCurrentValueLabel(row, actionType) {
+    if (!row) return ""
+    if (actionType === "price_override") return `$${this.formatCents(row.dataset.sellingCents)}`
+    if (actionType === "line_discount") {
+      const bp = row.dataset.discountBp
+      return bp ? `${this.formatBasisPoints(bp)}%` : "none"
+    }
+    return this.taxClassOptionLabel(row.dataset.taxClassId) || row.dataset.taxClassName || "—"
+  }
+
+  controlProposedLabel(actionType) {
+    if (actionType === "price_override") {
+      const value = this.hasControlPriceFieldTarget ? this.controlPriceFieldTarget.value.trim() : ""
+      return value ? `$${value}` : ""
+    }
+    if (actionType === "line_discount") {
+      const value = this.hasControlDiscountFieldTarget ? this.controlDiscountFieldTarget.value.trim() : ""
+      return value ? `${value}%` : ""
+    }
+    if (!this.hasControlTaxFieldTarget) return ""
+    const option = this.controlTaxFieldTarget.selectedOptions?.[0]
+    return option ? option.textContent : ""
+  }
+
+  reasonDisplayName(entries, code) {
+    if (!code) return ""
+    if (Array.isArray(entries)) {
+      const match = entries.find((entry) => entry.code === code)
+      return match?.name || code
+    }
+    if (entries && typeof entries === "object") {
+      return entries[code] || code
+    }
+    return code
+  }
+
+  commitControlOperation(operation, { credentials = null } = {}) {
+    if (this.inFlight || !this.hasControlFormTarget) return
+    this.fillControlForm(operation, credentials)
     this.clearOverlayError(this.controlOverlayTarget)
+    if (this.approvalOverlayOpen()) this.clearOverlayError(this.approvalOverlayTarget)
     this.beginFlight()
     this.controlFormTarget.requestSubmit()
+    this.clearHiddenApproverPasswords()
   }
 
-  submitControlRemove() {
-    if (this.inFlight || !this.hasControlFormTarget) return
-    this.fillControlForm("remove")
-    this.clearOverlayError(this.controlOverlayTarget)
-    this.beginFlight()
-    this.controlFormTarget.requestSubmit()
-  }
-
-  fillControlForm(operation) {
+  fillControlForm(operation, credentials = null) {
     this.syncSelectedLine()
     const action = this.currentControlAction
     const applying = operation === "apply"
     if (this.hasControlActionInputTarget) this.controlActionInputTarget.value = action || ""
     if (this.hasControlOperationInputTarget) this.controlOperationInputTarget.value = operation
-    if (this.hasControlReasonInputTarget) this.controlReasonInputTarget.value = this.hasControlReasonFieldTarget ? this.controlReasonFieldTarget.value : ""
-    if (this.hasControlNoteInputTarget) this.controlNoteInputTarget.value = this.hasControlNoteFieldTarget ? this.controlNoteFieldTarget.value.trim() : ""
+    if (this.hasControlReasonInputTarget) {
+      this.controlReasonInputTarget.value = applying && this.hasControlReasonFieldTarget
+        ? this.controlReasonFieldTarget.value
+        : ""
+    }
+    if (this.hasControlNoteInputTarget) {
+      this.controlNoteInputTarget.value = applying && this.hasControlNoteFieldTarget
+        ? this.controlNoteFieldTarget.value.trim()
+        : ""
+    }
     if (this.hasControlPriceInputTarget) {
       this.controlPriceInputTarget.value = applying && action === "price_override" && this.hasControlPriceFieldTarget
         ? this.controlPriceFieldTarget.value.trim()
@@ -2516,12 +2704,95 @@ export default class extends Controller {
         ? this.controlTaxFieldTarget.value
         : ""
     }
-    if (this.hasControlApproverUserInputTarget) {
-      this.controlApproverUserInputTarget.value = this.hasApproverUsernameTarget ? this.approverUsernameTarget.value.trim() : ""
+    const username = credentials?.username || ""
+    const password = credentials?.password || ""
+    if (this.hasControlApproverUserInputTarget) this.controlApproverUserInputTarget.value = username
+    if (this.hasControlApproverPasswordInputTarget) this.controlApproverPasswordInputTarget.value = password
+  }
+
+  openAuthorizationOverlay(invocation) {
+    if (!this.hasApprovalOverlayTarget) return
+    // Whitelisted fields only — never store credentials or callbacks.
+    this.confirmationInvocation = {
+      consumer: invocation.consumer,
+      operation: invocation.operation,
+      parentOverlay: invocation.parentOverlay,
+      formTarget: invocation.formTarget,
+      context: { ...(invocation.context || {}) }
     }
-    if (this.hasControlApproverPasswordInputTarget) {
-      this.controlApproverPasswordInputTarget.value = this.hasApproverPasswordTarget ? this.approverPasswordTarget.value : ""
+    const ctx = this.confirmationInvocation.context
+    if (this.hasApprovalActionLabelTarget) this.approvalActionLabelTarget.textContent = ctx.actionLabel || ""
+    if (this.hasApprovalItemLabelTarget) this.approvalItemLabelTarget.textContent = ctx.itemLabel || ""
+    if (this.hasApprovalCurrentLabelTarget) this.approvalCurrentLabelTarget.textContent = ctx.currentLabel || ""
+    if (this.hasApprovalProposedLabelTarget) this.approvalProposedLabelTarget.textContent = ctx.proposedLabel || ""
+    if (this.hasApprovalReasonLabelTarget) this.approvalReasonLabelTarget.textContent = ctx.reasonLabel || ""
+    if (this.hasApprovalQtyLabelTarget) this.approvalQtyLabelTarget.textContent = ctx.qtyLabel || ""
+    if (this.hasApprovalCurrentHeadingTarget) this.approvalCurrentHeadingTarget.textContent = "Current"
+    if (this.hasApprovalProposedHeadingTarget) {
+      this.approvalProposedHeadingTarget.textContent = ctx.proposedHeading || "Proposed"
     }
+    this.toggleHidden(this.hasApprovalCurrentWrapTarget && this.approvalCurrentWrapTarget, ctx.showCurrent === false)
+    this.toggleHidden(this.hasApprovalQtyWrapTarget && this.approvalQtyWrapTarget, !ctx.showQty)
+    if (this.hasApprovalBackTarget) this.approvalBackTarget.textContent = ctx.backLabel || "Back"
+    if (this.hasApprovalAuthorizeTarget) this.approvalAuthorizeTarget.textContent = ctx.authorizeLabel || "Authorize"
+    this.clearApprovalCredentials({ keepUsername: false })
+    this.clearOverlayError(this.approvalOverlayTarget)
+    this.showOverlay(this.approvalOverlayTarget, this.hasApproverUsernameTarget && this.approverUsernameTarget)
+  }
+
+  backFromApprovalOverlay(event) {
+    if (event) event.preventDefault()
+    if (this.inFlight) return
+    this.closeApprovalOverlay({ clearInvocation: true })
+  }
+
+  closeApprovalOverlay({ clearInvocation = true } = {}) {
+    this.clearApprovalCredentials({ keepUsername: false })
+    if (clearInvocation) this.confirmationInvocation = null
+    this.hideOverlay(this.hasApprovalOverlayTarget && this.approvalOverlayTarget)
+  }
+
+  authorizeAndSubmit(event) {
+    if (event) event.preventDefault()
+    if (this.inFlight) return
+    const invocation = this.confirmationInvocation
+    if (!invocation) return
+    const username = this.hasApproverUsernameTarget ? this.approverUsernameTarget.value.trim() : ""
+    const password = this.hasApproverPasswordTarget ? this.approverPasswordTarget.value : ""
+    if (!username || !password) {
+      if (this.hasApproverUsernameTarget && !username) {
+        this.approverUsernameTarget.focus()
+        return
+      }
+      if (this.hasApproverPasswordTarget) this.approverPasswordTarget.focus()
+      return
+    }
+    const credentials = { username, password }
+    if (this.hasApproverPasswordTarget) this.approverPasswordTarget.value = ""
+    if (invocation.formTarget === "controlForm") {
+      this.commitControlOperation(invocation.operation, { credentials })
+      return
+    }
+    if (invocation.formTarget === "unlinkedForm") {
+      this.commitUnlinkedReturn({ credentials })
+    }
+  }
+
+  clearApprovalCredentials({ keepUsername = false } = {}) {
+    if (!keepUsername && this.hasApproverUsernameTarget) this.approverUsernameTarget.value = ""
+    if (this.hasApproverPasswordTarget) this.approverPasswordTarget.value = ""
+    this.clearHiddenApproverPasswords()
+  }
+
+  clearHiddenApproverPasswords() {
+    if (this.hasControlApproverPasswordInputTarget) this.controlApproverPasswordInputTarget.value = ""
+    if (this.hasUnlinkedApproverPasswordInputTarget) this.unlinkedApproverPasswordInputTarget.value = ""
+  }
+
+  clearConfirmationCredentials() {
+    this.clearApprovalCredentials({ keepUsername: false })
+    if (this.hasControlApproverUserInputTarget) this.controlApproverUserInputTarget.value = ""
+    if (this.hasUnlinkedApproverUserInputTarget) this.unlinkedApproverUserInputTarget.value = ""
   }
 
   confirmCancel() {
@@ -2591,6 +2862,10 @@ export default class extends Controller {
     }
     if (this.hasControlOverlayTarget && overlay === this.controlOverlayTarget) {
       this.onControlOverlayKeydown(event, key)
+      return
+    }
+    if (this.hasApprovalOverlayTarget && overlay === this.approvalOverlayTarget) {
+      this.onApprovalOverlayKeydown(event, key)
       return
     }
     if (this.hasOtherOverlayTarget && overlay === this.otherOverlayTarget) {
@@ -2669,6 +2944,10 @@ export default class extends Controller {
 
   hideOverlayNode(overlay) {
     if (!overlay) return
+    if (this.hasApprovalOverlayTarget && overlay === this.approvalOverlayTarget) {
+      this.clearApprovalCredentials({ keepUsername: false })
+      this.confirmationInvocation = null
+    }
     overlay.hidden = true
     overlay.inert = false
     overlay.style.zIndex = ""
@@ -2678,6 +2957,8 @@ export default class extends Controller {
 
   clearOverlayStack({ restoreCommand = true } = {}) {
     this.abortPendingLookups()
+    this.clearConfirmationCredentials()
+    this.confirmationInvocation = null
     const entries = [ ...this.overlayStack ]
     this.overlayStack = []
     entries.reverse().forEach((entry) => this.hideOverlayNode(entry.overlay))
@@ -2777,11 +3058,39 @@ export default class extends Controller {
     if (this.hasFieldTarget) this.fieldTarget.disabled = false
     if (this.hasReferenceFieldTarget) this.referenceFieldTarget.disabled = false
     this.enableReadyActions()
-    if (this.hasControlApproverPasswordInputTarget) this.controlApproverPasswordInputTarget.value = ""
-    if (this.hasUnlinkedApproverPasswordInputTarget) this.unlinkedApproverPasswordInputTarget.value = ""
-    if (this.hasUnlinkedApproverPasswordTarget) this.unlinkedApproverPasswordTarget.value = ""
     this.syncUnlinkedPrimaryEnabled()
     this.syncLinkedPrimaryEnabled()
+
+    const failure = this.readOverlayFailure()
+    const kind = failure?.kind
+    this.clearHiddenApproverPasswords()
+
+    if (kind === "authorization_failed" || kind === "authorization_prohibited") {
+      if (this.hasApproverPasswordTarget) this.approverPasswordTarget.value = ""
+      const focusField = kind === "authorization_prohibited" && this.hasApproverUsernameTarget
+        ? this.approverUsernameTarget
+        : (this.hasApproverPasswordTarget && this.approverPasswordTarget)
+      if (focusField) {
+        focusField.focus()
+        if (typeof focusField.select === "function") focusField.select()
+      }
+      return
+    }
+
+    if (kind === "parent_validation_failed" || kind === "stale_transaction") {
+      if (this.approvalOverlayOpen()) this.closeApprovalOverlay({ clearInvocation: true })
+      const parent = this.activeOverlayElement()
+      if (!parent) return
+      const focusables = this.overlayFocusables(parent)
+      const firstField = focusables.find((el) => el.matches("input, select, textarea"))
+      if (firstField) {
+        firstField.focus()
+        return
+      }
+      if (focusables[0]) focusables[0].focus()
+      return
+    }
+
     const overlay = this.activeOverlayElement()
     if (!overlay) return
     overlay.querySelectorAll("input[type='password']").forEach((field) => {
@@ -2797,12 +3106,30 @@ export default class extends Controller {
     if (first) first.focus()
   }
 
+  readOverlayFailure() {
+    const nodes = [
+      ...(this.hasOverlayFailureMetaTarget ? this.overlayFailureMetaTargets : []),
+      ...Array.from(this.element.querySelectorAll("[data-overlay-error-kind]"))
+    ]
+    const node = nodes.find((entry) => entry?.dataset?.overlayErrorKind)
+    if (!node) return null
+    return {
+      kind: node.dataset.overlayErrorKind,
+      field: node.dataset.overlayErrorField || null,
+      message: node.textContent || ""
+    }
+  }
+
   cancelOverlayOpen() {
     return this.hasOverlayTarget && !this.overlayTarget.hidden
   }
 
   controlOverlayOpen() {
     return this.hasControlOverlayTarget && !this.controlOverlayTarget.hidden
+  }
+
+  approvalOverlayOpen() {
+    return this.hasApprovalOverlayTarget && !this.approvalOverlayTarget.hidden
   }
 
   unlinkedOverlayOpen() {

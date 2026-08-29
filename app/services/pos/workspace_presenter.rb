@@ -32,6 +32,7 @@ module Pos
       :issuance_remove_available,
       :pickup_available,
       :gift_card_programs_available,
+      :cancel_consequence,
       :feedback
     )
 
@@ -91,11 +92,35 @@ module Pos
         issuance_remove_available: capability?(:issuance_remove_available),
         pickup_available: capability?(:pickup_available),
         gift_card_programs_available: capability?(:gift_card_programs_available),
+        cancel_consequence: cancel_consequence,
         feedback: @feedback
       )
     end
 
     private
+
+    def cancel_consequence
+      parts = []
+      sale_qty = @lines.select(&:sale?).sum { |line| line.quantity.to_i }
+      return_qty = @lines.select(&:return?).sum { |line| line.quantity.to_i.abs }
+      issuance_count = @issuances.size
+      parts << "#{sale_qty} #{sale_qty == 1 ? "item" : "items"} for sale" if sale_qty.positive?
+      parts << "#{return_qty} #{return_qty == 1 ? "returned item" : "returned items"}" if return_qty.positive?
+      if issuance_count.positive?
+        parts << "#{issuance_count} gift card #{issuance_count == 1 ? "activation" : "activations"}"
+      end
+      return "All working content will be discarded." if parts.empty?
+
+      list =
+        if parts.length == 1
+          parts.first
+        elsif parts.length == 2
+          "#{parts[0]} and #{parts[1]}"
+        else
+          "#{parts[0...-1].join(", ")}, and #{parts[-1]}"
+        end
+      "#{list} will be discarded."
+    end
 
     def locked?
       %w[completion_pending completion_failed].include?(@ui_mode)

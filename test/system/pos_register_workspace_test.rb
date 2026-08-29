@@ -129,11 +129,12 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
 
     click_on "Price (F6)"
     assert_selector "#pos_control_overlay", visible: true
-    fill_in "Selling price", with: "15.00"
+    fill_in "New selling price", with: "15.00"
     select "Damaged", from: "Reason"
     find("#pos-control-price").send_keys :enter
 
-    assert_selector "#pos_control_overlay", visible: true
+    assert_selector "#pos_approval_overlay", visible: true
+    assert_selector "#pos_control_overlay[inert]", visible: :all
     assert_equal "pos-approver-username", page.evaluate_script("document.activeElement && document.activeElement.id")
     line = PosTransaction.working.find_by!(register: @register).pos_transaction_lines.first
     assert_equal line.reference_unit_price_cents, line.selling_unit_price_cents
@@ -142,13 +143,13 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     username.fill_in with: "mgr_scan"
     username.send_keys :enter
 
-    assert_selector "#pos_control_overlay", visible: true
+    assert_selector "#pos_approval_overlay", visible: true
     assert_equal "pos-approver-password", page.evaluate_script("document.activeElement && document.activeElement.id")
     line.reload
     assert_equal line.reference_unit_price_cents, line.selling_unit_price_cents
   end
 
-  test "rejected approver credentials stay in the price overlay" do
+  test "rejected approver credentials stay in authorization overlay" do
     pos_transacting_user(store: @store, assigned_by: @actor, username: "clerk_retry")
     pos_store_manager(store: @store, assigned_by: @actor, username: "mgr_retry")
     visit new_session_path
@@ -164,15 +165,18 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
 
     click_on "Price (F6)"
     assert_selector "#pos_control_overlay", visible: true
-    fill_in "Selling price", with: "15.00"
+    fill_in "New selling price", with: "15.00"
     select "Damaged", from: "Reason"
+    click_on "Apply"
+    assert_selector "#pos_approval_overlay", visible: true
     fill_in "Approver username", with: "mgr_retry"
     find("#pos-approver-password").fill_in with: "typoooo"
     find("#pos-approver-password").send_keys :enter
 
+    assert_selector "#pos_approval_overlay", visible: true
+    assert_selector "#pos-approval-feedback", text: /Manager credentials were not accepted/
     assert_selector "#pos_control_overlay", visible: true
-    assert_selector "#pos-control-feedback", text: /approver credentials/
-    assert_field "Selling price", with: "15.00"
+    assert_field "New selling price", with: "15.00"
     assert_field "Approver username", with: "mgr_retry"
     assert_equal "", find("#pos-approver-password").value
     assert_equal "pos-approver-password", page.evaluate_script("document.activeElement && document.activeElement.id")
@@ -181,6 +185,7 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
 
     find("#pos-approver-password").fill_in with: "correct-horse-battery"
     find("#pos-approver-password").send_keys :enter
+    assert_no_selector "#pos_approval_overlay", visible: true
     assert_no_selector "#pos_control_overlay", visible: true
     assert_equal 1500, line.reload.selling_unit_price_cents
   end
@@ -191,7 +196,8 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
 
     click_on "Price (F6)"
     assert_selector "#pos_control_overlay", visible: true
-    fill_in "Selling price", with: "15.00"
+    assert_selector "#pos-control-title", text: "Change Selling Price"
+    fill_in "New selling price", with: "15.00"
     select "Damaged", from: "Reason"
     find("#pos-control-price").send_keys :enter
 
@@ -225,19 +231,19 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
 
     send_keys :f6
     assert_selector "#pos_control_overlay", visible: true
-    assert_selector "#pos-control-title", text: "Price override"
+    assert_selector "#pos-control-title", text: "Change Selling Price"
     send_keys :escape
     assert_no_selector "#pos_control_overlay", visible: true
 
     send_keys :f7
     assert_selector "#pos_control_overlay", visible: true
-    assert_selector "#pos-control-title", text: "Line discount"
+    assert_selector "#pos-control-title", text: "Apply Line Discount"
     send_keys :escape
     assert_no_selector "#pos_control_overlay", visible: true
 
     click_on "Tax Class"
     assert_selector "#pos_control_overlay", visible: true
-    assert_selector "#pos-control-title", text: "Tax Class override"
+    assert_selector "#pos-control-title", text: "Change Tax Class"
     send_keys :escape
     assert_no_selector "#pos_control_overlay", visible: true
   end
@@ -370,12 +376,84 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     add_current_sku
     send_keys :f9
     assert_text "Cancel this transaction?"
+    assert_text "1 item for sale will be discarded"
+    assert_text "No receipt, inventory movement, or stored-value issuance will be completed"
     send_keys :enter
     assert_text "Cancel this transaction?"
     assert_text "Example Book"
     send_keys :f9
     assert_text "SALE ENTRY"
     assert_no_text "Example Book"
+  end
+
+  test "authorization escape restores control parent without credentials" do
+    pos_transacting_user(store: @store, assigned_by: @actor, username: "clerk_esc5c")
+    pos_store_manager(store: @store, assigned_by: @actor, username: "mgr_esc5c")
+    visit new_session_path
+    fill_in "session_username", with: "clerk_esc5c"
+    fill_in "session_password", with: "correct-horse-battery"
+    find_field("session_password").send_keys :enter
+    assert_text "Signed in successfully"
+    visit pos_register_enter_path(register_id: @register.id)
+    fill_in "Opening float", with: "0.00"
+    click_on "Open register"
+    assert_text "SALE ENTRY"
+    add_current_sku
+
+    click_on "Price (F6)"
+    fill_in "New selling price", with: "15.00"
+    select "Damaged", from: "Reason"
+    click_on "Apply"
+    assert_selector "#pos_approval_overlay", visible: true
+    fill_in "Approver username", with: "mgr_esc5c"
+    find("#pos-approver-password").fill_in with: "temp-secret"
+    send_keys :escape
+    assert_no_selector "#pos_approval_overlay", visible: true
+    assert_selector "#pos_control_overlay", visible: true
+    assert_field "New selling price", with: "15.00"
+    assert_equal "", find("#pos-approver-password", visible: :all).value
+    assert_equal "", find("#pos-approver-username", visible: :all).value
+  end
+
+  test "closing control parent clears prior authorization invocation before unlinked" do
+    pos_transacting_user(store: @store, assigned_by: @actor, username: "clerk_iso5c")
+    pos_store_manager(store: @store, assigned_by: @actor, username: "mgr_iso5c")
+    visit new_session_path
+    fill_in "session_username", with: "clerk_iso5c"
+    fill_in "session_password", with: "correct-horse-battery"
+    find_field("session_password").send_keys :enter
+    assert_text "Signed in successfully"
+    visit pos_register_enter_path(register_id: @register.id)
+    fill_in "Opening float", with: "0.00"
+    click_on "Open register"
+    assert_text "SALE ENTRY"
+    add_current_sku
+
+    click_on "Price (F6)"
+    fill_in "New selling price", with: "15.00"
+    select "Damaged", from: "Reason"
+    click_on "Apply"
+    assert_selector "#pos_approval_overlay", visible: true
+    assert_text "Price change"
+    click_on "Back to Price Change"
+    click_on "Keep Current Price"
+
+    click_on "Return (-)"
+    send_keys :arrow_down
+    send_keys :enter
+    assert_selector "#pos_unlinked_overlay", visible: true
+    identifier = find("#pos-unlinked-identifier")
+    identifier.fill_in with: @variant.sku
+    identifier.send_keys :enter
+    assert_text "Example Book", wait: 5
+    fill_in "Return unit price", with: "18.00"
+    select "Defective", from: "Return reason"
+    click_on "Add Unlinked Return"
+    assert_selector "#pos_approval_overlay", visible: true
+    assert_text "Unlinked return"
+    assert_no_text "Price change"
+    assert_equal "", find("#pos-approver-username").value
+    assert_equal "", find("#pos-approver-password").value
   end
 
   test "completed receipt enter is a no-op and workspace without a working sale returns to enter" do

@@ -564,7 +564,7 @@ class PosRegisterTest < ActionDispatch::IntegrationTest
     }
     assert_response :success
     assert_equal 1999, line.reload.selling_unit_price_cents
-    assert_match(/approver credentials/, response.body)
+    assert_match(/Manager credentials were not accepted/, response.body)
     assert_equal associate.id, User.find_by!(username: "clerk_ui").id
 
     post pos_register_controlled_action_path, params: {
@@ -608,8 +608,9 @@ class PosRegisterTest < ActionDispatch::IntegrationTest
 
     assert_response :unprocessable_entity
     assert_equal 1999, line.reload.selling_unit_price_cents
-    assert_match(/approver credentials/, response.body)
-    assert_includes response.body, 'target="pos-control-feedback"'
+    assert_match(/Manager credentials were not accepted/, response.body)
+    assert_includes response.body, 'target="pos-approval-feedback"'
+    assert_includes response.body, 'data-overlay-error-kind="authorization_failed"'
     refute_includes response.body, 'target="pos_workspace"'
     refute_includes response.body, "wrong-password-secret"
   end

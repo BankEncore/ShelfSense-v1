@@ -113,7 +113,8 @@ module Pos
       end
     rescue Pos::Denied => e
       record_denied!(e.message)
-      raise Pos::Error, e.message if e.message.start_with?("approver")
+      failure = Pos::OverlayFailure.from_denied(e)
+      raise failure if failure
 
       raise
     rescue Pos::Tax::UnresolvedApplicability, Inventory::ReturnValuation::Error => e

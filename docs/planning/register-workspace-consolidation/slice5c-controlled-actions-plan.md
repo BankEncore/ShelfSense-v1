@@ -1,6 +1,6 @@
 # Slice 5C — Controlled actions and confirmation
 
-Status: **Implementation-ready.** Slice 5B is on `register-workspace-consolidation` ([#87](https://github.com/BankEncore/ShelfSense-v1/issues/87) / PR [#100](https://github.com/BankEncore/ShelfSense-v1/pull/100)).
+Status: **Implemented** on `88-controlled-action-overlays` (PR targeting `register-workspace-consolidation`).
 
 Authority: [plan.md](plan.md), [routing-and-authority.md](routing-and-authority.md), [textual-wireframes.md](textual-wireframes.md) O9 / O18 / P14, [user-stories.md](user-stories.md), [slice5a-lookup-overlays-plan.md](slice5a-lookup-overlays-plan.md) (lifecycle), [slice5b-return-overlays-plan.md](slice5b-return-overlays-plan.md) (deferred O18 nesting).
 
