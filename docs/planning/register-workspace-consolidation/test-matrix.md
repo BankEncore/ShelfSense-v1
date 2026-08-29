@@ -60,13 +60,14 @@ F10 working-basket preservation is already covered in [test/system/pos_register_
 | `test/services/pos/workspace_presenter_test.rb` | Summary formula, tax groups, settlement DTOs, mismatch fallback, non-summary chrome | Slice 4 |
 | `test/integration/pos_register_test.rb` | `#pos_tenders` sibling of `#pos_totals`; Merchandise / no Sales | Slice 4 DOM |
 | Financial/domain POS suites | Signing / settlement unchanged under provisional tax persistence | Slice 4 regression |
-| `test/system/pos_register_workspace_test.rb` | Keyboard, F10→menu, overlays, scan; Slice 5A lookup stack/inert/async/pointer/open-price | Slice 5A |
+| `test/system/pos_register_workspace_test.rb` | Keyboard, F10→menu, overlays, scan; Slice 5A lookup stack/inert/async/pointer/open-price; Slice 5B return Escape ladder / chooser stack / linked add | Slice 5A–5B |
 | Slice 5A cases in workspace system suite | Root/nested inert; Escape restores parent stage; pointer Choose Product / Attach Customer / Add Pickup; Escape-during-fetch ignores late response; zero open-price select-all | [#86](https://github.com/BankEncore/ShelfSense-v1/issues/86) |
+| Slice 5B return overlay cases | Chooser parent stack; linked Escape ladder; Escape during lines fetch ignores late response; prohibited unlinked disabled in chooser; linked add clears ancestry; unlinked failure preserves fields/clears password; nested picker Cancel aborts; unlinked variant Back to Item Lookup | [#87](https://github.com/BankEncore/ShelfSense-v1/issues/87) |
 | `test/system/pos_register_shell_test.rb` | Shell zoom, F10 lifecycle on all compositions | Slice 3 |
 | `test/system/pos_linked_return_test.rb` | F10 menu then Transactions & Receipts | Slice 3 |
-| `test/system/pos_mixed_return_test.rb` | F10 menu then Transactions & Receipts | Slice 3 |
+| `test/system/pos_mixed_return_test.rb` | F10 menu then Transactions & Receipts; Escape restores chooser then command | Slice 3 / 5B |
 | `test/services/pos/register_menu_test.rb` | Menu capability keys | Slice 3 |
-| `test/system/pos_unlinked_return_test.rb` | Interaction | Preserve; retarget if chrome changes |
+| `test/system/pos_unlinked_return_test.rb` | Unlinked chrome, nested picker, approval failure while chooser parent inert | [#87](https://github.com/BankEncore/ShelfSense-v1/issues/87) |
 | `test/system/pos_close_z_test.rb` | Interaction | Preserve |
 
 ## Gap characterization (this slice)

@@ -79,6 +79,7 @@ export default class extends Controller {
     "unlinkedApproverUserInput",
     "unlinkedApproverPasswordInput",
     "unlinkedFeedback",
+    "unlinkedQueryLabel",
     "unlinkedPreview",
     "unlinkedDescription",
     "unlinkedReferenceLabel",
@@ -92,6 +93,7 @@ export default class extends Controller {
     "unlinkedApproverUsername",
     "unlinkedApproverPassword",
     "unlinkedCancel",
+    "unlinkedLookup",
     "unlinkedApply",
     "dontCancel",
     "confirmCancel",
@@ -134,8 +136,10 @@ export default class extends Controller {
     "productList",
     "variantOverlay",
     "variantList",
+    "variantBack",
     "unitOverlay",
     "unitList",
+    "unitBack",
     "openPriceOverlay",
     "openPriceTitle",
     "openPricePrompt",
@@ -149,14 +153,22 @@ export default class extends Controller {
     "returnButton",
     "returnChooserOverlay",
     "returnChooserList",
+    "returnChooserCancel",
+    "returnChooserContinue",
     "linkedOverlay",
+    "linkedInstruction",
+    "linkedLookupWrap",
     "linkedLookupField",
     "linkedFeedback",
+    "linkedQueryLabel",
     "linkedList",
+    "linkedDetailsWrap",
     "linkedQuantityField",
     "linkedReasonField",
     "linkedNoteWrap",
     "linkedNoteField",
+    "linkedSecondary",
+    "linkedPrimary",
     "linkedReturnForm",
     "linkedOriginalInput",
     "linkedQuantityInput",
@@ -194,9 +206,14 @@ export default class extends Controller {
     this.searchRequestToken = 0
     this.pickupRequestToken = 0
     this.customerRequestToken = 0
+    this.linkedInvocation = 0
+    this.unlinkedInvocation = 0
     this.searchAbort = null
     this.pickupAbort = null
     this.customerAbort = null
+    this.linkedAbort = null
+    this.unlinkedAbort = null
+    this.linkedStage = "lookup"
     this.bindFunctionKeyCapture()
     if (this.hasControlReasonFieldTarget) {
       this.controlReasonFieldTarget.addEventListener("change", () => {
@@ -206,6 +223,12 @@ export default class extends Controller {
     if (this.hasUnlinkedReasonFieldTarget) {
       this.unlinkedReasonFieldTarget.addEventListener("change", () => {
         this.toggleHidden(this.hasUnlinkedNoteWrapTarget && this.unlinkedNoteWrapTarget, this.unlinkedReasonFieldTarget.value !== "other")
+        this.syncUnlinkedPrimaryEnabled()
+      })
+    }
+    if (this.hasLinkedReasonFieldTarget) {
+      this.linkedReasonFieldTarget.addEventListener("change", () => {
+        this.onLinkedReasonChange()
       })
     }
     if (this.autoCompleteValue) {
@@ -415,7 +438,7 @@ export default class extends Controller {
   onUnlinkedOverlayKeydown(event, key = this.functionKey(event) || event.key) {
     if (key === "Escape") {
       event.preventDefault()
-      this.closeUnlinkedOverlay()
+      this.backFromUnlinkedOverlay()
       return
     }
     if (key === "F9") {
@@ -427,7 +450,7 @@ export default class extends Controller {
     const target = event.target
     if (this.hasUnlinkedIdentifierFieldTarget && target === this.unlinkedIdentifierFieldTarget) {
       event.preventDefault()
-      this.resolveUnlinkedIdentifier()
+      this.lookUpUnlinkedItem()
       return
     }
     if (this.hasUnlinkedApproverUsernameTarget && target === this.unlinkedApproverUsernameTarget) {
@@ -437,7 +460,7 @@ export default class extends Controller {
     }
     if (this.hasUnlinkedApproverPasswordTarget && target === this.unlinkedApproverPasswordTarget) {
       event.preventDefault()
-      if (this.unlinkedApproverPasswordTarget.value.trim() !== "") this.submitUnlinkedReturn()
+      if (this.unlinkedApproverPasswordTarget.value.trim() !== "" && this.unlinkedAddReady()) this.submitUnlinkedReturn()
       return
     }
     if (this.isActionableControl(target)) return
@@ -446,30 +469,11 @@ export default class extends Controller {
   }
 
   advanceOrApplyUnlinkedOverlay() {
-    if (!this.unlinkedPreviewPayload) return
-    if (this.policyFor("unlinked_return") !== "approval_required") {
-      this.submitUnlinkedReturn()
+    if (!this.unlinkedPreviewPayload) {
+      this.lookUpUnlinkedItem()
       return
     }
-    if (this.hasUnlinkedReasonFieldTarget &&
-        this.unlinkedReasonFieldTarget.value === "other" &&
-        this.hasUnlinkedNoteFieldTarget &&
-        this.unlinkedNoteFieldTarget.value.trim() === "" &&
-        this.hasUnlinkedNoteWrapTarget &&
-        !this.unlinkedNoteWrapTarget.hidden) {
-      this.unlinkedNoteFieldTarget.focus()
-      return
-    }
-    if (this.hasUnlinkedApproverUsernameTarget && !this.unlinkedApproverWrapTarget?.hidden) {
-      if (this.unlinkedApproverUsernameTarget.value.trim() === "") {
-        this.unlinkedApproverUsernameTarget.focus()
-        return
-      }
-      if (this.hasUnlinkedApproverPasswordTarget) {
-        this.unlinkedApproverPasswordTarget.focus()
-        return
-      }
-    }
+    if (!this.unlinkedAddReady()) return
     this.submitUnlinkedReturn()
   }
 
@@ -1324,10 +1328,12 @@ export default class extends Controller {
   backFromProductOverlay(event) {
     if (event) event.preventDefault()
     this.closeProductOverlay()
+    this.abortUnlinkedPicker()
   }
 
   openVariantPicker(variants) {
     if (!this.hasVariantOverlayTarget || !this.hasVariantListTarget) return
+    this.syncNestedPickerBackLabels()
     this.variantListTarget.replaceChildren()
     variants.forEach((variant, index) => {
       const item = document.createElement("li")
@@ -1385,10 +1391,22 @@ export default class extends Controller {
   backToProducts(event) {
     if (event) event.preventDefault()
     this.closeVariantOverlay()
+    this.abortUnlinkedPicker()
+  }
+
+  syncNestedPickerBackLabels() {
+    const unlinked = Boolean(this.unlinkedPickerActive)
+    if (this.hasVariantBackTarget) {
+      this.variantBackTarget.textContent = unlinked ? "Back to Item Lookup" : "Back to Products"
+    }
+    if (this.hasUnitBackTarget) {
+      this.unitBackTarget.textContent = unlinked ? "Back to Item Lookup" : "Back to Variants"
+    }
   }
 
   openUnitPicker(units) {
     if (!this.hasUnitOverlayTarget || !this.hasUnitListTarget) return
+    this.syncNestedPickerBackLabels()
     this.unitListTarget.replaceChildren()
     if (units.length === 0) {
       const item = document.createElement("li")
@@ -1450,6 +1468,7 @@ export default class extends Controller {
   backToVariants(event) {
     if (event) event.preventDefault()
     this.closeUnitOverlay()
+    this.abortUnlinkedPicker()
   }
 
   movePickerList(list, delta) {
@@ -1529,14 +1548,37 @@ export default class extends Controller {
     if (this.inFlight || this.modeValue !== "sale_entry") return
     if (!this.hasReturnChooserOverlayTarget) return
     const items = Array.from(this.returnChooserListTarget.querySelectorAll("li"))
-    items.forEach((item, index) => {
-      this.decoratePickerItem(item, { selected: index === 0 })
+    const unlinkedProhibited = this.policyFor("unlinked_return") === "prohibited"
+    let firstEnabled = null
+    items.forEach((item) => {
+      const disabled = item.dataset.choice === "unlinked" && unlinkedProhibited
+      const muted = item.querySelector(".muted")
+      if (item.dataset.choice === "unlinked" && muted) {
+        muted.textContent = disabled
+          ? "Not available for your role."
+          : "Requires a reason and may require authorization."
+      }
+      const selected = !disabled && firstEnabled == null
+      if (selected) firstEnabled = item
+      this.decoratePickerItem(item, { selected, disabled })
+      item.onclick = () => {
+        this.onPickerItemClick(this.returnChooserListTarget, item)
+        this.syncReturnChooserContinue()
+      }
     })
-    this.showOverlay(this.returnChooserOverlayTarget, this.returnChooserListTarget.querySelector("li.is-selected"))
+    this.showOverlay(this.returnChooserOverlayTarget, firstEnabled || items[0])
+    this.syncReturnChooserContinue()
   }
 
   closeReturnChooser() {
+    this.invalidateLinkedLookup()
+    this.invalidateUnlinkedLookup()
     this.hideOverlay(this.hasReturnChooserOverlayTarget && this.returnChooserOverlayTarget)
+  }
+
+  keepSaleMode(event) {
+    if (event) event.preventDefault()
+    this.closeReturnChooser()
   }
 
   onReturnChooserKeydown(event, key) {
@@ -1548,24 +1590,33 @@ export default class extends Controller {
     if (key === "ArrowUp" || key === "ArrowDown") {
       event.preventDefault()
       this.movePickerList(this.returnChooserListTarget, key === "ArrowUp" ? -1 : 1)
+      this.syncReturnChooserContinue()
       return
     }
     if (key === "Enter") {
       event.preventDefault()
-      this.selectReturnChooser()
+      this.confirmReturnChooser()
     }
   }
 
+  syncReturnChooserContinue() {
+    if (!this.hasReturnChooserContinueTarget) return
+    const selected = this.hasReturnChooserListTarget && this.returnChooserListTarget.querySelector("li.is-selected:not(.is-disabled)")
+    this.returnChooserContinueTarget.disabled = !selected
+  }
+
+  confirmReturnChooser(event) {
+    if (event) event.preventDefault()
+    this.selectReturnChooser()
+  }
+
   selectReturnChooser() {
-    const selected = this.hasReturnChooserListTarget && this.returnChooserListTarget.querySelector("li.is-selected")
+    const selected = this.hasReturnChooserListTarget && this.returnChooserListTarget.querySelector("li.is-selected:not(.is-disabled)")
     if (!selected) return
     const choice = selected.dataset.choice
-    this.closeReturnChooser()
+    // Keep chooser on the stack as parent of linked/unlinked.
     if (choice === "unlinked") {
-      if (this.policyFor("unlinked_return") === "prohibited") {
-        this.showFeedback("Return without receipt is not available.")
-        return
-      }
+      if (this.policyFor("unlinked_return") === "prohibited") return
       this.openUnlinkedOverlay()
       return
     }
@@ -1575,18 +1626,42 @@ export default class extends Controller {
   openLinkedOverlay() {
     if (this.inFlight || this.modeValue !== "sale_entry") return
     if (!this.hasLinkedOverlayTarget) return
-    this.linkedMode = "lookup"
+    this.invalidateLinkedLookup()
+    this.linkedStage = "lookup"
     if (this.hasLinkedLookupFieldTarget) this.linkedLookupFieldTarget.value = ""
     if (this.hasLinkedFeedbackTarget) this.linkedFeedbackTarget.textContent = ""
+    if (this.hasLinkedQueryLabelTarget) this.linkedQueryLabelTarget.textContent = ""
     if (this.hasLinkedListTarget) this.linkedListTarget.replaceChildren()
     if (this.hasLinkedQuantityFieldTarget) this.linkedQuantityFieldTarget.value = "1"
     this.populateLinkedReasons()
     this.toggleHidden(this.hasLinkedNoteWrapTarget && this.linkedNoteWrapTarget, true)
+    this.syncLinkedStageChrome()
     this.showOverlay(this.linkedOverlayTarget, this.hasLinkedLookupFieldTarget && this.linkedLookupFieldTarget)
   }
 
   closeLinkedOverlay() {
+    this.invalidateLinkedLookup()
     this.hideOverlay(this.hasLinkedOverlayTarget && this.linkedOverlayTarget)
+  }
+
+  invalidateLinkedLookup() {
+    if (this.linkedAbort) this.linkedAbort.abort()
+    this.linkedAbort = null
+    this.linkedInvocation += 1
+  }
+
+  invalidateLinkedResultsOnInput() {
+    this.syncLinkedPrimaryEnabled()
+    const hasResults = this.hasLinkedListTarget && this.linkedListTarget.children.length > 0
+    const searching = this.hasLinkedQueryLabelTarget && this.linkedQueryLabelTarget.textContent
+    if (this.linkedStage === "lookup" && !hasResults && !searching) return
+    this.invalidateLinkedLookup()
+    if (this.hasLinkedListTarget) this.linkedListTarget.replaceChildren()
+    if (this.hasLinkedFeedbackTarget) this.linkedFeedbackTarget.textContent = ""
+    if (this.hasLinkedQueryLabelTarget) this.linkedQueryLabelTarget.textContent = ""
+    this.linkedReceiptCacheHtml = null
+    this.linkedStage = "lookup"
+    this.syncLinkedStageChrome()
   }
 
   populateLinkedReasons() {
@@ -1605,91 +1680,248 @@ export default class extends Controller {
     })
   }
 
+  onLinkedReasonChange() {
+    const reason = this.hasLinkedReasonFieldTarget ? this.linkedReasonFieldTarget.value : ""
+    this.toggleHidden(this.hasLinkedNoteWrapTarget && this.linkedNoteWrapTarget, reason !== "other")
+    this.syncLinkedPrimaryEnabled()
+  }
+
+  syncLinkedStageChrome() {
+    const stage = this.linkedStage || "lookup"
+    if (this.hasLinkedLookupWrapTarget) this.linkedLookupWrapTarget.hidden = stage !== "lookup"
+    if (this.hasLinkedDetailsWrapTarget) this.linkedDetailsWrapTarget.hidden = stage !== "lines"
+    if (this.hasLinkedInstructionTarget) {
+      if (stage === "lookup") this.linkedInstructionTarget.textContent = "Find a receipt, then choose returnable items."
+      else if (stage === "receipts") this.linkedInstructionTarget.textContent = "Select a receipt to view returnable items."
+      else this.linkedInstructionTarget.textContent = "Select a returnable line and enter return details."
+    }
+    if (this.hasLinkedSecondaryTarget) {
+      if (stage === "lookup") this.linkedSecondaryTarget.textContent = "Back to Return Options"
+      else if (stage === "receipts") this.linkedSecondaryTarget.textContent = "Back"
+      else this.linkedSecondaryTarget.textContent = "Back to Receipts"
+    }
+    if (this.hasLinkedPrimaryTarget) {
+      if (stage === "lookup") this.linkedPrimaryTarget.textContent = "Find Receipt"
+      else if (stage === "receipts") this.linkedPrimaryTarget.textContent = "View Returnable Items"
+      else this.linkedPrimaryTarget.textContent = "Add Return"
+    }
+    this.syncLinkedPrimaryEnabled()
+  }
+
+  syncLinkedPrimaryEnabled() {
+    if (this.hasLinkedSecondaryTarget) this.linkedSecondaryTarget.disabled = this.inFlight
+    if (!this.hasLinkedPrimaryTarget) return
+    const stage = this.linkedStage || "lookup"
+    if (stage === "lookup") {
+      const query = this.hasLinkedLookupFieldTarget ? this.linkedLookupFieldTarget.value.trim() : ""
+      this.linkedPrimaryTarget.disabled = !query || this.inFlight
+      return
+    }
+    const selected = this.hasLinkedListTarget && this.linkedListTarget.querySelector("li.is-selected:not(.is-disabled)")
+    if (stage === "receipts") {
+      this.linkedPrimaryTarget.disabled = !selected || this.inFlight
+      return
+    }
+    this.linkedPrimaryTarget.disabled = !this.linkedLineReady(selected) || this.inFlight
+  }
+
+  linkedLineReady(selected) {
+    if (!selected || selected.classList.contains("is-disabled")) return false
+    const reason = this.hasLinkedReasonFieldTarget ? this.linkedReasonFieldTarget.value : ""
+    if (!reason) return false
+    if (reason === "other" && this.hasLinkedNoteFieldTarget && this.linkedNoteFieldTarget.value.trim() === "") return false
+    if (selected.dataset.quantityFixed !== "true") {
+      const qty = this.hasLinkedQuantityFieldTarget ? this.linkedQuantityFieldTarget.value.trim() : ""
+      if (!qty || Number(qty) <= 0) return false
+    }
+    return true
+  }
+
   onLinkedOverlayKeydown(event, key) {
     if (key === "Escape") {
       event.preventDefault()
-      this.closeLinkedOverlay()
+      this.linkedEscapeOrBack()
       return
     }
     if (key === "ArrowUp" || key === "ArrowDown") {
       event.preventDefault()
+      if (this.linkedStage === "lookup") return
       this.movePickerList(this.linkedListTarget, key === "ArrowUp" ? -1 : 1)
+      this.syncLinkedPrimaryEnabled()
       return
     }
     if (key !== "Enter") return
     event.preventDefault()
-    if (event.target === this.linkedLookupFieldTarget) {
+    if (event.target === this.linkedLookupFieldTarget || this.linkedStage === "lookup") {
       this.runLinkedLookup()
+      return
+    }
+    this.linkedPrimaryAction()
+  }
+
+  linkedSecondaryAction(event) {
+    if (event) event.preventDefault()
+    this.linkedEscapeOrBack()
+  }
+
+  linkedPrimaryAction(event) {
+    if (event) event.preventDefault()
+    if (this.inFlight) return
+    const stage = this.linkedStage || "lookup"
+    if (stage === "lookup") {
+      this.runLinkedLookup()
+      return
+    }
+    if (stage === "receipts") {
+      this.selectHighlightedLinked()
       return
     }
     this.selectHighlightedLinked()
   }
 
+  linkedEscapeOrBack() {
+    if (this.inFlight) return
+    const stage = this.linkedStage || "lookup"
+    if (stage === "lines") {
+      // Abandon any in-flight lookup/lines request before reversing stage.
+      this.invalidateLinkedLookup()
+      if (this.hasLinkedQueryLabelTarget) this.linkedQueryLabelTarget.textContent = ""
+      if (this.linkedReceiptCacheHtml) {
+        this.linkedStage = "receipts"
+        if (this.hasLinkedListTarget) this.linkedListTarget.innerHTML = this.linkedReceiptCacheHtml
+        this.linkedListTarget.querySelectorAll("li").forEach((item) => {
+          item.addEventListener("click", () => {
+            this.onPickerItemClick(this.linkedListTarget, item)
+            this.syncLinkedPrimaryEnabled()
+          })
+        })
+        this.syncLinkedStageChrome()
+        const first = this.linkedListTarget.querySelector("li.is-selected:not(.is-disabled)") ||
+          this.linkedListTarget.querySelector("li:not(.is-disabled)")
+        this.focusOverlayEntry(first)
+        return
+      }
+      this.linkedStage = "lookup"
+      if (this.hasLinkedListTarget) this.linkedListTarget.replaceChildren()
+      this.syncLinkedStageChrome()
+      this.focusOverlayEntry(this.hasLinkedLookupFieldTarget && this.linkedLookupFieldTarget)
+      return
+    }
+    if (stage === "receipts") {
+      this.invalidateLinkedLookup()
+      if (this.hasLinkedQueryLabelTarget) this.linkedQueryLabelTarget.textContent = ""
+      this.linkedStage = "lookup"
+      this.linkedReceiptCacheHtml = null
+      if (this.hasLinkedListTarget) this.linkedListTarget.replaceChildren()
+      if (this.hasLinkedFeedbackTarget) this.linkedFeedbackTarget.textContent = ""
+      this.syncLinkedStageChrome()
+      this.focusOverlayEntry(this.hasLinkedLookupFieldTarget && this.linkedLookupFieldTarget)
+      return
+    }
+    this.closeLinkedOverlay()
+  }
+
   async runLinkedLookup(params = {}) {
     const query = this.hasLinkedLookupFieldTarget ? this.linkedLookupFieldTarget.value.trim() : ""
+    if (!params.transaction_id && !query) return
+    if (this.linkedAbort) this.linkedAbort.abort()
+    this.linkedAbort = new AbortController()
+    const token = ++this.linkedInvocation
+    if (this.hasLinkedQueryLabelTarget) this.linkedQueryLabelTarget.textContent = "Searching…"
     const url = new URL(this.linkedLookupUrlValue, window.location.origin)
     if (params.transaction_id) url.searchParams.set("transaction_id", params.transaction_id)
-    else if (query) url.searchParams.set("q", query)
-    else return
+    else url.searchParams.set("q", query)
     try {
-      const response = await fetch(url, { headers: { Accept: "application/json" }, credentials: "same-origin" })
+      const response = await fetch(url, {
+        headers: { Accept: "application/json" },
+        credentials: "same-origin",
+        signal: this.linkedAbort.signal
+      })
       const payload = await response.json()
+      if (!this.linkedResponseCurrent(token)) return
       this.renderLinkedLookup(payload)
-    } catch (_error) {
+    } catch (error) {
+      if (error?.name === "AbortError") return
+      if (!this.linkedResponseCurrent(token)) return
       if (this.hasLinkedFeedbackTarget) this.linkedFeedbackTarget.textContent = "no returnable original found"
+      if (this.hasLinkedQueryLabelTarget) this.linkedQueryLabelTarget.textContent = ""
+      this.focusOverlayEntry(this.hasLinkedLookupFieldTarget && this.linkedLookupFieldTarget)
     }
+  }
+
+  linkedResponseCurrent(token) {
+    if (!this.element.isConnected) return false
+    if (token !== this.linkedInvocation) return false
+    return this.linkedOverlayOpen()
   }
 
   renderLinkedLookup(payload) {
     if (this.hasLinkedFeedbackTarget) this.linkedFeedbackTarget.textContent = payload.message || ""
+    if (this.hasLinkedQueryLabelTarget) this.linkedQueryLabelTarget.textContent = ""
     if (!this.hasLinkedListTarget) return
     this.linkedListTarget.replaceChildren()
     if (payload.outcome === "receipts") {
-      this.linkedMode = "receipts"
+      this.linkedStage = "receipts"
+      this.linkedReceiptCacheHtml = null
       ;(payload.receipts || []).forEach((receipt, index) => {
         const item = document.createElement("li")
         item.dataset.transactionId = receipt.id
         item.textContent = receipt.transaction_reference
-        this.decoratePickerItem(item, { selected: index === 0 })
+        const selected = index === 0
+        this.decoratePickerItem(item, { selected, disabled: false })
+        item.addEventListener("click", () => {
+          this.onPickerItemClick(this.linkedListTarget, item)
+          this.syncLinkedPrimaryEnabled()
+        })
         this.linkedListTarget.append(item)
       })
+      this.linkedReceiptCacheHtml = this.linkedListTarget.innerHTML
     } else if (payload.outcome === "lines") {
-      this.linkedMode = "lines"
-      ;(payload.lines || []).forEach((line, index) => {
+      this.linkedStage = "lines"
+      let firstEnabled = null
+      ;(payload.lines || []).forEach((line) => {
         const item = document.createElement("li")
         item.dataset.lineId = line.id
         item.dataset.remaining = String(line.remaining)
         item.dataset.quantityFixed = line.quantity_fixed ? "true" : "false"
+        const ineligible = line.remaining <= 0 || Boolean(line.ineligible)
         const unit = line.unit_identifier ? ` · ${line.unit_identifier}` : ""
-        item.textContent = `${line.description} · remaining ${line.remaining}${unit}`
-        this.decoratePickerItem(item, { selected: index === 0 })
+        const reason = line.ineligible_reason ? ` — ${line.ineligible_reason}` : ""
+        item.textContent = `${line.description} · remaining ${line.remaining}${unit}${reason}`
+        const selected = !ineligible && firstEnabled == null
+        if (selected) firstEnabled = item
+        this.decoratePickerItem(item, { selected, disabled: ineligible })
+        item.addEventListener("click", () => {
+          this.onPickerItemClick(this.linkedListTarget, item)
+          this.syncLinkedPrimaryEnabled()
+        })
         this.linkedListTarget.append(item)
       })
+    } else if (this.hasLinkedQueryLabelTarget) {
+      this.linkedQueryLabelTarget.textContent = payload.message || "No matching receipts."
+      this.linkedStage = "lookup"
     }
-    const first = this.linkedListTarget.querySelector("li.is-selected")
-    if (first) first.focus()
+    this.syncLinkedStageChrome()
+    const first = this.linkedListTarget.querySelector("li.is-selected:not(.is-disabled)")
+    if (first) this.focusOverlayEntry(first)
+    else this.focusOverlayEntry(this.hasLinkedLookupFieldTarget && this.linkedLookupFieldTarget)
   }
 
   selectHighlightedLinked() {
-    const selected = this.hasLinkedListTarget && this.linkedListTarget.querySelector("li.is-selected")
+    if (this.inFlight) return
+    const selected = this.hasLinkedListTarget && this.linkedListTarget.querySelector("li.is-selected:not(.is-disabled)")
     if (!selected) return
-    if (this.linkedMode === "receipts") {
+    if (this.linkedStage === "receipts") {
+      this.linkedReceiptCacheHtml = this.linkedListTarget.innerHTML
       this.runLinkedLookup({ transaction_id: selected.dataset.transactionId })
       return
     }
-    if (this.linkedMode !== "lines") return
+    if (this.linkedStage !== "lines") return
+    if (!this.linkedLineReady(selected)) {
+      if (this.hasLinkedFeedbackTarget) this.linkedFeedbackTarget.textContent = "Complete quantity, reason, and note."
+      return
+    }
     const reason = this.hasLinkedReasonFieldTarget ? this.linkedReasonFieldTarget.value : ""
-    if (!reason) {
-      if (this.hasLinkedFeedbackTarget) this.linkedFeedbackTarget.textContent = "Select a return reason."
-      if (this.hasLinkedReasonFieldTarget) this.linkedReasonFieldTarget.focus()
-      return
-    }
-    if (reason === "other" && this.hasLinkedNoteFieldTarget && this.linkedNoteFieldTarget.value.trim() === "") {
-      this.toggleHidden(this.hasLinkedNoteWrapTarget && this.linkedNoteWrapTarget, false)
-      if (this.hasLinkedFeedbackTarget) this.linkedFeedbackTarget.textContent = "reason note is required"
-      this.linkedNoteFieldTarget.focus()
-      return
-    }
     const quantity = selected.dataset.quantityFixed === "true"
       ? "1"
       : (this.hasLinkedQuantityFieldTarget ? this.linkedQuantityFieldTarget.value.trim() : "1")
@@ -1701,6 +1933,7 @@ export default class extends Controller {
     }
     this.clearOverlayError(this.linkedOverlayTarget)
     this.beginFlight()
+    this.syncLinkedPrimaryEnabled()
     this.linkedReturnFormTarget.requestSubmit()
   }
 
@@ -1945,27 +2178,58 @@ export default class extends Controller {
     if (this.policyFor("unlinked_return") === "prohibited") return
     if (!this.hasUnlinkedOverlayTarget) return
 
+    this.invalidateUnlinkedLookup()
     this.resetUnlinkedOverlay()
     this.populateUnlinkedReasons()
     const needsApprover = this.policyFor("unlinked_return") === "approval_required"
     this.toggleHidden(this.hasUnlinkedApproverWrapTarget && this.unlinkedApproverWrapTarget, !needsApprover)
+    this.syncUnlinkedPrimaryEnabled()
     this.showOverlay(this.unlinkedOverlayTarget, this.hasUnlinkedIdentifierFieldTarget && this.unlinkedIdentifierFieldTarget)
   }
 
   closeUnlinkedOverlay() {
+    this.invalidateUnlinkedLookup()
+    this.unlinkedPickerActive = false
     this.hideOverlay(this.hasUnlinkedOverlayTarget && this.unlinkedOverlayTarget)
+  }
+
+  backFromUnlinkedOverlay(event) {
+    if (event) event.preventDefault()
+    if (this.inFlight) return
+    this.closeUnlinkedOverlay()
+  }
+
+  invalidateUnlinkedLookup() {
+    if (this.unlinkedAbort) this.unlinkedAbort.abort()
+    this.unlinkedAbort = null
+    this.unlinkedInvocation += 1
+  }
+
+  invalidateUnlinkedResultsOnInput() {
+    this.syncUnlinkedPrimaryEnabled()
+    if (!this.unlinkedPreviewPayload && !(this.hasUnlinkedQueryLabelTarget && this.unlinkedQueryLabelTarget.textContent)) return
+    this.invalidateUnlinkedLookup()
+    this.clearUnlinkedPreviewState()
+    this.unlinkedSelection = null
+    this.unlinkedPickerActive = false
+    if (this.hasUnlinkedFeedbackTarget) this.unlinkedFeedbackTarget.textContent = ""
+    if (this.hasUnlinkedQueryLabelTarget) this.unlinkedQueryLabelTarget.textContent = ""
+    this.syncUnlinkedPrimaryEnabled()
   }
 
   resetUnlinkedOverlay() {
     this.unlinkedPreviewPayload = null
+    this.unlinkedSelection = null
+    this.unlinkedPickerActive = false
     if (this.hasUnlinkedFeedbackTarget) this.unlinkedFeedbackTarget.textContent = ""
+    if (this.hasUnlinkedQueryLabelTarget) this.unlinkedQueryLabelTarget.textContent = ""
     if (this.hasUnlinkedIdentifierFieldTarget) this.unlinkedIdentifierFieldTarget.value = ""
     this.toggleHidden(this.hasUnlinkedPreviewTarget && this.unlinkedPreviewTarget, true)
-    if (this.hasUnlinkedApplyTarget) this.unlinkedApplyTarget.hidden = true
     if (this.hasUnlinkedNoteFieldTarget) this.unlinkedNoteFieldTarget.value = ""
     this.toggleHidden(this.hasUnlinkedNoteWrapTarget && this.unlinkedNoteWrapTarget, true)
     if (this.hasUnlinkedApproverUsernameTarget) this.unlinkedApproverUsernameTarget.value = ""
     if (this.hasUnlinkedApproverPasswordTarget) this.unlinkedApproverPasswordTarget.value = ""
+    this.syncUnlinkedPrimaryEnabled()
   }
 
   populateUnlinkedReasons() {
@@ -1982,6 +2246,17 @@ export default class extends Controller {
       option.textContent = entry.name
       this.unlinkedReasonFieldTarget.appendChild(option)
     })
+  }
+
+  onUnlinkedReasonChange() {
+    const reason = this.hasUnlinkedReasonFieldTarget ? this.unlinkedReasonFieldTarget.value : ""
+    this.toggleHidden(this.hasUnlinkedNoteWrapTarget && this.unlinkedNoteWrapTarget, reason !== "other")
+    this.syncUnlinkedPrimaryEnabled()
+  }
+
+  lookUpUnlinkedItem(event) {
+    if (event) event.preventDefault()
+    this.resolveUnlinkedIdentifier()
   }
 
   async resolveUnlinkedIdentifier() {
@@ -2001,6 +2276,10 @@ export default class extends Controller {
     if (params.product_id) body.set("product_id", params.product_id)
     if (params.product_variant_id) body.set("product_variant_id", params.product_variant_id)
     if (params.inventory_unit_id) body.set("inventory_unit_id", params.inventory_unit_id)
+    if (this.unlinkedAbort) this.unlinkedAbort.abort()
+    this.unlinkedAbort = new AbortController()
+    const invocation = ++this.unlinkedInvocation
+    if (this.hasUnlinkedQueryLabelTarget) this.unlinkedQueryLabelTarget.textContent = "Looking up…"
     try {
       const response = await fetch(this.unlinkedLookupUrlValue, {
         method: "POST",
@@ -2009,18 +2288,31 @@ export default class extends Controller {
           "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
           "X-CSRF-Token": token || ""
         },
-        body: body.toString()
+        body: body.toString(),
+        signal: this.unlinkedAbort.signal
       })
       const payload = await response.json()
+      if (!this.unlinkedResponseCurrent(invocation)) return
       this.handleUnlinkedResolution(payload, response.ok)
-    } catch (_error) {
+    } catch (error) {
+      if (error?.name === "AbortError") return
+      if (!this.unlinkedResponseCurrent(invocation)) return
       this.showUnlinkedFeedback("merchandise not found")
       this.clearUnlinkedPreviewState()
       this.unlinkedSelection = null
     }
   }
 
+  unlinkedResponseCurrent(invocation) {
+    if (!this.element.isConnected) return false
+    if (invocation !== this.unlinkedInvocation) return false
+    if (!this.unlinkedOverlayOpen()) return false
+    // Must remain in stack ancestry (chooser may be parent).
+    return this.overlayStack.some((entry) => entry.overlay === this.unlinkedOverlayTarget && !entry.overlay.hidden)
+  }
+
   handleUnlinkedResolution(payload, ok) {
+    if (this.hasUnlinkedQueryLabelTarget) this.unlinkedQueryLabelTarget.textContent = ""
     const outcome = payload.outcome || (ok ? "resolved" : "unavailable")
     switch (outcome) {
       case "resolved":
@@ -2049,11 +2341,12 @@ export default class extends Controller {
   clearUnlinkedPreviewState() {
     this.unlinkedPreviewPayload = null
     this.toggleHidden(this.hasUnlinkedPreviewTarget && this.unlinkedPreviewTarget, true)
-    if (this.hasUnlinkedApplyTarget) this.unlinkedApplyTarget.hidden = true
+    this.syncUnlinkedPrimaryEnabled()
   }
 
   applyUnlinkedPreview(payload) {
     this.unlinkedPreviewPayload = payload
+    this.unlinkedPickerActive = false
     if (this.hasUnlinkedFeedbackTarget) this.unlinkedFeedbackTarget.textContent = ""
     this.toggleHidden(this.hasUnlinkedPreviewTarget && this.unlinkedPreviewTarget, false)
     if (this.hasUnlinkedDescriptionTarget) this.unlinkedDescriptionTarget.textContent = payload.description || ""
@@ -2069,20 +2362,52 @@ export default class extends Controller {
       this.unlinkedQuantityFieldTarget.value = "1"
       this.unlinkedQuantityFieldTarget.disabled = fixed
     }
-    if (this.hasUnlinkedApplyTarget) this.unlinkedApplyTarget.hidden = false
+    this.syncUnlinkedPrimaryEnabled()
 
     const focusTarget = (this.hasUnlinkedQuantityFieldTarget && !fixed)
       ? this.unlinkedQuantityFieldTarget
       : (this.hasUnlinkedReasonFieldTarget && this.unlinkedReasonFieldTarget)
-    this.showOverlay(this.unlinkedOverlayTarget, focusTarget)
+    // Restore unlinked as top if nested pickers closed.
+    if (this.topOverlay() !== this.unlinkedOverlayTarget) {
+      this.showOverlay(this.unlinkedOverlayTarget, focusTarget)
+    } else {
+      this.focusOverlayEntry(focusTarget)
+    }
   }
 
-  // Abandon a stacked merchandise picker opened from Return without receipt.
-  // Closes only the picker; keeps the unlinked overlay open and restores focus.
+  unlinkedAddReady() {
+    if (!this.unlinkedPreviewPayload || this.inFlight) return false
+    const reason = this.hasUnlinkedReasonFieldTarget ? this.unlinkedReasonFieldTarget.value : ""
+    if (!reason) return false
+    if (reason === "other" && this.hasUnlinkedNoteFieldTarget && this.unlinkedNoteFieldTarget.value.trim() === "") return false
+    const price = this.hasUnlinkedPriceFieldTarget ? this.unlinkedPriceFieldTarget.value.trim() : ""
+    if (price === "") return false
+    if (!this.unlinkedPreviewPayload.quantity_fixed) {
+      const qty = this.hasUnlinkedQuantityFieldTarget ? this.unlinkedQuantityFieldTarget.value.trim() : ""
+      if (!qty || Number(qty) <= 0) return false
+    }
+    if (this.policyFor("unlinked_return") === "approval_required") {
+      const user = this.hasUnlinkedApproverUsernameTarget ? this.unlinkedApproverUsernameTarget.value.trim() : ""
+      const pass = this.hasUnlinkedApproverPasswordTarget ? this.unlinkedApproverPasswordTarget.value : ""
+      if (!user || !pass) return false
+    }
+    return true
+  }
+
+  syncUnlinkedPrimaryEnabled() {
+    if (this.hasUnlinkedCancelTarget) this.unlinkedCancelTarget.disabled = this.inFlight
+    if (this.hasUnlinkedLookupTarget) {
+      const query = this.hasUnlinkedIdentifierFieldTarget ? this.unlinkedIdentifierFieldTarget.value.trim() : ""
+      this.unlinkedLookupTarget.disabled = this.inFlight || !query
+    }
+    if (!this.hasUnlinkedApplyTarget) return
+    this.unlinkedApplyTarget.disabled = !this.unlinkedAddReady()
+  }
+
+  // Abandon a stacked merchandise picker opened from unlinked return.
   abortUnlinkedPicker() {
     if (!this.unlinkedPickerActive) return
     this.unlinkedPickerActive = false
-    this.unlinkedSelection = null
     if (this.unlinkedOverlayOpen() && this.hasUnlinkedIdentifierFieldTarget) {
       this.unlinkedIdentifierFieldTarget.focus()
     }
@@ -2092,9 +2417,10 @@ export default class extends Controller {
     if (this.hasUnlinkedFeedbackTarget) this.unlinkedFeedbackTarget.textContent = message
   }
 
-  submitUnlinkedReturn() {
+  submitUnlinkedReturn(event) {
+    if (event) event.preventDefault()
     if (this.inFlight || !this.hasUnlinkedFormTarget) return
-    if (!this.unlinkedPreviewPayload) return
+    if (!this.unlinkedAddReady()) return
     if (this.hasUnlinkedIdentifierInputTarget) {
       this.unlinkedIdentifierInputTarget.value = this.hasUnlinkedIdentifierFieldTarget
         ? this.unlinkedIdentifierFieldTarget.value.trim()
@@ -2147,6 +2473,7 @@ export default class extends Controller {
     }
     this.clearOverlayError(this.unlinkedOverlayTarget)
     this.beginFlight()
+    this.syncUnlinkedPrimaryEnabled()
     this.unlinkedFormTarget.requestSubmit()
   }
 
@@ -2313,6 +2640,7 @@ export default class extends Controller {
     })
     overlay.hidden = false
     overlay.setAttribute("aria-modal", "true")
+    overlay.style.zIndex = String(1000 + (this.overlayStack.length * 10))
     if (parent && parent !== overlay) {
       parent.inert = true
       parent.setAttribute("aria-modal", "false")
@@ -2343,6 +2671,7 @@ export default class extends Controller {
     if (!overlay) return
     overlay.hidden = true
     overlay.inert = false
+    overlay.style.zIndex = ""
     overlay.setAttribute("aria-modal", "true")
     this.clearOverlayError(overlay)
   }
@@ -2392,12 +2721,18 @@ export default class extends Controller {
     if (this.searchAbort) this.searchAbort.abort()
     if (this.pickupAbort) this.pickupAbort.abort()
     if (this.customerAbort) this.customerAbort.abort()
+    if (this.linkedAbort) this.linkedAbort.abort()
+    if (this.unlinkedAbort) this.unlinkedAbort.abort()
     this.searchAbort = null
     this.pickupAbort = null
     this.customerAbort = null
+    this.linkedAbort = null
+    this.unlinkedAbort = null
     this.searchRequestToken += 1
     this.pickupRequestToken += 1
     this.customerRequestToken += 1
+    this.linkedInvocation += 1
+    this.unlinkedInvocation += 1
   }
 
   clearOverlayError(overlay) {
@@ -2444,6 +2779,9 @@ export default class extends Controller {
     this.enableReadyActions()
     if (this.hasControlApproverPasswordInputTarget) this.controlApproverPasswordInputTarget.value = ""
     if (this.hasUnlinkedApproverPasswordInputTarget) this.unlinkedApproverPasswordInputTarget.value = ""
+    if (this.hasUnlinkedApproverPasswordTarget) this.unlinkedApproverPasswordTarget.value = ""
+    this.syncUnlinkedPrimaryEnabled()
+    this.syncLinkedPrimaryEnabled()
     const overlay = this.activeOverlayElement()
     if (!overlay) return
     overlay.querySelectorAll("input[type='password']").forEach((field) => {

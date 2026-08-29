@@ -1047,21 +1047,207 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     open_register
     click_on "Return (-)"
     assert_selector "#pos_return_chooser", visible: true
-    assert_selector "#pos_return_chooser li.is-selected", text: "Linked return"
+    assert_selector "#pos_return_chooser li.is-selected", text: /Find Original Receipt/
     assert page.evaluate_script("document.activeElement === document.querySelector('#pos_return_chooser li.is-selected')")
+    assert page.evaluate_script("document.querySelector('[data-register-workspace-target=background]').inert === true")
     send_keys :arrow_down
     send_keys :enter
     assert_selector "#pos_unlinked_overlay", visible: true
+    assert_selector "#pos_return_chooser", visible: :all
+    assert page.evaluate_script("document.querySelector('#pos_return_chooser').inert === true")
     send_keys :escape
     assert_no_selector "#pos_unlinked_overlay", visible: true
+    assert_selector "#pos_return_chooser", visible: true
+    send_keys :escape
+    assert_no_selector "#pos_return_chooser", visible: true
     click_on "Return (-)"
-    send_keys :enter
+    click_on "Continue"
     assert_selector "#pos_linked_overlay", visible: true
     assert_field "Receipt, merchandise, or unit"
     send_keys :escape
     assert_no_selector "#pos_linked_overlay", visible: true
+    assert_selector "#pos_return_chooser", visible: true
     send_keys "-"
     assert_selector "#pos_return_chooser", visible: true
+  end
+
+  test "linked return Escape ladder restores stages then chooser" do
+    open_register
+    2.times do
+      field = find("#pos-command-field")
+      field.fill_in with: @variant.sku
+      field.send_keys :enter
+      click_on "Tender (+)"
+      field = find("#pos-command-field")
+      field.fill_in with: "25.00"
+      field.send_keys :enter
+      send_keys :enter
+      assert_text "Transaction complete", wait: 10
+      click_on "New transaction"
+      assert_text "SALE ENTRY", wait: 10
+    end
+
+    click_on "Return (-)"
+    click_on "Continue"
+    assert_selector "#pos_linked_overlay", visible: true
+    field = find("[data-register-workspace-target='linkedLookupField']")
+    field.fill_in with: @variant.sku
+    click_on "Find Receipt"
+    assert_selector "#pos_linked_overlay li", minimum: 2, wait: 10
+    assert_button "View Returnable Items"
+    click_on "View Returnable Items"
+    assert_selector "[data-register-workspace-target='linkedPrimary']", text: "Add Return", wait: 10
+    assert_selector "#pos_linked_overlay li", minimum: 1
+    send_keys :escape
+    assert_button "View Returnable Items"
+    send_keys :escape
+    assert_button "Find Receipt"
+    assert_field "Receipt, merchandise, or unit"
+    send_keys :escape
+    assert_no_selector "#pos_linked_overlay", visible: true
+    assert_selector "#pos_return_chooser", visible: true
+    send_keys :escape
+    assert_no_selector "#pos_return_chooser", visible: true
+    assert_equal "pos-command-field", page.evaluate_script("document.activeElement && document.activeElement.id")
+  end
+
+  test "linked return Escape during lines fetch ignores the late response" do
+    open_register
+    2.times do
+      field = find("#pos-command-field")
+      field.fill_in with: @variant.sku
+      field.send_keys :enter
+      click_on "Tender (+)"
+      field = find("#pos-command-field")
+      field.fill_in with: "25.00"
+      field.send_keys :enter
+      send_keys :enter
+      assert_text "Transaction complete", wait: 10
+      click_on "New transaction"
+      assert_text "SALE ENTRY", wait: 10
+    end
+
+    click_on "Return (-)"
+    click_on "Continue"
+    field = find("[data-register-workspace-target='linkedLookupField']")
+    field.fill_in with: @variant.sku
+    click_on "Find Receipt"
+    assert_selector "#pos_linked_overlay li", minimum: 2, wait: 10
+    assert_button "View Returnable Items"
+
+    page.evaluate_script(<<~JS.squish)
+      (function() {
+        window.__ssLinkedFetch = window.fetch.bind(window);
+        window.__ssHoldLinkedLines = true;
+        window.__ssDelayedLinked = null;
+        window.fetch = function(input, init) {
+          var url = "";
+          if (typeof input === "string") url = input;
+          else if (input && typeof input.url === "string") url = input.url;
+          else if (input) url = String(input);
+          if (window.__ssHoldLinkedLines && url.indexOf("linked_return_lookup") !== -1) {
+            return new Promise(function(resolve) {
+              window.__ssDelayedLinked = { resolve: resolve, init: init, input: input };
+            });
+          }
+          return window.__ssLinkedFetch(input, init);
+        };
+      })()
+    JS
+
+    find("#pos_linked_overlay li.is-selected").send_keys :enter
+    assert_text "Searching…", wait: 5
+    assert page.evaluate_script("window.__ssDelayedLinked != null")
+    send_keys :escape
+    assert_button "Find Receipt"
+    assert_field "Receipt, merchandise, or unit"
+
+    page.execute_script(<<~JS.squish)
+      (function() {
+        window.__ssHoldLinkedLines = false;
+        if (!window.__ssDelayedLinked) return;
+        window.__ssLinkedFetch(window.__ssDelayedLinked.input, window.__ssDelayedLinked.init).then(function(response) {
+          window.__ssDelayedLinked.resolve(response);
+        });
+        window.fetch = window.__ssLinkedFetch;
+      })()
+    JS
+    sleep 0.5
+    assert_button "Find Receipt"
+    assert_selector "[data-register-workspace-target='linkedPrimary']", text: "Find Receipt"
+    assert page.evaluate_script("document.activeElement === document.querySelector('[data-register-workspace-target=linkedLookupField]')")
+  ensure
+    page.execute_script("window.__ssHoldLinkedLines = false; if (window.__ssLinkedFetch) { window.fetch = window.__ssLinkedFetch; }")
+  end
+
+  test "prohibited unlinked return is disabled in the chooser" do
+    role = Role.create!(key: "linked_only_#{SecureRandom.hex(3)}", name: "Linked only", assignment_scope: "store")
+    RolePermission.create!(
+      role: role,
+      permission: Permission.find_by!(key: "pos.transact"),
+      granted_by: @actor
+    )
+    user = User.create!(
+      username: "linked_only_clerk",
+      display_name: "Linked Only",
+      password: "correct-horse-battery",
+      password_confirmation: "correct-horse-battery"
+    )
+    RoleAssignment.create!(
+      user: user,
+      role: role,
+      store: @store,
+      assigned_by: @actor,
+      effective_at: Time.current
+    )
+
+    visit new_session_path
+    fill_in "session_username", with: "linked_only_clerk"
+    fill_in "session_password", with: "correct-horse-battery"
+    find_field("session_password").send_keys :enter
+    assert_text "Signed in successfully"
+    visit pos_register_enter_path(register_id: @register.id)
+    fill_in "Opening float", with: "0.00"
+    click_on "Open register"
+    assert_text "SALE ENTRY", wait: 10
+
+    click_on "Return (-)"
+    assert_selector "#pos_return_chooser li[data-choice='unlinked'].is-disabled", text: /Not available for your role/
+    assert_selector "#pos_return_chooser li[data-choice='linked'].is-selected"
+    send_keys :arrow_down
+    assert_selector "#pos_return_chooser li[data-choice='linked'].is-selected"
+    click_on "Continue"
+    assert_selector "#pos_linked_overlay", visible: true
+    assert_no_selector "#pos_unlinked_overlay", visible: true
+  end
+
+  test "linked return add via overlay clears return overlay ancestry" do
+    open_register
+    field = find("#pos-command-field")
+    field.fill_in with: @variant.sku
+    field.send_keys :enter
+    click_on "Tender (+)"
+    field = find("#pos-command-field")
+    field.fill_in with: "25.00"
+    field.send_keys :enter
+    send_keys :enter
+    assert_text "Transaction complete", wait: 10
+    sale = PosTransaction.completed.find_by!(register: @register)
+    click_on "New transaction"
+    assert_text "SALE ENTRY", wait: 10
+
+    click_on "Return (-)"
+    click_on "Continue"
+    field = find("[data-register-workspace-target='linkedLookupField']")
+    field.fill_in with: sale.transaction_reference
+    click_on "Find Receipt"
+    assert_selector "#pos_linked_overlay li.is-selected", wait: 10
+    find("[data-register-workspace-target='linkedReasonField']").select "Changed mind"
+    click_on "Add Return"
+    assert_text "RETURN", wait: 10
+    assert_no_selector "#pos_linked_overlay", visible: true
+    assert_no_selector "#pos_return_chooser", visible: true
+    assert_selector "tr.is-selected[data-direction='return']"
   end
 
   test "cashier attaches a customer from operational search overlay" do
