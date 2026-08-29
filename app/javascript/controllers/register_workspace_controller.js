@@ -2183,8 +2183,9 @@ export default class extends Controller {
     return reload || !option || !option.value || option.dataset.numberAuthority !== "system_generated"
   }
 
-  onIssuanceFieldChange() {
-    this.syncIssuanceCardVisibility({ focusCardWhenShown: true })
+  onIssuanceFieldChange(event) {
+    const fromType = this.hasIssuanceTypeFieldTarget && event?.target === this.issuanceTypeFieldTarget
+    this.syncIssuanceCardVisibility({ focusCardWhenShown: fromType })
   }
 
   syncIssuanceCardVisibility({ preserveCard = false, focusCardWhenShown = false } = {}) {
@@ -2225,6 +2226,10 @@ export default class extends Controller {
     }
     if (key !== "Enter") return
     if (this.isActionableControl(event.target)) return
+    const submitField =
+      (this.hasIssuanceAmountFieldTarget && event.target === this.issuanceAmountFieldTarget) ||
+      (this.hasIssuanceCardNumberTarget && event.target === this.issuanceCardNumberTarget)
+    if (!submitField) return
     event.preventDefault()
     this.submitIssuance()
   }

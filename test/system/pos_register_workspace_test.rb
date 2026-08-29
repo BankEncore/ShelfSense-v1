@@ -1509,10 +1509,45 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     assert_equal "", find("#pos-issuance-card", visible: :all).value
 
     select "Physical / external", from: "pos-issuance-program"
+    assert_selector "#pos-issuance-card", visible: true
+    assert page.evaluate_script("document.activeElement === document.getElementById('pos-issuance-program')")
     select "Activation", from: "pos-issuance-type"
     assert_selector "#pos-issuance-card", visible: true
     select "Reload", from: "pos-issuance-type"
     assert_selector "#pos-issuance-card", visible: true
+  end
+
+  test "O10 Enter on Program or Type does not submit" do
+    GiftCards::Programs.seed!
+    open_register
+    click_on "Add gift card"
+    assert_selector "#pos_issuance_overlay", visible: true
+    find("#pos-issuance-amount").fill_in with: "10.00"
+    find("#pos-issuance-program").click
+    find("#pos-issuance-program").send_keys :enter
+    assert_selector "#pos_issuance_overlay", visible: true
+    assert_equal "", find("#pos-issuance-feedback").text
+    assert_equal 0, PosTransaction.working.find_by!(register: @register).pos_stored_value_issuances.count
+    find("#pos-issuance-type").click
+    find("#pos-issuance-type").send_keys :enter
+    assert_selector "#pos_issuance_overlay", visible: true
+    assert_equal "", find("#pos-issuance-feedback").text
+    assert_equal 0, PosTransaction.working.find_by!(register: @register).pos_stored_value_issuances.count
+  end
+
+  test "O10 Tab order is Amount Program Type then Card when required" do
+    GiftCards::Programs.seed!
+    open_register
+    click_on "Add gift card"
+    assert page.evaluate_script("document.activeElement === document.getElementById('pos-issuance-amount')")
+    find("#pos-issuance-amount").send_keys :tab
+    assert page.evaluate_script("document.activeElement === document.getElementById('pos-issuance-program')")
+    select "Physical / external", from: "pos-issuance-program"
+    assert page.evaluate_script("document.activeElement === document.getElementById('pos-issuance-program')")
+    find("#pos-issuance-program").send_keys :tab
+    assert page.evaluate_script("document.activeElement === document.getElementById('pos-issuance-type')")
+    find("#pos-issuance-type").send_keys :tab
+    assert page.evaluate_script("document.activeElement === document.getElementById('pos-issuance-card')")
   end
 
   test "O10 reload of system-generated card succeeds through scan-or-enter field" do
