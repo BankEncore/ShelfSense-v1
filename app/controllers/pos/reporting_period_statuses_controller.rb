@@ -2,6 +2,8 @@
 
 module Pos
   class ReportingPeriodStatusesController < BaseController
+    include Pos::ReportAccess
+
     def show
       prepare_inquiry_shell!(surface: :z_period)
       @period = locate_period!
@@ -12,6 +14,7 @@ module Pos
         return
       end
 
+      authorize_report_period!(@period)
       @register = @period.register
       @totals = Pos::PeriodTotals.for(@period)
       @report_groups = Pos::OperatorReport.period(
@@ -19,6 +22,8 @@ module Pos
         include_expected_cash: can_view_expected_cash?
       )
       @finalize = Pos::ReportingPeriodFinalizeBlockers.call(period: @period)
+      @report_print_url = pos_report_print_path(scope: "period", id: @period.id)
+      @tape_print_url = pos_report_print_path(scope: "period", id: @period.id, variant: "tape")
     end
 
     private
@@ -28,7 +33,7 @@ module Pos
         period = PosReportingPeriod.find_by(id: params[:id], store_id: current_store.id)
         raise ActiveRecord::RecordNotFound unless period
 
-        Pos::Support.authorize!(current_user, period.store)
+        authorize_report_period!(period)
         period
       else
         resolved = Pos::ReportingSurfaceResolver.call(
@@ -51,8 +56,6 @@ module Pos
           nil
         end
       end
-    rescue Pos::Denied
-      raise ActiveRecord::RecordNotFound
     end
 
     def period_denied_message(reason)

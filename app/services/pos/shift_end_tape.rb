@@ -1,22 +1,51 @@
 # frozen_string_literal: true
 
 module Pos
-  # Compact 42-character monospaced tape from the same P13 OperatorReport groups.
   class ShiftEndTape
     WIDTH = 42
 
-    def self.lines(groups:, identity_lines:)
-      new(groups: groups, identity_lines: identity_lines).lines
+    Identity = Data.define(
+      :report_type,
+      :store_label,
+      :register_label,
+      :business_date,
+      :session_reference,
+      :cashier_label,
+      :opened_at_label,
+      :closed_at_label,
+      :closed_by_label,
+      :generated_at_label,
+      :reprint
+    ) do
+      def lines
+        out = [ report_type.to_s ]
+        out << store_label.to_s
+        out << register_label.to_s
+        out << "Business date #{business_date}" if business_date.present?
+        out << session_reference.to_s if session_reference.present?
+        out << "Cashier #{cashier_label}" if cashier_label.present?
+        out << "Opened #{opened_at_label}" if opened_at_label.present?
+        out << "Closed #{closed_at_label}" if closed_at_label.present?
+        out << "Closed by #{closed_by_label}" if closed_by_label.present?
+        out << "Printed #{generated_at_label}" if generated_at_label.present?
+        out << "REPRINT" if reprint
+        out
+      end
     end
 
-    def initialize(groups:, identity_lines:)
+    def self.lines(groups:, identity:)
+      new(groups: groups, identity: identity).lines
+    end
+
+    def initialize(groups:, identity:)
       @groups = groups
-      @identity_lines = Array(identity_lines)
+      @identity = identity
     end
 
     def lines
       out = []
-      @identity_lines.each { |line| out << clip(line) }
+      identity_source = @identity.respond_to?(:lines) ? @identity.lines : Array(@identity)
+      identity_source.each { |line| out.concat(wrap(line)) }
       out << ("-" * WIDTH)
       @groups.each do |group|
         next if group.rows.empty?
@@ -24,7 +53,7 @@ module Pos
         essential = essential_rows(group)
         next if essential.empty?
 
-        out << clip(group.title.upcase)
+        out.concat(wrap(group.title.upcase))
         essential.each do |row|
           out << format_row(row)
         end
@@ -75,7 +104,7 @@ module Pos
         when :count
           row.cents.to_s
         when :signed
-          format_signed(row.cents)
+          format_money(row.cents)
         else
           format_money(row.cents)
         end
@@ -84,23 +113,22 @@ module Pos
 
     def pad_row(label, value)
       room = WIDTH - value.length
-      left = clip(label, room)
+      left = label.to_s[0, [ room, 0 ].max]
       spaces = [ WIDTH - left.length - value.length, 1 ].max
       "#{left}#{' ' * spaces}#{value}"[0, WIDTH]
     end
 
-    def clip(text, width = WIDTH)
-      text.to_s[0, width]
+    def wrap(text, width = WIDTH)
+      str = text.to_s
+      return [ "" ] if str.empty?
+
+      str.scan(/.{1,#{width}}/m)
     end
 
     def format_money(cents)
       sign = cents.to_i.negative? ? "-" : ""
       absolute = cents.to_i.abs
       "#{sign}$#{absolute / 100}.#{format('%02d', absolute % 100)}"
-    end
-
-    def format_signed(cents)
-      format_money(cents)
     end
   end
 end

@@ -1,7 +1,7 @@
 <%#
-  locals: groups:, identity_lines:
+  locals: groups:, identity: (ShiftEndTape::Identity or Array)
 %>
-<% tape_lines = Pos::ShiftEndTape.lines(groups: groups, identity_lines: identity_lines) %>
-<section class="pos-print-only pos-shift-end-tape" aria-hidden="true">
+<% tape_lines = Pos::ShiftEndTape.lines(groups: groups, identity: identity) %>
+<section class="pos-shift-end-tape" aria-hidden="true">
   <pre class="pos-shift-end-tape__pre"><%= tape_lines.join("\n") %></pre>
 </section>

@@ -111,5 +111,33 @@ module Pos
       assert_raises(ArgumentError) { totals.store_credit_payment_cents }
       assert_raises(ArgumentError) { totals.paid_in_cents }
     end
+    test "closed session gates expected cash and variance" do
+      pos_close_session!(
+        session: @session,
+        actor: @actor,
+        closing_count_cents: 10_000
+      )
+      totals = Pos::SessionTotals.for(@session.reload)
+
+      gated = Pos::OperatorReport.session(
+        totals: totals,
+        session: @session,
+        kind: :session,
+        include_expected_cash: false
+      ).find { |group| group.title == "Cash custody" }
+      labels = gated.rows.map(&:label)
+      assert_includes labels, "Counted Cash"
+      assert_not_includes labels, "Expected closing Cash"
+      assert_not_includes labels, "Variance"
+
+      allowed = Pos::OperatorReport.session(
+        totals: totals,
+        session: @session,
+        kind: :session,
+        include_expected_cash: true
+      ).find { |group| group.title == "Cash custody" }
+      assert allowed.rows.any? { |row| row.label == "Expected closing Cash" }
+      assert allowed.rows.any? { |row| row.label == "Variance" }
+    end
   end
 end

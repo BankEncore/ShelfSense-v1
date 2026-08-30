@@ -2,12 +2,13 @@
 
 module Pos
   class ReportingPeriodZsController < BaseController
+    include Pos::ReportAccess
+
     def show
       prepare_inquiry_shell!(surface: :z_period)
       @period = PosReportingPeriod.find_by(id: params[:id], store_id: current_store.id)
       raise ActiveRecord::RecordNotFound unless @period
-
-      Pos::Support.authorize!(current_user, @period.store)
+      authorize_report_period!(@period)
       raise ActiveRecord::RecordNotFound unless @period.finalized?
 
       @register = @period.register
@@ -15,8 +16,8 @@ module Pos
         period: @period,
         include_expected_cash: can_view_expected_cash?
       )
-    rescue Pos::Denied
-      raise ActiveRecord::RecordNotFound
+      @report_print_url = pos_report_print_path(scope: "period", id: @period.id)
+      @tape_print_url = pos_report_print_path(scope: "period", id: @period.id, variant: "tape")
     end
   end
 end

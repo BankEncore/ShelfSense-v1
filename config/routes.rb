@@ -207,6 +207,7 @@ Rails.application.routes.draw do
       member { post :reversal }
     end
     get "reports", to: "reports#index", as: :reports
+    get "report_prints/:scope(/:id)", to: "report_prints#show", as: :report_print
     get "z_status", to: "reporting_period_statuses#show", as: :z_status
     get "reporting_periods/:id/status", to: "reporting_period_statuses#show", as: :reporting_period_status
     get "reporting_periods/:id/finalize", to: "reporting_period_finalizations#new", as: :reporting_period_finalize_confirm

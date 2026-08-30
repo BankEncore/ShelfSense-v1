@@ -2,6 +2,8 @@
 
 module Pos
   class XReportsController < BaseController
+    include Pos::ReportAccess
+
     skip_before_action :require_pos_transact!
 
     def show
@@ -23,6 +25,8 @@ module Pos
         kind: :x,
         include_expected_cash: can_view_expected_cash?
       )
+      @report_print_url = pos_report_print_path(scope: "x", id: @session_record.id)
+      @tape_print_url = pos_report_print_path(scope: "x", id: @session_record.id, variant: "tape")
     end
 
     private
@@ -30,7 +34,7 @@ module Pos
     def locate_x_session
       if params[:id].present?
         session_record = PosSession.find_by!(id: params[:id], store_id: current_store.id)
-        authorize_x_session!(session_record)
+        authorize_report_session!(session_record)
         session_record
       else
         require_pos_transact!
@@ -43,21 +47,6 @@ module Pos
         end
         own
       end
-    end
-
-    def authorize_x_session!(session_record)
-      return if session_record.cashier_user_id == current_user.id && transact_allowed?
-      return if can_view_other_sessions?
-
-      raise ActiveRecord::RecordNotFound
-    end
-
-    def transact_allowed?
-      Authorization::PermissionEvaluator.allowed?(
-        user: current_user,
-        permission_key: "pos.transact",
-        store: current_store
-      )
     end
   end
 end

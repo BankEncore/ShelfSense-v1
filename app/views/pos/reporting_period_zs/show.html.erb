@@ -1,7 +1,10 @@
 <% content_for :title, "Z report" %>
 <%= render layout: "pos/shell/frame" do %>
   <%= render "pos/shell/feedback" %>
-  <div class="pos-register-shell__body" data-controller="pos-receipt">
+  <div class="pos-register-shell__body"
+       data-controller="pos-receipt"
+       data-pos-receipt-print-url-value="<%= @report_print_url %>"
+       data-pos-receipt-tape-url-value="<%= @tape_print_url %>">
     <main class="pos-history">
       <div class="pos-history__title-row pos-no-print">
         <h1>Z Report</h1>
@@ -25,26 +28,6 @@
         <button type="button" class="btn btn--outline" data-action="pos-receipt#printTape">Print tape</button>
         <%= link_to "Session / Z Reports", pos_reports_path, class: "btn btn--outline" %>
       </div>
-
-      <%= render "pos/shared/report_print",
-            title: "Z report",
-            banners: [],
-            meta: [
-              "Store  #{pos_padded_store_number(@period.store)}",
-              "Register  #{pos_padded_register_number(@register)}",
-              "Business date  #{@period.business_date.iso8601}",
-              "Finalized  #{format_store_timestamp(@period.closed_at, @period.store)}",
-              "Finalized by  #{@period.finalized_by.display_name}"
-            ],
-            groups: @report_groups %>
-      <%= render "pos/shared/shift_end_tape",
-            groups: @report_groups,
-            identity_lines: [
-              "Z REPORT",
-              pos_padded_store_number(@period.store),
-              pos_padded_register_number(@register),
-              @period.business_date.iso8601
-            ] %>
     </main>
   </div>
 <% end %>

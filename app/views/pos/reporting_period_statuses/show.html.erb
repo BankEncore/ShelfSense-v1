@@ -1,7 +1,10 @@
 <% content_for :title, "Z period status" %>
 <%= render layout: "pos/shell/frame" do %>
   <%= render "pos/shell/feedback" %>
-  <div class="pos-register-shell__body" data-controller="pos-receipt">
+  <div class="pos-register-shell__body"
+       data-controller="pos-receipt"
+       data-pos-receipt-print-url-value="<%= @report_print_url %>"
+       data-pos-receipt-tape-url-value="<%= @tape_print_url %>">
     <main class="pos-history">
       <div class="pos-history__title-row pos-no-print">
         <h1>Z Period Status</h1>
@@ -38,21 +41,12 @@
 
       <div class="pos-history__nav pos-no-print actions">
         <button type="button" class="btn" data-action="pos-receipt#print">Print</button>
+        <button type="button" class="btn btn--outline" data-action="pos-receipt#printTape">Print tape</button>
         <%= link_to "Session / Z Reports", pos_reports_path, class: "btn btn--outline" %>
         <% if @finalize.ready? %>
           <%= link_to "Finalize Z…", pos_reporting_period_finalize_confirm_path(@period), class: "btn" %>
         <% end %>
       </div>
-
-      <%= render "pos/shared/report_print",
-            title: "Z Period Status",
-            banners: [ "CURRENT Z — PERIOD REMAINS OPEN" ],
-            meta: [
-              "Store  #{pos_padded_store_number(@period.store)}",
-              "Register  #{pos_padded_register_number(@register)}",
-              "Business date  #{@period.business_date.iso8601}"
-            ],
-            groups: @report_groups %>
     </main>
   </div>
 <% end %>

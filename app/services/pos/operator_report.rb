@@ -167,10 +167,11 @@ module Pos
         money_row("Gift-card cash-out reversals", @totals.gift_card_cash_out_reversal_cents)
       ]
       rows.concat(operational_cash_component_rows)
-      # Closing expected/count/variance are frozen after close; blind-count gate does not apply.
-      rows << signed_row("Expected closing Cash", @session.closing_expected_cash_cents)
       rows << money_row("Counted Cash", @session.closing_count_cents)
-      rows << signed_row("Variance", @session.closing_variance_cents)
+      if @include_expected_cash
+        rows << signed_row("Expected closing Cash", @session.closing_expected_cash_cents)
+        rows << signed_row("Variance", @session.closing_variance_cents)
+      end
       rows
     end
 

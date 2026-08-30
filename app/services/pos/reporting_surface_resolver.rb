@@ -96,6 +96,7 @@ module Pos
       if @state.register.present? && period.register_id != @state.register.id
         return deny("not_found")
       end
+      return deny("not_found") unless can_view_period?(period)
 
       accept_period(period)
     end
@@ -112,6 +113,8 @@ module Pos
     end
 
     def accept_period(period)
+      return deny("not_found") unless can_view_period?(period)
+
       Result.new(
         status: :ok,
         session: nil,
@@ -147,8 +150,18 @@ module Pos
     def recent_finalized_for_register
       PosReportingPeriod.where(store_id: @store.id, register_id: @state.register.id, status: "finalized")
                         .order(closed_at: :desc, id: :desc)
-                        .limit(RECENT_PERIOD_LIMIT)
-                        .to_a
+                        .limit(RECENT_PERIOD_LIMIT * 2)
+                        .select { |period| can_view_period?(period) }
+                        .first(RECENT_PERIOD_LIMIT)
+    end
+
+    def can_view_period?(period)
+      return false if period.blank?
+      return true if can_view_other_sessions?
+      return true if period.finalized_by_user_id == @actor.id
+      return true if period.pos_sessions.exists?(cashier_user_id: @actor.id)
+
+      false
     end
 
     def can_view_other_sessions?

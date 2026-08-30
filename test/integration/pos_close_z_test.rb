@@ -135,12 +135,16 @@ class PosCloseZTest < ActionDispatch::IntegrationTest
     assert_match format_money(session_record.closing_expected_cash_cents), response.body
     assert_match format_money(session_record.closing_count_cents), response.body
     assert_match format_money(session_record.closing_variance_cents), response.body
-    assert_match "Store  #{@store.admin_label}", response.body
-    assert_match "Register  #{@register.admin_label}", response.body
-    assert_match "Cashier  #{@actor.display_name}", response.body
-    assert_match "Business date  #{session_record.reporting_period.business_date.iso8601}", response.body
+    assert_match @store.admin_label, response.body
+    assert_match @register.admin_label, response.body
+    assert_match @actor.display_name, response.body
+    assert_match session_record.reporting_period.business_date.iso8601, response.body
     assert_match "Finalize Z", response.body
     assert_match "Leave period open", response.body
+    get pos_report_print_path(scope: "session", id: session_record.id)
+    assert_response :success
+    assert_match "Store  #{@store.admin_label}", response.body
+    assert_match "Register  #{@register.admin_label}", response.body
     assert PosReportingPeriod.open.exists?(register: @register)
   end
 
@@ -281,12 +285,15 @@ class PosCloseZTest < ActionDispatch::IntegrationTest
     assert period.finalized?
     assert_equal 0, period.finalized_session_count
     assert_equal 0, period.finalized_transaction_count
-    assert_match "Z report", response.body
+    assert_match "Z Report", response.body
     assert_match "Sessions", response.body
     assert_match format_money(0), response.body
-    assert_match "Store  001", response.body
-    assert_match "Register  01", response.body
+    assert_match ">001<", response.body
+    assert_match ">01<", response.body
     assert_match format_store_zone(period.closed_at), response.body
+    get pos_report_print_path(scope: "period", id: period.id)
+    assert_response :success
+    assert_match "Store  #{@store.admin_label}", response.body
   end
 
   test "repeated finalize redirects to the existing z without a second audit" do
@@ -338,7 +345,7 @@ class PosCloseZTest < ActionDispatch::IntegrationTest
     assert period.reload.open?
   end
 
-  test "second cashier cannot access another cashier close flow but may finalize z" do
+  test "second cashier cannot access another cashier closed report but may finalize z" do
     complete_http_sale
     session_record = PosSession.open.find_by!(register: @register)
     pos_close_session!(
@@ -355,8 +362,7 @@ class PosCloseZTest < ActionDispatch::IntegrationTest
     get pos_session_close_path(session_record)
     assert_response :not_found
     get pos_session_details_path(session_record)
-    assert_response :success
-    assert_match "Closed Session Report", response.body
+    assert_redirected_to pos_path
     post pos_session_close_path(session_record), params: {
       closing_count: "0.00",
       expected_lock_version: session_record.lock_version

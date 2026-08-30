@@ -2,6 +2,8 @@
 
 module Pos
   class SessionDetailsController < BaseController
+    include Pos::ReportAccess
+
     def show
       prepare_inquiry_shell!(surface: :session_detail)
       @session_record = find_authorized_session!
@@ -21,6 +23,8 @@ module Pos
         kind: :session,
         include_expected_cash: @can_view_expected
       )
+      @report_print_url = pos_report_print_path(scope: "session", id: @session_record.id)
+      @tape_print_url = pos_report_print_path(scope: "session", id: @session_record.id, variant: "tape")
     end
 
     private
@@ -33,7 +37,7 @@ module Pos
       if params[:register_id].present? && session_record.register_id.to_s != params[:register_id].to_s
         raise ActiveRecord::RecordNotFound
       end
-      unless can_view_session?(session_record)
+      unless can_view_report_session?(session_record)
         redirect_to pos_path, alert: "You are not authorized to view that session."
         return
       end
@@ -41,26 +45,10 @@ module Pos
       session_record
     end
 
-    def can_view_session?(session_record)
-      return true if session_record.cashier_user_id == current_user.id
-      return true if can_view_other_sessions?
-      # Closed-session report was historically store-authorized (retired closed_sessions).
-      return true if session_record.closed? && store_pos_authorized?
-
-      false
-    end
-
-    def store_pos_authorized?
-      Pos::Support.authorize!(current_user, current_store)
-      true
-    rescue Pos::Denied
-      false
-    end
-
     def can_view_expected_for_session?(session_record)
       return false unless can_view_expected_cash?
 
-      can_view_session?(session_record)
+      can_view_report_session?(session_record)
     end
   end
 end

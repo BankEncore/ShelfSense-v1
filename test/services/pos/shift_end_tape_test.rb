@@ -22,11 +22,26 @@ module Pos
           ]
         )
       ]
+      identity = Pos::ShiftEndTape::Identity.new(
+        report_type: "X REPORT",
+        store_label: "A very long store label that must wrap across multiple tape lines without silent clipping of meaning",
+        register_label: "01 Front",
+        business_date: "2026-08-30",
+        session_reference: "Session abc",
+        cashier_label: "Cashier",
+        opened_at_label: "2026-08-30 09:00",
+        closed_at_label: nil,
+        closed_by_label: nil,
+        generated_at_label: "2026-08-30 12:00",
+        reprint: false
+      )
 
-      lines = Pos::ShiftEndTape.lines(groups: groups, identity_lines: [ "X REPORT", "Store" ])
+      lines = Pos::ShiftEndTape.lines(groups: groups, identity: identity)
       assert lines.all? { |line| line.length <= Pos::ShiftEndTape::WIDTH }
       assert lines.any? { |line| line.include?("Cash payments") }
-      assert lines.none? { |line| line.include?("Card payments") }
+      assert lines.none? { |row| row.include?("Card payments") }
+      assert lines.any? { |line| line.include?("Session abc") }
+      assert lines.count { |line| line.include?("long store") || line.include?("A very long") } >= 1
     end
   end
 end

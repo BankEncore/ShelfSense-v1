@@ -1,7 +1,10 @@
 <% content_for :title, "X Report" %>
 <%= render layout: "pos/shell/frame" do %>
   <%= render "pos/shell/feedback" %>
-  <div class="pos-register-shell__body" data-controller="pos-receipt">
+  <div class="pos-register-shell__body"
+       data-controller="pos-receipt"
+       data-pos-receipt-print-url-value="<%= @report_print_url %>"
+       data-pos-receipt-tape-url-value="<%= @tape_print_url %>">
     <main class="pos-history">
       <div class="pos-history__title-row pos-no-print">
         <h1>X Report</h1>
@@ -29,25 +32,6 @@
           <%= link_to "Resume Register", pos_register_workspace_path(register_id: @register.id), class: "btn" %>
         <% end %>
       </div>
-
-      <%= render "pos/shared/report_print",
-            title: "X Report",
-            banners: [ "X REPORT", "INTERIM — SESSION REMAINS OPEN" ],
-            meta: [
-              "Store  #{current_store.admin_label}",
-              "Register  #{@register.admin_label}",
-              "Cashier  #{@session_record.cashier_user.display_name}",
-              "Business date  #{@period.business_date.iso8601}"
-            ],
-            groups: @report_groups %>
-      <%= render "pos/shared/shift_end_tape",
-            groups: @report_groups,
-            identity_lines: [
-              "X REPORT",
-              current_store.admin_label.to_s,
-              @register.admin_label.to_s,
-              @period.business_date.iso8601
-            ] %>
     </main>
   </div>
 <% end %>

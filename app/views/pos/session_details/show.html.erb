@@ -1,7 +1,12 @@
 <% content_for :title, @session_record.closed? ? "Closed Session Report" : "Session Details" %>
 <%= render layout: "pos/shell/frame" do %>
   <%= render "pos/shell/feedback" %>
-  <div class="pos-register-shell__body" data-controller="pos-receipt">
+  <div class="pos-register-shell__body"
+       data-controller="pos-receipt"
+       <% if @report_print_url.present? %>
+         data-pos-receipt-print-url-value="<%= @report_print_url %>"
+         data-pos-receipt-tape-url-value="<%= @tape_print_url %>"
+       <% end %>>
     <main class="pos-history">
       <div class="pos-history__title-row pos-no-print">
         <h1><%= @session_record.closed? ? "Closed Session Report" : "Session Details" %></h1>
@@ -31,25 +36,6 @@
         <div class="pos-no-print">
           <%= render "pos/shared/totals_groups", groups: @report_groups %>
         </div>
-
-        <%= render "pos/shared/report_print",
-              title: "Closed Session Report",
-              banners: [],
-              meta: [
-                "Store  #{current_store.admin_label}",
-                "Register  #{@register.admin_label}",
-                "Cashier  #{@session_record.cashier_user.display_name}",
-                "Business date  #{@period.business_date.iso8601}"
-              ],
-              groups: @report_groups %>
-        <%= render "pos/shared/shift_end_tape",
-              groups: @report_groups,
-              identity_lines: [
-                "CLOSED SESSION",
-                current_store.admin_label.to_s,
-                @register.admin_label.to_s,
-                @period.business_date.iso8601
-              ] %>
       <% end %>
 
       <div class="pos-history__nav pos-no-print actions">
