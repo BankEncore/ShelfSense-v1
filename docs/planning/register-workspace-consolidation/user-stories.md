@@ -2,7 +2,7 @@
 
 GitHub issues should usually be one focused PR. Slice 1 is this packet (no separate implementation issue required after merge).
 
-Tracker: [milestone Register workspace consolidation](https://github.com/BankEncore/ShelfSense-v1/milestone/7) — [#83](https://github.com/BankEncore/ShelfSense-v1/issues/83) Slice 2, [#84](https://github.com/BankEncore/ShelfSense-v1/issues/84) Slice 3, [#85](https://github.com/BankEncore/ShelfSense-v1/issues/85) Slice 4, [#86](https://github.com/BankEncore/ShelfSense-v1/issues/86) 5A, [#87](https://github.com/BankEncore/ShelfSense-v1/issues/87) 5B, [#88](https://github.com/BankEncore/ShelfSense-v1/issues/88) 5C, [#89](https://github.com/BankEncore/ShelfSense-v1/issues/89) 5D, [#90](https://github.com/BankEncore/ShelfSense-v1/issues/90) 6A, [#91](https://github.com/BankEncore/ShelfSense-v1/issues/91) 6B, [#92](https://github.com/BankEncore/ShelfSense-v1/issues/92) 6C, [#93](https://github.com/BankEncore/ShelfSense-v1/issues/93) 7A (gated), [#94](https://github.com/BankEncore/ShelfSense-v1/issues/94) 7B (gated), [#95](https://github.com/BankEncore/ShelfSense-v1/issues/95) 7C (gated).
+Tracker: [milestone Register workspace consolidation](https://github.com/BankEncore/ShelfSense-v1/milestone/7) — [#83](https://github.com/BankEncore/ShelfSense-v1/issues/83) Slice 2, [#84](https://github.com/BankEncore/ShelfSense-v1/issues/84) Slice 3, [#85](https://github.com/BankEncore/ShelfSense-v1/issues/85) Slice 4, [#86](https://github.com/BankEncore/ShelfSense-v1/issues/86) 5A, [#87](https://github.com/BankEncore/ShelfSense-v1/issues/87) 5B, [#88](https://github.com/BankEncore/ShelfSense-v1/issues/88) 5C, [#89](https://github.com/BankEncore/ShelfSense-v1/issues/89) 5D, [#90](https://github.com/BankEncore/ShelfSense-v1/issues/90) 6A, [#91](https://github.com/BankEncore/ShelfSense-v1/issues/91) 6B, [#92](https://github.com/BankEncore/ShelfSense-v1/issues/92) 6C, [#93](https://github.com/BankEncore/ShelfSense-v1/issues/93) 7A (complete), [#94](https://github.com/BankEncore/ShelfSense-v1/issues/94) 7B (gated), [#95](https://github.com/BankEncore/ShelfSense-v1/issues/95) 7C (gated).
 
 ## Slice 2 — Shell and state routing
 
@@ -86,7 +86,7 @@ Till Activity, cash activity detail, Session Details, Active Sessions, reversal 
 
 ## Slice 7A — Tender-review framework
 
-**Implemented** on integration via [#93](https://github.com/BankEncore/ShelfSense-v1/issues/93): Tender Review selection, ordinary remove/replace with OperationLease, Return to Sale (ordinary-only; refuse when SV present). No temporary global shortcuts. SV mutate deferred to 7B. Packet: [slice7a-tender-review-plan.md](slice7a-tender-review-plan.md).
+**Complete** on integration ([#93](https://github.com/BankEncore/ShelfSense-v1/issues/93) / PRs [#115](https://github.com/BankEncore/ShelfSense-v1/pull/115)–[#116](https://github.com/BankEncore/ShelfSense-v1/pull/116)): Tender Review selection; ordinary remove/replace with OperationLease; card remove-only (external reauth); Return to Sale ordinary-only (refuse when SV present). No temporary global shortcuts. SV mutate deferred to 7B. Packet: [slice7a-tender-review-plan.md](slice7a-tender-review-plan.md). Evidence: [slice7a-manual-verification.md](slice7a-manual-verification.md).
 
 ## Slice 7B — Stored-value, issuance, and Quick Customer
 
