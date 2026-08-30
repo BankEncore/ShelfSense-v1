@@ -2607,8 +2607,22 @@ input[type="submit"]:disabled,
 
   .pos-no-print,
   .pos-receipt__screen,
-  .pos-receipt__actions {
+  .pos-receipt__actions,
+  .pos-register-shell__announce,
+  .pos-register-menu {
     display: none !important;
+  }
+
+  /* Shell layout is screen-only; print must not keep the viewport chrome. */
+  .pos-register-shell,
+  .pos-register-shell__background,
+  .pos-register-shell__body {
+    display: block !important;
+    height: auto !important;
+    max-height: none !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    width: 100% !important;
   }
 
   .pos-print-only,
