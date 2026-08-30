@@ -24,6 +24,7 @@
 
       <div class="pos-history__nav pos-no-print actions">
         <button type="button" class="btn" data-action="pos-receipt#print">Print</button>
+        <button type="button" class="btn btn--outline" data-action="pos-receipt#printTape">Print tape</button>
         <% if @session_record.cashier_user_id == current_user.id %>
           <%= link_to "Resume Register", pos_register_workspace_path(register_id: @register.id), class: "btn" %>
         <% end %>

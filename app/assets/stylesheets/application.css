@@ -2641,8 +2641,20 @@ input[type="submit"]:disabled,
 
   .pos-print-only,
   .pos-receipt__print,
-  .pos-report-print,
+  .pos-report-print {
+    display: block !important;
+  }
+
   .pos-shift-end-tape {
+    display: none !important;
+  }
+
+  body.is-printing-tape .pos-report-print,
+  body.is-printing-tape .pos-receipt__print {
+    display: none !important;
+  }
+
+  body.is-printing-tape .pos-shift-end-tape {
     display: block !important;
   }
 

@@ -10,12 +10,25 @@ export default class extends Controller {
   async print(event) {
     event.preventDefault()
     document.body.classList.remove("is-printing-voucher")
+    document.body.classList.remove("is-printing-tape")
     await this.prepareFonts()
     window.print()
   }
 
+  async printTape(event) {
+    event.preventDefault()
+    document.body.classList.remove("is-printing-voucher")
+    document.body.classList.add("is-printing-tape")
+    const cleanup = () => document.body.classList.remove("is-printing-tape")
+    window.addEventListener("afterprint", cleanup, { once: true })
+    await this.prepareFonts()
+    window.print()
+    window.setTimeout(cleanup, 1000)
+  }
+
   async printVoucher(event) {
     event.preventDefault()
+    document.body.classList.remove("is-printing-tape")
     document.body.classList.add("is-printing-voucher")
     const cleanup = () => document.body.classList.remove("is-printing-voucher")
     window.addEventListener("afterprint", cleanup, { once: true })
