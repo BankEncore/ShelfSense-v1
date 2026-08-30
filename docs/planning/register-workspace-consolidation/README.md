@@ -40,8 +40,8 @@ This program **replaces** the current POS presentation. It does not run a parall
 | [slice7-tender-lifecycle-inventory.md](slice7-tender-lifecycle-inventory.md) | Code-backed tender/issuance dispositions; gates 7A/7B packets |
 | [slice7a-tender-review-plan.md](slice7a-tender-review-plan.md) | Slice 7A **Complete**; Tender Review / ordinary remove-replace |
 | [slice7a-manual-verification.md](slice7a-manual-verification.md) | Slice 7A evidence (signed off) |
-| [slice7b-stored-value-issuance-plan.md](slice7b-stored-value-issuance-plan.md) | Slice 7B **Fully locked**; SV / issuance / Quick Customer |
-| [slice7b-manual-verification.md](slice7b-manual-verification.md) | Slice 7B evidence stub |
+| [slice7b-stored-value-issuance-plan.md](slice7b-stored-value-issuance-plan.md) | Slice 7B **Complete**; SV / issuance / Quick Customer |
+| [slice7b-manual-verification.md](slice7b-manual-verification.md) | Slice 7B evidence (signed off) |
 
 UX adoption: follow [ux-adoption-template.md](../ux-design-system/ux-adoption-template.md) in the slice that materially changes a screen. Printed receipts stay locked unless a slice explicitly owns print.
 

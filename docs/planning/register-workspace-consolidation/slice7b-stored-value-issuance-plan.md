@@ -1,10 +1,10 @@
 # Slice 7B — Stored value, issuance, and Quick Customer
 
-Status: **Fully locked** (docs packet). Implementation under [#94](https://github.com/BankEncore/ShelfSense-v1/issues/94). Inventory gate was met ([slice7-tender-lifecycle-inventory.md](slice7-tender-lifecycle-inventory.md)). Evidence stub: [slice7b-manual-verification.md](slice7b-manual-verification.md).
+Status: **Complete** on `register-workspace-consolidation` ([#94](https://github.com/BankEncore/ShelfSense-v1/issues/94) / PRs [#118](https://github.com/BankEncore/ShelfSense-v1/pull/118)–[#121](https://github.com/BankEncore/ShelfSense-v1/pull/121)). Inventory gate was met ([slice7-tender-lifecycle-inventory.md](slice7-tender-lifecycle-inventory.md)). Evidence: [slice7b-manual-verification.md](slice7b-manual-verification.md).
 
 Authority: [plan.md](plan.md), [implementation-plan.md](implementation-plan.md), [slice7-overview.md](slice7-overview.md), [slice7-tender-lifecycle-inventory.md](slice7-tender-lifecycle-inventory.md), [slice7-keyboard-contract.md](slice7-keyboard-contract.md), [slice7a-tender-review-plan.md](slice7a-tender-review-plan.md), [slice5a-lookup-overlays-plan.md](slice5a-lookup-overlays-plan.md), [slice5d-tender-issuance-plan.md](slice5d-tender-issuance-plan.md), [textual-wireframes.md](textual-wireframes.md) P10 / O14–O17, [user-stories.md](user-stories.md), [routing-and-authority.md](routing-and-authority.md).
 
-Issue: [#94](https://github.com/BankEncore/ShelfSense-v1/issues/94). Packet-lock branch: `94-slice7b-packet` (docs only; does not complete implementation of #94).
+Issue: [#94](https://github.com/BankEncore/ShelfSense-v1/issues/94).
 
 ## Outcome
 
@@ -210,4 +210,4 @@ Second customer-maintenance UI; merging gift-card issuances into merchandise lin
 
 ## Full-lock criterion
 
-Met when this packet is on `register-workspace-consolidation` with inventory already complete. Implementation proceeds as 7B.1 → 7B.2 → 7B.3 under [#94](https://github.com/BankEncore/ShelfSense-v1/issues/94).
+Met when this packet landed on `register-workspace-consolidation` ([#118](https://github.com/BankEncore/ShelfSense-v1/pull/118)). Implementation landed as [#119](https://github.com/BankEncore/ShelfSense-v1/pull/119) (7B.1), [#120](https://github.com/BankEncore/ShelfSense-v1/pull/120) (7B.2), [#121](https://github.com/BankEncore/ShelfSense-v1/pull/121) (7B.3).
