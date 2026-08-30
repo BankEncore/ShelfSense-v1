@@ -211,7 +211,7 @@ class PosMvpCloseoutTest < ActionDispatch::IntegrationTest
       closing_count: "0.00",
       expected_lock_version: session_record.lock_version
     )
-    assert_redirected_to pos_session_closed_path(session_record)
+    assert_redirected_to pos_session_details_path(session_record)
     follow_redirect!
     assert_response :success
     session_record.reload

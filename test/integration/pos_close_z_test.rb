@@ -124,7 +124,7 @@ class PosCloseZTest < ActionDispatch::IntegrationTest
       closing_count: "0.00",
       expected_lock_version: session_record.lock_version
     )
-    assert_redirected_to pos_session_closed_path(session_record)
+    assert_redirected_to pos_session_details_path(session_record)
     follow_redirect!
     assert_response :success
     session_record.reload
@@ -188,7 +188,7 @@ class PosCloseZTest < ActionDispatch::IntegrationTest
       closing_count: "0.00",
       expected_lock_version: session_record.lock_version
     }
-    assert_redirected_to pos_session_closed_path(session_record)
+    assert_redirected_to pos_session_details_path(session_record)
     assert_equal 1, AuditEvent.where(action: "pos.session.closed", subject_type: "PosSession", subject_id: session_record.id).count
   end
 
@@ -214,7 +214,7 @@ class PosCloseZTest < ActionDispatch::IntegrationTest
       expected_lock_version: session_record.lock_version,
       closing_count_cents: 0
     )
-    get pos_session_closed_path(session_record)
+    get pos_session_details_path(session_record)
     assert_select "a[href='#{pos_register_enter_path(register_id: @register.id)}']", text: "Leave period open"
 
     get pos_register_enter_path(register_id: @register.id)
@@ -354,9 +354,9 @@ class PosCloseZTest < ActionDispatch::IntegrationTest
 
     get pos_session_close_path(session_record)
     assert_response :not_found
-    get pos_session_closed_path(session_record)
+    get pos_session_details_path(session_record)
     assert_response :success
-    assert_match "Session closed", response.body
+    assert_match "Closed Session Report", response.body
     post pos_session_close_path(session_record), params: {
       closing_count: "0.00",
       expected_lock_version: session_record.lock_version
@@ -402,7 +402,7 @@ class PosCloseZTest < ActionDispatch::IntegrationTest
 
     get pos_session_close_path(session_record)
     assert_response :not_found
-    get pos_session_closed_path(session_record)
+    get pos_session_details_path(session_record)
     assert_response :not_found
     get pos_reporting_period_z_path(period)
     assert_response :not_found
@@ -447,7 +447,7 @@ class PosCloseZTest < ActionDispatch::IntegrationTest
     assert working_b.present?
 
     post pos_register_close_path, params: { session_id: session_a.id }
-    assert_redirected_to pos_session_closed_path(session_a)
+    assert_redirected_to pos_session_details_path(session_a)
     assert session_b.reload.open?
     assert working_b.reload.working?
     assert_equal 0, AuditEvent.where(action: "pos.transaction_cancelled", subject_id: working_b.id).count
@@ -489,7 +489,7 @@ class PosCloseZTest < ActionDispatch::IntegrationTest
       expected_lock_version: session_record.reporting_period.lock_version
     )
 
-    get pos_session_closed_path(session_record)
+    get pos_session_details_path(session_record)
     assert_response :success
     assert_select "a[href='#{pos_reporting_period_z_path(period)}']", text: "View Z"
     assert_select "input[type='submit'][value='Finalize Z']", count: 0

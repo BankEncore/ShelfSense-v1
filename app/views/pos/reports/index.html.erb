@@ -24,7 +24,7 @@
             <td><%= session_record.register.admin_label %></td>
             <td><%= session_record.cashier_user.display_name %></td>
             <td><%= format_store_timestamp(session_record.closed_at, current_store) %></td>
-            <td><%= link_to "Session report", pos_session_closed_path(session_record) %></td>
+            <td><%= link_to "Session report", pos_session_details_path(session_record) %></td>
           </tr>
         <% end %>
       </tbody>

@@ -35,14 +35,14 @@ module Pos
     private
 
     def fail_finalize(message)
-      if params[:return_to] == "closed" && params[:session_id].present?
-        render_closed_summary(message)
+      if params[:session_id].present? && %w[closed session_details].include?(params[:return_to].to_s)
+        render_session_details_summary(message)
       else
         render_enter(message)
       end
     end
 
-    def render_closed_summary(message)
+    def render_session_details_summary(message)
       @session_record = PosSession.find_by!(id: params[:session_id], store_id: current_store.id)
       Pos::Support.require_session_cashier!(current_user, @session_record)
       raise ActiveRecord::RecordNotFound unless @session_record.closed?
@@ -50,8 +50,17 @@ module Pos
       @register = @session_record.register
       @period = @session_record.reporting_period
       @totals = Pos::SessionTotals.for(@session_record)
+      @can_view_expected = can_view_expected_cash?
+      @expected_cash_cents = @can_view_expected ? @totals.expected_cash_cents : nil
+      @report_groups = Pos::OperatorReport.session(
+        totals: @totals,
+        session: @session_record,
+        kind: :session,
+        include_expected_cash: @can_view_expected
+      )
+      prepare_inquiry_shell!(surface: :session_detail)
       flash.now[:alert] = message
-      render "pos/closed_sessions/show", status: :unprocessable_content
+      render "pos/session_details/show", status: :unprocessable_content
     rescue Pos::Denied
       raise ActiveRecord::RecordNotFound
     end

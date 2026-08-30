@@ -5,11 +5,12 @@ module Pos
     skip_before_action :require_pos_transact!
 
     def show
+      prepare_inquiry_shell!(surface: :x_report)
       @session_record = locate_x_session
       return if performed?
 
       unless @session_record.open?
-        redirect_to pos_session_closed_path(@session_record)
+        redirect_to pos_session_details_path(@session_record)
         return
       end
 

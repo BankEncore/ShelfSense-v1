@@ -238,12 +238,12 @@ class PosHomeTest < ActionDispatch::IntegrationTest
 
     get pos_reports_path
     assert_response :success
-    assert_select "a[href='#{pos_session_closed_path(context[:session])}']"
+    assert_select "a[href='#{pos_session_details_path(context[:session])}']"
     assert_select "a[href='#{pos_reporting_period_z_path(context[:period])}']"
 
-    get pos_session_closed_path(context[:session])
+    get pos_session_details_path(context[:session])
     assert_response :success
-    assert_match "Session closed", response.body
+    assert_match "Closed Session Report", response.body
     assert_nil session[:pos_register_id]
 
     get pos_reporting_period_z_path(context[:period])
@@ -475,7 +475,7 @@ class PosHomeTest < ActionDispatch::IntegrationTest
     delete session_path
     sign_in_as("close_view")
 
-    get pos_session_closed_path(context[:session])
+    get pos_session_details_path(context[:session])
     assert_response :success
     assert_match "Expected closing Cash", response.body
   end

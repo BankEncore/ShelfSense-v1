@@ -1,37 +1,44 @@
 <% content_for :title, "X Report" %>
+<%= render layout: "pos/shell/frame" do %>
+  <%= render "pos/shell/feedback" %>
+  <div class="pos-register-shell__body" data-controller="pos-receipt">
+    <main class="pos-history">
+      <div class="pos-history__title-row pos-no-print">
+        <h1>X Report</h1>
+        <%= link_to register_inquiry_return_label, register_inquiry_return_path, class: "btn btn--ghost" %>
+      </div>
 
-<main class="pos-close" data-controller="pos-receipt">
-  <div class="pos-no-print">
-    <%= render "pos/shared/report_nav" %>
+      <p class="pos-banner pos-no-print" role="status"><strong>X REPORT</strong></p>
+      <p class="pos-banner pos-no-print" role="status"><strong>INTERIM — SESSION REMAINS OPEN</strong></p>
 
-    <p class="pos-banner" role="status"><strong>X REPORT</strong></p>
-    <p class="pos-banner" role="status"><strong>INTERIM — SESSION REMAINS OPEN</strong></p>
+      <dl class="pos-history__header pos-no-print">
+        <div><dt>Store</dt><dd><%= current_store.admin_label %></dd></div>
+        <div><dt>Register</dt><dd><%= @register.admin_label %></dd></div>
+        <div><dt>Cashier</dt><dd><%= @session_record.cashier_user.display_name %></dd></div>
+        <div><dt>Business date</dt><dd><%= @period.business_date.iso8601 %></dd></div>
+      </dl>
 
-    <h1>X Report</h1>
-    <p>Store  <%= current_store.admin_label %></p>
-    <p>Register  <%= @register.admin_label %></p>
-    <p>Cashier  <%= @session_record.cashier_user.display_name %></p>
-    <p>Business date  <%= @period.business_date.iso8601 %></p>
+      <div class="pos-no-print">
+        <%= render "pos/shared/totals_groups", groups: @report_groups %>
+      </div>
 
-    <%= render "pos/shared/totals_groups", groups: @report_groups %>
+      <div class="pos-history__nav pos-no-print actions">
+        <button type="button" class="btn" data-action="pos-receipt#print">Print</button>
+        <% if @session_record.cashier_user_id == current_user.id %>
+          <%= link_to "Resume Register", pos_register_workspace_path(register_id: @register.id), class: "btn" %>
+        <% end %>
+      </div>
 
-    <div class="pos-close__actions">
-      <button type="button" class="btn" data-action="pos-receipt#print">Print</button>
-      <%= link_to "Register", pos_path, class: "btn btn--secondary" %>
-      <% if @session_record.cashier_user_id == current_user.id %>
-        <%= link_to "Resume Register", pos_register_workspace_path(register_id: @register.id), class: "btn" %>
-      <% end %>
-    </div>
+      <%= render "pos/shared/report_print",
+            title: "X Report",
+            banners: [ "X REPORT", "INTERIM — SESSION REMAINS OPEN" ],
+            meta: [
+              "Store  #{current_store.admin_label}",
+              "Register  #{@register.admin_label}",
+              "Cashier  #{@session_record.cashier_user.display_name}",
+              "Business date  #{@period.business_date.iso8601}"
+            ],
+            groups: @report_groups %>
+    </main>
   </div>
-
-  <%= render "pos/shared/report_print",
-        title: "X Report",
-        banners: [ "X REPORT", "INTERIM — SESSION REMAINS OPEN" ],
-        meta: [
-          "Store  #{current_store.admin_label}",
-          "Register  #{@register.admin_label}",
-          "Cashier  #{@session_record.cashier_user.display_name}",
-          "Business date  #{@period.business_date.iso8601}"
-        ],
-        groups: @report_groups %>
-</main>
+<% end %>
