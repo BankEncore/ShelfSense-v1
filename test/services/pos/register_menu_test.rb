@@ -43,9 +43,11 @@ class PosRegisterMenuTest < ActiveSupport::TestCase
     refute_includes keys, :finalize_z
   end
 
-  test "workspace own session emits till x and close session without inspecting a basket" do
+  test "workspace own session emits till activity session details x and close session" do
     keys = keys_for(kind: "own_session", surface: :workspace, permissions: ALL_PERMISSIONS)
     assert_includes keys, :transactions
+    assert_includes keys, :till_activity
+    assert_includes keys, :session_details
     assert_includes keys, :x_report
     assert_includes keys, :drop
     assert_includes keys, :paid_in
@@ -62,10 +64,11 @@ class PosRegisterMenuTest < ActiveSupport::TestCase
     refute_includes keys, :gift_card_cash_out
   end
 
-  test "occupied includes x and session z only with sessions.view and a session" do
+  test "occupied includes x session details and session z only with sessions.view and a session" do
     gate = Struct.new(:session).new(Object.new)
     with_view = keys_for(kind: "occupied", surface: :state_landing, permissions: [ "pos.sessions.view" ], gate: gate)
     assert_includes with_view, :x_report
+    assert_includes with_view, :session_details
     assert_includes with_view, :session_z_reports
     assert_includes with_view, :active_sessions
     refute_includes with_view, :close_session
@@ -73,6 +76,7 @@ class PosRegisterMenuTest < ActiveSupport::TestCase
 
     without_view = keys_for(kind: "occupied", surface: :state_landing, permissions: [], gate: gate)
     refute_includes without_view, :x_report
+    refute_includes without_view, :session_details
     refute_includes without_view, :session_z_reports
     refute_includes without_view, :active_sessions
   end
@@ -88,6 +92,8 @@ class PosRegisterMenuTest < ActiveSupport::TestCase
     assert_equal %i[transactions stored_value_inquiry customer_summary pickup_queue session_z_reports active_sessions return_to_shelfsense], keys
     refute_includes keys, :switch_register
     refute_includes keys, :x_report
+    refute_includes keys, :session_details
+    refute_includes keys, :till_activity
     refute_includes keys, :drop
     refute_includes keys, :close_session
     refute_includes keys, :open_register
@@ -108,7 +114,7 @@ class PosRegisterMenuTest < ActiveSupport::TestCase
 
   test "never emits reverse cash" do
     %w[selector closed between_sessions own_session occupied].each do |kind|
-      %i[state_landing workspace switch_register inquiry].each do |surface|
+      %i[state_landing workspace switch_register inquiry cash_operation].each do |surface|
         keys = keys_for(kind:, surface:, permissions: ALL_PERMISSIONS)
         refute_includes keys, :reverse_cash
       end
@@ -128,8 +134,24 @@ class PosRegisterMenuTest < ActiveSupport::TestCase
 
     own = keys_for(kind: "own_session", surface: :inquiry, permissions: ALL_PERMISSIONS)
     assert_includes own, :transactions
+    assert_includes own, :till_activity
+    assert_includes own, :session_details
     assert_includes own, :drop
     refute_includes own, :close_session
+  end
+
+  test "cash operation surface suppresses till mutations and open finalize close" do
+    keys = keys_for(kind: "own_session", surface: :cash_operation, permissions: ALL_PERMISSIONS)
+    assert_includes keys, :transactions
+    assert_includes keys, :till_activity
+    assert_includes keys, :session_details
+    refute_includes keys, :drop
+    refute_includes keys, :paid_in
+    refute_includes keys, :paid_out
+    refute_includes keys, :replenish
+    refute_includes keys, :gift_card_cash_out
+    refute_includes keys, :close_session
+    refute_includes keys, :open_register
   end
 
   test "empty groups are omitted" do

@@ -1,34 +1,54 @@
 <% content_for :title, "Active Sessions" %>
+<%= render layout: "pos/shell/frame" do %>
+  <%= render "pos/shell/feedback" %>
+  <div class="pos-register-shell__body">
+    <main class="pos-history">
+      <div class="pos-history__title-row pos-no-print">
+        <h1>Active Sessions</h1>
+        <%= link_to register_inquiry_return_label, register_inquiry_return_path, class: "btn btn--ghost" %>
+      </div>
 
-<main class="pos-home">
-  <%= render "pos/shared/report_nav" %>
-
-  <h1>Active Sessions</h1>
-
-  <% if @sessions.empty? %>
-    <p>No open Sessions at this store.</p>
-  <% else %>
-    <table class="pos-history__table">
-      <thead>
-        <tr>
-          <th>Register</th>
-          <th>Cashier</th>
-          <th>Business date</th>
-          <th>Opened</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        <% @sessions.each do |session_record| %>
-          <tr>
-            <td><%= session_record.register.admin_label %></td>
-            <td><%= session_record.cashier_user.display_name %></td>
-            <td><%= session_record.reporting_period.business_date.iso8601 %></td>
-            <td><%= format_store_timestamp(session_record.opened_at, current_store) %></td>
-            <td><%= link_to "X Report", pos_session_x_report_path(session_record) %></td>
-          </tr>
-        <% end %>
-      </tbody>
-    </table>
-  <% end %>
-</main>
+      <% if @sessions.empty? %>
+        <p>No open Sessions at this store.</p>
+      <% else %>
+        <div class="table-scroll">
+          <table class="pos-history__table">
+            <thead>
+              <tr>
+                <th>Register</th>
+                <th>Cashier</th>
+                <th>Business date</th>
+                <th>Opened</th>
+                <th>Status</th>
+                <th class="numeric">Transactions</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <% @sessions.each do |session_record| %>
+                <% totals = Pos::SessionTotals.for(session_record) %>
+                <tr>
+                  <td><%= session_record.register.admin_label %></td>
+                  <td><%= session_record.cashier_user.display_name %></td>
+                  <td><%= session_record.reporting_period.business_date.iso8601 %></td>
+                  <td><%= format_store_timestamp(session_record.opened_at, current_store) %></td>
+                  <td>Open</td>
+                  <td class="numeric"><%= totals.completed_transaction_count %></td>
+                  <td>
+                    <%= link_to "Session details",
+                          pos_session_details_path(session_record, register_id: session_record.register_id),
+                          class: "btn btn--outline btn--small" %>
+                    <%= link_to "Till Activity",
+                          pos_till_activity_path(register_id: session_record.register_id, session_id: session_record.id),
+                          class: "btn btn--ghost btn--small" %>
+                    <%= link_to "X Report", pos_session_x_report_path(session_record), class: "btn btn--ghost btn--small" %>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      <% end %>
+    </main>
+  </div>
+<% end %>

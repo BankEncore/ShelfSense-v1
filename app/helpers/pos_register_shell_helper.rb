@@ -164,6 +164,13 @@ module PosRegisterShellHelper
       { key:, label: "Customer Summary", href: pos_customer_summary_path(inquiry_register_params) }
     when :pickup_queue
       { key:, label: "Pickup Queue", href: pos_pickup_queue_path(inquiry_register_params) }
+    when :till_activity
+      { key:, label: "Till Activity", href: pos_till_activity_path(inquiry_register_params) }
+    when :session_details
+      session_record = @gate&.session || @shell_context&.session
+      return if session_record.blank?
+
+      { key:, label: "Session Details", href: pos_session_details_path(session_record, inquiry_register_params) }
     when :gift_card_cash_out
       { key:, label: "Gift-card cash-out", href: new_pos_cash_out_path }
     when :paid_in
@@ -182,7 +189,7 @@ module PosRegisterShellHelper
     when :session_z_reports
       { key:, label: "Session / Z Reports", href: pos_reports_path }
     when :active_sessions
-      { key:, label: "Active Sessions", href: pos_active_sessions_path }
+      { key:, label: "Active Sessions", href: pos_active_sessions_path(inquiry_register_params) }
     when :switch_register
       { key:, label: "Switch Register", href: pos_switch_register_path }
     when :open_register

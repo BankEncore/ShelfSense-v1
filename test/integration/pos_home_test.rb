@@ -394,8 +394,6 @@ class PosHomeTest < ActionDispatch::IntegrationTest
 
   test "get enter redirect preserves flash" do
     get new_pos_cash_paid_in_path
-    assert_redirected_to pos_register_enter_path
-    follow_redirect!
     assert_redirected_to pos_path
     follow_redirect!
     assert_response :success

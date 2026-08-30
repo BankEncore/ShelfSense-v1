@@ -68,6 +68,15 @@ class PosRegisterShellContextTest < ActiveSupport::TestCase
     assert call_context(state:, can_view_expected_cash: true).can_view_expected_cash
   end
 
+  test "cash_operation surface uses cash_operation menu surface" do
+    context = pos_open_context(store: @store, actor: @actor, register: @register)
+    state = state_for(register: @register, owned: [ context[:session] ])
+    result = call_context(state:, surface: :cash_operation)
+
+    assert_equal :cash_operation, result.surface
+    assert_equal :cash_operation, result.menu_surface
+  end
+
   private
 
   def call_context(state:, surface: :transaction_history, can_view_expected_cash: false)

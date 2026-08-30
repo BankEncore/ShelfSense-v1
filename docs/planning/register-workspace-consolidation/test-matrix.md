@@ -56,7 +56,11 @@ F10 working-basket preservation is already covered in [test/system/pos_register_
 | `test/integration/pos_post_void_workspace_test.rb` | Request still required | Preserve |
 | `test/integration/pos_*_return_workspace_test.rb` | Request still required | Preserve |
 | `test/integration/pos_customer_attach_test.rb` | Request still required | Preserve |
-| `test/integration/pos_cash_activities_test.rb` | Request still required | Preserve; expected-cash visibility Slice 2/6B |
+| `test/integration/pos_cash_activities_test.rb` | Request still required; reverse retargeted in 6B.3 | Preserve; shell wrap 6B.2; nested reversal 6B.3 |
+| `test/integration/pos_till_session_surfaces_test.rb` | S17/S18/S19 shell; session selection; expected-cash; GET immutability | Slice 6B.1 |
+| `test/services/pos/till_activity_test.rb` | S17 custody projection (CashOperation + GiftCardCashOut) | Slice 6B.1 |
+| `test/services/pos/inquiry_session_resolver_test.rb` | Session selection table + ID validation | Slice 6B.1 |
+| `test/integration/pos_cash_operation_detail_test.rb` | S23 detail; nested reverse; generic launcher gone | Slice 6B.3 |
 | `test/integration/pos_close_z_test.rb` | Request still required | Preserve |
 | `test/integration/pos_mvp_closeout_test.rb` | Request still required | Preserve |
 | `test/integration/pos_gift_card_voucher_test.rb` | Domain/print | Preserve |

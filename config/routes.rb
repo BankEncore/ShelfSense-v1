@@ -201,6 +201,11 @@ Rails.application.routes.draw do
     get "x_report", to: "x_reports#show", as: :x_report
     get "sessions/:id/x_report", to: "x_reports#show", as: :session_x_report
     get "active_sessions", to: "active_sessions#index", as: :active_sessions
+    get "till_activity", to: "till_activities#index", as: :till_activity
+    get "sessions/:id/details", to: "session_details#show", as: :session_details
+    resources :cash_operations, only: :show do
+      member { post :reversal }
+    end
     get "reports", to: "reports#index", as: :reports
     resources :transactions, only: %i[index show]
     resource :stored_value_inquiry, only: :show, controller: "stored_value_inquiries" do
@@ -220,7 +225,6 @@ Rails.application.routes.draw do
     resources :cash_paid_outs, only: %i[new create]
     resources :cash_drops, only: %i[new create]
     resources :cash_replenishments, only: %i[new create]
-    resources :cash_reversals, only: %i[new create]
     get "register", to: "workspaces#show", as: :register_workspace
     get "register/merchandise_search", to: "workspaces#search", as: :register_merchandise_search
     get "register/merchandise_resolve", to: "workspaces#resolve", as: :register_merchandise_resolve

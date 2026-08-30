@@ -2,15 +2,20 @@
 
 module Pos
   class CashActivitiesController < BaseController
+    before_action :prepare_cash_operation_shell!
     before_action :load_open_session!
 
     private
+
+    def prepare_cash_operation_shell!
+      prepare_inquiry_shell!(surface: :cash_operation)
+    end
 
     def load_open_session!
       @session_record = cashier_target_session
       return if @session_record
 
-      redirect_to pos_register_enter_path, alert: "Open a register before recording cash activity."
+      redirect_to pos_path, alert: "Open a register before recording cash activity."
     end
 
     def require_cash_permission!(key)

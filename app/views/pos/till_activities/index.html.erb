@@ -1,0 +1,125 @@
+<% content_for :title, "Till Activity" %>
+<%= render layout: "pos/shell/frame" do %>
+  <%= render "pos/shell/feedback" %>
+  <div class="pos-register-shell__body">
+    <main class="pos-history">
+      <div class="pos-history__title-row pos-no-print">
+        <h1>Till Activity</h1>
+        <%= link_to register_inquiry_return_label, register_inquiry_return_path, class: "btn btn--ghost" %>
+      </div>
+
+      <% if @candidate_sessions %>
+        <p class="muted">Select a historical session for this Register.</p>
+        <% if @candidate_sessions.empty? %>
+          <p>No closed sessions are available to view.</p>
+        <% else %>
+          <div class="table-scroll">
+            <table class="pos-history__table">
+              <thead>
+                <tr>
+                  <th>Business date</th>
+                  <th>Cashier</th>
+                  <th>Opened</th>
+                  <th>Closed</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                <% @candidate_sessions.each do |session_record| %>
+                  <tr>
+                    <td><%= session_record.reporting_period.business_date.iso8601 %></td>
+                    <td><%= session_record.cashier_user.display_name %></td>
+                    <td><%= format_store_timestamp(session_record.opened_at, current_store) %></td>
+                    <td><%= format_store_timestamp(session_record.closed_at, current_store) %></td>
+                    <td>
+                      <%= link_to "View till",
+                            pos_till_activity_path(inquiry_register_params.merge(session_id: session_record.id)),
+                            class: "btn btn--outline btn--small" %>
+                      <%= link_to "Session details",
+                            pos_session_details_path(session_record, inquiry_register_params),
+                            class: "btn btn--ghost btn--small" %>
+                    </td>
+                  </tr>
+                <% end %>
+              </tbody>
+            </table>
+          </div>
+        <% end %>
+      <% else %>
+        <p class="muted">
+          Register <%= @session_record.register.admin_label %>
+          · <%= @session_record.cashier_user.display_name %>
+          · <%= @session_record.open? ? "Open" : "Closed" %>
+          <% if @session_record.opened_at %>
+            · Opened <%= format_store_timestamp(@session_record.opened_at, current_store) %>
+          <% end %>
+        </p>
+        <% if @can_view_expected && !@expected_cash_cents.nil? %>
+          <p>Expected cash <%= format_money_cents(@expected_cash_cents) %></p>
+        <% end %>
+
+        <% if @activity.rows.empty? %>
+          <p class="muted">No till activity for this session.</p>
+        <% else %>
+          <div class="table-scroll">
+            <table class="pos-history__table">
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>Activity</th>
+                  <th class="numeric">Amount</th>
+                  <th>Performed by</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% @activity.rows.each do |row| %>
+                  <tr>
+                    <td><%= format_store_timestamp(row.occurred_at, current_store) %></td>
+                    <td>
+                      <%= row.label %>
+                      <% if row.source == "cash_operation" %>
+                        <%= link_to "Details", pos_cash_operation_path(row.id, inquiry_register_params.merge(session_id: @session_record.id)), class: "btn btn--ghost btn--small" %>
+                      <% elsif row.source == "gift_card_cash_out" %>
+                        <%= link_to "Details", pos_cash_out_path(row.id), class: "btn btn--ghost btn--small" %>
+                      <% end %>
+                    </td>
+                    <td class="numeric"><%= format_signed_money_cents(row.session_effect_cents) %></td>
+                    <td>
+                      <%= row.performed_by_name %>
+                      <% if row.approver_name.present? %>
+                        <span class="muted">· approved <%= row.approver_name %></span>
+                      <% end %>
+                    </td>
+                    <td><%= row.status.humanize %></td>
+                  </tr>
+                <% end %>
+              </tbody>
+            </table>
+          </div>
+          <% if @activity.total_pages > 1 %>
+            <div class="pagination">
+              <span class="muted">Page <%= @activity.page %> of <%= @activity.total_pages %></span>
+              <% if @activity.page > 1 %>
+                <%= link_to "Previous",
+                      pos_till_activity_path(inquiry_register_params.merge(session_id: @session_record.id, page: @activity.page - 1)),
+                      class: "btn btn--ghost" %>
+              <% end %>
+              <% if @activity.page < @activity.total_pages %>
+                <%= link_to "Next",
+                      pos_till_activity_path(inquiry_register_params.merge(session_id: @session_record.id, page: @activity.page + 1)),
+                      class: "btn btn--ghost" %>
+              <% end %>
+            </div>
+          <% end %>
+        <% end %>
+
+        <div class="pos-history__nav pos-no-print">
+          <%= link_to "Session details",
+                pos_session_details_path(@session_record, inquiry_register_params),
+                class: "btn btn--outline" %>
+        </div>
+      <% end %>
+    </main>
+  </div>
+<% end %>

@@ -1,59 +1,65 @@
 <% content_for :title, "Gift-card cash-out" %>
+<%= render layout: "pos/shell/frame" do %>
+  <%= render "pos/shell/feedback" %>
+  <div class="pos-register-shell__body">
+    <main class="pos-history">
+      <div class="pos-history__title-row pos-no-print">
+        <h1>Gift-card cash-out</h1>
+        <%= link_to register_inquiry_return_label, register_inquiry_return_path, class: "btn btn--ghost" %>
+      </div>
+      <p>Pays the full eligible remaining balance from this open Register session. This is not a tender and not a paid-out.</p>
 
-<main class="pos-history">
-  <%= render "pos/shared/report_nav" %>
-  <h1>Gift-card cash-out</h1>
-  <p>Pays the full eligible remaining balance from this open Register session. This is not a tender and not a paid-out.</p>
+      <% if @error.present? %>
+        <p class="pos-enter__alert" role="alert"><%= @error %></p>
+      <% end %>
 
-  <% if @error.present? %>
-    <p class="pos-enter__alert" role="alert"><%= @error %></p>
-  <% end %>
-
-  <%= form_with url: lookup_pos_cash_outs_path, method: :post, local: true, class: "pos-return-items" do %>
-    <div class="form-field">
-      <%= label_tag :card_number, "Gift-card number" %>
-      <%= password_field_tag :card_number, nil, id: "card_number", autocomplete: "off", autofocus: true %>
-    </div>
-    <div class="actions">
-      <%= submit_tag "Look up", class: "btn" %>
-    </div>
-  <% end %>
-
-  <% if @gift_card && @eligibility %>
-    <dl class="pos-history__header">
-      <div><dt>Card</dt><dd><%= @gift_card.masked_number %></dd></div>
-      <div><dt>Program</dt><dd><%= @gift_card.gift_card_program.name %></dd></div>
-      <div><dt>Balance</dt><dd><%= format_money_cents(@gift_card.balance_cents) %></dd></div>
-      <div><dt>Eligible</dt><dd><%= @eligibility.eligible ? "Yes" : @eligibility.reason %></dd></div>
-    </dl>
-    <% if @eligibility.eligible %>
-      <%= form_with url: pos_cash_outs_path, method: :post, local: true, class: "pos-return-items" do %>
-        <%= hidden_field_tag :card_number, @card_number %>
-        <%= hidden_field_tag :source_id, SecureRandom.uuid_v7 %>
-        <%= hidden_field_tag :idempotency_key, SecureRandom.uuid_v7 %>
-        <% if @eligibility.requires_request_confirmation %>
-          <div class="form-field">
-            <label>
-              <%= check_box_tag :customer_requested, "1", false, id: "customer_requested" %>
-              Customer requested this cash-out
-            </label>
-          </div>
-        <% end %>
-        <% if @eligibility.approval_required %>
-          <div class="form-field">
-            <%= label_tag :approver_username, "Approver username" %>
-            <%= text_field_tag :approver_username, params[:approver_username], id: "approver_username", autocomplete: "off" %>
-          </div>
-          <div class="form-field">
-            <%= label_tag :approver_password, "Approver password" %>
-            <%= password_field_tag :approver_password, nil, id: "approver_password", autocomplete: "off" %>
-          </div>
-        <% end %>
+      <%= form_with url: lookup_pos_cash_outs_path, method: :post, local: true, class: "pos-inquiry__form" do %>
+        <div class="form-field">
+          <%= label_tag :card_number, "Gift-card number" %>
+          <%= password_field_tag :card_number, nil, id: "card_number", autocomplete: "off", autofocus: true %>
+        </div>
         <div class="actions">
-          <%= submit_tag "Cash out #{format_money_cents(@eligibility.amount_cents)}", class: "btn" %>
-          <%= link_to "Register", pos_path, class: "btn btn--ghost" %>
+          <%= submit_tag "Look up", class: "btn" %>
         </div>
       <% end %>
-    <% end %>
-  <% end %>
-</main>
+
+      <% if @gift_card && @eligibility %>
+        <dl class="pos-history__header">
+          <div><dt>Card</dt><dd><%= @gift_card.masked_number %></dd></div>
+          <div><dt>Program</dt><dd><%= @gift_card.gift_card_program.name %></dd></div>
+          <div><dt>Balance</dt><dd><%= format_money_cents(@gift_card.balance_cents) %></dd></div>
+          <div><dt>Eligible</dt><dd><%= @eligibility.eligible ? "Yes" : @eligibility.reason %></dd></div>
+        </dl>
+        <% if @eligibility.eligible %>
+          <%= form_with url: pos_cash_outs_path, method: :post, local: true, class: "pos-inquiry__form" do %>
+            <%= hidden_field_tag :card_number, @card_number %>
+            <%= hidden_field_tag :source_id, SecureRandom.uuid_v7 %>
+            <%= hidden_field_tag :idempotency_key, SecureRandom.uuid_v7 %>
+            <% if @eligibility.requires_request_confirmation %>
+              <div class="form-field">
+                <label>
+                  <%= check_box_tag :customer_requested, "1", false, id: "customer_requested" %>
+                  Customer requested this cash-out
+                </label>
+              </div>
+            <% end %>
+            <% if @eligibility.approval_required %>
+              <div class="form-field">
+                <%= label_tag :approver_username, "Approver username" %>
+                <%= text_field_tag :approver_username, params[:approver_username], id: "approver_username", autocomplete: "off" %>
+              </div>
+              <div class="form-field">
+                <%= label_tag :approver_password, "Approver password" %>
+                <%= password_field_tag :approver_password, nil, id: "approver_password", autocomplete: "off" %>
+              </div>
+            <% end %>
+            <div class="actions">
+              <%= submit_tag "Cash out #{format_money_cents(@eligibility.amount_cents)}", class: "btn" %>
+              <%= link_to register_inquiry_return_label, register_inquiry_return_path, class: "btn btn--ghost" %>
+            </div>
+          <% end %>
+        <% end %>
+      <% end %>
+    </main>
+  </div>
+<% end %>

@@ -29,6 +29,7 @@ module Pos
       x_report
       z_period
       cash_operation
+      cash_operation_detail
     ].freeze
 
     def self.call(...)
@@ -53,7 +54,7 @@ module Pos
         session: session_for(@state),
         gate: @state.gate,
         owned_sessions: Array(@state.owned_sessions),
-        menu_surface: :inquiry,
+        menu_surface: @surface == :cash_operation ? :cash_operation : :inquiry,
         return_path: return_path_for(@state),
         return_label: return_label_for(@state),
         can_view_expected_cash: @can_view_expected_cash

@@ -1,13 +1,19 @@
 <% content_for :title, "Replenish" %>
-
-<main class="pos-history">
-  <%= render "pos/shared/report_nav" %>
-  <h1>Replenish</h1>
-  <p>Move cash from the store safe to an open Register session.</p>
-  <%= render "pos/cash_activities/form",
-        url: pos_cash_replenishments_path,
-        submit: "Record replenishment",
-        amount_value: params[:amount],
-        sessions: @open_sessions,
-        session_value: @session_record&.id %>
-</main>
+<%= render layout: "pos/shell/frame" do %>
+  <%= render "pos/shell/feedback" %>
+  <div class="pos-register-shell__body">
+    <main class="pos-history">
+      <div class="pos-history__title-row pos-no-print">
+        <h1>Replenish</h1>
+        <%= link_to register_inquiry_return_label, register_inquiry_return_path, class: "btn btn--ghost" %>
+      </div>
+      <p>Move cash from the store safe to an open Register session.</p>
+      <%= render "pos/cash_activities/form",
+            url: pos_cash_replenishments_path,
+            submit: "Record replenishment",
+            amount_value: params[:amount],
+            sessions: @open_sessions,
+            session_value: @session_record&.id %>
+    </main>
+  </div>
+<% end %>

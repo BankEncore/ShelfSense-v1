@@ -2,6 +2,7 @@
 
 module Pos
   class CashOutsController < BaseController
+    before_action :prepare_cash_operation_shell!
     before_action :require_cash_out_permission!
     before_action :load_open_session!, except: :show
     before_action :load_cash_out!, only: %i[show reverse]
@@ -40,6 +41,12 @@ module Pos
     def show; end
 
     def reverse
+      @session_record = cashier_target_session
+      unless @session_record
+        redirect_to pos_path, alert: "Open a register before reversing a gift-card cash-out."
+        return
+      end
+
       reversal = GiftCards::ReverseCashOut.call(
         cash_out: @cash_out,
         session: @session_record,
@@ -58,6 +65,10 @@ module Pos
 
     private
 
+    def prepare_cash_operation_shell!
+      prepare_inquiry_shell!(surface: :cash_operation)
+    end
+
     def require_cash_out_permission!
       return if Authorization::PermissionEvaluator.allowed?(
         user: current_user,
@@ -70,9 +81,9 @@ module Pos
 
     def load_open_session!
       @session_record = cashier_target_session
-      unless @session_record
-        redirect_to pos_register_enter_path, alert: "Open a register before cashing out a gift card."
-      end
+      return if @session_record
+
+      redirect_to pos_path, alert: "Open a register before cashing out a gift card."
     end
 
     def load_cash_out!
