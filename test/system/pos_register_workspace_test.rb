@@ -340,13 +340,13 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
 
     open_register
     page.execute_script("var s=document.createElement('style'); s.id='pos-basket-scroll-probe'; s.textContent='#pos_basket{max-height:90px!important}'; document.head.appendChild(s);")
-    variants.each do |variant|
+    variants.each_with_index do |variant, index|
       field = find("#pos-command-field")
       field.fill_in with: variant.sku
       field.send_keys :enter
-      assert_selector "tbody tr.is-selected", text: "Scroll Book", wait: 10
+      assert_selector "tbody tr.is-selected", text: "Scroll Book #{index}", wait: 10
     end
-    assert_selector "tbody tr.is-selected", text: "Scroll Book 5"
+    assert_selector "tbody tr.is-selected", text: "Scroll Book 5", wait: 10
     assert selected_row_fully_in_basket?, "newly selected line must stay in the basket viewport"
 
     page.execute_script("document.getElementById('pos_basket').scrollTop = 0")
