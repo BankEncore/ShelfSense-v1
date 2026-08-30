@@ -38,7 +38,7 @@ This is presentation replacement. It must not introduce a second transaction, ca
     - Redirect printable scan/typed input into the command field when no overlay/dialog field owns the keystroke.
     - Reacquire Keyboard Lock from shell-wide pointer/focus (header, status, cluster, workspace), and tolerate `navigator.keyboard.lock` absence or rejection.
     - This does **not** authorize key remapping, new F-key bindings, or overlay family migration (Slices 3–5 / 7C).
-13. Slice 7 does not start until slices 2–6 are on the integration branch and green. Slice 7’s first merge is a packet amendment (SALE / TENDER / overlay tables), then 7A → 7B → 7C.
+13. Slice 7 does not start until slices 2–6 are on the integration branch and green. Slice 7’s first merge is a packet amendment (SALE / TENDER / overlay tables), then 7A → 7B → 7C. Clarified in [slice7-overview.md](slice7-overview.md): “first merge” accepts the keyboard **contract** ([slice7-keyboard-contract.md](slice7-keyboard-contract.md)); dispatcher **implementation** is 7C only.
 
 ## States
 
