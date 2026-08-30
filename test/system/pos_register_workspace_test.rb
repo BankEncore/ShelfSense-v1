@@ -98,14 +98,16 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     open_register
     add_current_sku
     start_cash_tender_via_plus
-    send_keys :f2
+    send_keys :f3
     field = find("#pos-command-field")
     field.fill_in with: "10.00"
     field.send_keys :enter
 
-    row = find(".pos-tenders__item", text: "External Card")
+    row = find(".pos-tenders__item", text: /Check/i)
     page.execute_script("arguments[0].click()", row)
     assert_equal "true", row["aria-selected"]
+    assert_button "Edit Tender"
+    assert_button "Remove Tender"
     click_on "Edit Tender"
     assert_selector "#pos_edit_tender_overlay", visible: true
     send_keys :escape
@@ -114,10 +116,10 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     click_on "Edit Tender"
     within("#pos_edit_tender_overlay") do
       fill_in "Applied amount", with: "8.00"
-      fill_in "Reference", with: "AUTH-REPLACED"
-      click_on "Replace Tender"
+      fill_in "Reference", with: "CHECK-REPLACED"
+      find("#pos-edit-tender-reference").send_keys :enter
     end
-    assert_selector ".pos-tenders__item.is-selected", text: "External Card", wait: 10
+    assert_selector ".pos-tenders__item.is-selected", text: /Check/i, wait: 10
     assert_text "$8.00"
 
     click_on "Remove Tender"
@@ -125,9 +127,90 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     send_keys :escape
     assert_no_selector "#pos_remove_tender_overlay", visible: true
     click_on "Remove Tender"
-    within("#pos_remove_tender_overlay") { click_on "Remove Tender" }
+    assert_selector "#pos_remove_tender_overlay", visible: true
+    send_keys :enter
     assert_no_selector ".pos-tenders__item", wait: 10
     assert_text "SALE ENTRY"
+  end
+
+  test "card tender review withholds Edit and rejects forged replace" do
+    open_register
+    add_current_sku
+    start_cash_tender_via_plus
+    send_keys :f2
+    field = find("#pos-command-field")
+    field.fill_in with: "10.00"
+    field.send_keys :enter
+
+    row = find(".pos-tenders__item", text: "External Card")
+    page.execute_script("arguments[0].click()", row)
+    assert_equal "true", row["aria-selected"]
+    assert_no_button "Edit Tender"
+    assert_button "Remove Tender"
+    assert_text(/re-authorized externally/i)
+
+    tender_id = row["data-tender-id"]
+    lock_version = page.evaluate_script("document.querySelector(\"input[name='lock_version']\").value")
+    page.execute_script(<<~JS, tender_id, lock_version)
+      const form = document.querySelector("[data-register-workspace-target='replaceTenderForm']")
+      form.querySelector("[name='tender_id']").value = arguments[0]
+      form.querySelector("[name='lock_version']").value = arguments[1]
+      form.querySelector("[name='tender_amount']").value = "8.00"
+      form.querySelector("[name='external_reference']").value = "AUTH-FORGED"
+      form.querySelector("[name='operation_id']").value = crypto.randomUUID()
+      form.requestSubmit()
+    JS
+    assert_selector ".pos-tenders__item", text: "External Card", wait: 10
+    assert_text "$10.00"
+    assert_no_text "$8.00"
+  end
+
+  test "tender review Escape opens Return to Sale and Enter confirms" do
+    open_register
+    add_current_sku
+    start_cash_tender_via_plus
+    send_keys :f2
+    field = find("#pos-command-field")
+    field.fill_in with: "10.00"
+    field.send_keys :enter
+    assert_selector ".pos-tenders__item", text: "External Card"
+
+    find("#pos-command-field").send_keys :escape
+    assert_selector "#pos_return_to_sale_overlay", visible: true
+    send_keys :escape
+    assert_no_selector "#pos_return_to_sale_overlay", visible: true
+    assert_selector ".pos-tenders__item", text: "External Card"
+
+    find("#pos-command-field").send_keys :escape
+    assert_selector "#pos_return_to_sale_overlay", visible: true
+    send_keys :enter
+    assert_text "SALE ENTRY", wait: 10
+    assert_no_selector ".pos-tenders__item"
+  end
+
+  test "arrow keys in the tender command field do not move tender selection" do
+    open_register
+    add_current_sku
+    start_cash_tender_via_plus
+    send_keys :f2
+    field = find("#pos-command-field")
+    field.fill_in with: "5.00"
+    field.send_keys :enter
+    send_keys :f2
+    field = find("#pos-command-field")
+    field.fill_in with: "5.00"
+    field.send_keys :enter
+
+    first = find(".pos-tenders__item.is-selected")
+    first_id = first["data-tender-id"]
+    field = find("#pos-command-field")
+    field.send_keys :arrow_down
+    assert_equal "pos-command-field", page.evaluate_script("document.activeElement && document.activeElement.id")
+    assert_equal first_id, find(".pos-tenders__item.is-selected")["data-tender-id"]
+
+    first.send_keys :arrow_down
+    second = find(".pos-tenders__item.is-selected")
+    refute_equal first_id, second["data-tender-id"]
   end
 
   test "delete and hyphen edit the identifier and f8 removes the selected line" do
