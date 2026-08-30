@@ -3,10 +3,27 @@
 <section id="pos_tenders" class="pos-tenders" aria-labelledby="pos-tenders-title">
   <h2 id="pos-tenders-title" class="pos-tenders__title">Applied tenders</h2>
   <% if workspace.tender_rows.any? %>
-    <ul class="pos-tenders__list">
+    <ul class="pos-tenders__list" role="listbox" aria-label="Applied tenders">
       <% workspace.tender_rows.each do |tender| %>
-        <li class="pos-tenders__item">
+        <% selected = tender.id == @selected_tender&.id %>
+        <li class="pos-tenders__item<%= " is-selected" if selected %>"
+            role="option"
+            tabindex="<%= selected ? 0 : -1 %>"
+            aria-selected="<%= selected %>"
+            data-action="click->register-workspace#selectTender"
+            data-tender-id="<%= tender.id %>"
+            data-ordinary="<%= tender.ordinary %>"
+            data-stored-value="<%= tender.stored_value %>"
+            data-mutate-available="<%= tender.mutate_available %>"
+            data-mutate-unavailable-reason="<%= tender.mutate_unavailable_reason %>"
+            data-behavioral-category="<%= tender.behavioral_category %>"
+            data-external-reference="<%= tender.external_reference %>"
+            data-amount-cents="<%= tender.amount_cents %>"
+            data-presented-cents="<%= tender.presented_cents %>"
+            data-direction="<%= tender.direction %>"
+            data-inspect-detail="<%= tender.inspect_detail %>">
           <div class="pos-money-row">
+            <span class="pos-tenders__chevron" aria-hidden="true"><%= selected ? "›" : "" %></span>
             <span class="pos-money-row__label"><%= tender.label %></span>
             <span class="pos-money-row__amount"><%= format_money_cents(tender.amount_cents) %></span>
           </div>
@@ -33,7 +50,7 @@
         <span class="pos-money-row__label"><%= cue.label %></span>
         <span class="pos-money-row__amount"><%= format_money_cents(cue.amount_cents) %></span>
       </div>
-    <% elsif cue.kind == :even_exchange || cue.kind == :settled %>
+    <% elsif %i[even_exchange settled completing completion_failed].include?(cue.kind) %>
       <div class="pos-money-row pos-money-row--emphasis">
         <span class="pos-money-row__label"><%= cue.label %></span>
       </div>

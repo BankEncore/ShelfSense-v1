@@ -1672,6 +1672,27 @@ input[type="submit"]:disabled,
 
 .pos-tenders__item {
   margin-bottom: var(--space-2);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  padding: var(--space-2);
+}
+
+.pos-tenders__item.is-selected {
+  background: var(--color-table-row-selected);
+  box-shadow: inset 3px 0 0 var(--color-brand-default);
+}
+
+.pos-tenders__item.is-selected .pos-money-row__label {
+  font-weight: 700;
+}
+
+.pos-tenders__chevron {
+  opacity: 0;
+  width: 1rem;
+}
+
+.pos-tenders__item.is-selected .pos-tenders__chevron {
+  opacity: 1;
 }
 
 .pos-tenders__detail,
@@ -1682,7 +1703,12 @@ input[type="submit"]:disabled,
 
 .pos-tenders__detail {
   margin-top: var(--space-1);
-  padding-left: 0;
+  padding-left: 1rem;
+}
+
+.pos-tender-review__detail {
+  flex-basis: 100%;
+  margin: 0;
 }
 
 .pos-settlement {

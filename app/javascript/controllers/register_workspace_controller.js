@@ -13,6 +13,8 @@ export default class extends Controller {
     "completeForm",
     "tenderForm",
     "removeTenderForm",
+    "replaceTenderForm",
+    "returnToSaleForm",
     "merchandiseForm",
     "quantityForm",
     "removeForm",
@@ -47,6 +49,27 @@ export default class extends Controller {
     "destinationModeInput",
     "referenceLabel",
     "removeTenderInput",
+    "removeTenderOperationInput",
+    "selectedTenderInput",
+    "replaceTenderInput",
+    "replaceTenderOperationInput",
+    "replaceTenderAmountInput",
+    "replaceTenderPresentedInput",
+    "replaceTenderReferenceInput",
+    "returnToSaleOperationInput",
+    "editTenderOverlay",
+    "editTenderDetail",
+    "editTenderAmount",
+    "editTenderPresentedWrap",
+    "editTenderPresented",
+    "editTenderReferenceWrap",
+    "editTenderReference",
+    "removeTenderOverlay",
+    "removeTenderDetail",
+    "returnToSaleOverlay",
+    "tenderReviewDetail",
+    "tenderMutateActions",
+    "tenderUnavailableReason",
     "quantityLineInput",
     "removeLineInput",
     "controlLineInput",
@@ -298,6 +321,18 @@ export default class extends Controller {
 
     if (overlay) {
       this.dispatchOverlayKeydown(overlay, event, key)
+      return
+    }
+
+    if (this.modeValue === "tender" && (key === "ArrowUp" || key === "ArrowDown")) {
+      event.preventDefault()
+      this.moveTenderSelection(key === "ArrowUp" ? -1 : 1, { focus: true })
+      return
+    }
+    if (this.modeValue === "tender" && key === "Enter" && event.target?.matches?.(".pos-tenders__item")) {
+      event.preventDefault()
+      this.selectTender({ currentTarget: event.target })
+      if (event.target.dataset.mutateAvailable === "true") this.openEditTenderOverlay()
       return
     }
 
@@ -2301,9 +2336,145 @@ export default class extends Controller {
   removeLastTender() {
     if (this.inFlight) return
     if (!this.hasRemoveTenderFormTarget || !this.hasRemoveTenderInputTarget) return
+    const last = this.tenderRows().at(-1)
+    if (last?.dataset?.tenderId) this.removeTenderInputTarget.value = last.dataset.tenderId
     if (!this.removeTenderInputTarget.value) return
+    if (this.hasRemoveTenderOperationInputTarget) this.removeTenderOperationInputTarget.value = this.uuidV7()
     this.beginFlight()
     this.removeTenderFormTarget.requestSubmit()
+  }
+
+  tenderRows() {
+    return Array.from(this.element.querySelectorAll(".pos-tenders__item[data-tender-id]"))
+  }
+
+  selectedTenderRow() {
+    return this.element.querySelector(".pos-tenders__item.is-selected[data-tender-id]")
+  }
+
+  selectTender(event) {
+    const row = event?.currentTarget
+    if (!row?.dataset?.tenderId) return
+    this.tenderRows().forEach((item) => {
+      const selected = item === row
+      item.classList.toggle("is-selected", selected)
+      item.setAttribute("aria-selected", String(selected))
+      item.tabIndex = selected ? 0 : -1
+    })
+    this.syncSelectedTender(row.dataset.tenderId)
+    if (this.hasTenderReviewDetailTarget) this.tenderReviewDetailTarget.textContent = row.dataset.inspectDetail || ""
+    const available = row.dataset.mutateAvailable === "true"
+    if (this.hasTenderMutateActionsTarget) this.tenderMutateActionsTarget.hidden = !available
+    if (this.hasTenderUnavailableReasonTarget) {
+      this.tenderUnavailableReasonTarget.hidden = available
+      this.tenderUnavailableReasonTarget.textContent = available ? "" : (row.dataset.mutateUnavailableReason || "")
+    }
+  }
+
+  moveTenderSelection(delta, { focus = false } = {}) {
+    const rows = this.tenderRows()
+    if (rows.length === 0) return
+    const current = this.selectedTenderRow()
+    const index = Math.max(0, rows.indexOf(current))
+    const next = rows[Math.max(0, Math.min(rows.length - 1, index + delta))]
+    this.selectTender({ currentTarget: next })
+    if (focus) next.focus()
+  }
+
+  syncSelectedTender(id = this.selectedTenderRow()?.dataset?.tenderId) {
+    this.selectedTenderInputTargets.forEach((input) => { input.value = id || "" })
+    if (this.hasRemoveTenderInputTarget) this.removeTenderInputTarget.value = id || this.removeTenderInputTarget.value
+    if (this.hasReplaceTenderInputTarget) this.replaceTenderInputTarget.value = id || ""
+  }
+
+  openRemoveTenderOverlay(event) {
+    if (event) event.preventDefault()
+    const row = this.selectedTenderRow()
+    if (!row || row.dataset.mutateAvailable !== "true" || !this.hasRemoveTenderOverlayTarget) return
+    this.syncSelectedTender(row.dataset.tenderId)
+    if (this.hasRemoveTenderDetailTarget) this.removeTenderDetailTarget.textContent = row.dataset.inspectDetail || ""
+    this.showOverlay(this.removeTenderOverlayTarget)
+  }
+
+  closeRemoveTenderOverlay(event) {
+    if (event) event.preventDefault()
+    this.hideOverlay(this.hasRemoveTenderOverlayTarget && this.removeTenderOverlayTarget)
+  }
+
+  confirmRemoveTender(event) {
+    if (event) event.preventDefault()
+    if (this.inFlight || !this.hasRemoveTenderFormTarget) return
+    if (this.hasRemoveTenderOperationInputTarget) this.removeTenderOperationInputTarget.value = this.uuidV7()
+    this.beginFlight()
+    this.removeTenderFormTarget.requestSubmit()
+  }
+
+  openEditTenderOverlay(event) {
+    if (event) event.preventDefault()
+    const row = this.selectedTenderRow()
+    if (!row || row.dataset.mutateAvailable !== "true" || !this.hasEditTenderOverlayTarget) return
+    this.syncSelectedTender(row.dataset.tenderId)
+    if (this.hasEditTenderDetailTarget) this.editTenderDetailTarget.textContent = row.dataset.inspectDetail || ""
+    if (this.hasEditTenderAmountTarget) this.editTenderAmountTarget.value = this.formatCents(row.dataset.amountCents)
+    const cashPayment = row.dataset.behavioralCategory === "cash" && row.dataset.direction === "payment"
+    if (this.hasEditTenderPresentedWrapTarget) this.editTenderPresentedWrapTarget.hidden = !cashPayment
+    if (this.hasEditTenderPresentedTarget) {
+      this.editTenderPresentedTarget.value = cashPayment ? this.formatCents(row.dataset.presentedCents || row.dataset.amountCents) : ""
+    }
+    const capturesReference = row.dataset.behavioralCategory !== "cash"
+    if (this.hasEditTenderReferenceWrapTarget) this.editTenderReferenceWrapTarget.hidden = !capturesReference
+    if (this.hasEditTenderReferenceTarget) this.editTenderReferenceTarget.value = row.dataset.externalReference || ""
+    this.showOverlay(this.editTenderOverlayTarget, this.editTenderAmountTarget)
+  }
+
+  closeEditTenderOverlay(event) {
+    if (event) event.preventDefault()
+    this.hideOverlay(this.hasEditTenderOverlayTarget && this.editTenderOverlayTarget)
+  }
+
+  confirmReplaceTender(event) {
+    if (event) event.preventDefault()
+    if (this.inFlight || !this.hasReplaceTenderFormTarget) return
+    this.replaceTenderAmountInputTarget.value = this.editTenderAmountTarget.value
+    this.replaceTenderPresentedInputTarget.value = this.hasEditTenderPresentedWrapTarget && !this.editTenderPresentedWrapTarget.hidden
+      ? this.editTenderPresentedTarget.value : ""
+    this.replaceTenderReferenceInputTarget.value = this.hasEditTenderReferenceWrapTarget && !this.editTenderReferenceWrapTarget.hidden
+      ? this.editTenderReferenceTarget.value.trim() : ""
+    this.replaceTenderOperationInputTarget.value = this.uuidV7()
+    this.beginFlight()
+    this.replaceTenderFormTarget.requestSubmit()
+  }
+
+  openReturnToSaleOverlay(event) {
+    if (event) event.preventDefault()
+    if (this.inFlight || !this.hasReturnToSaleOverlayTarget) return
+    this.showOverlay(this.returnToSaleOverlayTarget)
+  }
+
+  closeReturnToSaleOverlay(event) {
+    if (event) event.preventDefault()
+    this.hideOverlay(this.hasReturnToSaleOverlayTarget && this.returnToSaleOverlayTarget)
+  }
+
+  confirmReturnToSale(event) {
+    if (event) event.preventDefault()
+    if (this.inFlight || !this.hasReturnToSaleFormTarget) return
+    this.returnToSaleOperationInputTarget.value = this.uuidV7()
+    this.beginFlight()
+    this.returnToSaleFormTarget.requestSubmit()
+  }
+
+  uuidV7() {
+    const bytes = crypto.getRandomValues(new Uint8Array(16))
+    let timestamp = Date.now()
+    for (let index = 5; index >= 0; index -= 1) {
+      bytes[index] = timestamp & 0xff
+      timestamp = Math.floor(timestamp / 256)
+    }
+    bytes[6] = (bytes[6] & 0x0f) | 0x70
+    bytes[8] = (bytes[8] & 0x3f) | 0x80
+    const hex = Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("")
+    return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`
   }
 
   escape() {
@@ -3136,6 +3307,27 @@ export default class extends Controller {
   }
 
   dispatchOverlayKeydown(overlay, event, key) {
+    if (this.hasEditTenderOverlayTarget && overlay === this.editTenderOverlayTarget) {
+      if (key === "Escape") {
+        event.preventDefault()
+        this.closeEditTenderOverlay()
+      }
+      return
+    }
+    if (this.hasRemoveTenderOverlayTarget && overlay === this.removeTenderOverlayTarget) {
+      if (key === "Escape") {
+        event.preventDefault()
+        this.closeRemoveTenderOverlay()
+      }
+      return
+    }
+    if (this.hasReturnToSaleOverlayTarget && overlay === this.returnToSaleOverlayTarget) {
+      if (key === "Escape") {
+        event.preventDefault()
+        this.closeReturnToSaleOverlay()
+      }
+      return
+    }
     if (this.hasProductOverlayTarget && overlay === this.productOverlayTarget) {
       this.onProductOverlayKeydown(event, key)
       return

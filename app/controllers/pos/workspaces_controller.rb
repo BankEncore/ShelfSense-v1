@@ -7,7 +7,10 @@ module Pos
       "unlinked_return" => "pos-unlinked-feedback",
       "open_price" => "pos-open-price-feedback",
       "linked_return" => "pos-linked-feedback",
-      "stored_value_issuance" => "pos-issuance-feedback"
+      "stored_value_issuance" => "pos-issuance-feedback",
+      "replace_tender" => "pos-edit-tender-feedback",
+      "remove_tender" => "pos-remove-tender-feedback",
+      "abandon_tender" => "pos-return-to-sale-feedback"
     }.freeze
     APPROVAL_FEEDBACK_ID = "pos-approval-feedback"
 
@@ -264,10 +267,11 @@ module Pos
 
     def abandon_tender
       rescue_workspace(error_mode: "derive") do
-        Pos::AbandonTender.call(
+        Pos::ReturnToSaleClearTenders.call(
           transaction: @transaction,
           actor: current_user,
-          expected_lock_version: expected_lock_version
+          expected_lock_version: expected_lock_version,
+          operation_id: params.require(:operation_id)
         )
         @transaction.reload
         @ui_mode = "sale_entry"
@@ -432,14 +436,42 @@ module Pos
     def remove_tender
       rescue_workspace(error_mode: "tender") do
         tender = @transaction.pos_tenders.find(params.require(:tender_id))
+        tender_index = @transaction.pos_tenders.ordered.to_a.index(tender)
         Pos::RemoveWorkingTender.call(
           transaction: @transaction,
           actor: current_user,
           expected_lock_version: expected_lock_version,
-          tender: tender
+          tender: tender,
+          operation_id: params.require(:operation_id)
         )
         @transaction.reload
+        remaining = @transaction.pos_tenders.ordered.to_a
+        @selected_tender = remaining[tender_index] || remaining[tender_index.to_i - 1]
         @ui_mode = @transaction.pos_tenders.any? ? "tender" : "sale_entry"
+        respond_workspace
+      end
+    end
+
+    def replace_tender
+      rescue_workspace(error_mode: "tender") do
+        tender = @transaction.pos_tenders.find(params.require(:tender_id))
+        amount = Money::ParseCents.call(params[:tender_amount])
+        raise Pos::Error, "tender amount is required" if amount.nil?
+        presented = Money::ParseCents.call(params[:amount_presented]) if params[:amount_presented].present?
+
+        result = Pos::ReplaceTender.call(
+          transaction: @transaction,
+          tender: tender,
+          actor: current_user,
+          operation_id: params.require(:operation_id),
+          expected_lock_version: expected_lock_version,
+          amount_cents: amount,
+          amount_presented_cents: presented,
+          external_reference: params[:external_reference]
+        )
+        @transaction.reload
+        @selected_tender = @transaction.pos_tenders.find_by(id: result.tender&.id)
+        @ui_mode = "tender"
         respond_workspace
       end
     end
@@ -562,6 +594,7 @@ module Pos
         end
       @selected_tender_type = resolve_selected_tender_type
       @selected_line ||= default_selected_line
+      @selected_tender ||= default_selected_tender
       @tax_classes = TaxClass.active.order(:code)
       @control_policies = {
         "price_override" => Pos::ControlledActionPolicy.result(user: current_user, store: current_store, action_type: "price_override").to_s,
@@ -602,6 +635,7 @@ module Pos
         issuances: @issuances,
         selected_line: @selected_line,
         selected_tender_type: @selected_tender_type,
+        selected_tender: @selected_tender,
         ui_mode: @ui_mode,
         settlement_direction: @settlement_direction,
         remaining_payment_cents: @remaining_payment_cents,
@@ -792,6 +826,11 @@ module Pos
     def default_selected_line
       id = params[:selected_line_id].presence
       (id && @transaction.pos_transaction_lines.find_by(id: id)) || @transaction.pos_transaction_lines.last
+    end
+
+    def default_selected_tender
+      id = params[:selected_tender_id].presence
+      (id && @tenders.find { |tender| tender.id == id }) || @tenders.first
     end
 
     def previous_line(line)
