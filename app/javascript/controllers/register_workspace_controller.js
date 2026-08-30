@@ -44,6 +44,16 @@ export default class extends Controller {
     "issuanceProgramInput",
     "issuanceAmountInput",
     "issuanceCardInput",
+    "issuanceOperationInput",
+    "issuanceConfirmClearInput",
+    "removeIssuanceForm",
+    "removeIssuanceIdInput",
+    "removeIssuanceOperationInput",
+    "removeIssuanceConfirmClearInput",
+    "clearTendersOverlay",
+    "clearTendersConsequence",
+    "tenderOperationInput",
+    "editTenderStoredValueNote",
     "cashOutForm",
     "cashOutCardInput",
     "destinationModeInput",
@@ -186,6 +196,17 @@ export default class extends Controller {
     "customerList",
     "customerQueryField",
     "customerQueryLabel",
+    "quickCustomerButton",
+    "quickCustomerOverlay",
+    "quickCustomerContextLabel",
+    "quickCustomerDisplayNameField",
+    "quickCustomerEmailField",
+    "quickCustomerPhoneField",
+    "quickCustomerDuplicateWrap",
+    "quickCustomerDuplicateList",
+    "quickCustomerAcknowledgeField",
+    "quickCustomerBack",
+    "quickCustomerSubmit",
     "productOverlay",
     "productList",
     "variantOverlay",
@@ -246,6 +267,9 @@ export default class extends Controller {
     searchUrl: String,
     pickupSearchUrl: String,
     customerSearchUrl: String,
+    quickCustomerUrl: String,
+    quickCustomerAllowed: Boolean,
+    customerAttached: Boolean,
     pickupAllowed: Boolean,
     openPriceUrl: String,
     settlement: String,
@@ -269,6 +293,8 @@ export default class extends Controller {
     this.customerAbort = null
     this.linkedAbort = null
     this.unlinkedAbort = null
+    this.customerLookupContext = null
+    this.quickCustomerIdempotencyKey = null
     this.linkedStage = "lookup"
     this.bindFunctionKeyCapture()
     if (this.hasControlReasonFieldTarget) {
@@ -595,10 +621,15 @@ export default class extends Controller {
         this.destinationModeInputTarget.value = "new_gift_card"
       } else if (this.settlementValue === "refund" && type?.stored_value_account_type === "store_credit") {
         this.destinationModeInputTarget.value = "customer_store_credit"
+        if (!this.customerAttachedValue) {
+          this.showFeedback("A customer is required. Find and attach a customer to continue.")
+          this.openCustomerOverlay({ context: "customer_store_credit" })
+        }
       } else {
         this.destinationModeInputTarget.value = type?.category === "stored_value" ? "existing_account" : ""
       }
     }
+    if (this.hasTenderOperationInputTarget) this.tenderOperationInputTarget.value = this.uuidV7()
     this.beginFlight()
     this.tenderFormTarget.requestSubmit()
   }
@@ -1277,8 +1308,9 @@ export default class extends Controller {
     this.closePickupOverlay()
   }
 
-  openCustomerOverlay() {
+  openCustomerOverlay(options = {}) {
     if (!this.hasCustomerOverlayTarget) return
+    this.customerLookupContext = options.context || null
     this.invalidateCustomerLookup()
     if (this.hasCustomerQueryFieldTarget) this.customerQueryFieldTarget.value = ""
     if (this.hasCustomerListTarget) this.customerListTarget.replaceChildren()
@@ -1325,6 +1357,18 @@ export default class extends Controller {
       return
     }
     this.selectHighlightedCustomer()
+  }
+
+  onQuickCustomerOverlayKeydown(event, key) {
+    if (key === "Escape") {
+      event.preventDefault()
+      this.closeQuickCustomerOverlay()
+      return
+    }
+    if (key === "Enter" && !event.target.matches("textarea")) {
+      event.preventDefault()
+      this.submitQuickCustomer()
+    }
   }
 
   async runCustomerSearch() {
@@ -1398,6 +1442,160 @@ export default class extends Controller {
   keepCurrentCustomer(event) {
     if (event) event.preventDefault()
     this.closeCustomerOverlay()
+  }
+
+  openQuickCustomerOverlay(event) {
+    if (event) event.preventDefault()
+    if (!this.quickCustomerAllowedValue || !this.hasQuickCustomerOverlayTarget) return
+    this.resetQuickCustomerOverlay()
+    this.syncQuickCustomerContextLabel()
+    this.showOverlay(
+      this.quickCustomerOverlayTarget,
+      {
+        parent: this.hasCustomerOverlayTarget ? this.customerOverlayTarget : null,
+        initialFocus: this.hasQuickCustomerDisplayNameFieldTarget && this.quickCustomerDisplayNameFieldTarget
+      }
+    )
+  }
+
+  closeQuickCustomerOverlay(event) {
+    if (event) event.preventDefault()
+    this.hideOverlay(this.hasQuickCustomerOverlayTarget && this.quickCustomerOverlayTarget)
+  }
+
+  resetQuickCustomerOverlay() {
+    this.quickCustomerIdempotencyKey = this.uuidV7()
+    if (this.hasQuickCustomerDisplayNameFieldTarget) this.quickCustomerDisplayNameFieldTarget.value = ""
+    if (this.hasQuickCustomerEmailFieldTarget) this.quickCustomerEmailFieldTarget.value = ""
+    if (this.hasQuickCustomerPhoneFieldTarget) this.quickCustomerPhoneFieldTarget.value = ""
+    if (this.hasQuickCustomerAcknowledgeFieldTarget) this.quickCustomerAcknowledgeFieldTarget.checked = false
+    this.clearQuickCustomerDuplicates()
+    if (this.hasQuickCustomerOverlayTarget) this.clearOverlayError(this.quickCustomerOverlayTarget)
+  }
+
+  clearQuickCustomerDuplicates() {
+    if (this.hasQuickCustomerDuplicateWrapTarget) this.quickCustomerDuplicateWrapTarget.hidden = true
+    if (this.hasQuickCustomerDuplicateListTarget) this.quickCustomerDuplicateListTarget.replaceChildren()
+  }
+
+  syncQuickCustomerContextLabel() {
+    if (!this.hasQuickCustomerContextLabelTarget) return
+    const context = this.customerLookupContext
+    if (context === "store_credit" || context === "trade_credit") {
+      this.quickCustomerContextLabelTarget.textContent = "Email or phone is required for store-credit and trade-credit flows."
+    } else if (context === "customer_store_credit") {
+      this.quickCustomerContextLabelTarget.textContent = "Email or phone is required for customer store-credit refunds."
+    } else {
+      this.quickCustomerContextLabelTarget.textContent = "Create a customer identity and attach it to this transaction."
+    }
+  }
+
+  quickCustomerRequiresContact() {
+    return this.customerLookupContext === "store_credit" ||
+      this.customerLookupContext === "trade_credit" ||
+      this.customerLookupContext === "customer_store_credit"
+  }
+
+  renderQuickCustomerDuplicates(rows) {
+    if (!this.hasQuickCustomerDuplicateWrapTarget || !this.hasQuickCustomerDuplicateListTarget) return
+    this.quickCustomerDuplicateWrapTarget.hidden = false
+    this.quickCustomerDuplicateListTarget.replaceChildren()
+    rows.forEach((row, index) => {
+      const item = document.createElement("li")
+      item.textContent = row.label || [row.display_name, row.email, row.phone].filter(Boolean).join(" · ")
+      this.decoratePickerItem(item, { selected: index === 0, disabled: true })
+      this.quickCustomerDuplicateListTarget.append(item)
+    })
+  }
+
+  async submitQuickCustomer(event) {
+    if (event) event.preventDefault()
+    if (this.inFlight || !this.hasQuickCustomerOverlayTarget) return
+    const displayName = this.hasQuickCustomerDisplayNameFieldTarget ? this.quickCustomerDisplayNameFieldTarget.value.trim() : ""
+    const email = this.hasQuickCustomerEmailFieldTarget ? this.quickCustomerEmailFieldTarget.value.trim() : ""
+    const phone = this.hasQuickCustomerPhoneFieldTarget ? this.quickCustomerPhoneFieldTarget.value.trim() : ""
+    if (!displayName) {
+      this.setQuickCustomerFeedback("Display name is required.")
+      if (this.hasQuickCustomerDisplayNameFieldTarget) this.focusOverlayEntry(this.quickCustomerDisplayNameFieldTarget)
+      return
+    }
+    if (this.quickCustomerRequiresContact() && !email && !phone) {
+      this.setQuickCustomerFeedback("Email or phone is required for this flow.")
+      const focusTarget = this.hasQuickCustomerEmailFieldTarget ? this.quickCustomerEmailFieldTarget : this.quickCustomerPhoneFieldTarget
+      if (focusTarget) this.focusOverlayEntry(focusTarget)
+      return
+    }
+
+    if (!this.quickCustomerIdempotencyKey) this.quickCustomerIdempotencyKey = this.uuidV7()
+    const acknowledge = this.hasQuickCustomerAcknowledgeFieldTarget && this.quickCustomerAcknowledgeFieldTarget.checked
+
+    this.beginFlight()
+    try {
+      const body = new FormData()
+      body.set("display_name", displayName)
+      if (email) body.set("email", email)
+      if (phone) body.set("phone", phone)
+      body.set("idempotency_key", this.quickCustomerIdempotencyKey)
+      body.set("require_contact", this.quickCustomerRequiresContact() ? "1" : "0")
+      if (this.customerLookupContext) {
+        const creditAccountType = this.customerLookupContext === "customer_store_credit"
+          ? "store_credit"
+          : this.customerLookupContext
+        body.set("credit_account_type", creditAccountType)
+      }
+      if (acknowledge) body.set("acknowledge_duplicates", "1")
+
+      const response = await fetch(this.quickCustomerUrlValue, {
+        method: "POST",
+        headers: {
+          Accept: "text/vnd.turbo-stream.html, text/html, application/json",
+          "X-CSRF-Token": this.csrfToken()
+        },
+        body,
+        credentials: "same-origin"
+      })
+
+      const contentType = response.headers.get("content-type") || ""
+      if (contentType.includes("application/json")) {
+        const payload = await response.json()
+        if (response.ok) {
+          window.location.assign(this.workspaceUrlValue)
+          return
+        }
+        if (payload.error === "duplicates") {
+          this.setQuickCustomerFeedback(payload.message || "Possible duplicate customers found.")
+          this.renderQuickCustomerDuplicates(payload.suggestions || [])
+          if (this.hasQuickCustomerAcknowledgeFieldTarget) this.focusOverlayEntry(this.quickCustomerAcknowledgeFieldTarget)
+          return
+        }
+        this.setQuickCustomerFeedback(payload.message || "Quick Customer could not be completed.")
+        return
+      }
+
+      const html = await response.text()
+      if (response.ok) {
+        Turbo.renderStreamMessage(html)
+        this.clearOverlayStack({ restoreCommand: false })
+        return
+      }
+
+      Turbo.renderStreamMessage(html)
+    } catch (_error) {
+      this.setQuickCustomerFeedback("Quick Customer could not be completed.")
+    } finally {
+      this.inFlight = false
+      this.enableReadyActions()
+    }
+  }
+
+  setQuickCustomerFeedback(message) {
+    if (!this.hasQuickCustomerOverlayTarget) return
+    const node = this.quickCustomerOverlayTarget.querySelector("[data-overlay-error]")
+    if (node) node.textContent = message || ""
+  }
+
+  csrfToken() {
+    return document.querySelector("meta[name='csrf-token']")?.content || ""
   }
 
 
@@ -2096,6 +2294,21 @@ export default class extends Controller {
     }
     this.toggleReferenceField(type.reference_policy)
     this.toggleGiftCardNumberField(type)
+    this.promptCustomerLookupIfRequired(type)
+  }
+
+  customerRequiredTenderType(type) {
+    if (!type || type.category !== "stored_value") return false
+    const accountType = type.stored_value_account_type
+    if (accountType === "store_credit" || accountType === "trade_credit") return true
+    return false
+  }
+
+  promptCustomerLookupIfRequired(type) {
+    if (!this.customerRequiredTenderType(type)) return
+    if (this.customerAttachedValue) return
+    this.showFeedback("A customer is required. Find and attach a customer to continue.")
+    this.openCustomerOverlay({ context: type.stored_value_account_type })
   }
 
   toggleGiftCardNumberField(type) {
@@ -2296,8 +2509,86 @@ export default class extends Controller {
     if (this.hasIssuanceProgramInputTarget) this.issuanceProgramInputTarget.value = programId
     if (this.hasIssuanceAmountInputTarget) this.issuanceAmountInputTarget.value = amount
     if (this.hasIssuanceCardInputTarget) this.issuanceCardInputTarget.value = needsCard ? cardNumber : ""
+    if (this.hasIssuanceOperationInputTarget) this.issuanceOperationInputTarget.value = this.uuidV7()
+    if (this.hasIssuanceConfirmClearInputTarget) this.issuanceConfirmClearInputTarget.value = ""
+    if (this.tendersApplied()) {
+      this.requestClearTendersConfirmation("add")
+      return
+    }
     this.beginFlight()
     this.issuanceFormTarget.requestSubmit()
+  }
+
+  requestRemoveIssuance(event) {
+    if (event) event.preventDefault()
+    if (this.inFlight || !this.hasRemoveIssuanceFormTarget) return
+    const issuanceId = event?.currentTarget?.dataset?.issuanceId
+    if (!issuanceId) return
+    if (this.hasRemoveIssuanceIdInputTarget) this.removeIssuanceIdInputTarget.value = issuanceId
+    if (this.hasRemoveIssuanceOperationInputTarget) this.removeIssuanceOperationInputTarget.value = this.uuidV7()
+    if (this.hasRemoveIssuanceConfirmClearInputTarget) this.removeIssuanceConfirmClearInputTarget.value = ""
+    if (this.tendersApplied()) {
+      this.requestClearTendersConfirmation("remove")
+      return
+    }
+    this.beginFlight()
+    this.removeIssuanceFormTarget.requestSubmit()
+  }
+
+  tendersApplied() {
+    return Boolean(this.element.querySelector(".pos-tenders__item"))
+  }
+
+  requestClearTendersConfirmation(pendingIssuanceAction) {
+    this.pendingIssuanceAction = pendingIssuanceAction
+    if (!this.hasClearTendersOverlayTarget) return
+    if (this.hasClearTendersConsequenceTarget) {
+      this.clearTendersConsequenceTarget.textContent = pendingIssuanceAction === "remove"
+        ? "Removing this gift card changes the amount due, so every applied tender must be cleared and the transaction tendered again."
+        : "Adding this gift card changes the amount due, so every applied tender must be cleared and the transaction tendered again."
+    }
+    const confirm = this.clearTendersOverlayTarget.querySelector("[data-action*='confirmClearTenders']")
+    this.showOverlay(this.clearTendersOverlayTarget, confirm)
+  }
+
+  closeClearTendersOverlay(event) {
+    if (event) event.preventDefault()
+    this.pendingIssuanceAction = null
+    this.hideOverlay(this.hasClearTendersOverlayTarget && this.clearTendersOverlayTarget)
+  }
+
+  confirmClearTenders(event) {
+    if (event) event.preventDefault()
+    if (this.inFlight) return
+    const pending = this.pendingIssuanceAction
+    this.pendingIssuanceAction = null
+    if (pending === "remove" && this.hasRemoveIssuanceFormTarget) {
+      if (this.hasRemoveIssuanceConfirmClearInputTarget) this.removeIssuanceConfirmClearInputTarget.value = "true"
+      this.beginFlight()
+      this.removeIssuanceFormTarget.requestSubmit()
+      return
+    }
+    if (pending === "add" && this.hasIssuanceFormTarget) {
+      if (this.hasIssuanceConfirmClearInputTarget) this.issuanceConfirmClearInputTarget.value = "true"
+      this.beginFlight()
+      this.issuanceFormTarget.requestSubmit()
+    }
+  }
+
+  onClearTendersOverlayKeydown(event, key) {
+    if (key === "Escape") {
+      event.preventDefault()
+      this.closeClearTendersOverlay()
+      return
+    }
+    if (key === "F9" || key === "F10") {
+      event.preventDefault()
+      return
+    }
+    if (key !== "Enter") return
+    if (this.isActionableControl(event.target)) return
+    event.preventDefault()
+    this.confirmClearTenders()
   }
 
   showOverlayLocalError(overlay, message) {
@@ -2425,12 +2716,14 @@ export default class extends Controller {
     this.syncSelectedTender(row.dataset.tenderId)
     if (this.hasEditTenderDetailTarget) this.editTenderDetailTarget.textContent = row.dataset.inspectDetail || ""
     if (this.hasEditTenderAmountTarget) this.editTenderAmountTarget.value = this.formatCents(row.dataset.amountCents)
+    const storedValue = row.dataset.storedValue === "true"
     const cashPayment = row.dataset.behavioralCategory === "cash" && row.dataset.direction === "payment"
     if (this.hasEditTenderPresentedWrapTarget) this.editTenderPresentedWrapTarget.hidden = !cashPayment
     if (this.hasEditTenderPresentedTarget) {
       this.editTenderPresentedTarget.value = cashPayment ? this.formatCents(row.dataset.presentedCents || row.dataset.amountCents) : ""
     }
-    const capturesReference = row.dataset.behavioralCategory !== "cash"
+    if (this.hasEditTenderStoredValueNoteTarget) this.editTenderStoredValueNoteTarget.hidden = !storedValue
+    const capturesReference = !storedValue && row.dataset.behavioralCategory !== "cash"
     if (this.hasEditTenderReferenceWrapTarget) this.editTenderReferenceWrapTarget.hidden = !capturesReference
     if (this.hasEditTenderReferenceTarget) this.editTenderReferenceTarget.value = row.dataset.externalReference || ""
     this.showOverlay(this.editTenderOverlayTarget, this.editTenderAmountTarget)
@@ -3394,6 +3687,10 @@ export default class extends Controller {
       this.onReturnToSaleOverlayKeydown(event, key)
       return
     }
+    if (this.hasClearTendersOverlayTarget && overlay === this.clearTendersOverlayTarget) {
+      this.onClearTendersOverlayKeydown(event, key)
+      return
+    }
     if (this.hasProductOverlayTarget && overlay === this.productOverlayTarget) {
       this.onProductOverlayKeydown(event, key)
       return
@@ -3448,6 +3745,10 @@ export default class extends Controller {
     }
     if (this.hasCustomerOverlayTarget && overlay === this.customerOverlayTarget) {
       this.onCustomerOverlayKeydown(event, key)
+      return
+    }
+    if (this.hasQuickCustomerOverlayTarget && overlay === this.quickCustomerOverlayTarget) {
+      this.onQuickCustomerOverlayKeydown(event, key)
       return
     }
     if (this.hasOverlayTarget && overlay === this.overlayTarget) {
@@ -3727,6 +4028,10 @@ export default class extends Controller {
 
   customerOverlayOpen() {
     return this.hasCustomerOverlayTarget && !this.customerOverlayTarget.hidden
+  }
+
+  quickCustomerOverlayOpen() {
+    return this.hasQuickCustomerOverlayTarget && !this.quickCustomerOverlayTarget.hidden
   }
 
   productOverlayOpen() {

@@ -41,7 +41,6 @@ module Pos
         operation = PosOperation.lock.find(lease.operation.id)
         transaction = Pos::Support.lock_working_transaction!(@transaction, @expected_lock_version)
         tender = transaction.pos_tenders.find(@tender.id)
-        raise Pos::Error, "stored-value tender correction becomes available after Slice 7B" if tender.stored_value?
 
         Audit::Recorder.record!(
           action: "pos.working_tender.removed",
@@ -54,7 +53,8 @@ module Pos
           before_values: tender.slice(
             "id", "tender_number", "tender_type", "tender_name", "behavioral_category",
             "direction", "amount_cents", "amount_presented_cents", "change_cents", "external_reference"
-          )
+          ),
+          metadata: stored_value_metadata(tender)
         )
         tender.destroy!
         Pos::Support.renumber_tenders!(transaction)
@@ -75,6 +75,20 @@ module Pos
     end
 
     private
+
+    # Working removal discards an unposted tender; no stored-value ledger entry
+    # exists to reverse.
+    def stored_value_metadata(tender)
+      return {} unless tender.stored_value?
+
+      detail = tender.stored_value_tender_detail
+      {
+        stored_value_ledger_affected: false,
+        destination_mode: detail&.destination_mode,
+        stored_value_account_id: detail&.stored_value_account_id,
+        masked_card_snapshot: detail&.masked_card_snapshot
+      }.compact
+    end
 
     def replay_result(operation)
       Result.new(transaction: operation.pos_transaction, operation: operation, replayed: true)

@@ -10,7 +10,8 @@ module Pos
       "stored_value_issuance" => "pos-issuance-feedback",
       "replace_tender" => "pos-edit-tender-feedback",
       "remove_tender" => "pos-remove-tender-feedback",
-      "abandon_tender" => "pos-return-to-sale-feedback"
+      "abandon_tender" => "pos-return-to-sale-feedback",
+      "quick_customer" => "pos-quick-customer-feedback"
     }.freeze
     APPROVAL_FEEDBACK_ID = "pos-approval-feedback"
 
@@ -308,6 +309,7 @@ module Pos
               tender_type: type,
               amount_cents: amount,
               destination_mode: stored_value_destination_mode(type),
+              operation_id: params.require(:operation_id),
               card_number: params[:card_number],
               gift_card_program: find_optional_gift_card_program
             )
@@ -330,14 +332,16 @@ module Pos
               amount_presented_cents: amount
             )
           elsif type.stored_value?
-            Pos::AddStoredValueTender.call(
+            result = Pos::AddStoredValueTender.call(
               transaction: @transaction,
               actor: current_user,
               expected_lock_version: expected_lock_version,
               tender_type: type,
               amount_cents: amount,
+              operation_id: params.require(:operation_id),
               card_number: params[:card_number]
             )
+            @feedback = stored_value_cap_feedback(result) if result.capped
           else
             Pos::AddTender.call(
               transaction: @transaction,
@@ -368,8 +372,10 @@ module Pos
           expected_lock_version: expected_lock_version,
           issuance_type: params.require(:issuance_type),
           amount_cents: amount,
+          operation_id: params.require(:operation_id),
           gift_card_program: find_optional_gift_card_program,
-          card_number: params[:card_number]
+          card_number: params[:card_number],
+          confirm_clear_tenders: confirm_clear_tenders?
         )
         @transaction.reload
         @ui_mode = "sale_entry"
@@ -384,7 +390,9 @@ module Pos
           transaction: @transaction,
           actor: current_user,
           expected_lock_version: expected_lock_version,
-          issuance: issuance
+          issuance: issuance,
+          operation_id: params.require(:operation_id),
+          confirm_clear_tenders: confirm_clear_tenders?
         )
         @transaction.reload
         @ui_mode = "sale_entry"
@@ -417,6 +425,51 @@ module Pos
         @transaction.reload
         @ui_mode = "sale_entry"
         respond_workspace
+      end
+    end
+
+    def quick_customer
+      unless Authorization::PermissionEvaluator.allowed?(
+        user: current_user,
+        permission_key: "customers.create",
+        store: current_store
+      )
+        respond_to_quick_customer_forbidden
+        return
+      end
+
+      credit_account_type = params[:credit_account_type].presence
+      require_contact = ActiveModel::Type::Boolean.new.cast(params[:require_contact])
+
+      begin
+        create_result = Customers::Create.call(
+          display_name: params[:display_name],
+          email: params[:email],
+          phone: params[:phone],
+          actor: current_user,
+          store: current_store,
+          idempotency_key: params.require(:idempotency_key),
+          source_id: register_customer_create_source_id,
+          acknowledge_duplicates: params[:acknowledge_duplicates].present?,
+          require_contact: require_contact
+        )
+
+        rescue_workspace(error_mode: "sale_entry") do
+          Pos::AttachCustomer.call(
+            transaction: @transaction,
+            actor: current_user,
+            expected_lock_version: expected_lock_version,
+            customer: create_result.customer
+          )
+          @transaction.reload
+          @ui_mode = "sale_entry"
+          @feedback = quick_customer_attach_feedback(credit_account_type: credit_account_type)
+          respond_workspace
+        end
+      rescue Customers::DuplicateFoundError => e
+        respond_to_quick_customer_duplicates(e)
+      rescue Customers::Error => e
+        respond_to_quick_customer_validation(e.message)
       end
     end
 
@@ -471,6 +524,7 @@ module Pos
         )
         @transaction.reload
         @selected_tender = @transaction.pos_tenders.find_by(id: result.tender&.id)
+        @feedback = replacement_cap_feedback(result) if result.capped
         @ui_mode = "tender"
         respond_workspace
       end
@@ -495,6 +549,11 @@ module Pos
           expected_signed_net_cents: expected_signed_net
         )
         redirect_to pos_completed_transaction_path(result.transaction)
+      rescue Pos::StoredValueCompletionFailure => e
+        # Completion Failed / Tender Review keeps every working tender. Select the
+        # refused tender so the cashier can remove, edit, or correct the customer.
+        @selected_tender = @transaction.pos_tenders.find_by(id: e.tender_id) if e.tender_id.present?
+        raise
       end
     end
 
@@ -819,6 +878,25 @@ module Pos
       params.require(:lock_version)
     end
 
+    def confirm_clear_tenders?
+      ActiveModel::Type::Boolean.new.cast(params[:confirm_clear_tenders]).present?
+    end
+
+    def stored_value_cap_feedback(result)
+      due = result.remaining_due_cents.to_i
+      message = "Applied #{helpers.format_money_cents(result.applied_cents)} of the " \
+                "#{helpers.format_money_cents(result.requested_cents)} requested. Available balance was " \
+                "#{helpers.format_money_cents(result.available_cents)}."
+      return message unless due.positive?
+
+      "#{message} #{helpers.format_money_cents(due)} is still due."
+    end
+
+    def replacement_cap_feedback(result)
+      "Applied #{helpers.format_money_cents(result.applied_cents)} of the " \
+        "#{helpers.format_money_cents(result.requested_cents)} requested. The stored-value balance was lower."
+    end
+
     def find_line!
       @transaction.pos_transaction_lines.find(params.require(:line_id))
     end
@@ -1038,6 +1116,85 @@ module Pos
         reason: row.reason,
         tracking: row.tracking,
         open_price: row.open_price
+      }
+    end
+
+    def register_customer_create_source_id
+      @register.id
+    end
+
+    def quick_customer_attach_feedback(credit_account_type: nil)
+      customer = @transaction.customer
+      return "Customer attached." if customer.blank?
+
+      account_type = credit_account_type.presence_in(%w[store_credit trade_credit])
+      if account_type.present? && !eligible_customer_credit_account?(customer, account_type)
+        label = account_type == "trade_credit" ? "trade-credit" : "store-credit"
+        return "Customer attached. No eligible #{label} account is available yet."
+      end
+
+      "Customer attached."
+    end
+
+    def eligible_customer_credit_account?(customer, account_type)
+      StoredValueAccount.where(customer_id: customer.id, account_type: account_type)
+                        .where(status: "active")
+                        .exists?
+    end
+
+    def respond_to_quick_customer_forbidden
+      Audit::Recorder.record!(
+        action: "authorization.denied",
+        outcome: "denied",
+        actor_user: current_user,
+        actor_label: current_user.display_name,
+        store: current_store,
+        reason_code: "customers.create",
+        metadata: { path: request.fullpath }
+      )
+      respond_to do |format|
+        format.json { render json: { error: "forbidden", message: "not authorized" }, status: :forbidden }
+        format.all { redirect_to root_path, alert: "You are not authorized to perform that action." }
+      end
+    end
+
+    def respond_to_quick_customer_duplicates(error)
+      respond_to do |format|
+        format.json do
+          render json: {
+            error: "duplicates",
+            message: error.message,
+            suggestions: error.suggestions.map { |suggestion| serialize_customer_duplicate(suggestion) }
+          }, status: :unprocessable_entity
+        end
+        format.any do
+          @overlay_failure = Pos::OverlayFailure.parent_validation(error.message)
+          @feedback = error.message
+          @quick_customer_duplicates = error.suggestions
+          respond_overlay_error("sale_entry")
+        end
+      end
+    end
+
+    def respond_to_quick_customer_validation(message)
+      respond_to do |format|
+        format.json { render json: { error: "validation", message: message }, status: :unprocessable_entity }
+        format.any do
+          recover_from_workspace_error(message, "sale_entry", persist_overlay: true)
+        end
+      end
+    end
+
+    def serialize_customer_duplicate(suggestion)
+      customer = suggestion.customer
+      {
+        id: customer.id,
+        display_name: customer.display_name,
+        email: customer.email,
+        phone: customer.phone,
+        match_strength: suggestion.match_strength.to_s,
+        matched_on: suggestion.matched_on,
+        label: [ customer.display_name, customer.email, customer.phone ].compact.join(" · ")
       }
     end
   end

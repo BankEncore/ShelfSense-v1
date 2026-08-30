@@ -56,21 +56,26 @@ class PosTenderReviewMutationsTest < ActiveSupport::TestCase
     end
   end
 
-  test "ordinary remove refuses stored value without touching the tender" do
+  test "remove accepts stored value and replays without restoring ledger value" do
     transaction = start_sale
     tender = add_raw_tender(transaction, TenderType.find_by!(code: "gift_card"), 500)
+    operation_id = SecureRandom.uuid_v7
+    lock_version = transaction.reload.lock_version
+    attrs = {
+      transaction: transaction,
+      tender: tender,
+      actor: @actor,
+      operation_id: operation_id,
+      expected_lock_version: lock_version
+    }
 
-    error = assert_raises(Pos::Error) do
-      Pos::RemoveWorkingTender.call(
-        transaction: transaction.reload,
-        tender: tender,
-        actor: @actor,
-        operation_id: SecureRandom.uuid_v7,
-        expected_lock_version: transaction.lock_version
-      )
-    end
-    assert_match(/Slice 7B/, error.message)
-    assert transaction.reload.pos_tenders.exists?(tender.id)
+    first = Pos::RemoveWorkingTender.call(**attrs)
+    assert_not first.replayed
+    assert_not transaction.reload.pos_tenders.exists?(tender.id)
+    assert Pos::RemoveWorkingTender.call(**attrs).replayed
+    assert_equal 0, StoredValueOperation.count
+    event = AuditEvent.where(action: "pos.working_tender.removed").order(:created_at).last
+    assert_equal false, event.metadata["stored_value_ledger_affected"]
   end
 
   test "replace supports cash check and manual-reference other" do
@@ -209,22 +214,23 @@ class PosTenderReviewMutationsTest < ActiveSupport::TestCase
     assert Pos::ReturnToSaleClearTenders.call(**attrs).replayed
   end
 
-  test "return to sale refuses every change when stored value is present" do
+  test "return to sale clears ordinary and stored-value tenders together" do
     transaction = start_sale
-    ordinary = add_tender(transaction, @card, 500, "AUTH")
-    stored_value = add_raw_tender(transaction, TenderType.find_by!(code: "gift_card"), 400)
+    add_tender(transaction, @card, 500, "AUTH")
+    add_raw_tender(transaction, TenderType.find_by!(code: "gift_card"), 400)
     transaction.reload
+    attrs = {
+      transaction: transaction,
+      actor: @actor,
+      operation_id: SecureRandom.uuid_v7,
+      expected_lock_version: transaction.lock_version
+    }
 
-    error = assert_raises(Pos::Error) do
-      Pos::ReturnToSaleClearTenders.call(
-        transaction: transaction,
-        actor: @actor,
-        operation_id: SecureRandom.uuid_v7,
-        expected_lock_version: transaction.lock_version
-      )
-    end
-    assert_match(/Slice 7B/, error.message)
-    assert_equal [ ordinary.id, stored_value.id ].sort, transaction.reload.pos_tenders.pluck(:id).sort
+    result = Pos::ReturnToSaleClearTenders.call(**attrs)
+    assert_empty transaction.reload.pos_tenders
+    assert_equal 2, result.operation.envelope.dig("facts", "removed_tender_ids").size
+    assert_equal 0, StoredValueOperation.count
+    assert Pos::ReturnToSaleClearTenders.call(**attrs).replayed
   end
 
   private

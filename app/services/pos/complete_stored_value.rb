@@ -21,13 +21,23 @@ module Pos
 
       require_customer!(tenders)
       Pos::StoredValueRefundCapacity.assert_working_allocation!(@transaction)
-      issuances.each { |issuance| post_issuance!(issuance) }
-      tenders.each { |tender| post_tender!(tender) }
+      issuances.each { |issuance| attributed(issuance_id: issuance.id) { post_issuance!(issuance) } }
+      tenders.each { |tender| attributed(tender_id: tender.id) { post_tender!(tender) } }
     rescue StoredValue::Error, GiftCards::Error => e
       raise Pos::Error, e.message
     end
 
     private
+
+    # Completion-time revalidation must identify the working record that refused
+    # so Tender Review can select it instead of clearing anything.
+    def attributed(tender_id: nil, issuance_id: nil)
+      yield
+    rescue Pos::StoredValueCompletionFailure
+      raise
+    rescue Pos::Error, StoredValue::Error, GiftCards::Error => e
+      raise Pos::StoredValueCompletionFailure.new(e.message, tender_id: tender_id, issuance_id: issuance_id)
+    end
 
     def stored_value_tenders
       @transaction.pos_tenders.ordered.select(&:stored_value?)
@@ -43,9 +53,21 @@ module Pos
       }
       return unless needs_customer
 
+      dependent_tender_id = tenders.find { |tender|
+        type = tender.configured_tender_type
+        type&.stored_value_account_type.in?(%w[store_credit trade_credit]) ||
+          tender.stored_value_tender_detail&.customer_store_credit?
+      }&.id
       customer = @transaction.customer
-      raise Pos::Error, "a customer is required" if customer.blank?
-      raise Pos::Error, "customer must be an active canonical customer" unless customer.canonical? && customer.active?
+      if customer.blank?
+        raise Pos::StoredValueCompletionFailure.new("a customer is required", tender_id: dependent_tender_id)
+      end
+      return if customer.canonical? && customer.active?
+
+      raise Pos::StoredValueCompletionFailure.new(
+        "customer must be an active canonical customer",
+        tender_id: dependent_tender_id
+      )
     end
 
     def post_issuance!(issuance)

@@ -16,12 +16,8 @@
           · <%= issuance.gift_card_program.name %>
         <% end %>
         <% if workspace.issuance_remove_available %>
-          <%= button_to "Remove",
-                pos_register_remove_stored_value_issuance_path(register_scope),
-                method: :post,
-                params: { lock_version: @transaction.lock_version, register_id: @register.id, issuance_id: issuance.id },
-                form: { data: { turbo: true } },
-                class: "btn btn--ghost" %>
+          <%= action_button "Remove", style: :outline, intent: :warning, size: :standard,
+                data: { action: "register-workspace#requestRemoveIssuance", issuance_id: issuance.id } %>
         <% end %>
       </div>
     <% end %>

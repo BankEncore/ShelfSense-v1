@@ -165,7 +165,8 @@ class PosWorkspacePresenterTest < ActiveSupport::TestCase
       expected_lock_version: transaction.lock_version,
       issuance_type: "activation",
       amount_cents: 2500,
-      gift_card_program: program
+      gift_card_program: program,
+      operation_id: SecureRandom.uuid_v7
     )
     transaction.reload
     result = present(transaction, action_capabilities: { gift_card_programs_available: true })
@@ -341,7 +342,7 @@ class PosWorkspacePresenterTest < ActiveSupport::TestCase
     assert_match(/re-authorized externally/, row.edit_unavailable_reason)
   end
 
-  test "stored-value tender row is inspect-only until Slice 7B" do
+  test "stored-value tender row offers edit and remove" do
     transaction = start_sale
     stored_value = TenderType.find_by!(code: "gift_card")
     tender = transaction.pos_tenders.new(
@@ -356,11 +357,11 @@ class PosWorkspacePresenterTest < ActiveSupport::TestCase
     row = present(transaction.reload, ui_mode: "tender").tender_rows.sole
     refute row.ordinary
     assert row.stored_value
-    refute row.edit_available
-    refute row.remove_available
+    assert row.edit_available
+    assert row.remove_available
     assert_equal "stored_value", row.behavioral_category
-    assert_equal "Stored-value tender correction becomes available after Slice 7B.", row.edit_unavailable_reason
-    assert_equal "Stored-value tender correction becomes available after Slice 7B.", row.remove_unavailable_reason
+    assert_nil row.edit_unavailable_reason
+    assert_nil row.remove_unavailable_reason
     assert_kind_of String, row.inspect_detail
   end
 

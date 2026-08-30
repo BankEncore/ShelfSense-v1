@@ -19,6 +19,7 @@ module Pos
 
       PosTransaction.transaction do
         transaction = Pos::Support.lock_working_transaction!(@transaction, @expected_lock_version)
+        Pos::CustomerDependency.refuse_customer_change!(transaction)
         transaction.update!(customer: nil)
         Pos::Support.touch_working_transaction!(transaction)
         transaction

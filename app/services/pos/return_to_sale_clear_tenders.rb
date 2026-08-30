@@ -38,10 +38,6 @@ module Pos
         operation = PosOperation.lock.find(lease.operation.id)
         transaction = Pos::Support.lock_working_transaction!(@transaction, @expected_lock_version)
         tenders = transaction.pos_tenders.ordered.to_a
-        if tenders.any?(&:stored_value?)
-          raise Pos::Error, "Return to Sale with stored-value tenders becomes available after Slice 7B"
-        end
-
         removed_ids = tenders.map(&:id)
         Audit::Recorder.record!(
           action: "pos.working_tenders.returned_to_sale",
@@ -51,7 +47,8 @@ module Pos
           store: transaction.store,
           register: transaction.register,
           subject: transaction,
-          before_values: { tender_ids: removed_ids }
+          before_values: { tender_ids: removed_ids },
+          metadata: { stored_value_ledger_affected: false }
         )
         tenders.each(&:destroy!)
         Pos::Support.touch_working_transaction!(transaction) if tenders.any?

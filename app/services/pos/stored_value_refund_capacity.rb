@@ -2,8 +2,8 @@
 
 module Pos
   class StoredValueRefundCapacity
-    def self.remaining_cents(transaction:, tender_type:, destination_mode:, account_id: nil)
-      new(transaction).remaining_cents(
+    def self.remaining_cents(transaction:, tender_type:, destination_mode:, account_id: nil, except: nil)
+      new(transaction, except: except).remaining_cents(
         tender_type: tender_type,
         destination_mode: destination_mode,
         account_id: account_id
@@ -18,9 +18,10 @@ module Pos
       transaction.pos_tenders.ordered.select { |tender| tender.stored_value? && tender.direction == "refund" }
     end
 
-    def initialize(transaction, include_working: true)
+    def initialize(transaction, include_working: true, except: nil)
       @transaction = transaction
       @include_working = include_working
+      @except = except
     end
 
     def remaining_cents(tender_type:, destination_mode:, account_id: nil)
@@ -48,7 +49,7 @@ module Pos
         when "gift_card"
           allowed = allowed_from_pool(gift, destination_mode: detail.destination_mode, account_id: detail.stored_value_account_id)
           if tender.amount_cents > allowed
-            raise Pos::Error, "refund exceeds remaining gift-card-funded amount"
+            raise Pos::StoredValueCompletionFailure.new("refund exceeds remaining gift-card-funded amount", tender_id: tender.id)
           end
 
           gift[:total] -= tender.amount_cents
@@ -56,7 +57,7 @@ module Pos
         when "trade_credit"
           allowed = allowed_from_pool(trade, destination_mode: "existing_account", account_id: detail.stored_value_account_id)
           if tender.amount_cents > allowed
-            raise Pos::Error, "refund exceeds remaining trade-credit-funded amount"
+            raise Pos::StoredValueCompletionFailure.new("refund exceeds remaining trade-credit-funded amount", tender_id: tender.id)
           end
 
           trade[:total] -= tender.amount_cents
@@ -136,7 +137,9 @@ module Pos
     end
 
     def working_refund_tenders(tender_code)
-      self.class.refund_stored_value_tenders(@transaction).select { |tender| tender.tender_type == tender_code }
+      self.class.refund_stored_value_tenders(@transaction).select { |tender|
+        tender.tender_type == tender_code && tender.id != @except&.id
+      }
     end
 
     def active_original_transaction_ids
