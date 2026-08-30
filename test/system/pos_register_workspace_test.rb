@@ -706,8 +706,8 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     assert page.evaluate_script("document.activeElement === document.getElementById('pos-command-field')")
 
     choose_register_menu "Transactions & Receipts"
-    assert_text "Transactions"
-    click_on "Register"
+    assert_selector "h1", text: /Transactions/
+    click_on "Return to Register"
     assert_text "Example Book"
     assert_text "SALE ENTRY"
 
@@ -719,8 +719,8 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     assert_selector "#pos_tenders", text: "External Card"
     assert_no_selector "#pos_totals", text: "External Card"
     choose_register_menu "Transactions & Receipts"
-    assert_text "Transactions"
-    click_on "Register"
+    assert_selector "h1", text: /Transactions/
+    click_on "Return to Register"
     assert_selector "#pos_tenders", text: "External Card"
     assert_no_selector "#pos_totals", text: "External Card"
     assert_text "Example Book"
