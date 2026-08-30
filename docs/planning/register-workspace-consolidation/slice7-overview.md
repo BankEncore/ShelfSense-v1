@@ -62,7 +62,7 @@ Until 7C ships the dispatcher, **runtime** key behavior remains Phase 6.7 as sta
 | Completed tenders | Immutable; correction via post-void / refund only |
 | `+1`–`+9` sequences | **Omitted** from the accepted contract |
 | Customer Lookup | Semantic action `open-customer-lookup` only; **no 7.0 key**; **F2 remains Card Tender** |
-| Quick Customer | In scope for **7B.2**; inventory complete — extract `Customers::Create` for shared admin/Register path; authorize with `customers.manage`; must not invent a Register-only create path or repurpose F2 |
+| Quick Customer | In scope for **7B.2**; extract `Customers::Create`; authorize Register with **`customers.create`** (add permission); admin create continues under `customers.manage`; idempotent create; must not invent a Register-only create path or repurpose F2 |
 | Ambiguous external / activation outcome | Recovery surface; never ordinary retry |
 
 ## Speculative wireframe remap rejected
