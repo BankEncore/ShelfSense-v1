@@ -1,8 +1,8 @@
 # Slice 7 — Overview
 
-Status: **7.0 keyboard contract accepted as documentation** (PR toward `register-workspace-consolidation`; **[#95](https://github.com/BankEncore/ShelfSense-v1/issues/95) docs gate** — does not implement or close [#93](https://github.com/BankEncore/ShelfSense-v1/issues/93)). Tender lifecycle inventory and 7A–7C implementation packets follow. Issues [#93](https://github.com/BankEncore/ShelfSense-v1/issues/93)–[#95](https://github.com/BankEncore/ShelfSense-v1/issues/95).
+Status: **7.0 keyboard contract accepted** on `register-workspace-consolidation` ([#95](https://github.com/BankEncore/ShelfSense-v1/issues/95) / PR [#112](https://github.com/BankEncore/ShelfSense-v1/pull/112)). **Tender lifecycle inventory complete** ([slice7-tender-lifecycle-inventory.md](slice7-tender-lifecycle-inventory.md)). Next: lock 7A–7C implementation packets. Issues [#93](https://github.com/BankEncore/ShelfSense-v1/issues/93)–[#95](https://github.com/BankEncore/ShelfSense-v1/issues/95).
 
-Authority: [plan.md](plan.md) (esp. locked decision 13), [routing-and-authority.md](routing-and-authority.md), [slice5d-tender-issuance-plan.md](slice5d-tender-issuance-plan.md), [textual-wireframes.md](textual-wireframes.md) P10 / O11–O17, [slice7-keyboard-contract.md](slice7-keyboard-contract.md). Historical thinking: [slice-7-draft.md](../../drafts/phase-10-followup-pos-transaction-workspace/slice-7-draft.md) (superseded for implementation; do not implement from the draft).
+Authority: [plan.md](plan.md) (esp. locked decision 13), [routing-and-authority.md](routing-and-authority.md), [slice5d-tender-issuance-plan.md](slice5d-tender-issuance-plan.md), [textual-wireframes.md](textual-wireframes.md) P10 / O11–O17, [slice7-keyboard-contract.md](slice7-keyboard-contract.md), [slice7-tender-lifecycle-inventory.md](slice7-tender-lifecycle-inventory.md). Historical thinking: [slice-7-draft.md](../../drafts/phase-10-followup-pos-transaction-workspace/slice-7-draft.md) (superseded for implementation; do not implement from the draft).
 
 ## Boundary statement
 
@@ -19,8 +19,8 @@ Decision 13 requires Slice 7’s **first merge** to establish the replacement ke
 ## Sequencing
 
 ```text
-7.0 Keyboard contract amendment (docs-only)   ← this step
-  → Tender lifecycle inventory
+7.0 Keyboard contract amendment (docs-only)   ✓
+  → Tender lifecycle inventory                 ✓
   → 7A Tender Review (ordinary tender correction)
   → 7B Stored value, issuance, and Quick Customer
   → 7C Dispatcher implementation and obsolete-handler deletion
@@ -28,8 +28,8 @@ Decision 13 requires Slice 7’s **first merge** to establish the replacement ke
 
 | Step | Artifact | Issue |
 |---|---|---|
-| 7.0 | [slice7-keyboard-contract.md](slice7-keyboard-contract.md) | [#95](https://github.com/BankEncore/ShelfSense-v1/issues/95) (contract); shared Slice 7 gate |
-| Inventory | `slice7-tender-lifecycle-inventory.md` (next) | gates 7A/7B lock |
+| 7.0 | [slice7-keyboard-contract.md](slice7-keyboard-contract.md) | [#95](https://github.com/BankEncore/ShelfSense-v1/issues/95) (contract) |
+| Inventory | [slice7-tender-lifecycle-inventory.md](slice7-tender-lifecycle-inventory.md) (**Complete**) | gates 7A/7B lock |
 | 7A | `slice7a-tender-review-plan.md` | [#93](https://github.com/BankEncore/ShelfSense-v1/issues/93) |
 | 7B | `slice7b-stored-value-issuance-plan.md` | [#94](https://github.com/BankEncore/ShelfSense-v1/issues/94) |
 | 7C | `slice7c-keyboard-dispatcher-plan.md` + implement contract | [#95](https://github.com/BankEncore/ShelfSense-v1/issues/95) |
@@ -55,14 +55,14 @@ Until 7C ships the dispatcher, **runtime** key behavior remains Phase 6.7 as sta
 |---|---|
 | Keyboard first merge | Docs-only 7.0 ([slice7-keyboard-contract.md](slice7-keyboard-contract.md)) |
 | Ordinary edit | Cash, check, and configured manual-reference tenders via atomic replace; externally authorized **card** = remove + re-authorize (no field edit of external auth) |
-| Working tender persistence | Inventory decides durable supersession vs audited destroy against current `pos_tenders`; no second ledger |
+| Working tender persistence | **Audited destroy + add** under one txn lock ([slice7-tender-lifecycle-inventory.md](slice7-tender-lifecycle-inventory.md)); no supersession schema |
 | Return to Sale | Atomic remove of all reversible working tenders, or change nothing; not Cancel Transaction |
 | Confirmations | Destructive / reversal yes; ordinary field edits no |
 | SV cap | Auto-apply with prominent feedback; requested amount is prompt / audit context only |
 | Completed tenders | Immutable; correction via post-void / refund only |
 | `+1`–`+9` sequences | **Omitted** from the accepted contract |
 | Customer Lookup | Semantic action `open-customer-lookup` only; **no 7.0 key**; **F2 remains Card Tender** |
-| Quick Customer | In scope for **7B.2** as one child of the shared Register Customer Lookup family — reachable from ordinary Sale customer lookup **and** from customer-required stored-value / refund flows. Inventory validates reuse of the existing customer domain only; must not invent a second create path or repurpose F2 |
+| Quick Customer | In scope for **7B.2**; extract `Customers::Create`; authorize Register with **`customers.create`** (add permission); admin create continues under `customers.manage`; idempotent create; must not invent a Register-only create path or repurpose F2 |
 | Ambiguous external / activation outcome | Recovery surface; never ordinary retry |
 
 ## Speculative wireframe remap rejected
