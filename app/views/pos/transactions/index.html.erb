@@ -1,77 +1,85 @@
-<% content_for :title, "Transactions" %>
+<% content_for :title, "Transactions & Receipts" %>
+<%= render layout: "pos/shell/frame" do %>
+  <%= render "pos/shell/feedback" %>
+  <div class="pos-register-shell__body">
+    <main class="pos-history">
+      <div class="pos-history__title-row pos-no-print">
+        <h1>Transactions &amp; Receipts</h1>
+        <%= link_to register_inquiry_return_label, register_inquiry_return_path, class: "btn btn--ghost" %>
+      </div>
 
-<main class="pos-history">
-  <%= render "pos/transactions/chrome" %>
-
-  <h1>Transactions</h1>
-
-  <%= form_with url: pos_transactions_path, method: :get, local: true, class: "pos-history__filters" do %>
-    <div class="form-field">
-      <%= label_tag :transaction_reference, "Receipt reference" %>
-      <%= text_field_tag :transaction_reference, @search.transaction_reference, autocomplete: "off" %>
-    </div>
-    <div class="form-field">
-      <%= label_tag :register_id, "Register" %>
-      <%= select_tag :register_id,
-            options_for_select([["Any register", ""]] + @registers.map { |register| [register.admin_label, register.id] }, @search.register_id) %>
-    </div>
-    <div class="form-field">
-      <%= label_tag :receipt_sequence, "Transaction #" %>
-      <%= text_field_tag :receipt_sequence, @search.receipt_sequence, inputmode: "numeric", autocomplete: "off" %>
-    </div>
-    <div class="form-field">
-      <%= label_tag :business_date, "Business date" %>
-      <%= date_field_tag :business_date, @search.business_date %>
-    </div>
-    <div class="form-field">
-      <%= submit_tag "Find", class: "btn" %>
-    </div>
-  <% end %>
-
-  <% if @search.records.empty? && !@search.filtered %>
-    <p class="muted">No completed transactions yet.</p>
-  <% elsif @search.records.empty? %>
-    <p class="muted">No matching transactions.</p>
-  <% else %>
-    <div class="table-scroll">
-    <table class="pos-history__table">
-      <thead>
-        <tr>
-          <th>Receipt</th>
-          <th>Business date</th>
-          <th>Completed</th>
-          <th>Register</th>
-          <th>Cashier</th>
-          <th class="numeric">Net</th>
-          <th>Tender</th>
-        </tr>
-      </thead>
-      <tbody>
-        <% @search.records.each do |transaction| %>
-          <tr>
-            <td><%= link_to transaction.transaction_reference, pos_transaction_path(transaction) %></td>
-            <td><%= transaction.business_date.iso8601 %></td>
-            <td><%= format_store_timestamp(transaction.completed_at, current_store) %></td>
-            <td><%= pos_padded_register_snapshot(transaction.register_number_snapshot) %></td>
-            <td><%= pos_cashier_name(transaction) %></td>
-            <td class="numeric"><%= format_signed_money_cents(transaction.signed_net_cents) %></td>
-            <td><%= pos_tender_summary(transaction) %></td>
-          </tr>
+      <%= form_with url: pos_transactions_path, method: :get, local: true, class: "pos-history__filters" do %>
+        <% inquiry_register_params.each do |key, value| %>
+          <%= hidden_field_tag key, value %>
         <% end %>
-      </tbody>
-    </table>
-    </div>
+        <div class="form-field">
+          <%= label_tag :transaction_reference, "Receipt reference" %>
+          <%= text_field_tag :transaction_reference, @search.transaction_reference, autocomplete: "off" %>
+        </div>
+        <div class="form-field">
+          <%= label_tag :filter_register_id, "Register" %>
+          <%= select_tag :filter_register_id,
+                options_for_select([["Any register", ""]] + @registers.map { |register| [register.admin_label, register.id] }, @search.register_id) %>
+        </div>
+        <div class="form-field">
+          <%= label_tag :receipt_sequence, "Transaction #" %>
+          <%= text_field_tag :receipt_sequence, @search.receipt_sequence, inputmode: "numeric", autocomplete: "off" %>
+        </div>
+        <div class="form-field">
+          <%= label_tag :business_date, "Business date" %>
+          <%= date_field_tag :business_date, @search.business_date %>
+        </div>
+        <div class="form-field">
+          <%= submit_tag "Find", class: "btn" %>
+        </div>
+      <% end %>
 
-    <div class="pagination">
-      <span class="muted">
-        Page <%= @search.page %> of <%= @search.total_pages %> · <%= @search.total_count %> total
-      </span>
-      <% if @search.page > 1 %>
-        <%= link_to "Previous", pos_transactions_path(pos_history_query_params(@search).merge(page: @search.page - 1)), class: "btn btn--ghost" %>
+      <% if @search.records.empty? && !@search.filtered %>
+        <p class="muted">No completed transactions yet.</p>
+      <% elsif @search.records.empty? %>
+        <p class="muted">No matching transactions.</p>
+      <% else %>
+        <div class="table-scroll">
+        <table class="pos-history__table">
+          <thead>
+            <tr>
+              <th>Receipt</th>
+              <th>Business date</th>
+              <th>Completed</th>
+              <th>Register</th>
+              <th>Cashier</th>
+              <th class="numeric">Net</th>
+              <th>Tender</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @search.records.each do |transaction| %>
+              <tr>
+                <td><%= link_to transaction.transaction_reference, pos_transaction_path(transaction, inquiry_register_params) %></td>
+                <td><%= transaction.business_date.iso8601 %></td>
+                <td><%= format_store_timestamp(transaction.completed_at, current_store) %></td>
+                <td><%= pos_padded_register_snapshot(transaction.register_number_snapshot) %></td>
+                <td><%= pos_cashier_name(transaction) %></td>
+                <td class="numeric"><%= format_signed_money_cents(transaction.signed_net_cents) %></td>
+                <td><%= pos_tender_summary(transaction) %></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+        </div>
+
+        <div class="pagination">
+          <span class="muted">
+            Page <%= @search.page %> of <%= @search.total_pages %> · <%= @search.total_count %> total
+          </span>
+          <% if @search.page > 1 %>
+            <%= link_to "Previous", pos_transactions_path(pos_history_query_params(@search).merge(page: @search.page - 1).merge(inquiry_register_params)), class: "btn btn--ghost" %>
+          <% end %>
+          <% if @search.page < @search.total_pages %>
+            <%= link_to "Next", pos_transactions_path(pos_history_query_params(@search).merge(page: @search.page + 1).merge(inquiry_register_params)), class: "btn btn--ghost" %>
+          <% end %>
+        </div>
       <% end %>
-      <% if @search.page < @search.total_pages %>
-        <%= link_to "Next", pos_transactions_path(pos_history_query_params(@search).merge(page: @search.page + 1)), class: "btn btn--ghost" %>
-      <% end %>
-    </div>
-  <% end %>
-</main>
+    </main>
+  </div>
+<% end %>

@@ -9,6 +9,7 @@ module Pos
     SWITCH_SUPPRESSED = (
       TILL_KEYS + %i[switch_register x_report close_session open_register open_session finalize_z]
     ).freeze
+    INQUIRY_SUPPRESSED = %i[open_register open_session finalize_z close_session].freeze
 
     def self.call(...)
       new(...).call
@@ -37,7 +38,10 @@ module Pos
     end
 
     def suppressed?(key)
-      @surface == :switch_register && SWITCH_SUPPRESSED.include?(key)
+      return true if @surface == :switch_register && SWITCH_SUPPRESSED.include?(key)
+      return true if @surface == :inquiry && INQUIRY_SUPPRESSED.include?(key)
+
+      false
     end
 
     def customer_service_keys

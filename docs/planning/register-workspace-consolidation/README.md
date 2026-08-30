@@ -27,6 +27,8 @@ This program **replaces** the current POS presentation. It does not run a parall
 | [slice5c-manual-verification.md](slice5c-manual-verification.md) | Slice 5C workstation evidence |
 | [slice5d-tender-issuance-plan.md](slice5d-tender-issuance-plan.md) | Locked Slice 5D tender selection / issuance Add contracts |
 | [slice5d-manual-verification.md](slice5d-manual-verification.md) | Slice 5D workstation evidence |
+| [slice6a-customer-service-plan.md](slice6a-customer-service-plan.md) | Locked Slice 6A shell context / S12–S16 contracts (6A.1–6A.3) |
+| [slice6a-manual-verification.md](slice6a-manual-verification.md) | Slice 6A workstation evidence |
 
 UX adoption: follow [ux-adoption-template.md](../ux-design-system/ux-adoption-template.md) in the slice that materially changes a screen. Printed receipts stay locked unless a slice explicitly owns print.
 

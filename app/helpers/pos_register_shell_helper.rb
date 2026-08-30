@@ -133,8 +133,21 @@ module PosRegisterShellHelper
   def register_menu_surface
     return :switch_register if @switch_register
     return :workspace if controller_path == "pos/workspaces"
+    return @shell_context.menu_surface if @shell_context.respond_to?(:menu_surface)
 
     :state_landing
+  end
+
+  def register_inquiry_return_path
+    return @shell_context.return_path if @shell_context.respond_to?(:return_path)
+
+    pos_resume_register_path
+  end
+
+  def register_inquiry_return_label
+    return @shell_context.return_label if @shell_context.respond_to?(:return_label)
+
+    "Close"
   end
 
   def register_menu_permissions
@@ -144,7 +157,7 @@ module PosRegisterShellHelper
   def register_menu_item(key)
     case key
     when :transactions
-      { key:, label: "Transactions & Receipts", href: pos_transactions_path }
+      { key:, label: "Transactions & Receipts", href: pos_transactions_path(inquiry_register_params) }
     when :gift_card_cash_out
       { key:, label: "Gift-card cash-out", href: new_pos_cash_out_path }
     when :paid_in

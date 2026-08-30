@@ -131,6 +131,24 @@ module Pos
       end
     end
 
+    def prepare_inquiry_shell!(surface:)
+      prepare_register_shell!
+      @shell_context = Pos::RegisterShellContext.call(
+        store: current_store,
+        actor: current_user,
+        state: @state,
+        surface: surface,
+        can_view_expected_cash: can_view_expected_cash?
+      )
+    end
+
+    def inquiry_register_params
+      return {} if @register.blank?
+
+      { register_id: @register.id }
+    end
+    helper_method :inquiry_register_params
+
     def cashier_open_sessions
       PosSession.open.where(store: current_store, cashier_user: current_user)
     end
