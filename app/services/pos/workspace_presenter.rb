@@ -342,10 +342,10 @@ module Pos
     def tender_affordances(tender)
       if tender.stored_value?
         return {
-          edit_available: false,
-          remove_available: false,
-          edit_unavailable_reason: "Stored-value tender correction becomes available after Slice 7B.",
-          remove_unavailable_reason: "Stored-value tender correction becomes available after Slice 7B."
+          edit_available: true,
+          remove_available: true,
+          edit_unavailable_reason: nil,
+          remove_unavailable_reason: nil
         }
       end
 

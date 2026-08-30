@@ -38,7 +38,8 @@ class PosStoredValueCompletionTest < ActiveSupport::TestCase
       expected_lock_version: transaction.lock_version,
       issuance_type: "activation",
       amount_cents: 2500,
-      gift_card_program: @program
+      gift_card_program: @program,
+      operation_id: SecureRandom.uuid_v7
     )
     transaction.reload
     assert_equal 2500, transaction.stored_value_issuance_cents
@@ -82,7 +83,8 @@ class PosStoredValueCompletionTest < ActiveSupport::TestCase
       expected_lock_version: transaction.lock_version,
       issuance_type: "activation",
       amount_cents: 1200,
-      gift_card_program: @program
+      gift_card_program: @program,
+      operation_id: SecureRandom.uuid_v7
     )
     Pos::TenderCash.call(
       transaction: transaction.reload,
@@ -122,7 +124,8 @@ class PosStoredValueCompletionTest < ActiveSupport::TestCase
         expected_lock_version: transaction.lock_version,
         issuance_type: "activation",
         amount_cents: 1000,
-        gift_card_program: @program
+        gift_card_program: @program,
+        operation_id: SecureRandom.uuid_v7
       )
       Pos::AddStoredValueTender.call(
         transaction: transaction.reload,
@@ -130,7 +133,8 @@ class PosStoredValueCompletionTest < ActiveSupport::TestCase
         expected_lock_version: transaction.lock_version,
         tender_type: @gift_card_type,
         amount_cents: 1000,
-        card_number: card.number
+        card_number: card.number,
+        operation_id: SecureRandom.uuid_v7
       )
     end
     assert_match(/cannot redeem stored value on a ticket with gift-card issuance/, error.message)
@@ -147,7 +151,8 @@ class PosStoredValueCompletionTest < ActiveSupport::TestCase
       expected_lock_version: transaction.lock_version,
       tender_type: @gift_card_type,
       amount_cents: transaction.signed_net_cents,
-      card_number: card.number
+      card_number: card.number,
+      operation_id: SecureRandom.uuid_v7
     )
     result = complete_current!(transaction.reload)
     detail = result.transaction.pos_tenders.sole.stored_value_tender_detail
@@ -176,7 +181,8 @@ class PosStoredValueCompletionTest < ActiveSupport::TestCase
         actor: @actor,
         expected_lock_version: transaction.lock_version,
         tender_type: @store_credit_type,
-        amount_cents: 1000
+        amount_cents: 1000,
+        operation_id: SecureRandom.uuid_v7
       )
     end
     assert_match(/customer is required/, error.message)
@@ -192,7 +198,8 @@ class PosStoredValueCompletionTest < ActiveSupport::TestCase
       actor: @actor,
       expected_lock_version: transaction.lock_version,
       tender_type: @store_credit_type,
-      amount_cents: transaction.signed_net_cents
+      amount_cents: transaction.signed_net_cents,
+      operation_id: SecureRandom.uuid_v7
     )
     result = complete_current!(transaction.reload)
     assert_equal "redeem", result.transaction.pos_tenders.sole.stored_value_tender_detail.stored_value_operation.operation_type
@@ -220,7 +227,8 @@ class PosStoredValueCompletionTest < ActiveSupport::TestCase
         expected_lock_version: refund_txn.lock_version,
         tender_type: @trade_credit_type,
         amount_cents: -refund_txn.signed_net_cents,
-        destination_mode: "existing_account"
+        destination_mode: "existing_account",
+        operation_id: SecureRandom.uuid_v7
       )
     end
     assert_match(/original account|trade credit/, error.message)
@@ -231,7 +239,8 @@ class PosStoredValueCompletionTest < ActiveSupport::TestCase
       expected_lock_version: refund_txn.lock_version,
       tender_type: @store_credit_type,
       amount_cents: -refund_txn.signed_net_cents,
-      destination_mode: "customer_store_credit"
+      destination_mode: "customer_store_credit",
+      operation_id: SecureRandom.uuid_v7
     )
     refund_result = complete_current!(refund_txn.reload, expected_signed_net_cents: refund_txn.signed_net_cents)
     assert_equal "refund", refund_result.transaction.pos_tenders.sole.stored_value_tender_detail.stored_value_operation.operation_type
@@ -264,7 +273,8 @@ class PosStoredValueCompletionTest < ActiveSupport::TestCase
       actor: @actor,
       expected_lock_version: transaction.lock_version,
       tender_type: @trade_credit_type,
-      amount_cents: transaction.signed_net_cents
+      amount_cents: transaction.signed_net_cents,
+      operation_id: SecureRandom.uuid_v7
     )
     sale = complete_current!(transaction.reload).transaction
     assert_equal opening_balance - sale.signed_net_cents, account.reload.balance_cents
@@ -290,7 +300,8 @@ class PosStoredValueCompletionTest < ActiveSupport::TestCase
       expected_lock_version: refund_txn.lock_version,
       tender_type: @trade_credit_type,
       amount_cents: -refund_txn.signed_net_cents,
-      destination_mode: "existing_account"
+      destination_mode: "existing_account",
+      operation_id: SecureRandom.uuid_v7
     )
     refund = complete_current!(refund_txn.reload, expected_signed_net_cents: refund_txn.signed_net_cents).transaction
     assert_equal "refund", refund.pos_tenders.sole.stored_value_tender_detail.stored_value_operation.operation_type
@@ -314,7 +325,8 @@ class PosStoredValueCompletionTest < ActiveSupport::TestCase
       expected_lock_version: transaction.lock_version,
       issuance_type: "activation",
       amount_cents: 2500,
-      gift_card_program: @program
+      gift_card_program: @program,
+      operation_id: SecureRandom.uuid_v7
     )
     Pos::TenderCash.call(
       transaction: transaction.reload,
@@ -343,7 +355,8 @@ class PosStoredValueCompletionTest < ActiveSupport::TestCase
       expected_lock_version: activation.lock_version,
       issuance_type: "activation",
       amount_cents: 2500,
-      gift_card_program: @program
+      gift_card_program: @program,
+      operation_id: SecureRandom.uuid_v7
     )
     Pos::TenderCash.call(
       transaction: activation.reload,
@@ -360,7 +373,8 @@ class PosStoredValueCompletionTest < ActiveSupport::TestCase
       expected_lock_version: spend.lock_version,
       tender_type: @gift_card_type,
       amount_cents: spend.signed_net_cents,
-      card_number: funded.number
+      card_number: funded.number,
+      operation_id: SecureRandom.uuid_v7
     )
     complete_current!(spend.reload)
 
@@ -385,7 +399,8 @@ class PosStoredValueCompletionTest < ActiveSupport::TestCase
       expected_lock_version: transaction.lock_version,
       issuance_type: "activation",
       amount_cents: 2500,
-      gift_card_program: @program
+      gift_card_program: @program,
+      operation_id: SecureRandom.uuid_v7
     )
     Pos::TenderCash.call(
       transaction: transaction.reload,
@@ -424,7 +439,8 @@ class PosStoredValueCompletionTest < ActiveSupport::TestCase
         tender_type: @gift_card_type,
         amount_cents: -refund_txn.signed_net_cents,
         destination_mode: "new_gift_card",
-        gift_card_program: @program
+        gift_card_program: @program,
+        operation_id: SecureRandom.uuid_v7
       )
     end
     assert_match(/gift-card-funded/, error.message)
@@ -436,7 +452,8 @@ class PosStoredValueCompletionTest < ActiveSupport::TestCase
       tender_type: @gift_card_type,
       amount_cents: 100,
       destination_mode: "new_gift_card",
-      gift_card_program: @program
+      gift_card_program: @program,
+      operation_id: SecureRandom.uuid_v7
     )
     Pos::AddRefundTender.call(
       transaction: refund_txn.reload,
@@ -475,7 +492,8 @@ class PosStoredValueCompletionTest < ActiveSupport::TestCase
       actor: @actor,
       expected_lock_version: transaction.lock_version,
       tender_type: @trade_credit_type,
-      amount_cents: 100
+      amount_cents: 100,
+      operation_id: SecureRandom.uuid_v7
     )
     Pos::TenderCash.call(
       transaction: transaction.reload,
@@ -499,7 +517,8 @@ class PosStoredValueCompletionTest < ActiveSupport::TestCase
         expected_lock_version: refund_txn.lock_version,
         tender_type: @trade_credit_type,
         amount_cents: -refund_txn.signed_net_cents,
-        destination_mode: "existing_account"
+        destination_mode: "existing_account",
+        operation_id: SecureRandom.uuid_v7
       )
     end
     assert_match(/trade-credit-funded/, error.message)
@@ -535,7 +554,8 @@ class PosStoredValueCompletionTest < ActiveSupport::TestCase
         tender_type: @gift_card_type,
         amount_cents: 100,
         destination_mode: "new_gift_card",
-        gift_card_program: @program
+        gift_card_program: @program,
+        operation_id: SecureRandom.uuid_v7
       )
     end
     assert_match(/maximum balance/, error.message)
@@ -568,7 +588,8 @@ class PosStoredValueCompletionTest < ActiveSupport::TestCase
       expected_lock_version: transaction.lock_version,
       tender_type: @gift_card_type,
       amount_cents: gift_cents,
-      card_number: card.number
+      card_number: card.number,
+      operation_id: SecureRandom.uuid_v7
     )
     Pos::TenderCash.call(
       transaction: transaction.reload,
@@ -600,7 +621,8 @@ class PosStoredValueCompletionTest < ActiveSupport::TestCase
       expected_lock_version: transaction.lock_version,
       issuance_type: "reload",
       amount_cents: amount_cents,
-      card_number: card.number
+      card_number: card.number,
+      operation_id: SecureRandom.uuid_v7
     )
     Pos::TenderCash.call(
       transaction: transaction.reload,

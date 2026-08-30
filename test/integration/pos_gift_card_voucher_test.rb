@@ -40,7 +40,8 @@ class PosGiftCardVoucherTest < ActionDispatch::IntegrationTest
       lock_version: transaction.lock_version,
       issuance_type: "activation",
       gift_card_program_id: @program.id,
-      issuance_amount: "10.00"
+      issuance_amount: "10.00",
+      operation_id: SecureRandom.uuid_v7
     }
     post pos_register_tender_path, params: { tender_amount: "10.00", lock_version: transaction.reload.lock_version }
     operation_id = css_select("input[name='completion_operation_id']").first["value"]

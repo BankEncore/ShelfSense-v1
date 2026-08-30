@@ -44,6 +44,16 @@ export default class extends Controller {
     "issuanceProgramInput",
     "issuanceAmountInput",
     "issuanceCardInput",
+    "issuanceOperationInput",
+    "issuanceConfirmClearInput",
+    "removeIssuanceForm",
+    "removeIssuanceIdInput",
+    "removeIssuanceOperationInput",
+    "removeIssuanceConfirmClearInput",
+    "clearTendersOverlay",
+    "clearTendersConsequence",
+    "tenderOperationInput",
+    "editTenderStoredValueNote",
     "cashOutForm",
     "cashOutCardInput",
     "destinationModeInput",
@@ -619,6 +629,7 @@ export default class extends Controller {
         this.destinationModeInputTarget.value = type?.category === "stored_value" ? "existing_account" : ""
       }
     }
+    if (this.hasTenderOperationInputTarget) this.tenderOperationInputTarget.value = this.uuidV7()
     this.beginFlight()
     this.tenderFormTarget.requestSubmit()
   }
@@ -2498,8 +2509,86 @@ export default class extends Controller {
     if (this.hasIssuanceProgramInputTarget) this.issuanceProgramInputTarget.value = programId
     if (this.hasIssuanceAmountInputTarget) this.issuanceAmountInputTarget.value = amount
     if (this.hasIssuanceCardInputTarget) this.issuanceCardInputTarget.value = needsCard ? cardNumber : ""
+    if (this.hasIssuanceOperationInputTarget) this.issuanceOperationInputTarget.value = this.uuidV7()
+    if (this.hasIssuanceConfirmClearInputTarget) this.issuanceConfirmClearInputTarget.value = ""
+    if (this.tendersApplied()) {
+      this.requestClearTendersConfirmation("add")
+      return
+    }
     this.beginFlight()
     this.issuanceFormTarget.requestSubmit()
+  }
+
+  requestRemoveIssuance(event) {
+    if (event) event.preventDefault()
+    if (this.inFlight || !this.hasRemoveIssuanceFormTarget) return
+    const issuanceId = event?.currentTarget?.dataset?.issuanceId
+    if (!issuanceId) return
+    if (this.hasRemoveIssuanceIdInputTarget) this.removeIssuanceIdInputTarget.value = issuanceId
+    if (this.hasRemoveIssuanceOperationInputTarget) this.removeIssuanceOperationInputTarget.value = this.uuidV7()
+    if (this.hasRemoveIssuanceConfirmClearInputTarget) this.removeIssuanceConfirmClearInputTarget.value = ""
+    if (this.tendersApplied()) {
+      this.requestClearTendersConfirmation("remove")
+      return
+    }
+    this.beginFlight()
+    this.removeIssuanceFormTarget.requestSubmit()
+  }
+
+  tendersApplied() {
+    return Boolean(this.element.querySelector(".pos-tenders__item"))
+  }
+
+  requestClearTendersConfirmation(pendingIssuanceAction) {
+    this.pendingIssuanceAction = pendingIssuanceAction
+    if (!this.hasClearTendersOverlayTarget) return
+    if (this.hasClearTendersConsequenceTarget) {
+      this.clearTendersConsequenceTarget.textContent = pendingIssuanceAction === "remove"
+        ? "Removing this gift card changes the amount due, so every applied tender must be cleared and the transaction tendered again."
+        : "Adding this gift card changes the amount due, so every applied tender must be cleared and the transaction tendered again."
+    }
+    const confirm = this.clearTendersOverlayTarget.querySelector("[data-action*='confirmClearTenders']")
+    this.showOverlay(this.clearTendersOverlayTarget, confirm)
+  }
+
+  closeClearTendersOverlay(event) {
+    if (event) event.preventDefault()
+    this.pendingIssuanceAction = null
+    this.hideOverlay(this.hasClearTendersOverlayTarget && this.clearTendersOverlayTarget)
+  }
+
+  confirmClearTenders(event) {
+    if (event) event.preventDefault()
+    if (this.inFlight) return
+    const pending = this.pendingIssuanceAction
+    this.pendingIssuanceAction = null
+    if (pending === "remove" && this.hasRemoveIssuanceFormTarget) {
+      if (this.hasRemoveIssuanceConfirmClearInputTarget) this.removeIssuanceConfirmClearInputTarget.value = "true"
+      this.beginFlight()
+      this.removeIssuanceFormTarget.requestSubmit()
+      return
+    }
+    if (pending === "add" && this.hasIssuanceFormTarget) {
+      if (this.hasIssuanceConfirmClearInputTarget) this.issuanceConfirmClearInputTarget.value = "true"
+      this.beginFlight()
+      this.issuanceFormTarget.requestSubmit()
+    }
+  }
+
+  onClearTendersOverlayKeydown(event, key) {
+    if (key === "Escape") {
+      event.preventDefault()
+      this.closeClearTendersOverlay()
+      return
+    }
+    if (key === "F9" || key === "F10") {
+      event.preventDefault()
+      return
+    }
+    if (key !== "Enter") return
+    if (this.isActionableControl(event.target)) return
+    event.preventDefault()
+    this.confirmClearTenders()
   }
 
   showOverlayLocalError(overlay, message) {
@@ -2627,12 +2716,14 @@ export default class extends Controller {
     this.syncSelectedTender(row.dataset.tenderId)
     if (this.hasEditTenderDetailTarget) this.editTenderDetailTarget.textContent = row.dataset.inspectDetail || ""
     if (this.hasEditTenderAmountTarget) this.editTenderAmountTarget.value = this.formatCents(row.dataset.amountCents)
+    const storedValue = row.dataset.storedValue === "true"
     const cashPayment = row.dataset.behavioralCategory === "cash" && row.dataset.direction === "payment"
     if (this.hasEditTenderPresentedWrapTarget) this.editTenderPresentedWrapTarget.hidden = !cashPayment
     if (this.hasEditTenderPresentedTarget) {
       this.editTenderPresentedTarget.value = cashPayment ? this.formatCents(row.dataset.presentedCents || row.dataset.amountCents) : ""
     }
-    const capturesReference = row.dataset.behavioralCategory !== "cash"
+    if (this.hasEditTenderStoredValueNoteTarget) this.editTenderStoredValueNoteTarget.hidden = !storedValue
+    const capturesReference = !storedValue && row.dataset.behavioralCategory !== "cash"
     if (this.hasEditTenderReferenceWrapTarget) this.editTenderReferenceWrapTarget.hidden = !capturesReference
     if (this.hasEditTenderReferenceTarget) this.editTenderReferenceTarget.value = row.dataset.externalReference || ""
     this.showOverlay(this.editTenderOverlayTarget, this.editTenderAmountTarget)
@@ -3594,6 +3685,10 @@ export default class extends Controller {
     }
     if (this.hasReturnToSaleOverlayTarget && overlay === this.returnToSaleOverlayTarget) {
       this.onReturnToSaleOverlayKeydown(event, key)
+      return
+    }
+    if (this.hasClearTendersOverlayTarget && overlay === this.clearTendersOverlayTarget) {
+      this.onClearTendersOverlayKeydown(event, key)
       return
     }
     if (this.hasProductOverlayTarget && overlay === this.productOverlayTarget) {

@@ -107,7 +107,8 @@ class PosAttachCustomerTest < ActiveSupport::TestCase
       actor: @actor,
       expected_lock_version: transaction.lock_version,
       tender_type: TenderType.find_by!(code: "store_credit"),
-      amount_cents: [ transaction.signed_net_cents, account.reload.balance_cents ].min
+      amount_cents: [ transaction.signed_net_cents, account.reload.balance_cents ].min,
+      operation_id: SecureRandom.uuid_v7
     )
     assert Pos::CustomerDependency.dependent_working_stored_value?(transaction.reload)
 
@@ -156,7 +157,8 @@ class PosAttachCustomerTest < ActiveSupport::TestCase
       expected_lock_version: transaction.lock_version,
       issuance_type: "activation",
       amount_cents: 1_000,
-      gift_card_program: GiftCardProgram.find_by!(code: "generated")
+      gift_card_program: GiftCardProgram.find_by!(code: "generated"),
+      operation_id: SecureRandom.uuid_v7
     )
     refute Pos::CustomerDependency.dependent_working_stored_value?(transaction.reload)
 

@@ -5,6 +5,7 @@
       <h2 id="pos-edit-tender-title">Edit tender</h2>
       <p data-register-workspace-target="editTenderDetail"></p>
       <p id="pos-edit-tender-feedback" class="pos-overlay__error" data-overlay-error role="alert"></p>
+      <p data-register-workspace-target="editTenderStoredValueNote" hidden>Stored value applies up to the available balance. If the balance is lower, the applied amount is reduced and the remainder stays due. Nothing is posted until the transaction completes.</p>
       <label for="pos-edit-tender-amount">Applied amount</label>
       <input id="pos-edit-tender-amount" class="pos-command__field" inputmode="decimal"
              data-register-workspace-target="editTenderAmount">
@@ -34,7 +35,7 @@
       <h2 id="pos-remove-tender-title">Remove this tender?</h2>
       <p data-register-workspace-target="removeTenderDetail"></p>
       <p id="pos-remove-tender-feedback" class="pos-overlay__error" data-overlay-error role="alert"></p>
-      <p>The ordinary working tender will be removed. No stored-value ledger entry is affected.</p>
+      <p>The working tender will be removed. Nothing has been posted yet, so removing a stored-value tender does not restore ledger value to the account or card.</p>
       <div class="pos-overlay__actions">
         <%= action_button "Keep Tender", style: :outline, intent: :neutral, size: :standard,
               data: { action: "register-workspace#closeRemoveTenderOverlay" } %>
@@ -50,15 +51,14 @@
     <div class="pos-overlay__panel">
       <h2 id="pos-return-to-sale-title">Return to Sale?</h2>
       <p id="pos-return-to-sale-feedback" class="pos-overlay__error" data-overlay-error role="alert"></p>
-      <p>All applied ordinary tenders will be cleared. Merchandise can then be changed, and the transaction must be tendered again.</p>
+      <p>All applied tenders will be cleared. Merchandise can then be changed, and the transaction must be tendered again.</p>
       <% if @tenders&.any?(&:stored_value?) %>
-        <p class="pos-overlay__error">Return to Sale with stored-value tenders becomes available after Slice 7B.</p>
+        <p>Nothing has been posted yet, so clearing a stored-value tender does not restore ledger value to the account or card.</p>
       <% end %>
       <div class="pos-overlay__actions">
         <%= action_button "Keep Tenders", style: :outline, intent: :neutral, size: :standard,
               data: { action: "register-workspace#closeReturnToSaleOverlay" } %>
         <%= action_button "Return to Sale", style: :solid, intent: :warning, size: :standard,
-              disabled: @tenders&.any?(&:stored_value?),
               data: { action: "register-workspace#confirmReturnToSale" } %>
       </div>
     </div>
@@ -285,6 +285,26 @@
               data: { action: "register-workspace#closeIssuanceOverlay", register_workspace_target: "issuanceCancel" } %>
         <%= action_button "Add Gift Card", style: :solid, intent: :brand, size: :standard,
               data: { action: "register-workspace#submitIssuance", register_workspace_target: "issuanceApply" } %>
+      </div>
+    </div>
+  </div>
+
+  <div class="pos-overlay" data-register-blocking-overlay
+       id="pos_clear_tenders_overlay"
+       hidden
+       data-register-workspace-target="clearTendersOverlay"
+       role="dialog"
+       aria-modal="true"
+       aria-labelledby="pos-clear-tenders-title">
+    <div class="pos-overlay__panel">
+      <h2 id="pos-clear-tenders-title">Clear applied tenders?</h2>
+      <p data-register-workspace-target="clearTendersConsequence">Changing gift cards changes the amount due, so every applied tender must be cleared and the transaction tendered again.</p>
+      <p>Nothing has been posted yet, so clearing a stored-value tender does not restore ledger value to the account or card.</p>
+      <div class="pos-overlay__actions">
+        <%= action_button "Keep Tenders", style: :outline, intent: :neutral, size: :standard,
+              data: { action: "register-workspace#closeClearTendersOverlay" } %>
+        <%= action_button "Clear Tenders and Continue", style: :solid, intent: :warning, size: :standard,
+              data: { action: "register-workspace#confirmClearTenders" } %>
       </div>
     </div>
   </div>

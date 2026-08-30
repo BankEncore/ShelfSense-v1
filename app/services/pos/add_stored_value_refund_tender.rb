@@ -2,6 +2,15 @@
 
 module Pos
   class AddStoredValueRefundTender
+    Result = Data.define(
+      :transaction,
+      :tender,
+      :operation,
+      :amount_cents,
+      :remaining_refund_cents,
+      :replayed
+    )
+
     def self.call(**attrs)
       new(**attrs).call
     end
@@ -13,8 +22,10 @@ module Pos
       tender_type:,
       amount_cents:,
       destination_mode:,
+      operation_id:,
       card_number: nil,
-      gift_card_program: nil
+      gift_card_program: nil,
+      existing_detail: nil
     )
       @transaction = transaction
       @actor = actor
@@ -22,51 +33,170 @@ module Pos
       @tender_type = tender_type
       @amount_cents = amount_cents.to_i
       @destination_mode = destination_mode.to_s
+      @operation_id = operation_id
       @card_number = card_number.to_s.strip.presence
       @gift_card_program = gift_card_program
+      @existing_detail = existing_detail
     end
 
     def call
+      lease = nil
       Pos::Support.authorize!(@actor, @transaction.store)
       Pos::Support.require_active_context!(@transaction.store, @transaction.register)
       Pos::Support.require_transaction_cashier!(@actor, @transaction)
+      validate_request!
+
+      lease = Pos::OperationLease.begin!(
+        register_id: @transaction.register_id,
+        operation_id: @operation_id,
+        command_payload: command_payload,
+        store_id: @transaction.store_id,
+        pos_transaction_id: @transaction.id,
+        command_type: PosOperation::ADD_WORKING_STORED_VALUE_REFUND_TENDER_COMMAND_TYPE
+      )
+      return replay_result(lease.operation) if lease.replayed
+
+      result = nil
+      PosTransaction.transaction do
+        operation = PosOperation.lock.find(lease.operation.id)
+        transaction = Pos::Support.lock_working_transaction!(@transaction, @expected_lock_version)
+        detail_attrs = plan!(transaction)
+        tender = persist_tender!(transaction, detail_attrs, tender_number: Pos::Support.next_tender_number(transaction))
+        Pos::Support.touch_working_transaction!(transaction)
+        record_audit!(transaction, tender, detail_attrs)
+        Pos::CompleteWorkingOperation.call(
+          operation: operation,
+          fact_type: PosOperation::ADD_WORKING_STORED_VALUE_REFUND_TENDER_FACT_TYPE,
+          facts: facts_for(tender, detail_attrs)
+        )
+        result = Result.new(
+          transaction: transaction,
+          tender: tender,
+          operation: operation,
+          amount_cents: tender.amount_cents,
+          remaining_refund_cents: Pos::Support.remaining_refund_cents(transaction.reload),
+          replayed: false
+        )
+      end
+      result
+    rescue Pos::PayloadMismatch, Pos::OperationLease::Error
+      raise
+    rescue GiftCards::Error => e
+      Pos::OperationLease.fail!(lease.operation) if lease&.operation&.reload&.status == "in_flight"
+      raise Pos::Error, e.message
+    rescue StandardError
+      Pos::OperationLease.fail!(lease.operation) if lease&.operation&.reload&.status == "in_flight"
+      raise
+    end
+
+    # Validates the full proposed refund destination and capacity against the
+    # locked transaction, returning the detail attributes to persist.
+    def plan!(transaction, except: nil)
+      Pos::Support.require_commercial_content!(transaction)
+      raise Pos::Error, "transaction does not require a refund" unless Pos::Support.settlement_direction(transaction) == :refund
+      remaining = Pos::Support.remaining_refund_cents(transaction, except: except)
+      raise Pos::Error, "no remaining refund amount" if remaining <= 0
+      raise Pos::Error, "amount is greater than remaining refund" if @amount_cents > remaining
+
+      detail_attrs = build_detail_attrs!(transaction)
+      assert_refund_capacity!(transaction, detail_attrs, except: except)
+      detail_attrs
+    end
+
+    def persist_tender!(transaction, detail_attrs, tender_number:)
+      tender = transaction.pos_tenders.new(
+        direction: "refund",
+        tender_number: tender_number,
+        amount_cents: @amount_cents,
+        amount_presented_cents: nil,
+        change_cents: nil
+      )
+      Pos::Support.snapshot_tender_identity!(tender, @tender_type)
+      tender.save!
+      tender.create_stored_value_tender_detail!(detail_attrs)
+      tender
+    end
+
+    private
+
+    def validate_request!
       raise Pos::Error, "tender is not available" unless @tender_type.active?
       raise Pos::Error, "tender is not stored value" unless @tender_type.stored_value?
       raise Pos::Error, "amount must be positive" unless @amount_cents.positive?
       unless PosStoredValueTenderDetail::DESTINATION_MODES.include?(@destination_mode)
         raise Pos::Error, "refund destination is invalid"
       end
-
-      PosTransaction.transaction do
-        transaction = Pos::Support.lock_working_transaction!(@transaction, @expected_lock_version)
-        Pos::Support.require_commercial_content!(transaction)
-        raise Pos::Error, "transaction does not require a refund" unless Pos::Support.settlement_direction(transaction) == :refund
-        remaining = Pos::Support.remaining_refund_cents(transaction)
-        raise Pos::Error, "no remaining refund amount" if remaining <= 0
-        raise Pos::Error, "amount is greater than remaining refund" if @amount_cents > remaining
-
-        detail_attrs = build_detail_attrs!(transaction)
-        assert_refund_capacity!(transaction, detail_attrs)
-        tender = transaction.pos_tenders.new(
-          direction: "refund",
-          tender_number: Pos::Support.next_tender_number(transaction),
-          amount_cents: @amount_cents,
-          amount_presented_cents: nil,
-          change_cents: nil
-        )
-        Pos::Support.snapshot_tender_identity!(tender, @tender_type)
-        tender.save!
-        tender.create_stored_value_tender_detail!(detail_attrs)
-        Pos::Support.touch_working_transaction!(transaction)
-        tender
-      end
-    rescue GiftCards::Error => e
-      raise Pos::Error, e.message
     end
 
-    private
+    # Never carries a full card number; only a keyed digest and last four.
+    def command_payload
+      {
+        transaction_id: @transaction.id,
+        expected_lock_version: @expected_lock_version.to_i,
+        tender_type_id: @tender_type.id,
+        tender_type_code: @tender_type.code,
+        amount_cents: @amount_cents,
+        destination_mode: @destination_mode,
+        customer_id: @transaction.customer_id,
+        gift_card_program_id: @gift_card_program&.id,
+        card_number_digest: card_number_digest,
+        card_last_four: card_last_four
+      }
+    end
+
+    def normalized_card_number
+      return if @card_number.blank?
+
+      @normalized_card_number ||= GiftCards::Number.normalize(@card_number)
+    end
+
+    def card_number_digest
+      return if normalized_card_number.blank?
+
+      GiftCards::Number.digest(normalized_card_number)
+    end
+
+    def card_last_four
+      GiftCards::Number.last_four(normalized_card_number)
+    end
+
+    def facts_for(tender, detail_attrs)
+      account = detail_attrs[:stored_value_account]
+      {
+        tender_id: tender.id,
+        amount_cents: tender.amount_cents,
+        destination_mode: detail_attrs[:destination_mode],
+        stored_value_account_id: account&.id,
+        gift_card_program_id: detail_attrs[:gift_card_program]&.id,
+        masked_card_snapshot: detail_attrs[:masked_card_snapshot]
+      }.compact
+    end
+
+    def record_audit!(transaction, tender, detail_attrs)
+      Audit::Recorder.record!(
+        action: "pos.working_stored_value_refund_tender.added",
+        outcome: "succeeded",
+        actor_user: @actor,
+        actor_label: @actor.display_name,
+        store: transaction.store,
+        register: transaction.register,
+        subject: tender,
+        after_values: tender.slice(
+          "id", "tender_number", "tender_type", "tender_name", "behavioral_category",
+          "direction", "amount_cents"
+        ),
+        metadata: {
+          destination_mode: detail_attrs[:destination_mode],
+          stored_value_account_id: detail_attrs[:stored_value_account]&.id,
+          gift_card_program_id: detail_attrs[:gift_card_program]&.id,
+          masked_card_snapshot: detail_attrs[:masked_card_snapshot]
+        }.compact
+      )
+    end
 
     def build_detail_attrs!(transaction)
+      return cloned_detail_attrs! if @existing_detail
+
       case @destination_mode
       when "existing_account"
         existing_account_attrs!(transaction)
@@ -75,6 +205,30 @@ module Pos
       when "new_gift_card"
         new_gift_card_attrs!(transaction)
       end
+    end
+
+    # Replacement keeps the original destination. The pending card number stays
+    # in memory and never enters payloads, facts, or audit metadata.
+    def cloned_detail_attrs!
+      attrs = {
+        destination_mode: @existing_detail.destination_mode,
+        stored_value_account: @existing_detail.stored_value_account,
+        gift_card: @existing_detail.gift_card,
+        gift_card_program: @existing_detail.gift_card_program,
+        masked_card_snapshot: @existing_detail.masked_card_snapshot
+      }.compact
+      attrs[:pending_card_number] = @existing_detail.pending_card_number if @existing_detail.pending_card_number.present?
+      if attrs[:destination_mode] == "new_gift_card"
+        program = attrs[:gift_card_program]
+        raise Pos::Error, "gift-card program is not active" unless program&.active?
+        if program.maximum_balance_cents.present? && @amount_cents > program.maximum_balance_cents
+          raise Pos::Error, "credit would exceed the program maximum balance"
+        end
+      end
+      if attrs[:destination_mode] == "existing_account" && attrs[:gift_card].present?
+        assert_gift_card_credit_within_maximum!(attrs[:gift_card])
+      end
+      attrs
     end
 
     def existing_account_attrs!(transaction)
@@ -151,18 +305,19 @@ module Pos
       attrs
     end
 
-    def assert_refund_capacity!(transaction, detail_attrs)
+    def assert_refund_capacity!(transaction, detail_attrs, except: nil)
       remaining = Pos::StoredValueRefundCapacity.remaining_cents(
         transaction: transaction,
         tender_type: @tender_type,
-        destination_mode: @destination_mode,
-        account_id: detail_attrs[:stored_value_account]&.id || detail_attrs[:stored_value_account_id]
+        destination_mode: detail_attrs[:destination_mode],
+        account_id: detail_attrs[:stored_value_account]&.id || detail_attrs[:stored_value_account_id],
+        except: except
       )
       return if remaining.nil?
 
       kind = @tender_type.stored_value_account_type == "trade_credit" ? "trade-credit-funded" : "gift-card-funded"
       if remaining <= 0
-        raise Pos::Error, "#{@destination_mode == 'new_gift_card' ? 'new gift card' : @tender_type.name.downcase} cannot receive this refund"
+        raise Pos::Error, "#{detail_attrs[:destination_mode] == 'new_gift_card' ? 'new gift card' : @tender_type.name.downcase} cannot receive this refund"
       end
       raise Pos::Error, "refund exceeds remaining #{kind} amount" if @amount_cents > remaining
     end
@@ -197,6 +352,19 @@ module Pos
                .includes(:stored_value_tender_detail)
                .filter_map { |tender| tender.stored_value_tender_detail&.stored_value_account_id }
                .uniq
+    end
+
+    def replay_result(operation)
+      facts = operation.envelope.fetch("facts", {})
+      transaction = operation.pos_transaction
+      Result.new(
+        transaction: transaction,
+        tender: PosTender.find_by(id: facts["tender_id"]),
+        operation: operation,
+        amount_cents: facts["amount_cents"],
+        remaining_refund_cents: transaction && Pos::Support.remaining_refund_cents(transaction),
+        replayed: true
+      )
     end
   end
 end

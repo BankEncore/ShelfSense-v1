@@ -309,6 +309,7 @@ module Pos
               tender_type: type,
               amount_cents: amount,
               destination_mode: stored_value_destination_mode(type),
+              operation_id: params.require(:operation_id),
               card_number: params[:card_number],
               gift_card_program: find_optional_gift_card_program
             )
@@ -331,14 +332,16 @@ module Pos
               amount_presented_cents: amount
             )
           elsif type.stored_value?
-            Pos::AddStoredValueTender.call(
+            result = Pos::AddStoredValueTender.call(
               transaction: @transaction,
               actor: current_user,
               expected_lock_version: expected_lock_version,
               tender_type: type,
               amount_cents: amount,
+              operation_id: params.require(:operation_id),
               card_number: params[:card_number]
             )
+            @feedback = stored_value_cap_feedback(result) if result.capped
           else
             Pos::AddTender.call(
               transaction: @transaction,
@@ -369,8 +372,10 @@ module Pos
           expected_lock_version: expected_lock_version,
           issuance_type: params.require(:issuance_type),
           amount_cents: amount,
+          operation_id: params.require(:operation_id),
           gift_card_program: find_optional_gift_card_program,
-          card_number: params[:card_number]
+          card_number: params[:card_number],
+          confirm_clear_tenders: confirm_clear_tenders?
         )
         @transaction.reload
         @ui_mode = "sale_entry"
@@ -385,7 +390,9 @@ module Pos
           transaction: @transaction,
           actor: current_user,
           expected_lock_version: expected_lock_version,
-          issuance: issuance
+          issuance: issuance,
+          operation_id: params.require(:operation_id),
+          confirm_clear_tenders: confirm_clear_tenders?
         )
         @transaction.reload
         @ui_mode = "sale_entry"
@@ -517,6 +524,7 @@ module Pos
         )
         @transaction.reload
         @selected_tender = @transaction.pos_tenders.find_by(id: result.tender&.id)
+        @feedback = replacement_cap_feedback(result) if result.capped
         @ui_mode = "tender"
         respond_workspace
       end
@@ -541,6 +549,11 @@ module Pos
           expected_signed_net_cents: expected_signed_net
         )
         redirect_to pos_completed_transaction_path(result.transaction)
+      rescue Pos::StoredValueCompletionFailure => e
+        # Completion Failed / Tender Review keeps every working tender. Select the
+        # refused tender so the cashier can remove, edit, or correct the customer.
+        @selected_tender = @transaction.pos_tenders.find_by(id: e.tender_id) if e.tender_id.present?
+        raise
       end
     end
 
@@ -863,6 +876,25 @@ module Pos
 
     def expected_lock_version
       params.require(:lock_version)
+    end
+
+    def confirm_clear_tenders?
+      ActiveModel::Type::Boolean.new.cast(params[:confirm_clear_tenders]).present?
+    end
+
+    def stored_value_cap_feedback(result)
+      due = result.remaining_due_cents.to_i
+      message = "Applied #{helpers.format_money_cents(result.applied_cents)} of the " \
+                "#{helpers.format_money_cents(result.requested_cents)} requested. Available balance was " \
+                "#{helpers.format_money_cents(result.available_cents)}."
+      return message unless due.positive?
+
+      "#{message} #{helpers.format_money_cents(due)} is still due."
+    end
+
+    def replacement_cap_feedback(result)
+      "Applied #{helpers.format_money_cents(result.applied_cents)} of the " \
+        "#{helpers.format_money_cents(result.requested_cents)} requested. The stored-value balance was lower."
     end
 
     def find_line!
