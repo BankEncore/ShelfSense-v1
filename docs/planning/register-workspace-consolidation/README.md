@@ -35,6 +35,8 @@ This program **replaces** the current POS presentation. It does not run a parall
 | [report-content-contract.md](report-content-contract.md) | P13 semantic report vocabulary (not implementability claims) |
 | [report-content-inventory.md](report-content-inventory.md) | Code-backed row dispositions (complete; no 6C snapshot extensions) |
 | [slice6c-manual-verification.md](slice6c-manual-verification.md) | Slice 6C workstation evidence |
+| [slice7-overview.md](slice7-overview.md) | Slice 7 boundary, sequencing, product defaults |
+| [slice7-keyboard-contract.md](slice7-keyboard-contract.md) | Slice 7.0 accepted SALE/TENDER keyboard contract (docs; runtime in 7C) |
 
 UX adoption: follow [ux-adoption-template.md](../ux-design-system/ux-adoption-template.md) in the slice that materially changes a screen. Printed receipts stay locked unless a slice explicitly owns print.
 
@@ -43,3 +45,4 @@ Overlapping drafts are **superseded**. Do not implement from them:
 - [shelvesense-register-workspace-project-brief.md](../../drafts/phase-10-followup-pos-transaction-workspace/shelvesense-register-workspace-project-brief.md)
 - [pos-transaction-workspace.md](../../drafts/phase-10-followup-pos-transaction-workspace/pos-transaction-workspace.md)
 - [phase-11-followup-register-ux-spec.md](../../drafts/phase-9-product/phase-11-followup-register-ux-spec.md)
+- [slice-7-draft.md](../../drafts/phase-10-followup-pos-transaction-workspace/slice-7-draft.md) — historical Slice 7 thinking; authority is [slice7-overview.md](slice7-overview.md) and child packets

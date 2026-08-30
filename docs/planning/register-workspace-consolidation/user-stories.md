@@ -80,14 +80,18 @@ Till Activity, cash activity detail, Session Details, Active Sessions, reversal 
 
 **Complete** ([#92](https://github.com/BankEncore/ShelfSense-v1/issues/92) / PR [#109](https://github.com/BankEncore/ShelfSense-v1/pull/109)). Z status, blockers, live X, Session Details closed-session report, finalized Z, finalization confirmation, print chrome, and shift-end tape in shell — only inventory-permitted P13 rows.
 
+## Slice 7.0 — Keyboard contract amendment
+
+**Docs-only** ([#95](https://github.com/BankEncore/ShelfSense-v1/issues/95) / PR [#112](https://github.com/BankEncore/ShelfSense-v1/pull/112)). Accept SALE / TENDER / overlay / Escape / scanner / Lock tables and semantic vocabulary ([slice7-keyboard-contract.md](slice7-keyboard-contract.md)). Does not implement the dispatcher and **does not close [#93](https://github.com/BankEncore/ShelfSense-v1/issues/93)**. Clarifies plan.md decision 13 “first merge.” See [slice7-overview.md](slice7-overview.md).
+
 ## Slice 7A — Tender-review framework (gated)
 
-Packet-stable 2–6 first. Announced TENDER, selection, individual removal, atomic replacement **service**. Keep current keys except what review mode requires.
+Gated on 7.0 + tender lifecycle inventory. Tender Review mode, semantic selection, ordinary tender remove/replace, Return to Sale. No temporary global shortcuts. SV mutate deferred to 7B.
 
-## Slice 7B — Stored-value and issuance completion
+## Slice 7B — Stored-value, issuance, and Quick Customer
 
-Capping, revalidation, exact-once reversal, SV tender and issuance replacement.
+Gated on 7A. Nested customer-required SV lookup (7B.1), Quick Customer (7B.2), capping / working correction / completion revalidation / issuance edit (7B.3).
 
-## Slice 7C — Keyboard supersession
+## Slice 7C — Keyboard dispatcher
 
-Accepted SALE/TENDER/overlay tables first (packet amendment). Dispatcher, scanner punctuation, delete obsolete handlers, document 6.7 remainder supersession.
+Gated on 7A–7B. Implement [slice7-keyboard-contract.md](slice7-keyboard-contract.md): one dispatcher, scanner/overlay hardening, delete obsolete handlers, update pos-workflow.md §6 supersession.
