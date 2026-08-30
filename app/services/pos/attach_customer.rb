@@ -22,6 +22,9 @@ module Pos
 
       PosTransaction.transaction do
         transaction = Pos::Support.lock_working_transaction!(@transaction, @expected_lock_version)
+        if transaction.customer_id.present? && transaction.customer_id != @customer.id
+          Pos::CustomerDependency.refuse_customer_change!(transaction)
+        end
         transaction.update!(customer: @customer)
         Pos::Support.touch_working_transaction!(transaction)
         transaction

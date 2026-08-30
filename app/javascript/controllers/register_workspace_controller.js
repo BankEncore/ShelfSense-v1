@@ -246,6 +246,7 @@ export default class extends Controller {
     searchUrl: String,
     pickupSearchUrl: String,
     customerSearchUrl: String,
+    customerAttached: Boolean,
     pickupAllowed: Boolean,
     openPriceUrl: String,
     settlement: String,
@@ -2096,6 +2097,21 @@ export default class extends Controller {
     }
     this.toggleReferenceField(type.reference_policy)
     this.toggleGiftCardNumberField(type)
+    this.promptCustomerLookupIfRequired(type)
+  }
+
+  customerRequiredTenderType(type) {
+    if (!type || type.category !== "stored_value") return false
+    const accountType = type.stored_value_account_type
+    if (accountType === "store_credit" || accountType === "trade_credit") return true
+    return false
+  }
+
+  promptCustomerLookupIfRequired(type) {
+    if (!this.customerRequiredTenderType(type)) return
+    if (this.customerAttachedValue) return
+    this.showFeedback("A customer is required. Find and attach a customer to continue.")
+    this.openCustomerOverlay()
   }
 
   toggleGiftCardNumberField(type) {
