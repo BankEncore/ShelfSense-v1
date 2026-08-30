@@ -58,6 +58,7 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
   def choose_register_menu(label)
     open_register_menu
     click_on label
+    assert_no_selector "#register-menu", visible: true
   end
 
   # Slice 5D: empty-field Tender (+) / Refund (+) opens O11; Cash is first in cashier_selectable order.

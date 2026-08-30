@@ -258,6 +258,19 @@ class PosTransactionHistoryTest < ActionDispatch::IntegrationTest
     assert_match transaction.transaction_reference, response.body
   end
 
+  test "receipt reprint chrome is marked no-print so shell header stays off the ticket" do
+    transaction = complete_cash_sale!
+    get pos_transaction_path(transaction)
+    assert_response :success
+    assert_select ".pos-register-shell"
+    assert_select "header.pos-header.pos-no-print"
+    assert_select "[data-register-shell-target=status].pos-no-print"
+    assert_select ".pos-register-menu.pos-no-print"
+    assert_select ".pos-receipt__print .pos-receipt__reprint", text: "*** REPRINT ***"
+    assert_select ".pos-history__title-row.pos-no-print"
+    assert_select ".pos-history__detail.pos-no-print"
+  end
+
   private
 
   def sign_in_as(username)

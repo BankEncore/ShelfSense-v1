@@ -6,16 +6,112 @@ module Pos
     before_action :require_gift_cards_view!, only: :admin_prefix_last_four
 
     def show
+      restore_inquiry_result!
     end
 
     def exact_number
       raw = params[:card_number].to_s
       card = GiftCards::Lookup.by_number(raw)
       if card.nil?
-        flash.now[:alert] = "No gift card matched that number."
-        render :show, status: :unprocessable_entity
+        redirect_to pos_stored_value_inquiry_path(inquiry_register_params),
+                    alert: "No gift card matched that number."
         return
       end
+
+      flash[:sv_inquiry] = { "exact_gift_card_id" => card.id }
+      redirect_to pos_stored_value_inquiry_path(inquiry_register_params)
+    end
+
+    def store_credit
+      if params[:customer_id].present?
+        customer = Customer.active.canonical.find_by(id: params[:customer_id])
+        unless customer
+          redirect_to pos_stored_value_inquiry_path(inquiry_register_params),
+                      alert: "Customer not found."
+          return
+        end
+
+        flash[:sv_inquiry] = { "store_credit_customer_id" => customer.id }
+        redirect_to pos_stored_value_inquiry_path(inquiry_register_params)
+        return
+      end
+
+      query = params[:customer_query].to_s.strip
+      if query.blank?
+        redirect_to pos_stored_value_inquiry_path(inquiry_register_params),
+                    alert: "Enter a customer name, email, or phone."
+        return
+      end
+
+      matches = Customers::Search.call(query: query, mode: :operational, limit: 20)
+      if matches.empty?
+        redirect_to pos_stored_value_inquiry_path(inquiry_register_params.merge(customer_query: query)),
+                    alert: "No matching customers."
+        return
+      end
+
+      flash[:sv_inquiry] = {
+        "store_credit_match_ids" => matches.map { |row| row.customer.id },
+        "customer_query" => query
+      }
+      redirect_to pos_stored_value_inquiry_path(inquiry_register_params.merge(customer_query: query))
+    end
+
+    def admin_prefix_last_four
+      result = GiftCards::AdminInquiry.call(
+        prefix: params[:number_prefix],
+        last_four: params[:number_last_four],
+        actor: current_user,
+        store: current_store
+      )
+      case result.status
+      when :found
+        flash[:sv_inquiry] = { "admin_gift_card_id" => result.card.id }
+        redirect_to pos_stored_value_inquiry_path(inquiry_register_params)
+      when :ambiguous
+        flash[:sv_inquiry] = {
+          "admin_candidate_ids" => result.candidates.map(&:id),
+          "admin_prefix" => params[:number_prefix].to_s,
+          "admin_last_four" => params[:number_last_four].to_s
+        }
+        redirect_to pos_stored_value_inquiry_path(inquiry_register_params),
+                    alert: "Several cards share that prefix and last four. Choose a masked candidate."
+      else
+        redirect_to pos_stored_value_inquiry_path(inquiry_register_params),
+                    alert: GiftCards::GENERIC_INQUIRY_FAILURE
+      end
+    rescue GiftCards::Error => e
+      redirect_to pos_stored_value_inquiry_path(inquiry_register_params), alert: e.message
+    end
+
+    private
+
+    def prepare_surface
+      prepare_inquiry_shell!(surface: :stored_value_inquiry)
+      @can_admin_inquire = Authorization::PermissionEvaluator.allowed?(
+        user: current_user,
+        permission_key: "gift_cards.view",
+        store: current_store
+      )
+      @customer_query = params[:customer_query].to_s
+      @inquiry_result_present = false
+    end
+
+    def restore_inquiry_result!
+      payload = flash[:sv_inquiry]
+      return if payload.blank?
+
+      restore_exact_result!(payload)
+      restore_store_credit_result!(payload)
+      restore_admin_result!(payload)
+      @inquiry_result_present = inquiry_result_present?
+    end
+
+    def restore_exact_result!(payload)
+      return if payload["exact_gift_card_id"].blank?
+
+      card = GiftCard.includes(:gift_card_program, :stored_value_account).find_by(id: payload["exact_gift_card_id"])
+      return unless card
 
       @exact_card = card
       @exact_activity = StoredValue::AccountActivity.call(
@@ -30,56 +126,49 @@ module Pos
         store: current_store,
         gift_card: card
       )
-      render :show
     end
 
-    def store_credit
-      if params[:customer_id].present?
-        customer = Customer.active.canonical.find_by(id: params[:customer_id])
-        unless customer
-          flash.now[:alert] = "Customer not found."
-          render :show, status: :unprocessable_entity
-          return
+    def restore_store_credit_result!(payload)
+      if payload["store_credit_match_ids"].present?
+        ids = Array(payload["store_credit_match_ids"])
+        customers = Customer.active.canonical.where(id: ids).index_by(&:id)
+        @store_credit_matches = ids.filter_map do |id|
+          customer = customers[id]
+          next unless customer
+
+          Customers::Search::Result.new(customer: customer, matched_former_customer: false)
         end
-
-        @store_credit_customer = customer
-        @store_credit_account = customer.stored_value_accounts.find_by(account_type: "store_credit")
-        @continuations = Pos::StoredValueInquiryContinuations.call(
-          state: @state,
-          actor: current_user,
-          store: current_store,
-          store_credit_customer: customer
-        )
-        render :show
-        return
+        @customer_query = payload["customer_query"].presence || @customer_query
       end
 
-      query = params[:customer_query].to_s.strip
-      if query.blank?
-        flash.now[:alert] = "Enter a customer name, email, or phone."
-        render :show, status: :unprocessable_entity
-        return
-      end
+      return if payload["store_credit_customer_id"].blank?
 
-      @store_credit_matches = Customers::Search.call(query: query, mode: :operational, limit: 20)
-      if @store_credit_matches.empty?
-        flash.now[:alert] = "No matching customers."
-        render :show, status: :unprocessable_entity
-        return
-      end
+      customer = Customer.active.canonical.find_by(id: payload["store_credit_customer_id"])
+      return unless customer
 
-      render :show
+      @store_credit_customer = customer
+      @store_credit_account = customer.stored_value_accounts.find_by(account_type: "store_credit")
+      @continuations = Pos::StoredValueInquiryContinuations.call(
+        state: @state,
+        actor: current_user,
+        store: current_store,
+        store_credit_customer: customer
+      )
     end
 
-    def admin_prefix_last_four
-      result = GiftCards::AdminInquiry.call(
-        prefix: params[:number_prefix],
-        last_four: params[:number_last_four],
+    def restore_admin_result!(payload)
+      result = Pos::StoredValueAdminInquiryRestore.call(
+        payload: payload,
         actor: current_user,
         store: current_store
       )
-      case result.status
-      when :found
+      if result.denied
+        record_gift_cards_view_denied!
+        flash.now[:alert] = "You are not authorized to perform that action."
+        return
+      end
+
+      if result.card
         @admin_card = result.card
         @admin_activity = StoredValue::AccountActivity.call(
           account: result.card.stored_value_account,
@@ -87,32 +176,28 @@ module Pos
           permission_key: "gift_cards.view",
           page: 1
         )
-      when :ambiguous
-        @admin_candidates = result.candidates
-        flash.now[:alert] = "Several cards share that prefix and last four. Choose a masked candidate."
-      else
-        flash.now[:alert] = GiftCards::GENERIC_INQUIRY_FAILURE
       end
-      render :show, status: result.status == :found ? :ok : :unprocessable_entity
-    rescue GiftCards::Error => e
-      flash.now[:alert] = e.message
-      render :show, status: :unprocessable_entity
+
+      @admin_candidates = result.candidates if result.candidates.any?
     end
 
-    private
-
-    def prepare_surface
-      prepare_inquiry_shell!(surface: :stored_value_inquiry)
-      @can_admin_inquire = Authorization::PermissionEvaluator.allowed?(
-        user: current_user,
-        permission_key: "gift_cards.view",
-        store: current_store
-      )
+    def inquiry_result_present?
+      @exact_card ||
+        @store_credit_customer ||
+        @store_credit_matches.present? ||
+        @admin_card ||
+        @admin_candidates.present?
     end
 
     def require_gift_cards_view!
       return if @can_admin_inquire
 
+      record_gift_cards_view_denied!
+      redirect_to pos_stored_value_inquiry_path(inquiry_register_params),
+                  alert: "You are not authorized to perform that action."
+    end
+
+    def record_gift_cards_view_denied!
       Audit::Recorder.record!(
         action: "authorization.denied",
         outcome: "denied",
@@ -122,8 +207,6 @@ module Pos
         reason_code: "gift_cards.view",
         metadata: { path: request.fullpath }
       )
-      redirect_to pos_stored_value_inquiry_path(inquiry_register_params),
-                  alert: "You are not authorized to perform that action."
     end
   end
 end

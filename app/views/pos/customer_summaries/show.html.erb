@@ -8,31 +8,38 @@
         <%= link_to register_inquiry_return_label, register_inquiry_return_path, class: "btn btn--ghost" %>
       </div>
 
-      <%= form_with url: pos_customer_summary_path, method: :get, local: true, class: "pos-inquiry__form" do %>
+      <%= form_with url: pos_customer_summary_path,
+            method: :get,
+            local: true,
+            data: { turbo: false },
+            class: "pos-inquiry__form" do %>
         <% inquiry_register_params.each do |key, value| %>
           <%= hidden_field_tag key, value %>
         <% end %>
         <div class="form-field">
           <%= label_tag :q, "Search customer" %>
-          <%= text_field_tag :q, params[:q], autocomplete: "off" %>
+          <%= text_field_tag :q, params[:q], autocomplete: "off", autofocus: @customer.blank? && @matches.blank? %>
         </div>
         <%= submit_tag "Search", class: "btn" %>
       <% end %>
 
       <% if @matches.present? %>
-        <ul class="pos-inquiry__matches">
-          <% @matches.each do |row| %>
-            <li>
-              <%= link_to [ row.customer.display_name, row.customer.email, row.customer.phone ].compact.join(" · "),
-                    pos_customer_summary_path(inquiry_register_params.merge(customer_id: row.customer.id)),
-                    class: "btn btn--ghost" %>
-            </li>
-          <% end %>
-        </ul>
+        <section class="pos-inquiry__result" id="customer-summary-result" aria-live="polite">
+          <h2>Matching customers</h2>
+          <ul class="pos-inquiry__matches">
+            <% @matches.each do |row| %>
+              <li>
+                <%= link_to [ row.customer.display_name, row.customer.email, row.customer.phone ].compact.join(" · "),
+                      pos_customer_summary_path(inquiry_register_params.merge(customer_id: row.customer.id)),
+                      class: "btn btn--outline" %>
+              </li>
+            <% end %>
+          </ul>
+        </section>
       <% end %>
 
       <% if @customer %>
-        <section class="pos-inquiry__result" aria-label="Customer summary">
+        <section class="pos-inquiry__result" id="customer-summary-result" aria-label="Customer summary">
           <div class="pos-history__title-row">
             <h2><%= @customer.display_name %></h2>
             <% if @can_open_customer %>

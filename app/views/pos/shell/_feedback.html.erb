@@ -1,6 +1,6 @@
 <% if notice.present? %>
-  <p class="pos-feedback" role="status"><%= notice %></p>
+  <p class="pos-feedback pos-no-print" role="status"><%= notice %></p>
 <% end %>
 <% if alert.present? || flash.now[:alert].present? %>
-  <p class="pos-enter__alert" role="alert"><%= alert.presence || flash.now[:alert] %></p>
+  <p class="pos-enter__alert pos-no-print" role="alert"><%= alert.presence || flash.now[:alert] %></p>
 <% end %>

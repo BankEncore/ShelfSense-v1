@@ -1392,6 +1392,8 @@ input[type="submit"]:disabled,
 
 .table-scroll {
   overflow-x: auto;
+  max-width: 100%;
+  min-width: 0;
   border: 1px solid var(--color-border-subtle);
   border-radius: var(--radius);
   background: var(--color-bg-surface);
@@ -2312,8 +2314,12 @@ input[type="submit"]:disabled,
 }
 
 .pos-inquiry {
-  width: min(100% - 2rem, 40rem);
+  width: 100%;
+  max-width: 40rem;
   margin: var(--space-6) auto;
+  padding-inline: 1rem;
+  box-sizing: border-box;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: var(--space-6);
@@ -2332,7 +2338,21 @@ input[type="submit"]:disabled,
   align-items: flex-end;
 }
 
-.pos-inquiry__result,
+.pos-inquiry__result {
+  margin: 0;
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface, #fff);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.pos-inquiry__result h2,
+.pos-inquiry__result h3 {
+  margin: 0;
+}
+
 .pos-inquiry__matches,
 .pos-inquiry__activity {
   margin: 0;
@@ -2346,29 +2366,44 @@ input[type="submit"]:disabled,
   gap: var(--space-2);
 }
 
+.pos-inquiry__matches .btn {
+  width: 100%;
+  justify-content: flex-start;
+  text-align: left;
+  white-space: normal;
+}
+
 .pos-inquiry__actions {
-  margin-top: var(--space-3);
+  margin-top: var(--space-2);
 }
 
 .pos-inquiry--wide {
-  width: min(100% - 2rem, 56rem);
+  max-width: 56rem;
 }
 
 .pos-history {
-  width: min(100% - 2rem, 56rem);
+  width: 100%;
+  max-width: 56rem;
   margin: var(--space-6) auto;
+  padding-inline: 1rem;
+  box-sizing: border-box;
+  min-width: 0;
 }
 
 .pos-history__title-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
   margin-bottom: var(--space-3);
+  min-width: 0;
 }
 
 .pos-history__title-row h1 {
   margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .pos-history__nav {
@@ -2586,8 +2621,22 @@ input[type="submit"]:disabled,
 
   .pos-no-print,
   .pos-receipt__screen,
-  .pos-receipt__actions {
+  .pos-receipt__actions,
+  .pos-register-shell__announce,
+  .pos-register-menu {
     display: none !important;
+  }
+
+  /* Shell layout is screen-only; print must not keep the viewport chrome. */
+  .pos-register-shell,
+  .pos-register-shell__background,
+  .pos-register-shell__body {
+    display: block !important;
+    height: auto !important;
+    max-height: none !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    width: 100% !important;
   }
 
   .pos-print-only,
