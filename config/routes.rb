@@ -203,6 +203,11 @@ Rails.application.routes.draw do
     get "active_sessions", to: "active_sessions#index", as: :active_sessions
     get "reports", to: "reports#index", as: :reports
     resources :transactions, only: %i[index show]
+    resource :stored_value_inquiry, only: :show, controller: "stored_value_inquiries" do
+      post :exact_number
+      post :store_credit
+      post :admin_prefix_last_four
+    end
     get "register/enter", to: "enters#show", as: :register_enter
     post "register/enter", to: "enters#create"
     resources :cash_outs, only: %i[new create show] do

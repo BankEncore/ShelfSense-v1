@@ -45,7 +45,7 @@ module Pos
     end
 
     def customer_service_keys
-      [ :transactions ]
+      %i[transactions stored_value_inquiry]
     end
 
     def till_keys

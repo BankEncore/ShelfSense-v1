@@ -7,7 +7,7 @@ class PosRegisterMenuTest < ActiveSupport::TestCase
 
   test "selector includes transactions session z switch and return" do
     keys = keys_for(kind: "selector", surface: :state_landing, permissions: ALL_PERMISSIONS)
-    assert_equal %i[transactions session_z_reports active_sessions switch_register return_to_shelfsense], keys
+    assert_equal %i[transactions stored_value_inquiry session_z_reports active_sessions switch_register return_to_shelfsense], keys
     refute_includes keys, :x_report
     refute_includes keys, :close_session
     refute_includes keys, :drop
@@ -85,7 +85,7 @@ class PosRegisterMenuTest < ActiveSupport::TestCase
 
   test "switch register suppresses switch till x close and in-page mutations" do
     keys = keys_for(kind: "own_session", surface: :switch_register, permissions: ALL_PERMISSIONS)
-    assert_equal %i[transactions session_z_reports active_sessions return_to_shelfsense], keys
+    assert_equal %i[transactions stored_value_inquiry session_z_reports active_sessions return_to_shelfsense], keys
     refute_includes keys, :switch_register
     refute_includes keys, :x_report
     refute_includes keys, :drop
