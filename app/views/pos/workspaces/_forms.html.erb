@@ -1,6 +1,7 @@
 <% register_scope = { register_id: @register.id } %>
 <% selected_id = @selected_line&.id %>
 <% selected_tender_type = @selected_tender_type %>
+<% selected_tender_id = @selected_tender&.id %>
 <% tenders = @tenders %>
 
 <% if effective_permissions.include?("gift_cards.cash_out") %>
@@ -13,6 +14,7 @@
   <%= hidden_field_tag :register_id, @register.id %>
   <%= hidden_field_tag :lock_version, @transaction.lock_version %>
   <%= hidden_field_tag :selected_line_id, selected_id %>
+  <%= hidden_field_tag :selected_tender_id, selected_tender_id, data: { register_workspace_target: "selectedTenderInput" } %>
   <%= hidden_field_tag :identifier, "", data: { register_workspace_target: "identifierInput" } %>
   <%= hidden_field_tag :product_variant_id, "", data: { register_workspace_target: "variantInput" } %>
   <%= hidden_field_tag :inventory_unit_id, "", data: { register_workspace_target: "unitInput" } %>
@@ -57,11 +59,32 @@
 <%= form_with url: pos_register_remove_tender_path(register_scope), method: :post, html: { class: "pos-hidden", data: { register_workspace_target: "removeTenderForm", turbo: true } } do %>
   <%= hidden_field_tag :register_id, @register.id %>
   <%= hidden_field_tag :lock_version, @transaction.lock_version %>
-  <%= hidden_field_tag :tender_id, tenders.last&.id, data: { register_workspace_target: "removeTenderInput" } %>
+  <%= hidden_field_tag :selected_tender_id, selected_tender_id, data: { register_workspace_target: "selectedTenderInput" } %>
+  <%= hidden_field_tag :tender_id, selected_tender_id || tenders.last&.id, data: { register_workspace_target: "removeTenderInput" } %>
+  <%= hidden_field_tag :operation_id, "", data: { register_workspace_target: "removeTenderOperationInput" } %>
+<% end %>
+
+<%= form_with url: pos_register_replace_tender_path(register_scope), method: :post, html: { class: "pos-hidden", data: { register_workspace_target: "replaceTenderForm", turbo: true } } do %>
+  <%= hidden_field_tag :register_id, @register.id %>
+  <%= hidden_field_tag :lock_version, @transaction.lock_version %>
+  <%= hidden_field_tag :selected_tender_id, selected_tender_id, data: { register_workspace_target: "selectedTenderInput" } %>
+  <%= hidden_field_tag :tender_id, selected_tender_id, data: { register_workspace_target: "replaceTenderInput" } %>
+  <%= hidden_field_tag :operation_id, "", data: { register_workspace_target: "replaceTenderOperationInput" } %>
+  <%= hidden_field_tag :tender_amount, "", data: { register_workspace_target: "replaceTenderAmountInput" } %>
+  <%= hidden_field_tag :amount_presented, "", data: { register_workspace_target: "replaceTenderPresentedInput" } %>
+  <%= hidden_field_tag :external_reference, "", data: { register_workspace_target: "replaceTenderReferenceInput" } %>
+<% end %>
+
+<%= form_with url: pos_register_abandon_tender_path(register_scope), method: :post, html: { class: "pos-hidden", data: { register_workspace_target: "returnToSaleForm", turbo: true } } do %>
+  <%= hidden_field_tag :register_id, @register.id %>
+  <%= hidden_field_tag :lock_version, @transaction.lock_version %>
+  <%= hidden_field_tag :selected_tender_id, selected_tender_id, data: { register_workspace_target: "selectedTenderInput" } %>
+  <%= hidden_field_tag :operation_id, "", data: { register_workspace_target: "returnToSaleOperationInput" } %>
 <% end %>
 
 <%= form_with url: pos_transaction_complete_path(@transaction), method: :post, html: { class: "pos-hidden", data: { register_workspace_target: "completeForm", turbo: true } } do %>
   <%= hidden_field_tag :lock_version, @transaction.lock_version %>
+  <%= hidden_field_tag :selected_tender_id, selected_tender_id, data: { register_workspace_target: "selectedTenderInput" } %>
   <%= hidden_field_tag :completion_operation_id, @completion_operation_id %>
   <%= hidden_field_tag :expected_total_cents, @transaction.total_cents %>
   <%= hidden_field_tag :expected_signed_net_cents, @transaction.signed_net_cents %>

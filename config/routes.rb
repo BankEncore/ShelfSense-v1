@@ -255,6 +255,7 @@ Rails.application.routes.draw do
     post "register/detach_customer", to: "workspaces#detach_customer"
     get "register/customer_search", to: "workspaces#customer_search", as: :register_customer_search
     post "register/remove_tender", to: "workspaces#remove_tender"
+    post "register/replace_tender", to: "workspaces#replace_tender"
     post "register/continue", to: "workspaces#continue"
     get "transactions/:transaction_id/return_items", to: "return_items#show", as: :transaction_return_items
     post "transactions/:transaction_id/return_items", to: "return_items#create"

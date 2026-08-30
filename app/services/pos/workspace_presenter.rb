@@ -13,7 +13,21 @@ module Pos
         [ store_tax_id, code, name, rate_percent.to_s, calculation_order ].join(":")
       end
     end
-    TenderRow = Data.define(:id, :label, :amount_cents, :direction, :presented_cents, :change_cents)
+    TenderRow = Data.define(
+      :id,
+      :label,
+      :amount_cents,
+      :direction,
+      :presented_cents,
+      :change_cents,
+      :ordinary,
+      :stored_value,
+      :behavioral_category,
+      :external_reference,
+      :mutate_available,
+      :mutate_unavailable_reason,
+      :inspect_detail
+    )
     SettlementCue = Data.define(:kind, :label, :amount_cents)
     Result = Data.define(
       :mode_label,
@@ -53,7 +67,8 @@ module Pos
       remaining_refund_cents:,
       command_value:,
       feedback:,
-      action_capabilities:
+      action_capabilities:,
+      selected_tender: nil
     )
       @transaction = transaction
       @lines = Array(lines)
@@ -61,6 +76,7 @@ module Pos
       @issuances = Array(issuances)
       @selected_line = selected_line
       @selected_tender_type = selected_tender_type
+      @selected_tender = selected_tender
       @ui_mode = ui_mode.to_s
       @settlement_direction = settlement_direction.to_sym
       @remaining_payment_cents = remaining_payment_cents.to_i
@@ -306,9 +322,25 @@ module Pos
           amount_cents: tender.amount_cents.to_i,
           direction: tender.direction,
           presented_cents: tender.amount_presented_cents,
-          change_cents: tender.change_cents
+          change_cents: tender.change_cents,
+          ordinary: !tender.stored_value?,
+          stored_value: tender.stored_value?,
+          behavioral_category: tender.behavioral_category,
+          external_reference: tender.external_reference,
+          mutate_available: !tender.stored_value?,
+          mutate_unavailable_reason: tender.stored_value? ?
+            "Stored-value tender correction becomes available after Slice 7B." : nil,
+          inspect_detail: tender_inspect_detail(tender)
         )
       end
+    end
+
+    def tender_inspect_detail(tender)
+      details = [ "#{tender.direction.capitalize} #{format_money(tender.amount_cents)}" ]
+      details << "Presented #{format_money(tender.amount_presented_cents)}" if tender.amount_presented_cents.present?
+      details << "Change #{format_money(tender.change_cents)}" if tender.change_cents.to_i.positive?
+      details << "Reference #{tender.external_reference}" if tender.external_reference.present?
+      details.join(" · ")
     end
 
     def tender_label(tender, distinguish_cash:)
@@ -324,7 +356,11 @@ module Pos
     def build_settlement_cues
       cues = []
 
-      if even_exchange? && @ui_mode == "sale_entry"
+      if @ui_mode == "completion_pending"
+        cues << SettlementCue.new(kind: :completing, label: "Completing", amount_cents: nil)
+      elsif @ui_mode == "completion_failed"
+        cues << SettlementCue.new(kind: :completion_failed, label: "Completion Failed", amount_cents: nil)
+      elsif even_exchange? && @ui_mode == "sale_entry"
         cues << SettlementCue.new(kind: :even_exchange, label: "Even exchange", amount_cents: nil)
       elsif exact_settlement?
         cues << SettlementCue.new(kind: :settled, label: "Settled", amount_cents: 0)

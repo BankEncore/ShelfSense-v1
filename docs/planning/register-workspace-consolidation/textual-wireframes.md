@@ -1447,7 +1447,7 @@ The current tender remains applied until the replacement succeeds.
 [Keep Current Tender]                       [Replace Tender]
 ```
 
-On failure, the original remains unchanged. Stored-value replacement safely reverses/reapplies value inside one domain operation.
+On failure, the original remains unchanged. **Slice 7A authority correction:** O15 is ordinary-tender replacement only. Working stored-value rows have not posted ledger value, and their correction belongs to Slice 7B; do not infer a ledger reversal from this wireframe.
 
 ## O16. Remove tender confirmation
 
@@ -1460,6 +1460,8 @@ balance due to $30.00.
 
 [Keep Tender]                                  [Remove Tender]
 ```
+
+**Slice 7A authority correction:** the gift-card restore copy above is not authoritative for 7A. O16 removes ordinary working tenders only and must not claim a stored-value ledger restore. Stored-value working-tender correction and its final consequence copy belong to Slice 7B.
 
 Removal is idempotent and preserves reversal/audit relationships.
 

@@ -65,6 +65,8 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     assert_text "Balance due"
     assert_equal "pos-command-field", page.evaluate_script("document.activeElement && document.activeElement.id")
     click_on "Return to sale"
+    assert_selector "#pos_return_to_sale_overlay", visible: true
+    within("#pos_return_to_sale_overlay") { click_on "Return to Sale" }
     assert_text "SALE ENTRY"
     assert_no_selector "#pos_tenders", text: "External Card"
 
@@ -90,6 +92,42 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     assert_text "Cash"
     completed = PosTransaction.completed.find_by!(register: @register)
     assert_equal %w[card cash], completed.pos_tenders.ordered.map(&:behavioral_category)
+  end
+
+  test "tender review selects replaces and confirms ordinary removal" do
+    open_register
+    add_current_sku
+    start_cash_tender_via_plus
+    send_keys :f2
+    field = find("#pos-command-field")
+    field.fill_in with: "10.00"
+    field.send_keys :enter
+
+    row = find(".pos-tenders__item", text: "External Card")
+    page.execute_script("arguments[0].click()", row)
+    assert_equal "true", row["aria-selected"]
+    click_on "Edit Tender"
+    assert_selector "#pos_edit_tender_overlay", visible: true
+    send_keys :escape
+    assert_no_selector "#pos_edit_tender_overlay", visible: true
+
+    click_on "Edit Tender"
+    within("#pos_edit_tender_overlay") do
+      fill_in "Applied amount", with: "8.00"
+      fill_in "Reference", with: "AUTH-REPLACED"
+      click_on "Replace Tender"
+    end
+    assert_selector ".pos-tenders__item.is-selected", text: "External Card", wait: 10
+    assert_text "$8.00"
+
+    click_on "Remove Tender"
+    assert_selector "#pos_remove_tender_overlay", visible: true
+    send_keys :escape
+    assert_no_selector "#pos_remove_tender_overlay", visible: true
+    click_on "Remove Tender"
+    within("#pos_remove_tender_overlay") { click_on "Remove Tender" }
+    assert_no_selector ".pos-tenders__item", wait: 10
+    assert_text "SALE ENTRY"
   end
 
   test "delete and hyphen edit the identifier and f8 removes the selected line" do
@@ -549,6 +587,8 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     field.send_keys :enter
     assert_text "Retry complete", wait: 10
     click_on "Return to sale"
+    assert_selector "#pos_return_to_sale_overlay", visible: true
+    within("#pos_return_to_sale_overlay") { click_on "Return to Sale" }
     assert_text "SALE ENTRY"
     assert_text "Example Book"
     assert_no_text "CHANGE"

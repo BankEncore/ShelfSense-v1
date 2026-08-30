@@ -68,9 +68,22 @@ class PosWorkspacePresenterTest < ActiveSupport::TestCase
     assert result.locked
     assert_equal "CASH TENDER", result.mode_label
     assert_equal 1, result.tender_rows.size
-    assert_equal %i[settled change], result.settlement_cues.map(&:kind)
-    assert_equal "Settled", result.settlement_cues.first.label
-    assert_equal "CHANGE", result.settlement_cues.second.label
+    assert_equal [ :completion_failed ], result.settlement_cues.map(&:kind)
+    assert_equal "Completion Failed", result.settlement_cues.first.label
+  end
+
+  test "completion pending uses Completing as the primary settlement cue" do
+    transaction = start_sale
+    tender_cash!(transaction, 2500)
+    result = present(
+      transaction.reload,
+      ui_mode: "completion_pending",
+      settlement_direction: :payment,
+      remaining_payment_cents: 0
+    )
+
+    assert_equal [ :completing ], result.settlement_cues.map(&:kind)
+    assert_equal "Completing", result.settlement_cues.first.label
   end
 
   test "sale only summary reconciles to signed net without Sales label" do
@@ -301,6 +314,33 @@ class PosWorkspacePresenterTest < ActiveSupport::TestCase
     assert_equal "CHANGE", result.settlement_cues.second.label
     assert_equal tender.change_cents, result.settlement_cues.second.amount_cents
     assert_equal tender.change_cents, row.change_cents
+    assert row.ordinary
+    refute row.stored_value
+    assert row.mutate_available
+    assert_nil row.mutate_unavailable_reason
+    assert_equal "cash", row.behavioral_category
+    assert_match(/Presented/, row.inspect_detail)
+  end
+
+  test "stored-value tender row is inspect-only until Slice 7B" do
+    transaction = start_sale
+    stored_value = TenderType.find_by!(code: "gift_card")
+    tender = transaction.pos_tenders.new(
+      direction: "payment",
+      tender_number: 1,
+      amount_cents: 500,
+      external_reference: nil
+    )
+    Pos::Support.snapshot_tender_identity!(tender, stored_value)
+    tender.save!
+
+    row = present(transaction.reload, ui_mode: "tender").tender_rows.sole
+    refute row.ordinary
+    assert row.stored_value
+    refute row.mutate_available
+    assert_equal "stored_value", row.behavioral_category
+    assert_equal "Stored-value tender correction becomes available after Slice 7B.", row.mutate_unavailable_reason
+    assert_kind_of String, row.inspect_detail
   end
 
   test "exact non-cash payment shows Settled without fabricating amount due" do

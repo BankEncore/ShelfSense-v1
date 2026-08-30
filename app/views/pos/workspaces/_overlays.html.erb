@@ -1,3 +1,69 @@
+  <div class="pos-overlay" data-register-blocking-overlay id="pos_edit_tender_overlay" hidden
+       data-register-workspace-target="editTenderOverlay" role="dialog" aria-modal="true"
+       aria-labelledby="pos-edit-tender-title">
+    <div class="pos-overlay__panel pos-overlay__panel--control">
+      <h2 id="pos-edit-tender-title">Edit tender</h2>
+      <p data-register-workspace-target="editTenderDetail"></p>
+      <p id="pos-edit-tender-feedback" class="pos-overlay__error" data-overlay-error role="alert"></p>
+      <label for="pos-edit-tender-amount">Applied amount</label>
+      <input id="pos-edit-tender-amount" class="pos-command__field" inputmode="decimal"
+             data-register-workspace-target="editTenderAmount">
+      <div data-register-workspace-target="editTenderPresentedWrap" hidden>
+        <label for="pos-edit-tender-presented">Cash presented</label>
+        <input id="pos-edit-tender-presented" class="pos-command__field" inputmode="decimal"
+               data-register-workspace-target="editTenderPresented">
+      </div>
+      <div data-register-workspace-target="editTenderReferenceWrap">
+        <label for="pos-edit-tender-reference">Reference</label>
+        <input id="pos-edit-tender-reference" class="pos-command__field"
+               data-register-workspace-target="editTenderReference">
+      </div>
+      <div class="pos-overlay__actions">
+        <%= action_button "Keep Current", style: :outline, intent: :neutral, size: :standard,
+              data: { action: "register-workspace#closeEditTenderOverlay" } %>
+        <%= action_button "Replace Tender", style: :solid, intent: :brand, size: :standard,
+              data: { action: "register-workspace#confirmReplaceTender" } %>
+      </div>
+    </div>
+  </div>
+
+  <div class="pos-overlay" data-register-blocking-overlay id="pos_remove_tender_overlay" hidden
+       data-register-workspace-target="removeTenderOverlay" role="dialog" aria-modal="true"
+       aria-labelledby="pos-remove-tender-title">
+    <div class="pos-overlay__panel">
+      <h2 id="pos-remove-tender-title">Remove this tender?</h2>
+      <p data-register-workspace-target="removeTenderDetail"></p>
+      <p id="pos-remove-tender-feedback" class="pos-overlay__error" data-overlay-error role="alert"></p>
+      <p>The ordinary working tender will be removed. No stored-value ledger entry is affected.</p>
+      <div class="pos-overlay__actions">
+        <%= action_button "Keep Tender", style: :outline, intent: :neutral, size: :standard,
+              data: { action: "register-workspace#closeRemoveTenderOverlay" } %>
+        <%= action_button "Remove Tender", style: :solid, intent: :danger, size: :standard,
+              data: { action: "register-workspace#confirmRemoveTender" } %>
+      </div>
+    </div>
+  </div>
+
+  <div class="pos-overlay" data-register-blocking-overlay id="pos_return_to_sale_overlay" hidden
+       data-register-workspace-target="returnToSaleOverlay" role="dialog" aria-modal="true"
+       aria-labelledby="pos-return-to-sale-title">
+    <div class="pos-overlay__panel">
+      <h2 id="pos-return-to-sale-title">Return to Sale?</h2>
+      <p id="pos-return-to-sale-feedback" class="pos-overlay__error" data-overlay-error role="alert"></p>
+      <p>All applied ordinary tenders will be cleared. Merchandise can then be changed, and the transaction must be tendered again.</p>
+      <% if @tenders&.any?(&:stored_value?) %>
+        <p class="pos-overlay__error">Return to Sale with stored-value tenders becomes available after Slice 7B.</p>
+      <% end %>
+      <div class="pos-overlay__actions">
+        <%= action_button "Keep Tenders", style: :outline, intent: :neutral, size: :standard,
+              data: { action: "register-workspace#closeReturnToSaleOverlay" } %>
+        <%= action_button "Return to Sale", style: :solid, intent: :warning, size: :standard,
+              disabled: @tenders&.any?(&:stored_value?),
+              data: { action: "register-workspace#confirmReturnToSale" } %>
+      </div>
+    </div>
+  </div>
+
   <div class="pos-overlay" data-register-blocking-overlay
        id="pos_overlay"
        hidden

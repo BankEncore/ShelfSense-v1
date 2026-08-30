@@ -72,8 +72,8 @@ class PosRegisterTest < ActionDispatch::IntegrationTest
     assert_response :success
     transaction.reload
     assert_equal 1, transaction.pos_tenders.count
-    assert_match "Settled", response.body
-    assert_match "CHANGE", response.body
+    assert_match "Completing", response.body
+    refute_match "Settled", response.body
     assert_select "input[name='completion_operation_id']"
 
     operation_id = css_select("input[name='completion_operation_id']").first["value"]
@@ -171,8 +171,8 @@ class PosRegisterTest < ActionDispatch::IntegrationTest
       lock_version: transaction.lock_version
     }
     assert_response :success
-    assert_match "CHANGE", response.body
-    assert_match "Settled", response.body
+    assert_match "Completing", response.body
+    refute_match "Settled", response.body
     transaction.reload
     operation_id = css_select("input[name='completion_operation_id']").first["value"]
     post pos_transaction_complete_path(transaction), params: {
@@ -266,7 +266,10 @@ class PosRegisterTest < ActionDispatch::IntegrationTest
     transaction.reload
     post pos_register_tender_path, params: { tender_amount: "25.00", lock_version: transaction.lock_version }
     transaction.reload
-    post pos_register_abandon_tender_path, params: { lock_version: transaction.lock_version }
+    post pos_register_abandon_tender_path, params: {
+      lock_version: transaction.lock_version,
+      operation_id: SecureRandom.uuid_v7
+    }
     transaction.reload
     assert_equal 0, transaction.pos_tenders.count
     assert transaction.working?
@@ -277,6 +280,40 @@ class PosRegisterTest < ActionDispatch::IntegrationTest
     assert_redirected_to pos_register_workspace_path
     assert transaction.reload.cancelled?
     assert_equal 0, transaction.pos_tenders.count
+  end
+
+  test "tender review renders semantic selection and removes selected ordinary tender idempotently" do
+    post pos_register_enter_path, params: enter_params
+    transaction = PosTransaction.working.find_by!(register: @register)
+    post pos_register_merchandise_path, params: { identifier: @variant.sku, lock_version: transaction.lock_version }
+    transaction.reload
+    card = TenderType.find_by!(code: "card")
+    post pos_register_tender_path, params: {
+      tender_amount: "5.00",
+      tender_type_id: card.id,
+      external_reference: "AUTH-SELECT",
+      lock_version: transaction.lock_version
+    }
+    assert_response :success
+    transaction.reload
+    tender = transaction.pos_tenders.sole
+
+    assert_select ".pos-tenders__item[data-tender-id='#{tender.id}'][role='option'][aria-selected='true'].is-selected"
+    assert_select ".pos-tenders__item[data-ordinary='true'][data-mutate-available='true']"
+    assert_select "input[name='selected_tender_id'][value='#{tender.id}']", minimum: 4
+    assert_select "button", text: "Edit Tender"
+    assert_select "button", text: "Remove Tender"
+
+    operation_id = SecureRandom.uuid_v7
+    post pos_register_remove_tender_path, params: {
+      tender_id: tender.id,
+      selected_tender_id: tender.id,
+      operation_id: operation_id,
+      lock_version: transaction.lock_version
+    }
+    assert_response :success
+    assert_empty transaction.reload.pos_tenders
+    assert_equal "completed", PosOperation.find(operation_id).status
   end
 
   test "completed receipt is not found while working" do

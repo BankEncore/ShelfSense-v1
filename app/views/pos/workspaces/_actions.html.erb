@@ -4,6 +4,7 @@
 <% completion_recovery = workspace.completion_recovery %>
 <% refund_mode = workspace.refund_mode %>
 <% even_exchange = @transaction.even_exchange? %>
+<% selected_tender_row = workspace.tender_rows.find { |row| row.id == @selected_tender&.id } %>
 
 <div id="pos_actions" class="pos-actions">
   <% if completion_recovery %>
@@ -11,10 +12,8 @@
       <%= action_button "Retry complete", style: :solid, intent: :brand, size: :large,
             data: { action: "register-workspace#submitComplete", register_workspace_target: "retry" },
             autofocus: true %>
-      <%= action_button_to "Return to sale", pos_register_abandon_tender_path, style: :outline, intent: :neutral, size: :large, method: :post,
-            params: { lock_version: @transaction.lock_version, register_id: @register.id },
-            form: { data: { turbo: true } },
-            data: { register_workspace_target: "abandonButton" } %>
+      <%= action_button "Return to sale", style: :outline, intent: :neutral, size: :large,
+            data: { action: "register-workspace#openReturnToSaleOverlay", register_workspace_target: "abandonButton" } %>
     </div>
   <% else %>
     <div class="pos-actions__group" role="group" aria-label="Returns and pickup">
@@ -54,12 +53,23 @@
       <%= action_button "Remove (F8)", style: :outline, intent: :neutral, size: :large, disabled: true,
             data: { action: "register-workspace#removeSelected", register_workspace_target: "removeButton" } %>
       <% if @ui_mode == "tender" && tenders.any? %>
-        <%= action_button_to "Return to sale", pos_register_abandon_tender_path, style: :outline, intent: :neutral, size: :large, method: :post,
-              params: { lock_version: @transaction.lock_version, register_id: @register.id },
-              form: { data: { turbo: true } },
-              data: { register_workspace_target: "abandonButton" } %>
+        <%= action_button "Return to sale", style: :outline, intent: :neutral, size: :large,
+              data: { action: "register-workspace#openReturnToSaleOverlay", register_workspace_target: "abandonButton" } %>
       <% end %>
     </div>
+    <% if @ui_mode == "tender" && selected_tender_row %>
+      <div class="pos-actions__group pos-tender-review" role="group" aria-label="Selected tender actions">
+        <p class="pos-tender-review__detail" data-register-workspace-target="tenderReviewDetail"><%= selected_tender_row.inspect_detail %></p>
+        <div data-register-workspace-target="tenderMutateActions" <%= "hidden" unless selected_tender_row.mutate_available %>>
+          <%= action_button "Edit Tender", style: :outline, intent: :neutral, size: :large,
+                data: { action: "register-workspace#openEditTenderOverlay" } %>
+          <%= action_button "Remove Tender", style: :outline, intent: :warning, size: :large,
+                data: { action: "register-workspace#openRemoveTenderOverlay" } %>
+        </div>
+        <p class="muted" data-register-workspace-target="tenderUnavailableReason"
+           <%= "hidden" if selected_tender_row.mutate_available %>><%= selected_tender_row.mutate_unavailable_reason %></p>
+      </div>
+    <% end %>
   <% end %>
   <div data-register-workspace-target="clientRecovery" hidden>
     <%= action_button "Retry complete", style: :solid, intent: :brand, size: :large,

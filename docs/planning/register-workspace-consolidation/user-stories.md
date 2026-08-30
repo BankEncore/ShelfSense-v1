@@ -86,7 +86,7 @@ Till Activity, cash activity detail, Session Details, Active Sessions, reversal 
 
 ## Slice 7A — Tender-review framework
 
-**Packet Fully locked** ([slice7a-tender-review-plan.md](slice7a-tender-review-plan.md)). Implement 7A.1–7A.3 under [#93](https://github.com/BankEncore/ShelfSense-v1/issues/93): Tender Review selection, ordinary remove/replace with OperationLease, Return to Sale (ordinary-only; refuse when SV present). No temporary global shortcuts. SV mutate deferred to 7B.
+**Implemented** on integration via [#93](https://github.com/BankEncore/ShelfSense-v1/issues/93): Tender Review selection, ordinary remove/replace with OperationLease, Return to Sale (ordinary-only; refuse when SV present). No temporary global shortcuts. SV mutate deferred to 7B. Packet: [slice7a-tender-review-plan.md](slice7a-tender-review-plan.md).
 
 ## Slice 7B — Stored-value, issuance, and Quick Customer
 
