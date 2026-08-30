@@ -1447,7 +1447,7 @@ The current tender remains applied until the replacement succeeds.
 [Keep Current Tender]                       [Replace Tender]
 ```
 
-On failure, the original remains unchanged. **Slice 7A authority correction:** O15 is ordinary-tender replacement only. Working stored-value rows have not posted ledger value, and their correction belongs to Slice 7B; do not infer a ledger reversal from this wireframe.
+On failure, the original remains unchanged. **Slice 7A:** O15 was ordinary-tender replacement only. **Slice 7B:** O15 extends to stored-value working tenders via audited destroy + add under OperationLease; working SV rows have not posted ledger value — replacement is not a ledger reversal. See [slice7b-stored-value-issuance-plan.md](slice7b-stored-value-issuance-plan.md).
 
 ## O16. Remove tender confirmation
 
@@ -1455,13 +1455,13 @@ On failure, the original remains unchanged. **Slice 7A authority correction:** O
 REMOVE GIFT CARD TENDER?
 
 Gift Card •••• 1234 · $18.00 applied
-Removing it will restore $18.00 to the card and increase the transaction
-balance due to $30.00.
+Removing this working tender does not restore ledger value (nothing has
+posted yet). Balance due returns to $30.00.
 
 [Keep Tender]                                  [Remove Tender]
 ```
 
-**Slice 7A authority correction:** the gift-card restore copy above is not authoritative for 7A. O16 removes ordinary working tenders only and must not claim a stored-value ledger restore. Stored-value working-tender correction and its final consequence copy belong to Slice 7B.
+**Slice 7A:** O16 removed ordinary working tenders only and must not claim a stored-value ledger restore. **Slice 7B:** O16 may remove working stored-value tenders; consequence copy must state that working remove does **not** restore ledger value. Authority: [slice7b-stored-value-issuance-plan.md](slice7b-stored-value-issuance-plan.md).
 
 Removal is idempotent and preserves reversal/audit relationships.
 
@@ -1479,7 +1479,7 @@ transaction to be tendered again.
 [Keep Tendering]                   [Remove Tenders and Return to Sale]
 ```
 
-If the eventual domain contract permits retaining some tenders, the consequence text and service must reflect that exact behavior.
+If the eventual domain contract permits retaining some tenders, the consequence text and service must reflect that exact behavior. **Slice 7A:** Return to Sale refused while any stored-value tender remained. **Slice 7B:** O17 clears all supported working tenders including stored-value, atomically, or changes nothing ([slice7b-stored-value-issuance-plan.md](slice7b-stored-value-issuance-plan.md)).
 
 ## O18. Controlled-action approval
 

@@ -200,12 +200,14 @@ Product decision unchanged: Quick Customer remains **7B.2** (child of shared Reg
 
 ## Notes for later packets
 
+Normative 7B contracts are locked in [slice7b-stored-value-issuance-plan.md](slice7b-stored-value-issuance-plan.md) (including refuse-on-dependent customer change, Quick Customer non-provisioning, Cap Result + add leases, issuance validate-before-clear, Completion Failed recovery).
+
 | Topic | Owner |
 |---|---|
-| Tender Review selection; ordinary remove/replace; Return to Sale (ordinary-only) | **7A** |
-| Nested customer lookup, attach, change-customer guards | **7B.1** |
-| Quick Customer + `Customers::Create` + `customers.create` seed | **7B.2** |
-| SV capping (auto); idempotent working SV remove/replace; issuance edit with tender-clear confirm; completion revalidation | **7B.3** |
+| Tender Review selection; ordinary remove/replace; Return to Sale (ordinary-only) | **7A** (complete) |
+| Nested customer lookup, attach, refuse change/detach while dependent SV present | **7B.1** |
+| Quick Customer + `Customers::Create` + `customers.create` seed (identity only) | **7B.2** |
+| SV capping (auto) + add leases; idempotent working SV remove/replace; issuance edit with tender-clear confirm; completion recovery | **7B.3** |
 | Activated / completed issuance or tender edit from workspace | **Out** — recovery / post-void only |
 | Keyboard dispatcher | **7C** |
 

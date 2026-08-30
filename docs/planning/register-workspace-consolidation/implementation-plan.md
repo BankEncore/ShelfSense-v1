@@ -1,6 +1,6 @@
 # Register workspace consolidation — Implementation plan
 
-Status: **Slice 6C complete** on `register-workspace-consolidation`. **Slice 7.0** + tender lifecycle inventory complete. **Slice 7A complete** ([#93](https://github.com/BankEncore/ShelfSense-v1/issues/93) / PRs [#115](https://github.com/BankEncore/ShelfSense-v1/pull/115)–[#116](https://github.com/BankEncore/ShelfSense-v1/pull/116)). Next: 7B.
+Status: **Slice 6C complete** on `register-workspace-consolidation`. **Slice 7.0** + tender lifecycle inventory complete. **Slice 7A complete** ([#93](https://github.com/BankEncore/ShelfSense-v1/issues/93) / PRs [#115](https://github.com/BankEncore/ShelfSense-v1/pull/115)–[#116](https://github.com/BankEncore/ShelfSense-v1/pull/116)). **Slice 7B packet Fully locked** ([slice7b-stored-value-issuance-plan.md](slice7b-stored-value-issuance-plan.md)); implement under [#94](https://github.com/BankEncore/ShelfSense-v1/issues/94).
 
 Authority: [plan.md](plan.md), [routing-and-authority.md](routing-and-authority.md).
 
@@ -34,7 +34,7 @@ This program uses a long-lived integration branch because an incomplete Register
 | 7.0 Keyboard contract amendment | **Docs** merged PR [#112](https://github.com/BankEncore/ShelfSense-v1/pull/112) ([slice7-keyboard-contract.md](slice7-keyboard-contract.md)); runtime unchanged until 7C | [#95](https://github.com/BankEncore/ShelfSense-v1/issues/95) (contract) |
 | Inventory (7A/7B gate) | **Complete** ([slice7-tender-lifecycle-inventory.md](slice7-tender-lifecycle-inventory.md)) | — |
 | 7A Tender-review framework | **Complete** on integration ([#93](https://github.com/BankEncore/ShelfSense-v1/issues/93) / PRs [#115](https://github.com/BankEncore/ShelfSense-v1/pull/115)–[#116](https://github.com/BankEncore/ShelfSense-v1/pull/116); [slice7a-tender-review-plan.md](slice7a-tender-review-plan.md)) | [#93](https://github.com/BankEncore/ShelfSense-v1/issues/93) |
-| 7B Stored-value / issuance / Quick Customer | Gated on 7A | [#94](https://github.com/BankEncore/ShelfSense-v1/issues/94) |
+| 7B Stored-value / issuance / Quick Customer | Packet **Fully locked** ([slice7b-stored-value-issuance-plan.md](slice7b-stored-value-issuance-plan.md)); implement 7B.1→7B.2→7B.3 | [#94](https://github.com/BankEncore/ShelfSense-v1/issues/94) |
 | 7C Keyboard dispatcher | Gated on 7A–7B; implements 7.0 contract | [#95](https://github.com/BankEncore/ShelfSense-v1/issues/95) |
 
 ## Testing stack
