@@ -7,11 +7,7 @@ module Pos
       @operation = find_authorized_operation!
       return if performed?
 
-      @session_record = session_for_operation(@operation)
-      @session_effect_cents = session_effect_cents(@operation, @session_record)
-      @can_reverse = can_reverse?(@operation)
-      Cash::ActivityReasons.seed!
-      @reasons = CashActivityReason.active.where(operation_kind: "reverse").order(:name)
+      assign_detail!
     end
 
     def reversal
@@ -36,16 +32,19 @@ module Pos
       redirect_to pos_cash_operation_path(@operation, inquiry_register_params),
                   notice: "Cash operation reversed."
     rescue Cash::Error => e
-      @session_record = session_for_operation(@operation)
-      @session_effect_cents = session_effect_cents(@operation, @session_record)
-      @can_reverse = can_reverse?(@operation)
-      Cash::ActivityReasons.seed!
-      @reasons = CashActivityReason.active.where(operation_kind: "reverse").order(:name)
+      assign_detail!
       @error = e.message
       render :show, status: :unprocessable_content
     end
 
     private
+
+    def assign_detail!
+      @session_record = session_for_operation(@operation)
+      @session_effect_cents = session_effect_cents(@operation, @session_record)
+      @can_reverse = can_reverse?(@operation)
+      @reasons = CashActivityReason.active.where(operation_kind: "reverse").order(:name)
+    end
 
     def find_authorized_operation!
       operation = CashOperation.includes(

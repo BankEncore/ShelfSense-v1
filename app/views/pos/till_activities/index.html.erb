@@ -81,7 +81,7 @@
                       <% if row.source == "cash_operation" %>
                         <%= link_to "Details", pos_cash_operation_path(row.id, inquiry_register_params.merge(session_id: @session_record.id)), class: "btn btn--ghost btn--small" %>
                       <% elsif row.source == "gift_card_cash_out" %>
-                        <%= link_to "Details", pos_cash_out_path(row.id), class: "btn btn--ghost btn--small" %>
+                        <%= link_to "Details", pos_cash_out_path(row.id, inquiry_register_params.merge(session_id: @session_record.id, register_id: @session_record.register_id)), class: "btn btn--ghost btn--small" %>
                       <% end %>
                     </td>
                     <td class="numeric"><%= format_signed_money_cents(row.session_effect_cents) %></td>

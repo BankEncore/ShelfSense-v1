@@ -2,7 +2,7 @@
 <%= render layout: "pos/shell/frame" do %>
   <%= render "pos/shell/feedback" %>
   <div class="pos-register-shell__body">
-    <main class="pos-receipt" data-controller="pos-receipt">
+    <main class="pos-receipt" data-controller="pos-receipt" id="pos_cash_out_detail">
       <div class="pos-receipt__screen">
         <h1 tabindex="-1" autofocus><%= @cash_out.reversal? ? "Cash-out reversed" : "Cash-out complete" %></h1>
         <% if notice.present? %>
@@ -14,17 +14,31 @@
         <dl class="pos-receipt__totals">
           <div><dt>Card</dt><dd><%= @cash_out.gift_card.masked_number %></dd></div>
           <div><dt>Amount</dt><dd><%= format_money_cents(@cash_out.amount_cents) %></dd></div>
-          <div><dt>Register</dt><dd><%= @cash_out.register.admin_label %></dd></div>
+          <div><dt>Original Register</dt><dd><%= @cash_out.register.admin_label %></dd></div>
+          <% if @original_session %>
+            <div><dt>Original session</dt><dd><%= @original_session.cashier_user.display_name %> · <%= @original_session.open? ? "Open" : "Closed" %></dd></div>
+          <% end %>
           <div><dt>Business date</dt><dd><%= @cash_out.business_date.iso8601 %></dd></div>
           <div><dt>Remaining balance</dt><dd><%= format_money_cents(@cash_out.gift_card.balance_cents) %></dd></div>
+          <% if @reversal_session && @reversal_session.id != @original_session&.id %>
+            <div><dt>Your current Register</dt><dd><%= @reversal_session.register.admin_label %> · <%= @reversal_session.cashier_user.display_name %></dd></div>
+          <% end %>
         </dl>
+        <% if !@cash_out.reversal? && !@cash_out.reversed? && !@can_reverse %>
+          <p class="muted pos-no-print">
+            Reversal is available only while you hold the original open Register session for this cash-out.
+          </p>
+        <% end %>
       </div>
 
       <div class="pos-receipt__actions pos-no-print">
         <%= action_button("Print", style: :solid, intent: :brand, data: { action: "pos-receipt#print" }) %>
         <%= action_link_to(register_inquiry_return_label, register_inquiry_return_path, style: :outline, intent: :neutral) %>
-        <% if !@cash_out.reversal? && !@cash_out.reversed? && cashier_target_session %>
+        <% if @can_reverse %>
           <%= form_with url: reverse_pos_cash_out_path(@cash_out), method: :post, local: true, class: "pos-return-items" do %>
+            <% cash_out_context_params.each do |key, value| %>
+              <%= hidden_field_tag key, value %>
+            <% end %>
             <%= hidden_field_tag :source_id, SecureRandom.uuid_v7 %>
             <%= hidden_field_tag :idempotency_key, SecureRandom.uuid_v7 %>
             <div class="form-field">

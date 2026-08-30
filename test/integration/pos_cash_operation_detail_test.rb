@@ -22,14 +22,26 @@ class PosCashOperationDetailTest < ActionDispatch::IntegrationTest
     sign_in_as("admin")
   end
 
-  test "detail shows original effect and reverse confirmation overlay" do
+  test "GET detail does not seed reasons or mutate cash or session state" do
+    reason_count = CashActivityReason.count
+    reason_digest = CashActivityReason.order(:id).pluck(:id, :updated_at, :name)
+    operation_count = CashOperation.count
+    entry_count = CashEntry.count
+    session_lock = @context[:session].lock_version
+    working = Pos::StartTransaction.call(session: @context[:session], actor: @actor)
+
     get pos_cash_operation_path(@operation, register_id: @register.id)
     assert_response :success
-    assert_select ".pos-register-shell"
-    assert_select "#pos_cash_reversal_overlay[data-overlay=cash-reversal-confirmation]"
-    assert_match "Original effect", response.body
-    assert_match "Reversal effect", response.body
-    assert_match(/\+\$4\.00/, response.body)
+    assert_select "[data-controller='pos-blocking-overlay']"
+    assert_select "#pos_cash_reversal_overlay[data-register-blocking-overlay]"
+
+    assert_equal reason_count, CashActivityReason.count
+    assert_equal reason_digest, CashActivityReason.order(:id).pluck(:id, :updated_at, :name)
+    assert_equal operation_count, CashOperation.count
+    assert_equal entry_count, CashEntry.count
+    assert_equal session_lock, @context[:session].reload.lock_version
+    assert_equal @operation.id, @operation.reload.id
+    assert working.reload.working?
   end
 
   test "nested reversal posts through Cash::Reverse and rejects reverse-of-reverse" do
