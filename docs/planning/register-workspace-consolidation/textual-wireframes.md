@@ -363,7 +363,7 @@ F10 Register Menu
 
 ### Future mode-scoped concept (not implementation authority)
 
-Do not implement, display as the live legend, or treat as 6.7 replacement until Slice 6 formally supersedes the keyboard contract. `/` is not Discount. `-` is not Remove. `F5` is not Price. `F7` is not Tax. `F8` is not Return.
+Do not implement, display as the live legend, or treat as 6.7 replacement until Slice **7C** implements the accepted contract. Speculative remaps that assign `/` to Discount or `-` to Remove on SALE are **rejected**; see [slice7-keyboard-contract.md](slice7-keyboard-contract.md) and [slice7-overview.md](slice7-overview.md).
 
 ```text
 TARGET CONCEPT — NOT IMPLEMENTATION AUTHORITY
