@@ -2350,6 +2350,10 @@ input[type="submit"]:disabled,
   margin-top: var(--space-3);
 }
 
+.pos-inquiry--wide {
+  width: min(100% - 2rem, 56rem);
+}
+
 .pos-history {
   width: min(100% - 2rem, 56rem);
   margin: var(--space-6) auto;

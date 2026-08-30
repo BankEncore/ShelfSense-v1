@@ -208,6 +208,8 @@ Rails.application.routes.draw do
       post :store_credit
       post :admin_prefix_last_four
     end
+    resource :customer_summary, only: :show, controller: "customer_summaries"
+    get "pickup_queue", to: "pickup_queues#index", as: :pickup_queue
     get "register/enter", to: "enters#show", as: :register_enter
     post "register/enter", to: "enters#create"
     resources :cash_outs, only: %i[new create show] do

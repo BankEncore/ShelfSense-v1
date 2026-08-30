@@ -1,6 +1,6 @@
 # Slice 6A — Customer-service surfaces
 
-Status: **In implementation** on `register-workspace-consolidation` ([#90](https://github.com/BankEncore/ShelfSense-v1/issues/90)). Delivery: one packet; three PRs (**6A.1** / **6A.2** / **6A.3**). Close #90 after all three merge.
+Status: **Implemented on branch** `90-customer-service-surfaces` ([#90](https://github.com/BankEncore/ShelfSense-v1/issues/90)). Delivery: one packet; three commits/PRs (**6A.1** / **6A.2** / **6A.3**). Close #90 after all three merge to `register-workspace-consolidation`.
 
 Authority: [plan.md](plan.md), [implementation-plan.md](implementation-plan.md), [routing-and-authority.md](routing-and-authority.md), [user-stories.md](user-stories.md), [textual-wireframes.md](textual-wireframes.md) S12–S16 / P1–P5, [closeout-plan.md](closeout-plan.md), ADR-026 / ADR-027.
 

@@ -43,11 +43,15 @@ F10 working-basket preservation is already covered in [test/system/pos_register_
 | `test/services/pos/cash_accountability_test.rb` | Domain | Preserve |
 | `test/services/cash/*` | Domain | Preserve |
 | `test/services/gift_cards/cash_out_test.rb` | Domain | Preserve |
-| `test/services/gift_cards/*` inquiry/admin | Domain; prefix/last-four vs possession | Preserve; extend in 6A |
+| `test/services/gift_cards/*` inquiry/admin | Domain; prefix/last-four vs possession | Preserve; POS S14 in 6A.2 |
 | `test/models/pos_schema_test.rb` | Domain | Preserve |
 | `test/integration/pos_register_test.rb` | Request still required (enter, occupied, resume) | Preserve; retarget paths if `/pos` semantics change |
 | `test/integration/pos_home_test.rb` | Mixed: GET immutability / auth (keep); `h1` POS Home and Home link lists (replace Slice 2); workspace “POS Home” chrome (replace Slice 2–3); F10 not covered here | Replace Home-specific assertions in Slice 2 |
-| `test/integration/pos_transaction_history_test.rb` | Request still required | Preserve; Slice 3/6A may change chrome |
+| `test/integration/pos_transaction_history_test.rb` | Request still required; shell wrap + return ownership | Slice 6A.1 |
+| `test/services/pos/register_shell_context_test.rb` | Return paths / inquiry menu surface / expected-cash flag | Slice 6A.1 |
+| `test/integration/pos_stored_value_inquiry_test.rb` | S14 three POST paths; no GET number leakage; admin isolation | Slice 6A.2 |
+| `test/integration/pos_customer_service_surfaces_test.rb` | S15/S16 read-only shell surfaces | Slice 6A.3 |
+| `test/services/pos/register_menu_test.rb` | Menu capability keys; inquiry suppresses proxies; 6A customer-service items | Slice 3 / 6A |
 | `test/integration/pos_return_items_test.rb` | Request still required | Preserve |
 | `test/integration/pos_post_void_workspace_test.rb` | Request still required | Preserve |
 | `test/integration/pos_*_return_workspace_test.rb` | Request still required | Preserve |

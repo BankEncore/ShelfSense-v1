@@ -160,6 +160,10 @@ module PosRegisterShellHelper
       { key:, label: "Transactions & Receipts", href: pos_transactions_path(inquiry_register_params) }
     when :stored_value_inquiry
       { key:, label: "Stored Value Inquiry", href: pos_stored_value_inquiry_path(inquiry_register_params) }
+    when :customer_summary
+      { key:, label: "Customer Summary", href: pos_customer_summary_path(inquiry_register_params) }
+    when :pickup_queue
+      { key:, label: "Pickup Queue", href: pos_pickup_queue_path(inquiry_register_params) }
     when :gift_card_cash_out
       { key:, label: "Gift-card cash-out", href: new_pos_cash_out_path }
     when :paid_in

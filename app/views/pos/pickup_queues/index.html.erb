@@ -1,0 +1,87 @@
+<% content_for :title, "Pickup Queue" %>
+<%= render layout: "pos/shell/frame" do %>
+  <%= render "pos/shell/feedback" %>
+  <div class="pos-register-shell__body">
+    <main class="pos-inquiry pos-inquiry--wide">
+      <div class="pos-history__title-row pos-no-print">
+        <h1>Pickup Queue</h1>
+        <%= link_to register_inquiry_return_label, register_inquiry_return_path, class: "btn btn--ghost" %>
+      </div>
+      <p class="muted">View only. Add to Transaction is not available from this surface in Slice 6A.</p>
+
+      <%= form_with url: pos_pickup_queue_path, method: :get, local: true, class: "pos-inquiry__form" do %>
+        <% inquiry_register_params.each do |key, value| %>
+          <%= hidden_field_tag key, value %>
+        <% end %>
+        <div class="form-field">
+          <%= label_tag :status, "Status" %>
+          <%= select_tag :status, options_for_select([["Ready", "available"], ["All open", "all"]], @status) %>
+        </div>
+        <div class="form-field">
+          <%= label_tag :q, "Search" %>
+          <%= text_field_tag :q, @query, autocomplete: "off" %>
+        </div>
+        <%= submit_tag "Filter", class: "btn" %>
+      <% end %>
+
+      <% if @requests.empty? %>
+        <p class="muted">No matching pickups.</p>
+      <% else %>
+        <div class="table-scroll">
+          <table class="pos-history__table">
+            <thead>
+              <tr>
+                <th>Request</th>
+                <th>Customer</th>
+                <th>Items</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% @requests.each do |request| %>
+                <tr class="<%= "is-selected" if @selected&.id == request.id %>">
+                  <td>
+                    <%= link_to "##{request.number}",
+                          pos_pickup_queue_path(inquiry_register_params.merge(q: @query, status: @status, request_id: request.id)) %>
+                  </td>
+                  <td><%= request.customer.display_name %></td>
+                  <td>
+                    <% variant = request.product_variant %>
+                    <%= [ variant&.product&.name, variant&.sku ].compact.join(" · ") %>
+                  </td>
+                  <td><%= request.status.humanize %></td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+
+        <% if @selected %>
+          <section class="pos-inquiry__result" aria-label="Selected pickup">
+            <h2>Request #<%= @selected.number %> · <%= @selected.customer.display_name %></h2>
+            <% variant = @selected.product_variant %>
+            <dl class="pos-history__header">
+              <div><dt>Merchandise</dt><dd><%= [ variant&.product&.name, variant&.sku ].compact.join(" · ") %></dd></div>
+              <div><dt>Status</dt><dd><%= @selected.status.humanize %></dd></div>
+              <% allocation = @selected.active_allocation %>
+              <% if allocation %>
+                <div><dt>Allocation</dt><dd><%= allocation.allocation_type.humanize %></dd></div>
+                <% if allocation.inventory_unit %>
+                  <div><dt>Unit</dt><dd><%= allocation.inventory_unit.unit_identifier %></dd></div>
+                <% end %>
+              <% end %>
+            </dl>
+            <div class="actions">
+              <% if @can_view_request %>
+                <%= link_to "View Request", admin_customer_request_path(@selected), class: "btn btn--outline" %>
+              <% end %>
+              <%= link_to "Customer Summary",
+                    pos_customer_summary_path(inquiry_register_params.merge(customer_id: @selected.customer_id)),
+                    class: "btn btn--outline" %>
+            </div>
+          </section>
+        <% end %>
+      <% end %>
+    </main>
+  </div>
+<% end %>

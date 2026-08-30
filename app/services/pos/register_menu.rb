@@ -45,7 +45,7 @@ module Pos
     end
 
     def customer_service_keys
-      %i[transactions stored_value_inquiry]
+      %i[transactions stored_value_inquiry customer_summary pickup_queue]
     end
 
     def till_keys
