@@ -139,7 +139,7 @@ class PosHomeTest < ActionDispatch::IntegrationTest
     assert_select "h2", text: "Tenders"
     assert_select "h2", text: "Cash custody"
     assert_select "button", text: "Print"
-    assert_select ".pos-report-print", text: /X REPORT/
+    assert_select "[data-pos-receipt-print-url-value]"
     assert_match format_money_cents(500), response.body
     assert context[:session].reload.open?
     assert_nil context[:session].closed_at
@@ -216,7 +216,44 @@ class PosHomeTest < ActionDispatch::IntegrationTest
     assert_equal viewer.id, User.find_by!(username: "x_viewer").id
   end
 
-  test "session and z reports are viewable without an open session" do
+  test "session and z reports are viewable without an open session when authorized" do
+    context = pos_open_context(store: @store, actor: @actor, register: @register)
+    pos_close_session!(
+      session: context[:session],
+      actor: @actor,
+      expected_lock_version: context[:session].lock_version,
+      closing_count_cents: 0
+    )
+    period = context[:period].reload
+    Pos::FinalizeReportingPeriod.call(
+      period: period,
+      actor: @actor,
+      expected_lock_version: period.lock_version
+    )
+    viewer = pos_store_manager(store: @store, assigned_by: @actor, username: "report_viewer")
+    delete session_path
+    sign_in_as("report_viewer")
+
+    refute PosSession.open.exists?(cashier_user: viewer)
+
+    get pos_reports_path
+    assert_response :success
+    assert_select "a[href='#{pos_session_details_path(context[:session])}']"
+    assert_select "a[href='#{pos_reporting_period_z_path(context[:period])}']"
+
+    get pos_session_details_path(context[:session])
+    assert_response :success
+    assert_match "Closed Session Report", response.body
+
+    get pos_reporting_period_z_path(context[:period])
+    assert_response :success
+    assert_match "Z Report", response.body
+    assert_select "h2", text: "Sales"
+    assert_select "h2", text: "Cash custody"
+    assert_select "button", text: "Print"
+  end
+
+  test "associate cannot view another cashier closed session or period reports" do
     context = pos_open_context(store: @store, actor: @actor, register: @register)
     pos_close_session!(
       session: context[:session],
@@ -234,25 +271,15 @@ class PosHomeTest < ActionDispatch::IntegrationTest
     delete session_path
     sign_in_as("report_clerk")
 
-    refute PosSession.open.exists?(cashier_user: clerk)
-
     get pos_reports_path
     assert_response :success
-    assert_select "a[href='#{pos_session_closed_path(context[:session])}']"
-    assert_select "a[href='#{pos_reporting_period_z_path(context[:period])}']"
+    assert_select "a[href='#{pos_session_details_path(context[:session])}']", count: 0
+    assert_select "a[href='#{pos_reporting_period_z_path(context[:period])}']", count: 0
 
-    get pos_session_closed_path(context[:session])
-    assert_response :success
-    assert_match "Session closed", response.body
-    assert_nil session[:pos_register_id]
-
+    get pos_session_details_path(context[:session])
+    assert_redirected_to pos_path
     get pos_reporting_period_z_path(context[:period])
-    assert_response :success
-    assert_match "Z report", response.body
-    assert_select "h2", text: "Sales"
-    assert_select "h2", text: "Cash custody"
-    assert_select "button", text: "Print"
-    assert_select ".pos-report-print"
+    assert_response :not_found
   end
 
   test "workspace chrome uses the shared shell" do
@@ -463,21 +490,69 @@ class PosHomeTest < ActionDispatch::IntegrationTest
     assert context[:session].reload.open?
   end
 
-  test "closed session report still shows expected closing cash" do
-    context = pos_open_context(store: @store, actor: @actor, register: @register, opening_float_cents: 500)
-    clerk = pos_transacting_user(store: @store, assigned_by: @actor, username: "close_view")
+  test "closed session report gates expected closing cash without permission" do
+    clerk = pos_transacting_user(store: @store, assigned_by: @actor, username: "close_owner")
+    context = pos_open_context(store: @store, actor: clerk, register: @register, opening_float_cents: 500)
     pos_close_session!(
       session: context[:session],
-      actor: @actor,
+      actor: clerk,
       expected_lock_version: context[:session].lock_version,
       closing_count_cents: 500
     )
     delete session_path
-    sign_in_as("close_view")
+    sign_in_as("close_owner")
 
-    get pos_session_closed_path(context[:session])
+    refute Authorization::PermissionEvaluator.allowed?(
+      user: clerk,
+      permission_key: "cash.view_expected_before_count",
+      store: @store
+    )
+
+    get pos_session_details_path(context[:session])
+    assert_response :success
+    assert_match "Counted Cash", response.body
+    assert_no_match(/Expected closing Cash/, response.body)
+    assert_no_match(/\bVariance\b/, response.body)
+
+    get pos_report_print_path(scope: "session", id: context[:session].id)
+    assert_response :success
+    assert_match "Counted Cash", response.body
+    assert_no_match(/Expected closing Cash/, response.body)
+    assert_no_match(/\bVariance\b/, response.body)
+
+    get pos_report_print_path(scope: "session", id: context[:session].id, variant: "tape")
+    assert_response :success
+    assert_match "CLOSED SESSION", response.body
+    assert_includes response.body.delete("\n"), "Session #{context[:session].id}"
+    assert_no_match(/Expected closing Cash/, response.body)
+    assert_no_match(/\bVariance\b/, response.body)
+  end
+
+  test "print endpoint rebuilds expected cash under current permission" do
+    manager = pos_store_manager(store: @store, assigned_by: @actor, username: "print_mgr")
+    context = pos_open_context(store: @store, actor: manager, register: @register, opening_float_cents: 500)
+    pos_close_session!(
+      session: context[:session],
+      actor: manager,
+      expected_lock_version: context[:session].lock_version,
+      closing_count_cents: 500
+    )
+    delete session_path
+    sign_in_as("print_mgr")
+
+    get pos_report_print_path(scope: "session", id: context[:session].id)
     assert_response :success
     assert_match "Expected closing Cash", response.body
+
+    Role.find_by!(key: "store_manager").role_permissions
+        .joins(:permission)
+        .where(permissions: { key: "cash.view_expected_before_count" })
+        .delete_all
+
+    get pos_report_print_path(scope: "session", id: context[:session].id)
+    assert_response :success
+    assert_no_match(/Expected closing Cash/, response.body)
+    assert_match "Counted Cash", response.body
   end
 
   private

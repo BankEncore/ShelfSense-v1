@@ -78,7 +78,7 @@ Till Activity, cash activity detail, Session Details, Active Sessions, reversal 
 
 ## Slice 6C — Reporting-period surfaces
 
-Z status, blockers, X, closed-session, finalized Z, finalization confirmation in shell.
+**Complete** ([#92](https://github.com/BankEncore/ShelfSense-v1/issues/92) / PR [#109](https://github.com/BankEncore/ShelfSense-v1/pull/109)). Z status, blockers, live X, Session Details closed-session report, finalized Z, finalization confirmation, print chrome, and shift-end tape in shell — only inventory-permitted P13 rows.
 
 ## Slice 7A — Tender-review framework (gated)
 

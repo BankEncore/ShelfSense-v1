@@ -1,10 +1,15 @@
-<% content_for :title, "Session Details" %>
+<% content_for :title, @session_record.closed? ? "Closed Session Report" : "Session Details" %>
 <%= render layout: "pos/shell/frame" do %>
   <%= render "pos/shell/feedback" %>
-  <div class="pos-register-shell__body">
+  <div class="pos-register-shell__body"
+       data-controller="pos-receipt"
+       <% if @report_print_url.present? %>
+         data-pos-receipt-print-url-value="<%= @report_print_url %>"
+         data-pos-receipt-tape-url-value="<%= @tape_print_url %>"
+       <% end %>>
     <main class="pos-history">
       <div class="pos-history__title-row pos-no-print">
-        <h1>Session Details</h1>
+        <h1><%= @session_record.closed? ? "Closed Session Report" : "Session Details" %></h1>
         <%= link_to register_inquiry_return_label, register_inquiry_return_path, class: "btn btn--ghost" %>
       </div>
 
@@ -19,7 +24,7 @@
         <% end %>
         <div><dt>Opening float</dt><dd><%= format_money_cents(@session_record.opening_float_cents) %></dd></div>
         <div><dt>Transactions</dt><dd><%= @totals.completed_transaction_count %></dd></div>
-        <% if @can_view_expected && !@expected_cash_cents.nil? %>
+        <% if @can_view_expected && !@expected_cash_cents.nil? && @session_record.open? %>
           <div><dt>Expected cash</dt><dd><%= format_money_cents(@expected_cash_cents) %></dd></div>
         <% end %>
         <% if @session_record.closed? && @session_record.closed_by_user %>
@@ -27,9 +32,24 @@
         <% end %>
       </dl>
 
+      <% if @session_record.closed? && @report_groups.present? %>
+        <div class="pos-no-print">
+          <%= render "pos/shared/totals_groups", groups: @report_groups %>
+        </div>
+      <% end %>
+
       <div class="pos-history__nav pos-no-print actions">
         <% if @session_record.open? %>
           <%= link_to "X Report", pos_session_x_report_path(@session_record), class: "btn btn--outline" %>
+        <% else %>
+          <button type="button" class="btn" data-action="pos-receipt#print">Print</button>
+          <button type="button" class="btn btn--outline" data-action="pos-receipt#printTape">Print tape</button>
+          <% if @period.finalized? %>
+            <%= link_to "View Z", pos_reporting_period_z_path(@period), class: "btn" %>
+          <% elsif @session_record.cashier_user_id == current_user.id || can_view_other_sessions? %>
+            <%= link_to "Finalize Z…", pos_reporting_period_finalize_confirm_path(@period), class: "btn" %>
+            <%= link_to "Leave period open", pos_register_enter_path(register_id: @register.id), class: "btn btn--secondary" %>
+          <% end %>
         <% end %>
         <%= link_to "Till Activity",
               pos_till_activity_path(inquiry_register_params.merge(session_id: @session_record.id, register_id: @session_record.register_id)),

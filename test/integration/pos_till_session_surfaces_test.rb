@@ -92,7 +92,7 @@ class PosTillSessionSurfacesTest < ActionDispatch::IntegrationTest
     assert_redirected_to pos_path
 
     get pos_session_details_path(@context[:session], register_id: other_register.id)
-    assert_redirected_to pos_path
+    assert_response :not_found
   end
 
   test "selector entry redirects and closed register shows a chooser" do

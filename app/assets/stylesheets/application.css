@@ -2030,6 +2030,16 @@ input[type="submit"]:disabled,
   display: none;
 }
 
+.pos-shift-end-tape {
+  display: none;
+}
+
+body.is-authorized-print .pos-report-print,
+body.is-authorized-print .pos-print-only,
+body.is-authorized-print .pos-shift-end-tape {
+  display: block;
+}
+
 .pos-receipt-font-loader {
   position: absolute;
   width: 1px;
@@ -2641,7 +2651,8 @@ input[type="submit"]:disabled,
 
   .pos-print-only,
   .pos-receipt__print,
-  .pos-report-print {
+  .pos-report-print,
+  .pos-shift-end-tape {
     display: block !important;
   }
 
@@ -2650,7 +2661,8 @@ input[type="submit"]:disabled,
   }
 
   body.is-printing-voucher .pos-receipt__print,
-  body.is-printing-voucher .pos-report-print {
+  body.is-printing-voucher .pos-report-print,
+  body.is-printing-voucher .pos-shift-end-tape {
     display: none !important;
   }
 
@@ -2842,6 +2854,15 @@ input[type="submit"]:disabled,
   .pos-report-print .pos-report-group h2 {
     margin: 0 0 0.15em;
     font-size: 1em;
+  }
+
+  .pos-shift-end-tape__pre {
+    font-family: "Inconsolata", ui-monospace, monospace;
+    font-size: 12px;
+    line-height: 1.2;
+    margin: 0;
+    white-space: pre;
+    width: 42ch;
   }
 
   .pos-report-print .pos-close__facts,

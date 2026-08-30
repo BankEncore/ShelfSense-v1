@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title><%= @print_title %> · ShelfSense</title>
+    <%= stylesheet_link_tag "application", "data-turbo-track": "reload" %>
+  </head>
+  <body class="pos-body density-standard is-authorized-print">
+    <span class="pos-receipt-font-loader" aria-hidden="true">0</span>
+    <% if @variant == :tape %>
+      <%= render "pos/shared/shift_end_tape", groups: @report_groups, identity: @tape_identity %>
+    <% else %>
+      <%= render "pos/shared/report_print",
+            title: @print_title,
+            banners: @print_banners,
+            meta: @print_meta,
+            groups: @report_groups %>
+    <% end %>
+  </body>
+</html>

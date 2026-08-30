@@ -17,7 +17,7 @@ module Pos
       )
 
       if session_record.closed?
-        redirect_to pos_session_closed_path(session_record)
+        redirect_to pos_session_details_path(session_record)
         return
       end
 

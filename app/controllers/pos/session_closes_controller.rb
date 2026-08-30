@@ -8,7 +8,7 @@ module Pos
       return if performed?
 
       if @session_record.closed?
-        redirect_to pos_session_closed_path(@session_record)
+        redirect_to pos_session_details_path(@session_record)
         return
       end
 
@@ -25,7 +25,7 @@ module Pos
       return if performed?
 
       if @session_record.closed?
-        redirect_to pos_session_closed_path(@session_record)
+        redirect_to pos_session_details_path(@session_record)
         return
       end
 
@@ -41,7 +41,7 @@ module Pos
         approver_username: params[:approver_username],
         approver_password: params[:approver_password]
       )
-      redirect_to pos_session_closed_path(@session_record)
+      redirect_to pos_session_details_path(@session_record)
     rescue ActionController::ParameterMissing
       recover_blind("expected lock version is required")
     rescue Money::ParseCents::Error => e
@@ -56,7 +56,7 @@ module Pos
       return if performed?
 
       if @session_record.closed?
-        redirect_to pos_session_closed_path(@session_record)
+        redirect_to pos_session_details_path(@session_record)
         return
       end
 
@@ -109,7 +109,7 @@ module Pos
       @session_record.reload
 
       if @session_record.closed?
-        redirect_to pos_session_closed_path(@session_record)
+        redirect_to pos_session_details_path(@session_record)
       elsif @session_record.pos_transactions.working.exists?
         redirect_to pos_register_workspace_path, alert: "Complete or cancel the current sale before closing."
       else

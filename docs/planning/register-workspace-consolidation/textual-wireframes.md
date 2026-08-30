@@ -947,6 +947,8 @@ Selected: Register 03 · Morgan Lee
 
 ## S20. X Report
 
+Live open-session X only. Closed-session reporting belongs on **Session Details** (Slice 6B route), not a redefined S20 and not a second closed-session destination.
+
 ```text
 X REPORT · INTERIM — SESSION REMAINS OPEN
 

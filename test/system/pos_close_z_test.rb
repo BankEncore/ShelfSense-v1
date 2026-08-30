@@ -36,14 +36,16 @@ class PosCloseZTest < ApplicationSystemTestCase
     fill_in "Over/short note", with: "Blind zero count"
     click_on "Close session"
 
-    assert_text "Session closed"
+    assert_text "Closed Session Report"
     assert_text "Expected closing Cash"
     assert_text "$100.00"
     assert_text "Counted Cash"
+    click_on "Finalize Z…"
+    assert_text "Confirmation"
     click_on "Finalize Z"
-    assert_text "Z report"
-    assert_text "Store 001"
-    assert_text "Register 01"
+    assert_text "Z Report"
+    assert_text "001"
+    assert_text "01"
     assert_text "Opening floats total"
     period = PosReportingPeriod.finalized.find_by!(register: @register)
     assert period.finalized?
@@ -74,7 +76,7 @@ class PosCloseZTest < ApplicationSystemTestCase
     assert_text "Closing Cash count"
     fill_in "Closing Cash count", with: "120.99"
     click_on "Close session"
-    assert_text "Session closed"
+    assert_text "Closed Session Report"
     assert_text "Leave period open"
     click_on "Leave period open"
     assert_button "Finalize Z"
@@ -139,7 +141,7 @@ class PosCloseZTest < ApplicationSystemTestCase
     fill_in "Closing Cash count", with: format("%<dollars>d.%<cents>02d", dollars: expected / 100, cents: expected % 100)
     click_on "Close session"
 
-    assert_text "Session closed"
+    assert_text "Closed Session Report"
     session_record.reload
     assert session_record.closed?
     assert_equal expected, session_record.closing_expected_cash_cents
@@ -148,13 +150,16 @@ class PosCloseZTest < ApplicationSystemTestCase
     assert_text "Expected closing Cash"
     assert_text "Variance"
 
+    click_on "Finalize Z…"
+    assert_text "Confirmation"
     click_on "Finalize Z"
-    assert_text "Z report"
+    assert_text "Z Report"
     period = PosReportingPeriod.finalized.find_by!(register: @register)
     assert period.finalized?
     assert_equal session_record.closing_expected_cash_cents, period.finalized_closing_expected_cash_cents_sum
     assert_equal session_record.closing_count_cents, period.finalized_closing_count_cents_sum
     assert_equal 0, period.finalized_closing_variance_cents_sum
+    assert_no_link "Finalize Z…"
     assert_no_button "Finalize Z"
   end
 
