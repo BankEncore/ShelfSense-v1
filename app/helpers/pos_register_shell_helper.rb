@@ -158,6 +158,8 @@ module PosRegisterShellHelper
     case key
     when :transactions
       { key:, label: "Transactions & Receipts", href: pos_transactions_path(inquiry_register_params) }
+    when :stored_value_inquiry
+      { key:, label: "Stored Value Inquiry", href: pos_stored_value_inquiry_path(inquiry_register_params) }
     when :gift_card_cash_out
       { key:, label: "Gift-card cash-out", href: new_pos_cash_out_path }
     when :paid_in
