@@ -255,13 +255,22 @@ module Pos
     end
 
     def money_row(label, cents)
-      return if cents.nil?
+      if cents.nil?
+        # Finalized Z may still list snapshot columns that predate capture ("not captured").
+        return Row.new(label: label, cents: nil, format: :optional_money) if finalized_period?
+
+        return
+      end
 
       Row.new(label: label, cents: cents, format: :money)
     end
 
     def signed_row(label, cents)
-      return if cents.nil?
+      if cents.nil?
+        return Row.new(label: label, cents: nil, format: :optional_signed) if finalized_period?
+
+        return
+      end
 
       Row.new(label: label, cents: cents, format: :signed)
     end

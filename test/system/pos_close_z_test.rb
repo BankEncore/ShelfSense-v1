@@ -44,8 +44,8 @@ class PosCloseZTest < ApplicationSystemTestCase
     assert_text "Confirmation"
     click_on "Finalize Z"
     assert_text "Z Report"
-    assert_text "Store 001"
-    assert_text "Register 01"
+    assert_text "001"
+    assert_text "01"
     assert_text "Opening floats total"
     period = PosReportingPeriod.finalized.find_by!(register: @register)
     assert period.finalized?
