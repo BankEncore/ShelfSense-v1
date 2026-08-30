@@ -27,7 +27,7 @@ class PosStoredValueInquiryTest < ActionDispatch::IntegrationTest
     refute PosSession.open.exists?
   end
 
-  test "exact number POST shows masked balance and never echoes the full number" do
+  test "exact number POST redirects then shows masked balance and never echoes the full number" do
     card = numbered_card(last_four: "4242")
     GiftCards::Fund.call(gift_card: card, amount_cents: 1_800, store: @store, performed_by: @actor)
 
@@ -35,9 +35,13 @@ class PosStoredValueInquiryTest < ActionDispatch::IntegrationTest
       register_id: @register.id,
       card_number: card.number
     }
+    assert_redirected_to pos_stored_value_inquiry_path(register_id: @register.id)
+    follow_redirect!
     assert_response :success
+    assert_select "#sv-inquiry-result"
     assert_match card.masked_number, response.body
     assert_match format_money_cents(1_800), response.body
+    assert_match "Available balance", response.body
     refute_includes response.body, card.number
     refute_match(/card_number=#{Regexp.escape(card.number)}/, response.body)
     assert_select "a", text: "Use as Tender", count: 0
@@ -55,7 +59,8 @@ class PosStoredValueInquiryTest < ActionDispatch::IntegrationTest
       number_prefix: first.number_prefix,
       number_last_four: "3131"
     }
-    assert_response :unprocessable_entity
+    assert_response :redirect
+    follow_redirect!
     assert_match first.masked_number, response.body
     assert_match second.masked_number, response.body
     refute_includes response.body, first.number
@@ -87,15 +92,7 @@ class PosStoredValueInquiryTest < ActionDispatch::IntegrationTest
       phone: "555-0199"
     )
     account = StoredValue::OpenAccount.call(account_type: "store_credit", customer: customer)
-    reason = StoredValueAdjustmentReason.find_by(code: "goodwill") ||
-             StoredValueAdjustmentReason.create!(
-               code: "goodwill",
-               name: "Goodwill",
-               active: true,
-               applies_to_store_credit: true,
-               applies_to_trade_credit: true,
-               applies_to_gift_card: false
-             )
+    reason = StoredValueAdjustmentReason.find_by!(code: "goodwill")
     StoredValue::Adjust.call(
       account: account,
       direction: "credit",
@@ -111,15 +108,19 @@ class PosStoredValueInquiryTest < ActionDispatch::IntegrationTest
       register_id: @register.id,
       customer_query: "Jane Inquiry"
     }
-    assert_response :success
+    assert_redirected_to pos_stored_value_inquiry_path(register_id: @register.id, customer_query: "Jane Inquiry")
+    follow_redirect!
     assert_match "Jane Inquiry", response.body
+    assert_select "#sv-inquiry-result"
 
     post store_credit_pos_stored_value_inquiry_path, params: {
       register_id: @register.id,
       customer_id: customer.id
     }
-    assert_response :success
+    assert_response :redirect
+    follow_redirect!
     assert_match format_money_cents(500), response.body
+    assert_match "Customer store credit", response.body
   end
 
   test "GET with card_number query does not perform possession lookup" do

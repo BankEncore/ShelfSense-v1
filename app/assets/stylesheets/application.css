@@ -2332,7 +2332,21 @@ input[type="submit"]:disabled,
   align-items: flex-end;
 }
 
-.pos-inquiry__result,
+.pos-inquiry__result {
+  margin: 0;
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface, #fff);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.pos-inquiry__result h2,
+.pos-inquiry__result h3 {
+  margin: 0;
+}
+
 .pos-inquiry__matches,
 .pos-inquiry__activity {
   margin: 0;
@@ -2346,8 +2360,15 @@ input[type="submit"]:disabled,
   gap: var(--space-2);
 }
 
+.pos-inquiry__matches .btn {
+  width: 100%;
+  justify-content: flex-start;
+  text-align: left;
+  white-space: normal;
+}
+
 .pos-inquiry__actions {
-  margin-top: var(--space-3);
+  margin-top: var(--space-2);
 }
 
 .pos-inquiry--wide {
