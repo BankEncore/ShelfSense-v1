@@ -82,7 +82,7 @@ Till Activity, cash activity detail, Session Details, Active Sessions, reversal 
 
 ## Slice 7.0 — Keyboard contract amendment
 
-**Docs-only.** Accept SALE / TENDER / overlay / Escape / scanner / Lock tables and semantic vocabulary ([slice7-keyboard-contract.md](slice7-keyboard-contract.md)). Does not implement the dispatcher. Clarifies plan.md decision 13 “first merge.” See [slice7-overview.md](slice7-overview.md).
+**Docs-only** ([#95](https://github.com/BankEncore/ShelfSense-v1/issues/95) / PR [#112](https://github.com/BankEncore/ShelfSense-v1/pull/112)). Accept SALE / TENDER / overlay / Escape / scanner / Lock tables and semantic vocabulary ([slice7-keyboard-contract.md](slice7-keyboard-contract.md)). Does not implement the dispatcher and **does not close [#93](https://github.com/BankEncore/ShelfSense-v1/issues/93)**. Clarifies plan.md decision 13 “first merge.” See [slice7-overview.md](slice7-overview.md).
 
 ## Slice 7A — Tender-review framework (gated)
 

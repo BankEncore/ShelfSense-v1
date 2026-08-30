@@ -1,10 +1,10 @@
 # Slice 7.0 — Keyboard contract amendment
 
-Status: **Accepted as documentation** (implementation deferred to Slice 7C). Branch `93-slice7-keyboard-contract`. Parent: [slice7-overview.md](slice7-overview.md).
+Status: **Accepted as documentation** (implementation deferred to Slice 7C). Delivered via PR toward `register-workspace-consolidation` as the **[#95](https://github.com/BankEncore/ShelfSense-v1/issues/95) documentation gate** (does not implement or close [#93](https://github.com/BankEncore/ShelfSense-v1/issues/93)). Parent: [slice7-overview.md](slice7-overview.md).
 
 This document is the replacement keyboard **authority** for Register workspace consolidation. It satisfies [plan.md](plan.md) locked decision 13’s “first merge” requirement without remapping live keys.
 
-**Runtime until 7C:** Phase 6.7 [pos-workflow.md](../phase4-6-point-of-sale/phase6-pos-mvp/pos-workflow.md) §6 remains live, as staged in [routing-and-authority.md](routing-and-authority.md) (Slice 3 F10; Slice 5D `+` → O11).
+**Runtime until 7C:** Phase 6.7 [pos-workflow.md](../phase4-6-point-of-sale/phase6-pos-mvp/pos-workflow.md) §6 remains live, as staged in [routing-and-authority.md](routing-and-authority.md) (Slice 3 F10; Slice 5D `+` → O11, including today’s empty-field interception). Slice 7.0 **supersedes empty-field punctuation interception** for the *accepted* contract; 7C implements the focus rule below.
 
 **Implementation:** One mode-aware dispatcher and deletion of obsolete handlers occur only in **7C**, after 7A/7B expose final semantic actions.
 
@@ -23,21 +23,40 @@ This document is the replacement keyboard **authority** for Register workspace c
 
 ---
 
+## Printable punctuation vs shortcuts (normative)
+
+Empty-field interception of `/`, `.`, `-`, `+`, and `*` is **not** the accepted Slice 7 rule. A leading scanner character arrives while the command field is empty, so the dispatcher cannot tell shortcut from barcode prefix on the first `keydown`.
+
+**Accepted rule:**
+
+> When the command field owns focus — or when Slice 2 printable redirection delivers characters into that field — printable characters, including `/`, `.`, `-`, `+`, and `*`, are **command / scanner input** (`command-input`). Punctuation mode shortcuts are recognized only when focus is on the workspace command surface **but not inside** an input control (for example selected basket or tender row), or when invoked through an explicit non-printable binding or visible control.
+
+| Focus | `+` meaning |
+|---|---|
+| Command input (or printable redirected into it) | Literal input / scanner character |
+| Workspace background / selected row (non-input) | `open-tender-selection` (Sale) or add tender (Tender) |
+| Tender / reference / other text entry | Literal field character |
+| Blocking overlay | Overlay owns it |
+
+Punctuation shortcuts while the command field remains focused require a separate, packet-amended mechanism (scanner prefix or delayed sequence buffer). That is **out of 7.0**; do not invent it in 7C without amending this contract.
+
+---
+
 ## SALE
 
-Applies when the workspace is in commercial Sale entry (basket / command field; not Tender Review; no blocking overlay owns input).
+Applies when the workspace is in commercial Sale entry (basket / command surface; not Tender Review; no blocking overlay owns input).
 
 | Key | Semantic action | Meaning |
 |---|---|---|
-| Printable scan / typed characters | `command-input` | Route into the sale command field when input protection allows |
-| `Enter` | `submit-command` | Submit current command / resolve scan (context per overlay Enter table below when an overlay owns focus) |
-| `*` | `set-quantity` | Quantity on selected quantity-tracked sale line |
-| `/` | `open-product-lookup` | Merchandise search (empty command field only; identifier punctuation is not Search) |
-| `.` | `open-pickup-lookup` | Pickup lookup (composition MVP; empty field pattern) |
-| `-` | `open-return-chooser` | Return chooser (empty command field only) |
-| `+` | `open-tender-selection` | Open O11 tender selection after tenderability checks (**preserves Slice 5D**; does not restore Cash-with-remaining as the `+` destination) |
+| Printable scan / typed characters | `command-input` | Literal input when the command field owns focus or receives redirected printables |
+| `Enter` | `submit-command` | Submit current command / resolve scan (overlay Enter rules when an overlay owns focus) |
+| `*` | `set-quantity` | Quantity on selected quantity-tracked sale line — **non-input workspace focus** or Quantity control |
+| `/` | `open-product-lookup` | Merchandise search — **non-input workspace focus** or Product Search control |
+| `.` | `open-pickup-lookup` | Pickup lookup — **non-input workspace focus** or Pickup control |
+| `-` | `open-return-chooser` | Return chooser — **non-input workspace focus** or Return control |
+| `+` | `open-tender-selection` | Open O11 after tenderability checks — **non-input workspace focus** or Tender control (**preserves Slice 5D destination**; does not restore Cash-with-remaining as the `+` destination) |
 | `F1` | `tender-cash` | Cash tender entry |
-| `F2` | `tender-card` | Card tender entry |
+| `F2` | `tender-card` | Card tender entry (**not** Customer Lookup) |
 | `F3` | `tender-check` | Check tender entry |
 | `F4` | `tender-other` | Other tender (picker when multiple configured) |
 | `F5` | `tender-stored-value` | Stored-value tender family |
@@ -48,6 +67,8 @@ Applies when the workspace is in commercial Sale entry (basket / command field; 
 | `F10` | `open-register-menu` | Register Menu (shell-owned) |
 | `↑` / `↓` | `move-basket-selection` | Move selected basket line |
 | `Esc` | (see Escape precedence) | Innermost reversible layer only |
+
+**No direct key** is assigned to Customer Lookup in 7.0. Use `open-customer-lookup` from the visible Customer control (and from 7B customer-required flows).
 
 **Omitted:** `+1`–`+9` tender category sequences.
 
@@ -61,16 +82,16 @@ Applies when at least one working tender is applied and the workspace is in Tend
 
 | Key | Semantic action | Meaning |
 |---|---|---|
-| `+` | `open-tender-selection` | Add another tender (O11) |
-| `-` | `remove-selected-tender` | Remove selected tender when supported; confirm when required |
+| `+` | `open-tender-selection` | Add another tender (O11) — **non-input workspace focus** or Tender control |
+| `-` | `remove-selected-tender` | Remove selected tender when supported — **non-input workspace focus** or Remove control; confirm when required |
 | `↑` / `↓` | `move-tender-selection` | Change selected applied tender |
 | `Enter` | `open-selected-tender-actions` | Open actions / editor for the selected tender (O15 when replace supported) |
 | `Esc` | `return-to-sale` or leave child overlay | Per Escape precedence; may open O17 when tenders must clear |
-| `F1`–`F5` | same tender-family actions as SALE | Add that tender family without requiring O11 when legal |
+| `F1`–`F5` | same tender-family actions as SALE | Add that tender family without requiring O11 when legal; **F2 remains Card** |
 | `F8` | `remove-selected-tender` | Same as `-` when a tender is selected |
 | `F9` | `cancel-transaction` | Same cancel contract as SALE |
 | `F10` | `open-register-menu` | Register Menu |
-| Printable / scan | `command-input` only when a tender amount/reference field owns focus under input protection | Do not treat scanned `+` / `-` as Add/Remove |
+| Printable / scan | `command-input` when a tender amount/reference field owns focus | Literal characters only; never Add/Remove |
 
 **Omitted:** `+1`–`+9`.
 
@@ -89,9 +110,11 @@ Register Menu (F10)
 
 Workspace submode (Sale / Tender Review)
   → owns mode-specific commands when no overlay owns input
+  → punctuation shortcuts only from non-input workspace focus (see above)
 
 Sale command field
-  → receives scanner/command input only when input protection allows
+  → receives scanner/command input as literals whenever it owns focus
+    or receives Slice 2 printable redirection
 ```
 
 Blocking overlays do not create a competing `navigator.keyboard.lock` owner. Shell remains sole Lock owner.
@@ -111,7 +134,7 @@ Blocking overlays do not create a competing `navigator.keyboard.lock` owner. She
 
 ## Scanner punctuation and input protection
 
-Do **not** redirect printable characters into workspace commands when focus is in:
+Do **not** treat printable characters as workspace mode shortcuts when focus is in:
 
 - `text` / `password` / `search` / `tel` / `email` / `number` fields
 - textareas
@@ -120,10 +143,11 @@ Do **not** redirect printable characters into workspace commands when focus is i
 - blocking overlays
 - authorization fields
 - tender / issuance entry controls
+- the sale command field (including when printables are redirected into it)
 
-Intercept mode keys such as `/`, `*`, `-`, `+` only when the owning command field is **empty** (existing empty-field pattern). A hyphen or slash inside a typed or scanned identifier is not Return or Search.
+All such characters are **literal** `command-input` or field input. Cover scanner strings containing `/`, `-`, `+`, `*`, leading zeroes, rapid input, and Enter terminator without firing Tender, Return, Search, Quantity, or Pickup.
 
-Cover scanner strings containing `/`, `-`, `+`, `*`, leading zeroes, rapid input, and Enter terminator. A scanned `+` must not be mistaken for Tender; a typed `-` in an applicable field must not be Remove.
+Slice 2 may still redirect printables into the command field when no overlay owns the keystroke; under this contract that redirection **preserves literal semantics** and does not enable empty-field shortcut interception.
 
 ---
 
@@ -147,18 +171,19 @@ Controllers and (later) the dispatcher consume these actions. Keys are bindings;
 
 | Action | Typical producers |
 |---|---|
-| `command-input` | Scanner / printable routing |
+| `command-input` | Scanner / printable routing into an input |
 | `submit-command` | Enter on command field |
-| `open-product-lookup` | `/`, Product Search control |
-| `open-pickup-lookup` | `.`, Pickup control |
-| `open-return-chooser` | `-` (Sale), Return control |
-| `open-tender-selection` | `+`, Tender control → O11 |
-| `set-quantity` | `*` |
+| `open-product-lookup` | `/` (non-input focus), Product Search control |
+| `open-pickup-lookup` | `.` (non-input focus), Pickup control |
+| `open-return-chooser` | `-` (Sale, non-input focus), Return control |
+| `open-customer-lookup` | Visible Customer control during Sale; customer-required store-credit / trade-credit / refund-destination flows (7B). **No 7.0 key binding; F2 remains Card.** |
+| `open-tender-selection` | `+` (non-input focus), Tender control → O11 |
+| `set-quantity` | `*` (non-input focus), Quantity control |
 | `edit-price` | `F6` |
 | `edit-discount` | `F7` |
 | `tender-cash` / `tender-card` / `tender-check` / `tender-other` / `tender-stored-value` | `F1`–`F5` |
 | `remove-selected-record` | `F8` (Sale) |
-| `remove-selected-tender` | `-` / `F8` (Tender) |
+| `remove-selected-tender` | `-` / `F8` (Tender, non-input focus or control) |
 | `move-basket-selection` | Arrows (Sale) |
 | `move-tender-selection` | Arrows (Tender) |
 | `open-selected-tender-actions` | Enter (Tender) |
@@ -167,7 +192,7 @@ Controllers and (later) the dispatcher consume these actions. Keys are bindings;
 | `open-register-menu` | `F10` |
 | `complete-transaction` | Complete control when exactly settled (pointer / announced control; key binding if added later must be packet-amended) |
 
-7A/7B may add narrowly scoped actions (for example `attach-customer`, `open-quick-customer`) in their packets; 7C folds them into the dispatcher.
+7A/7B may add narrowly scoped actions (for example `attach-customer`, `open-quick-customer`) in their packets; 7C folds them into the dispatcher. A future key for Customer Lookup requires amending this table — it must not silently repurpose `F2`.
 
 ---
 
@@ -177,11 +202,12 @@ Controllers and (later) the dispatcher consume these actions. Keys are bindings;
 |---|---|
 | §6 full keyboard map (except already staged) | Superseded at **7C runtime** by this document |
 | Slice 3: F10 → Register Menu | **Retained** |
-| Slice 5D: empty-field `+` → O11 | **Retained** as `open-tender-selection` |
+| Slice 5D: `+` destination → O11 | **Retained** as `open-tender-selection` |
+| Slice 5D / 6.7: empty-field interception of `+` / `/` / `-` / `*` | **Superseded** by focus-based punctuation rule above (7C implements; runtime stays empty-field until then) |
 | Historical 6.7: `+` = Cash-with-remaining | Remains superseded by 5D; not restored |
-| F1–F5 tender families | **Retained** meanings |
+| F1–F5 tender families | **Retained** meanings; F2 is Card, not Customer |
 | F6 Price / F7 Discount / F8 Remove / F9 Cancel | **Retained**; F8 becomes explicitly mode-scoped (line vs tender) |
-| `/` merchandise search, `*` quantity, `-` return (Sale) | **Retained** on SALE (speculative P12 remap rejected) |
+| `/` merchandise search, `*` quantity, `-` return (Sale) | **Retained** on SALE as actions; speculative P12 remap rejected |
 | F8 removes last tender only (current UI) | Superseded in **7A** by selected-tender remove; key binding in **7C** |
 | Document-scattered key handlers | Superseded by one dispatcher in **7C** |
 | pos-workflow.md §6 as live authority | Remains live until **7C** updates it to point here |
@@ -198,4 +224,4 @@ Wireframe destinations remain composition authority for frames:
 - O16 Remove confirmation — when required
 - O17 Return to Sale with tenders — `return-to-sale` when tenders must clear
 
-Overlay lifecycle remains [slice5a-lookup-overlays-plan.md](slice5a-lookup-overlays-plan.md).
+Customer Lookup (and Quick Customer as its child in 7B) uses the shared lookup overlay family from [slice5a-lookup-overlays-plan.md](slice5a-lookup-overlays-plan.md), opened via `open-customer-lookup`.

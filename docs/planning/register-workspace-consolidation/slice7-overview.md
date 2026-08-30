@@ -1,12 +1,12 @@
 # Slice 7 — Overview
 
-Status: **7.0 keyboard contract accepted as documentation** on branch `93-slice7-keyboard-contract` (pending merge to `register-workspace-consolidation`). Tender lifecycle inventory and 7A–7C implementation packets follow. Issues [#93](https://github.com/BankEncore/ShelfSense-v1/issues/93)–[#95](https://github.com/BankEncore/ShelfSense-v1/issues/95).
+Status: **7.0 keyboard contract accepted as documentation** (PR toward `register-workspace-consolidation`; **[#95](https://github.com/BankEncore/ShelfSense-v1/issues/95) docs gate** — does not implement or close [#93](https://github.com/BankEncore/ShelfSense-v1/issues/93)). Tender lifecycle inventory and 7A–7C implementation packets follow. Issues [#93](https://github.com/BankEncore/ShelfSense-v1/issues/93)–[#95](https://github.com/BankEncore/ShelfSense-v1/issues/95).
 
 Authority: [plan.md](plan.md) (esp. locked decision 13), [routing-and-authority.md](routing-and-authority.md), [slice5d-tender-issuance-plan.md](slice5d-tender-issuance-plan.md), [textual-wireframes.md](textual-wireframes.md) P10 / O11–O17, [slice7-keyboard-contract.md](slice7-keyboard-contract.md). Historical thinking: [slice-7-draft.md](../../drafts/phase-10-followup-pos-transaction-workspace/slice-7-draft.md) (superseded for implementation; do not implement from the draft).
 
 ## Boundary statement
 
-> Slice 7 completes the active transaction interaction model. It introduces tender review, record-specific correction, stored-value capping and replacement, gift-card issuance replacement, Quick Customer within customer-required stored-value flows, and one authoritative keyboard dispatcher. It preserves the existing transaction, tender, stored-value, completion, authorization, and audit models unless a packet explicitly identifies a required service extension.
+> Slice 7 completes the active transaction interaction model. It introduces tender review, record-specific correction, stored-value capping and replacement, gift-card issuance replacement, Quick Customer as a child of the shared Register Customer Lookup family, and one authoritative keyboard dispatcher. It preserves the existing transaction, tender, stored-value, completion, authorization, and audit models unless a packet explicitly identifies a required service extension.
 
 ## Clarification of plan.md locked decision 13
 
@@ -61,7 +61,8 @@ Until 7C ships the dispatcher, **runtime** key behavior remains Phase 6.7 as sta
 | SV cap | Auto-apply with prominent feedback; requested amount is prompt / audit context only |
 | Completed tenders | Immutable; correction via post-void / refund only |
 | `+1`–`+9` sequences | **Omitted** from the accepted contract |
-| Quick Customer | In scope for **7B.2**; inventory validates reuse of the existing customer domain only |
+| Customer Lookup | Semantic action `open-customer-lookup` only; **no 7.0 key**; **F2 remains Card Tender** |
+| Quick Customer | In scope for **7B.2** as one child of the shared Register Customer Lookup family — reachable from ordinary Sale customer lookup **and** from customer-required stored-value / refund flows. Inventory validates reuse of the existing customer domain only; must not invent a second create path or repurpose F2 |
 | Ambiguous external / activation outcome | Recovery surface; never ordinary retry |
 
 ## Speculative wireframe remap rejected
