@@ -8,8 +8,8 @@
         <%= link_to register_inquiry_return_label, register_inquiry_return_path, class: "btn btn--ghost" %>
       </div>
 
-      <% if @exact_card || @store_credit_customer || @store_credit_matches.present? || @admin_card || @admin_candidates.present? %>
-        <section class="pos-inquiry__result" id="sv-inquiry-result" tabindex="-1" aria-live="polite">
+      <% if @inquiry_result_present %>
+        <section class="pos-inquiry__result" id="sv-inquiry-result" tabindex="-1" autofocus aria-live="polite">
           <% if @exact_card %>
             <h2>Gift card</h2>
             <dl class="pos-history__header">
@@ -134,7 +134,7 @@
                   id: "card_number",
                   autocomplete: "off",
                   inputmode: "numeric",
-                  autofocus: @exact_card.blank?,
+                  autofocus: !@inquiry_result_present,
                   aria: { describedby: "sv-exact-hint" } %>
           </div>
           <p id="sv-exact-hint" class="muted">Focus this field, then scan or type the full number and press Enter or Look up card.</p>

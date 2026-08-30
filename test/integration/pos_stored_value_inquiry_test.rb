@@ -85,6 +85,48 @@ class PosStoredValueInquiryTest < ActionDispatch::IntegrationTest
     assert_redirected_to pos_stored_value_inquiry_path
   end
 
+  test "admin restore discards flash when gift_cards.view is revoked before GET" do
+    manager = pos_store_manager(store: @store, assigned_by: @actor, username: "sv_mgr_revoke")
+    RoleAssignment.create!(
+      user: manager,
+      role: Role.find_by!(key: "associate"),
+      store: @store,
+      assigned_by: @actor,
+      effective_at: Time.current
+    )
+    delete session_path
+    sign_in_as("sv_mgr_revoke")
+
+    card = numbered_card(last_four: "7171")
+    GiftCards::Fund.call(gift_card: card, amount_cents: 300, store: @store, performed_by: @actor)
+
+    post admin_prefix_last_four_pos_stored_value_inquiry_path, params: {
+      register_id: @register.id,
+      number_prefix: card.number_prefix,
+      number_last_four: "7171"
+    }
+    assert_redirected_to pos_stored_value_inquiry_path(register_id: @register.id)
+
+    assignment = RoleAssignment.effective.find_by!(user: manager, role: Role.find_by!(key: "store_manager"), store: @store)
+    assignment.update!(
+      revoked_at: Time.current,
+      revoked_by: @actor,
+      revocation_reason: "test revoke"
+    )
+
+    follow_redirect!
+    assert_response :success
+    assert_select "#sv-inquiry-result", count: 0
+    refute_match card.masked_number, response.body
+    assert_match(/not authorized/i, response.body)
+    assert AuditEvent.exists?(
+      action: "authorization.denied",
+      outcome: "denied",
+      actor_user: manager,
+      reason_code: "gift_cards.view"
+    )
+  end
+
   test "store credit path finds customer by identity without gift card lookup" do
     customer = Customer.create!(
       display_name: "Jane Inquiry",
@@ -112,6 +154,8 @@ class PosStoredValueInquiryTest < ActionDispatch::IntegrationTest
     follow_redirect!
     assert_match "Jane Inquiry", response.body
     assert_select "#sv-inquiry-result"
+    assert_select "#sv-inquiry-result[autofocus]"
+    assert_select "input#card_number[autofocus]", count: 0
 
     post store_credit_pos_stored_value_inquiry_path, params: {
       register_id: @register.id,
@@ -121,6 +165,30 @@ class PosStoredValueInquiryTest < ActionDispatch::IntegrationTest
     follow_redirect!
     assert_match format_money_cents(500), response.body
     assert_match "Customer store credit", response.body
+    assert_select "#sv-inquiry-result[autofocus]"
+    assert_select "input#card_number[autofocus]", count: 0
+  end
+
+  test "admin result panel receives autofocus instead of exact-card field" do
+    card = numbered_card(last_four: "6060")
+    GiftCards::Fund.call(gift_card: card, amount_cents: 150, store: @store, performed_by: @actor)
+
+    post admin_prefix_last_four_pos_stored_value_inquiry_path, params: {
+      register_id: @register.id,
+      number_prefix: card.number_prefix,
+      number_last_four: "6060"
+    }
+    follow_redirect!
+    assert_select "#sv-inquiry-result[autofocus]"
+    assert_match card.masked_number, response.body
+    assert_select "input#card_number[autofocus]", count: 0
+  end
+
+  test "empty inquiry autofocuses the exact-card field" do
+    get pos_stored_value_inquiry_path, params: { register_id: @register.id }
+    assert_response :success
+    assert_select "#sv-inquiry-result", count: 0
+    assert_select "input#card_number[autofocus]"
   end
 
   test "GET with card_number query does not perform possession lookup" do

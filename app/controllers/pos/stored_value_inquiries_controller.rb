@@ -94,31 +94,41 @@ module Pos
         store: current_store
       )
       @customer_query = params[:customer_query].to_s
+      @inquiry_result_present = false
     end
 
     def restore_inquiry_result!
       payload = flash[:sv_inquiry]
       return if payload.blank?
 
-      if payload["exact_gift_card_id"].present?
-        card = GiftCard.includes(:gift_card_program, :stored_value_account).find_by(id: payload["exact_gift_card_id"])
-        return unless card
+      restore_exact_result!(payload)
+      restore_store_credit_result!(payload)
+      restore_admin_result!(payload)
+      @inquiry_result_present = inquiry_result_present?
+    end
 
-        @exact_card = card
-        @exact_activity = StoredValue::AccountActivity.call(
-          account: card.stored_value_account,
-          actor: current_user,
-          permission_key: "pos.transact",
-          page: 1
-        )
-        @continuations = Pos::StoredValueInquiryContinuations.call(
-          state: @state,
-          actor: current_user,
-          store: current_store,
-          gift_card: card
-        )
-      end
+    def restore_exact_result!(payload)
+      return if payload["exact_gift_card_id"].blank?
 
+      card = GiftCard.includes(:gift_card_program, :stored_value_account).find_by(id: payload["exact_gift_card_id"])
+      return unless card
+
+      @exact_card = card
+      @exact_activity = StoredValue::AccountActivity.call(
+        account: card.stored_value_account,
+        actor: current_user,
+        permission_key: "pos.transact",
+        page: 1
+      )
+      @continuations = Pos::StoredValueInquiryContinuations.call(
+        state: @state,
+        actor: current_user,
+        store: current_store,
+        gift_card: card
+      )
+    end
+
+    def restore_store_credit_result!(payload)
       if payload["store_credit_match_ids"].present?
         ids = Array(payload["store_credit_match_ids"])
         customers = Customer.active.canonical.where(id: ids).index_by(&:id)
@@ -131,56 +141,63 @@ module Pos
         @customer_query = payload["customer_query"].presence || @customer_query
       end
 
-      if payload["store_credit_customer_id"].present?
-        customer = Customer.active.canonical.find_by(id: payload["store_credit_customer_id"])
-        if customer
-          @store_credit_customer = customer
-          @store_credit_account = customer.stored_value_accounts.find_by(account_type: "store_credit")
-          @continuations = Pos::StoredValueInquiryContinuations.call(
-            state: @state,
-            actor: current_user,
-            store: current_store,
-            store_credit_customer: customer
-          )
-        end
+      return if payload["store_credit_customer_id"].blank?
+
+      customer = Customer.active.canonical.find_by(id: payload["store_credit_customer_id"])
+      return unless customer
+
+      @store_credit_customer = customer
+      @store_credit_account = customer.stored_value_accounts.find_by(account_type: "store_credit")
+      @continuations = Pos::StoredValueInquiryContinuations.call(
+        state: @state,
+        actor: current_user,
+        store: current_store,
+        store_credit_customer: customer
+      )
+    end
+
+    def restore_admin_result!(payload)
+      result = Pos::StoredValueAdminInquiryRestore.call(
+        payload: payload,
+        actor: current_user,
+        store: current_store
+      )
+      if result.denied
+        record_gift_cards_view_denied!
+        flash.now[:alert] = "You are not authorized to perform that action."
+        return
       end
 
-      if payload["admin_gift_card_id"].present?
-        card = GiftCard.includes(:gift_card_program, :stored_value_account).find_by(id: payload["admin_gift_card_id"])
-        if card
-          @admin_card = card
-          @admin_activity = StoredValue::AccountActivity.call(
-            account: card.stored_value_account,
-            actor: current_user,
-            permission_key: "gift_cards.view",
-            page: 1
-          )
-        end
+      if result.card
+        @admin_card = result.card
+        @admin_activity = StoredValue::AccountActivity.call(
+          account: result.card.stored_value_account,
+          actor: current_user,
+          permission_key: "gift_cards.view",
+          page: 1
+        )
       end
 
-      if payload["admin_candidate_ids"].present?
-        cards = GiftCard.includes(:gift_card_program, :stored_value_account)
-                        .where(id: payload["admin_candidate_ids"])
-                        .index_by(&:id)
-        @admin_candidates = Array(payload["admin_candidate_ids"]).filter_map do |id|
-          card = cards[id]
-          next unless card
+      @admin_candidates = result.candidates if result.candidates.any?
+    end
 
-          GiftCards::AdminInquiry::Candidate.new(
-            id: card.id,
-            masked_number: card.masked_number,
-            status: card.status,
-            program_name: card.gift_card_program.name,
-            balance_cents: card.balance_cents,
-            activated_at: card.activated_at
-          )
-        end
-      end
+    def inquiry_result_present?
+      @exact_card ||
+        @store_credit_customer ||
+        @store_credit_matches.present? ||
+        @admin_card ||
+        @admin_candidates.present?
     end
 
     def require_gift_cards_view!
       return if @can_admin_inquire
 
+      record_gift_cards_view_denied!
+      redirect_to pos_stored_value_inquiry_path(inquiry_register_params),
+                  alert: "You are not authorized to perform that action."
+    end
+
+    def record_gift_cards_view_denied!
       Audit::Recorder.record!(
         action: "authorization.denied",
         outcome: "denied",
@@ -190,8 +207,6 @@ module Pos
         reason_code: "gift_cards.view",
         metadata: { path: request.fullpath }
       )
-      redirect_to pos_stored_value_inquiry_path(inquiry_register_params),
-                  alert: "You are not authorized to perform that action."
     end
   end
 end
