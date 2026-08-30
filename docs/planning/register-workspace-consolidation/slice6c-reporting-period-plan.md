@@ -1,6 +1,6 @@
 # Slice 6C — Reporting-period surfaces
 
-Status: **Fully locked.** Report-content inventory complete ([report-content-inventory.md](report-content-inventory.md)); snapshot-envelope extensions for 6C: **none.** Implementation may proceed as 6C.1 → 6C.2 → 6C.3 on branch `92-reporting-period-surfaces`. Depends on Slice 6A shell context and Slice 6B till/session patterns.
+Status: **Complete** on `register-workspace-consolidation` ([#92](https://github.com/BankEncore/ShelfSense-v1/issues/92) / PR [#109](https://github.com/BankEncore/ShelfSense-v1/pull/109)). Report-content inventory complete ([report-content-inventory.md](report-content-inventory.md)); snapshot-envelope extensions for 6C: **none.**
 
 Authority: [plan.md](plan.md), [implementation-plan.md](implementation-plan.md), [routing-and-authority.md](routing-and-authority.md), [slice6a-customer-service-plan.md](slice6a-customer-service-plan.md), [slice6b-till-session-plan.md](slice6b-till-session-plan.md), [report-content-contract.md](report-content-contract.md), [report-content-inventory.md](report-content-inventory.md), [textual-wireframes.md](textual-wireframes.md) S8–S11 / S20 / P13, [user-stories.md](user-stories.md).
 

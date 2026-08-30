@@ -31,7 +31,7 @@ This program **replaces** the current POS presentation. It does not run a parall
 | [slice6a-manual-verification.md](slice6a-manual-verification.md) | Slice 6A workstation evidence |
 | [slice6b-till-session-plan.md](slice6b-till-session-plan.md) | Locked Slice 6B till / session / reverse-from-original contracts |
 | [slice6b-manual-verification.md](slice6b-manual-verification.md) | Slice 6B workstation evidence |
-| [slice6c-reporting-period-plan.md](slice6c-reporting-period-plan.md) | Slice 6C fully locked; P13 over live totals / finalized snapshots |
+| [slice6c-reporting-period-plan.md](slice6c-reporting-period-plan.md) | Slice 6C complete; P13 over live totals / finalized snapshots |
 | [report-content-contract.md](report-content-contract.md) | P13 semantic report vocabulary (not implementability claims) |
 | [report-content-inventory.md](report-content-inventory.md) | Code-backed row dispositions (complete; no 6C snapshot extensions) |
 | [slice6c-manual-verification.md](slice6c-manual-verification.md) | Slice 6C workstation evidence |
