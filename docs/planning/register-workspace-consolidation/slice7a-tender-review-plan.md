@@ -1,6 +1,6 @@
 # Slice 7A — Tender Review (ordinary tender correction)
 
-Status: **Fully locked.** Inventory gate met ([slice7-tender-lifecycle-inventory.md](slice7-tender-lifecycle-inventory.md)). Implementation may proceed as 7A.1 → 7A.2 → 7A.3 on branches under [#93](https://github.com/BankEncore/ShelfSense-v1/issues/93). PR target: `register-workspace-consolidation`.
+Status: **Complete** on `register-workspace-consolidation` ([#93](https://github.com/BankEncore/ShelfSense-v1/issues/93) / PRs [#115](https://github.com/BankEncore/ShelfSense-v1/pull/115), remediation [#116](https://github.com/BankEncore/ShelfSense-v1/pull/116)). Inventory gate was met ([slice7-tender-lifecycle-inventory.md](slice7-tender-lifecycle-inventory.md)). Evidence: [slice7a-manual-verification.md](slice7a-manual-verification.md).
 
 Authority: [plan.md](plan.md), [implementation-plan.md](implementation-plan.md), [slice7-overview.md](slice7-overview.md), [slice7-tender-lifecycle-inventory.md](slice7-tender-lifecycle-inventory.md), [slice7-keyboard-contract.md](slice7-keyboard-contract.md), [slice5a-lookup-overlays-plan.md](slice5a-lookup-overlays-plan.md) (overlay lifecycle), [slice5d-tender-issuance-plan.md](slice5d-tender-issuance-plan.md) (O11 add path unchanged), [textual-wireframes.md](textual-wireframes.md) P10 / **O15–O17**, [user-stories.md](user-stories.md), [routing-and-authority.md](routing-and-authority.md).
 
@@ -180,4 +180,4 @@ Reporting periods; sessions; completed transactions; posted tenders; stored-valu
 
 ## Full-lock criterion
 
-Met when this packet is on `register-workspace-consolidation` with inventory already complete. Implementation PRs follow 7A.1 → 7A.2 → 7A.3.
+Met when this packet is on `register-workspace-consolidation` with inventory already complete. Implementation landed as [#115](https://github.com/BankEncore/ShelfSense-v1/pull/115) (7A.1–7A.3 together) with remediation [#116](https://github.com/BankEncore/ShelfSense-v1/pull/116).

@@ -43,7 +43,7 @@ Creating compensating ledger entries for an **unposted** working tender would be
 | Cash upsert | `Pos::TenderCash` upserts the single cash **payment** row. Cash **refund** upserts via cash branch of `Pos::AddRefundTender`. |
 | Ordinary non-cash | `Pos::AddTender` / `Pos::AddRefundTender` append new rows (optional `external_reference`). |
 | Issuance | `Pos::AddStoredValueIssuance` / `RemoveStoredValueIssuance` — working rows; **clears all working tenders** on add and on remove. |
-| Replace orchestration | **`Pos::ReplaceTender` does not exist** — 7A introduces it for ordinary families; 7B for SV/issuance. |
+| Replace orchestration | **`Pos::ReplaceTender`** exists for ordinary families (cash / check / other; card refused — remove + external reauth). 7B extends for SV/issuance. |
 | Completed immutability | Completed tenders/issuances are commercially readonly; correction via post-void / new refund. Posted SV reverse: `Pos::PostVoidStoredValue` / `StoredValue::Reverse`. |
 | Add idempotency today | Tender/issuance **add has no idempotency key**. Completion uses `Pos::OperationLease` (`command_type: pos.complete_transaction`). Nested SV post keys under completion operation id. |
 

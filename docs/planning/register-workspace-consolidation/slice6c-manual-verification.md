@@ -25,4 +25,4 @@ Workstation assumptions: Chrome (or Chromium) on a Register-class display; print
 - Date: 2026-08-30
 - Browser / OS: Automated Docker/Chromium system suite + PR CI
 - Verified by: Project owner (automated evidence)
-- Follow-ups (if any): Slice 7A tender-review framework (#93) remains gated on 2–6. Workstation print-preview spot-check optional.
+- Follow-ups (if any): Slice 7A complete (#93 / #115–#116). Next: 7B (#94). Workstation print-preview spot-check optional.

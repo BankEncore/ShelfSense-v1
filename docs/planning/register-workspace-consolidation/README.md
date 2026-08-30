@@ -38,8 +38,8 @@ This program **replaces** the current POS presentation. It does not run a parall
 | [slice7-overview.md](slice7-overview.md) | Slice 7 boundary, sequencing, product defaults |
 | [slice7-keyboard-contract.md](slice7-keyboard-contract.md) | Slice 7.0 accepted SALE/TENDER keyboard contract (docs; runtime in 7C) |
 | [slice7-tender-lifecycle-inventory.md](slice7-tender-lifecycle-inventory.md) | Code-backed tender/issuance dispositions; gates 7A/7B packets |
-| [slice7a-tender-review-plan.md](slice7a-tender-review-plan.md) | Slice 7A Fully locked; Tender Review / ordinary remove-replace |
-| [slice7a-manual-verification.md](slice7a-manual-verification.md) | Slice 7A workstation evidence |
+| [slice7a-tender-review-plan.md](slice7a-tender-review-plan.md) | Slice 7A **Complete**; Tender Review / ordinary remove-replace |
+| [slice7a-manual-verification.md](slice7a-manual-verification.md) | Slice 7A evidence (signed off) |
 
 UX adoption: follow [ux-adoption-template.md](../ux-design-system/ux-adoption-template.md) in the slice that materially changes a screen. Printed receipts stay locked unless a slice explicitly owns print.
 
