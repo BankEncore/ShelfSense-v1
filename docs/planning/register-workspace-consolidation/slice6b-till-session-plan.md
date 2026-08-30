@@ -1,6 +1,6 @@
 # Slice 6B — Till and session detail
 
-Status: **Packet locked** on `91-till-session-detail` → `register-workspace-consolidation` ([#91](https://github.com/BankEncore/ShelfSense-v1/issues/91)). Delivery: three PRs (6B.1 / 6B.2 / 6B.3).
+Status: **Complete** on `register-workspace-consolidation` ([#91](https://github.com/BankEncore/ShelfSense-v1/issues/91) / PR [#108](https://github.com/BankEncore/ShelfSense-v1/pull/108)).
 
 Authority: [plan.md](plan.md), [implementation-plan.md](implementation-plan.md), [routing-and-authority.md](routing-and-authority.md), [slice6a-customer-service-plan.md](slice6a-customer-service-plan.md) (shared `RegisterShellContext`, expected-cash law), [textual-wireframes.md](textual-wireframes.md) S17–S19 / S21–S23 / **O19**, [user-stories.md](user-stories.md).
 
