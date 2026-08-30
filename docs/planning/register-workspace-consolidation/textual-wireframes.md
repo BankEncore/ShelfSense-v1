@@ -1034,7 +1034,7 @@ Status             Posted
 [Back to Till Activity]                       {Eligible: [Reverse]}
 ```
 
-Selecting Reverse opens O10 with the original operation already identified; there is no generic reference-entry reversal launcher.
+Selecting Reverse opens **O19** (`#pos_cash_reversal_overlay` / cash-reversal-confirmation) with the original operation already identified; there is no generic reference-entry reversal launcher. (O10 remains gift-card issuance.)
 
 ## S24. Manager-assisted close
 

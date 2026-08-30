@@ -1,11 +1,17 @@
 <% content_for :title, "Drop" %>
-
-<main class="pos-history">
-  <%= render "pos/shared/report_nav" %>
-  <h1>Drop</h1>
-  <p>Move cash from this open session to the store safe. This is not session close.</p>
-  <%= render "pos/cash_activities/form",
-        url: pos_cash_drops_path,
-        submit: "Record drop",
-        amount_value: params[:amount] %>
-</main>
+<%= render layout: "pos/shell/frame" do %>
+  <%= render "pos/shell/feedback" %>
+  <div class="pos-register-shell__body">
+    <main class="pos-history">
+      <div class="pos-history__title-row pos-no-print">
+        <h1>Drop</h1>
+        <%= link_to register_inquiry_return_label, register_inquiry_return_path, class: "btn btn--ghost" %>
+      </div>
+      <p>Move cash from this open session to the store safe. This is not session close.</p>
+      <%= render "pos/cash_activities/form",
+            url: pos_cash_drops_path,
+            submit: "Record drop",
+            amount_value: params[:amount] %>
+    </main>
+  </div>
+<% end %>

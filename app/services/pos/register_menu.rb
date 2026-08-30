@@ -5,11 +5,14 @@ module Pos
     Group = Struct.new(:key, :item_keys, keyword_init: true)
     Result = Struct.new(:groups, keyword_init: true)
 
-    TILL_KEYS = %i[gift_card_cash_out paid_in paid_out drop replenish].freeze
+    TILL_KEYS = %i[till_activity gift_card_cash_out paid_in paid_out drop replenish].freeze
     SWITCH_SUPPRESSED = (
-      TILL_KEYS + %i[switch_register x_report close_session open_register open_session finalize_z]
+      TILL_KEYS + %i[switch_register x_report close_session open_register open_session finalize_z session_details]
     ).freeze
     INQUIRY_SUPPRESSED = %i[open_register open_session finalize_z close_session].freeze
+    CASH_OPERATION_SUPPRESSED = (
+      INQUIRY_SUPPRESSED + %i[gift_card_cash_out paid_in paid_out drop replenish]
+    ).freeze
 
     def self.call(...)
       new(...).call
@@ -40,6 +43,7 @@ module Pos
     def suppressed?(key)
       return true if @surface == :switch_register && SWITCH_SUPPRESSED.include?(key)
       return true if @surface == :inquiry && INQUIRY_SUPPRESSED.include?(key)
+      return true if @surface == :cash_operation && CASH_OPERATION_SUPPRESSED.include?(key)
 
       false
     end
@@ -51,7 +55,7 @@ module Pos
     def till_keys
       return [] unless @kind == "own_session"
 
-      keys = []
+      keys = [ :till_activity ]
       keys << :gift_card_cash_out if permitted?("gift_cards.cash_out")
       keys << :paid_in if permitted?("cash.paid_in")
       keys << :paid_out if permitted?("cash.paid_out")
@@ -63,6 +67,7 @@ module Pos
     def session_and_register_keys
       keys = []
       keys << :x_report if x_report?
+      keys << :session_details if session_details?
       keys << :session_z_reports if session_z_reports?
       keys << :active_sessions if permitted?("pos.sessions.view")
       keys << :switch_register
@@ -72,6 +77,14 @@ module Pos
       keys << :close_session if @surface == :workspace
       keys << :return_to_shelfsense
       keys
+    end
+
+    def session_details?
+      return true if @kind == "own_session"
+      return false unless @kind == "occupied"
+      return false unless permitted?("pos.sessions.view")
+
+      @gate.respond_to?(:session) && @gate.session.present?
     end
 
     def x_report?

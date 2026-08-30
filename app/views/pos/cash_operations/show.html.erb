@@ -1,0 +1,110 @@
+<% content_for :title, "Cash activity" %>
+<%= render layout: "pos/shell/frame" do %>
+  <%= render "pos/shell/feedback" %>
+  <div class="pos-register-shell__body">
+    <div data-controller="pos-blocking-overlay">
+      <main class="pos-history" id="pos_cash_operation_detail" data-pos-blocking-overlay-target="detail">
+        <div class="pos-history__title-row pos-no-print">
+          <h1><%= @operation.operation_type.humanize %></h1>
+          <%= link_to register_inquiry_return_label, register_inquiry_return_path, class: "btn btn--ghost" %>
+        </div>
+
+        <% if @error.present? %>
+          <p class="pos-enter__alert" role="alert"><%= @error %></p>
+        <% end %>
+
+        <dl class="pos-history__header">
+          <div><dt>When</dt><dd><%= format_store_timestamp(@operation.occurred_at, current_store) %></dd></div>
+          <% if @session_record %>
+            <div><dt>Register</dt><dd><%= @session_record.register.admin_label %></dd></div>
+          <% end %>
+          <div><dt>Performed by</dt><dd><%= @operation.performed_by.display_name %></dd></div>
+          <% if @operation.approved_by %>
+            <div><dt>Approved by</dt><dd><%= @operation.approved_by.display_name %></dd></div>
+          <% end %>
+          <div><dt>Session effect</dt><dd><%= format_signed_money_cents(@session_effect_cents) %></dd></div>
+          <div><dt>Status</dt><dd><%= @operation.reversed? ? "Reversed" : (@operation.reverse? ? "Reversal" : "Posted") %></dd></div>
+          <% if @operation.reason_name_snapshot.present? %>
+            <div><dt>Reason</dt><dd><%= @operation.reason_name_snapshot %></dd></div>
+          <% end %>
+          <% if @operation.notes.present? %>
+            <div><dt>Notes</dt><dd><%= @operation.notes %></dd></div>
+          <% end %>
+        </dl>
+
+        <% if @operation.reversed_by %>
+          <p class="muted">
+            Reversed by
+            <%= link_to "reversal", pos_cash_operation_path(@operation.reversed_by, inquiry_register_params) %>
+            on <%= format_store_timestamp(@operation.reversed_by.occurred_at, current_store) %>.
+          </p>
+        <% end %>
+        <% if @operation.reversal_of %>
+          <p class="muted">
+            Reversal of
+            <%= link_to "original", pos_cash_operation_path(@operation.reversal_of, inquiry_register_params) %>.
+          </p>
+        <% end %>
+
+        <div class="pos-history__nav pos-no-print actions">
+          <% if @session_record %>
+            <%= link_to "Back to Till Activity",
+                  pos_till_activity_path(inquiry_register_params.merge(session_id: @session_record.id, register_id: @session_record.register_id)),
+                  class: "btn btn--outline" %>
+          <% end %>
+          <% if @can_reverse %>
+            <button type="button"
+                    class="btn"
+                    data-pos-blocking-overlay-target="launcher"
+                    data-action="pos-blocking-overlay#open">
+              Reverse
+            </button>
+          <% end %>
+        </div>
+      </main>
+
+      <% if @can_reverse %>
+        <div class="pos-overlay pos-no-print"
+             id="pos_cash_reversal_overlay"
+             hidden
+             data-pos-blocking-overlay-target="overlay"
+             data-overlay="cash-reversal-confirmation"
+             data-register-blocking-overlay
+             role="dialog"
+             aria-modal="true"
+             aria-labelledby="pos-cash-reversal-title">
+          <div class="pos-overlay__panel">
+            <h2 id="pos-cash-reversal-title">Reverse this cash operation?</h2>
+            <dl class="pos-history__header">
+              <div><dt>Original effect</dt><dd><%= format_signed_money_cents(@session_effect_cents) %> from session</dd></div>
+              <div><dt>Reversal effect</dt><dd><%= format_signed_money_cents(-@session_effect_cents) %> to session</dd></div>
+            </dl>
+            <%= form_with url: reversal_pos_cash_operation_path(@operation), method: :post, local: true, data: { turbo: false } do %>
+              <% inquiry_register_params.each do |key, value| %>
+                <%= hidden_field_tag key, value %>
+              <% end %>
+              <%= hidden_field_tag :source_id, SecureRandom.uuid_v7 %>
+              <%= hidden_field_tag :idempotency_key, SecureRandom.uuid_v7 %>
+              <div class="form-field">
+                <%= label_tag :reason_code, "Reason" %>
+                <%= select_tag :reason_code,
+                      options_from_collection_for_select(@reasons, :code, :name),
+                      data: { pos_blocking_overlay_target: "initialFocus" } %>
+              </div>
+              <div class="form-field">
+                <%= label_tag :notes, "Note" %>
+                <%= text_field_tag :notes, nil, autocomplete: "off" %>
+              </div>
+              <div class="actions">
+                <button type="button" class="btn btn--ghost" data-action="pos-blocking-overlay#close">
+                  Keep Original Operation
+                </button>
+                <%= submit_tag "Record Reversal", class: "btn" %>
+              </div>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  </div>
+<% end %>
