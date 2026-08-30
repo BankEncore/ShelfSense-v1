@@ -186,6 +186,17 @@ export default class extends Controller {
     "customerList",
     "customerQueryField",
     "customerQueryLabel",
+    "quickCustomerButton",
+    "quickCustomerOverlay",
+    "quickCustomerContextLabel",
+    "quickCustomerDisplayNameField",
+    "quickCustomerEmailField",
+    "quickCustomerPhoneField",
+    "quickCustomerDuplicateWrap",
+    "quickCustomerDuplicateList",
+    "quickCustomerAcknowledgeField",
+    "quickCustomerBack",
+    "quickCustomerSubmit",
     "productOverlay",
     "productList",
     "variantOverlay",
@@ -246,6 +257,8 @@ export default class extends Controller {
     searchUrl: String,
     pickupSearchUrl: String,
     customerSearchUrl: String,
+    quickCustomerUrl: String,
+    quickCustomerAllowed: Boolean,
     customerAttached: Boolean,
     pickupAllowed: Boolean,
     openPriceUrl: String,
@@ -270,6 +283,8 @@ export default class extends Controller {
     this.customerAbort = null
     this.linkedAbort = null
     this.unlinkedAbort = null
+    this.customerLookupContext = null
+    this.quickCustomerIdempotencyKey = null
     this.linkedStage = "lookup"
     this.bindFunctionKeyCapture()
     if (this.hasControlReasonFieldTarget) {
@@ -596,6 +611,10 @@ export default class extends Controller {
         this.destinationModeInputTarget.value = "new_gift_card"
       } else if (this.settlementValue === "refund" && type?.stored_value_account_type === "store_credit") {
         this.destinationModeInputTarget.value = "customer_store_credit"
+        if (!this.customerAttachedValue) {
+          this.showFeedback("A customer is required. Find and attach a customer to continue.")
+          this.openCustomerOverlay({ context: "customer_store_credit" })
+        }
       } else {
         this.destinationModeInputTarget.value = type?.category === "stored_value" ? "existing_account" : ""
       }
@@ -1278,8 +1297,9 @@ export default class extends Controller {
     this.closePickupOverlay()
   }
 
-  openCustomerOverlay() {
+  openCustomerOverlay(options = {}) {
     if (!this.hasCustomerOverlayTarget) return
+    this.customerLookupContext = options.context || null
     this.invalidateCustomerLookup()
     if (this.hasCustomerQueryFieldTarget) this.customerQueryFieldTarget.value = ""
     if (this.hasCustomerListTarget) this.customerListTarget.replaceChildren()
@@ -1326,6 +1346,18 @@ export default class extends Controller {
       return
     }
     this.selectHighlightedCustomer()
+  }
+
+  onQuickCustomerOverlayKeydown(event, key) {
+    if (key === "Escape") {
+      event.preventDefault()
+      this.closeQuickCustomerOverlay()
+      return
+    }
+    if (key === "Enter" && !event.target.matches("textarea")) {
+      event.preventDefault()
+      this.submitQuickCustomer()
+    }
   }
 
   async runCustomerSearch() {
@@ -1399,6 +1431,160 @@ export default class extends Controller {
   keepCurrentCustomer(event) {
     if (event) event.preventDefault()
     this.closeCustomerOverlay()
+  }
+
+  openQuickCustomerOverlay(event) {
+    if (event) event.preventDefault()
+    if (!this.quickCustomerAllowedValue || !this.hasQuickCustomerOverlayTarget) return
+    this.resetQuickCustomerOverlay()
+    this.syncQuickCustomerContextLabel()
+    this.showOverlay(
+      this.quickCustomerOverlayTarget,
+      {
+        parent: this.hasCustomerOverlayTarget ? this.customerOverlayTarget : null,
+        initialFocus: this.hasQuickCustomerDisplayNameFieldTarget && this.quickCustomerDisplayNameFieldTarget
+      }
+    )
+  }
+
+  closeQuickCustomerOverlay(event) {
+    if (event) event.preventDefault()
+    this.hideOverlay(this.hasQuickCustomerOverlayTarget && this.quickCustomerOverlayTarget)
+  }
+
+  resetQuickCustomerOverlay() {
+    this.quickCustomerIdempotencyKey = this.uuidV7()
+    if (this.hasQuickCustomerDisplayNameFieldTarget) this.quickCustomerDisplayNameFieldTarget.value = ""
+    if (this.hasQuickCustomerEmailFieldTarget) this.quickCustomerEmailFieldTarget.value = ""
+    if (this.hasQuickCustomerPhoneFieldTarget) this.quickCustomerPhoneFieldTarget.value = ""
+    if (this.hasQuickCustomerAcknowledgeFieldTarget) this.quickCustomerAcknowledgeFieldTarget.checked = false
+    this.clearQuickCustomerDuplicates()
+    if (this.hasQuickCustomerOverlayTarget) this.clearOverlayError(this.quickCustomerOverlayTarget)
+  }
+
+  clearQuickCustomerDuplicates() {
+    if (this.hasQuickCustomerDuplicateWrapTarget) this.quickCustomerDuplicateWrapTarget.hidden = true
+    if (this.hasQuickCustomerDuplicateListTarget) this.quickCustomerDuplicateListTarget.replaceChildren()
+  }
+
+  syncQuickCustomerContextLabel() {
+    if (!this.hasQuickCustomerContextLabelTarget) return
+    const context = this.customerLookupContext
+    if (context === "store_credit" || context === "trade_credit") {
+      this.quickCustomerContextLabelTarget.textContent = "Email or phone is required for store-credit and trade-credit flows."
+    } else if (context === "customer_store_credit") {
+      this.quickCustomerContextLabelTarget.textContent = "Email or phone is required for customer store-credit refunds."
+    } else {
+      this.quickCustomerContextLabelTarget.textContent = "Create a customer identity and attach it to this transaction."
+    }
+  }
+
+  quickCustomerRequiresContact() {
+    return this.customerLookupContext === "store_credit" ||
+      this.customerLookupContext === "trade_credit" ||
+      this.customerLookupContext === "customer_store_credit"
+  }
+
+  renderQuickCustomerDuplicates(rows) {
+    if (!this.hasQuickCustomerDuplicateWrapTarget || !this.hasQuickCustomerDuplicateListTarget) return
+    this.quickCustomerDuplicateWrapTarget.hidden = false
+    this.quickCustomerDuplicateListTarget.replaceChildren()
+    rows.forEach((row, index) => {
+      const item = document.createElement("li")
+      item.textContent = row.label || [row.display_name, row.email, row.phone].filter(Boolean).join(" · ")
+      this.decoratePickerItem(item, { selected: index === 0, disabled: true })
+      this.quickCustomerDuplicateListTarget.append(item)
+    })
+  }
+
+  async submitQuickCustomer(event) {
+    if (event) event.preventDefault()
+    if (this.inFlight || !this.hasQuickCustomerOverlayTarget) return
+    const displayName = this.hasQuickCustomerDisplayNameFieldTarget ? this.quickCustomerDisplayNameFieldTarget.value.trim() : ""
+    const email = this.hasQuickCustomerEmailFieldTarget ? this.quickCustomerEmailFieldTarget.value.trim() : ""
+    const phone = this.hasQuickCustomerPhoneFieldTarget ? this.quickCustomerPhoneFieldTarget.value.trim() : ""
+    if (!displayName) {
+      this.setQuickCustomerFeedback("Display name is required.")
+      if (this.hasQuickCustomerDisplayNameFieldTarget) this.focusOverlayEntry(this.quickCustomerDisplayNameFieldTarget)
+      return
+    }
+    if (this.quickCustomerRequiresContact() && !email && !phone) {
+      this.setQuickCustomerFeedback("Email or phone is required for this flow.")
+      const focusTarget = this.hasQuickCustomerEmailFieldTarget ? this.quickCustomerEmailFieldTarget : this.quickCustomerPhoneFieldTarget
+      if (focusTarget) this.focusOverlayEntry(focusTarget)
+      return
+    }
+
+    if (!this.quickCustomerIdempotencyKey) this.quickCustomerIdempotencyKey = this.uuidV7()
+    const acknowledge = this.hasQuickCustomerAcknowledgeFieldTarget && this.quickCustomerAcknowledgeFieldTarget.checked
+
+    this.beginFlight()
+    try {
+      const body = new FormData()
+      body.set("display_name", displayName)
+      if (email) body.set("email", email)
+      if (phone) body.set("phone", phone)
+      body.set("idempotency_key", this.quickCustomerIdempotencyKey)
+      body.set("require_contact", this.quickCustomerRequiresContact() ? "1" : "0")
+      if (this.customerLookupContext) {
+        const creditAccountType = this.customerLookupContext === "customer_store_credit"
+          ? "store_credit"
+          : this.customerLookupContext
+        body.set("credit_account_type", creditAccountType)
+      }
+      if (acknowledge) body.set("acknowledge_duplicates", "1")
+
+      const response = await fetch(this.quickCustomerUrlValue, {
+        method: "POST",
+        headers: {
+          Accept: "text/vnd.turbo-stream.html, text/html, application/json",
+          "X-CSRF-Token": this.csrfToken()
+        },
+        body,
+        credentials: "same-origin"
+      })
+
+      const contentType = response.headers.get("content-type") || ""
+      if (contentType.includes("application/json")) {
+        const payload = await response.json()
+        if (response.ok) {
+          window.location.assign(this.workspaceUrlValue)
+          return
+        }
+        if (payload.error === "duplicates") {
+          this.setQuickCustomerFeedback(payload.message || "Possible duplicate customers found.")
+          this.renderQuickCustomerDuplicates(payload.suggestions || [])
+          if (this.hasQuickCustomerAcknowledgeFieldTarget) this.focusOverlayEntry(this.quickCustomerAcknowledgeFieldTarget)
+          return
+        }
+        this.setQuickCustomerFeedback(payload.message || "Quick Customer could not be completed.")
+        return
+      }
+
+      const html = await response.text()
+      if (response.ok) {
+        Turbo.renderStreamMessage(html)
+        this.clearOverlayStack({ restoreCommand: false })
+        return
+      }
+
+      Turbo.renderStreamMessage(html)
+    } catch (_error) {
+      this.setQuickCustomerFeedback("Quick Customer could not be completed.")
+    } finally {
+      this.inFlight = false
+      this.enableReadyActions()
+    }
+  }
+
+  setQuickCustomerFeedback(message) {
+    if (!this.hasQuickCustomerOverlayTarget) return
+    const node = this.quickCustomerOverlayTarget.querySelector("[data-overlay-error]")
+    if (node) node.textContent = message || ""
+  }
+
+  csrfToken() {
+    return document.querySelector("meta[name='csrf-token']")?.content || ""
   }
 
 
@@ -2111,7 +2297,7 @@ export default class extends Controller {
     if (!this.customerRequiredTenderType(type)) return
     if (this.customerAttachedValue) return
     this.showFeedback("A customer is required. Find and attach a customer to continue.")
-    this.openCustomerOverlay()
+    this.openCustomerOverlay({ context: type.stored_value_account_type })
   }
 
   toggleGiftCardNumberField(type) {
@@ -3466,6 +3652,10 @@ export default class extends Controller {
       this.onCustomerOverlayKeydown(event, key)
       return
     }
+    if (this.hasQuickCustomerOverlayTarget && overlay === this.quickCustomerOverlayTarget) {
+      this.onQuickCustomerOverlayKeydown(event, key)
+      return
+    }
     if (this.hasOverlayTarget && overlay === this.overlayTarget) {
       event.preventDefault()
       if (key === "Escape") this.closeOverlay()
@@ -3743,6 +3933,10 @@ export default class extends Controller {
 
   customerOverlayOpen() {
     return this.hasCustomerOverlayTarget && !this.customerOverlayTarget.hidden
+  }
+
+  quickCustomerOverlayOpen() {
+    return this.hasQuickCustomerOverlayTarget && !this.quickCustomerOverlayTarget.hidden
   }
 
   productOverlayOpen() {

@@ -23,6 +23,8 @@
      data-register-workspace-search-url-value="<%= pos_register_merchandise_search_path(register_scope) %>"
      data-register-workspace-pickup-search-url-value="<%= pos_register_pickup_search_path(register_scope) %>"
      data-register-workspace-customer-search-url-value="<%= pos_register_customer_search_path(register_scope) %>"
+     data-register-workspace-quick-customer-url-value="<%= pos_register_quick_customer_path(register_scope) %>"
+     data-register-workspace-quick-customer-allowed-value="<%= effective_permissions.include?("customers.create") ? "true" : "false" %>"
      data-register-workspace-customer-attached-value="<%= @transaction.customer.present? ? "true" : "false" %>"
      data-register-workspace-pickup-allowed-value="<%= @pickup_allowed ? "true" : "false" %>"
      data-register-workspace-open-price-url-value="<%= pos_register_open_price_path(register_scope) %>"

@@ -13,7 +13,8 @@ class CustomersAdminTest < ActionDispatch::IntegrationTest
     sign_in_as("admin")
 
     post admin_customers_path, params: {
-      customer: { display_name: "Jamie Reader", email: "jamie@example.com" }
+      customer: { display_name: "Jamie Reader", email: "jamie@example.com" },
+      idempotency_key: SecureRandom.uuid_v7
     }
     customer = Customer.find_by!(display_name: "Jamie Reader")
     assert_redirected_to admin_customer_path(customer)
@@ -36,7 +37,8 @@ class CustomersAdminTest < ActionDispatch::IntegrationTest
     sign_in_as("admin")
 
     post admin_customers_path, params: {
-      customer: { display_name: "Someone Else", email: "dup@example.com" }
+      customer: { display_name: "Someone Else", email: "dup@example.com" },
+      idempotency_key: SecureRandom.uuid_v7
     }
     assert_response :unprocessable_entity
     assert_includes response.body, "Possible duplicates"
@@ -44,7 +46,8 @@ class CustomersAdminTest < ActionDispatch::IntegrationTest
 
     post admin_customers_path, params: {
       customer: { display_name: "Someone Else", email: "dup@example.com" },
-      acknowledge_duplicates: "1"
+      acknowledge_duplicates: "1",
+      idempotency_key: SecureRandom.uuid_v7
     }
     assert_redirected_to admin_customer_path(Customer.find_by!(display_name: "Someone Else"))
   end
@@ -58,7 +61,8 @@ class CustomersAdminTest < ActionDispatch::IntegrationTest
         given_name: "Jamie",
         family_name: "Lee",
         email: "new.jamie@example.com"
-      }
+      },
+      idempotency_key: SecureRandom.uuid_v7
     }
     assert_response :unprocessable_entity
     assert_includes response.body, "Possible duplicates"

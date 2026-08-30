@@ -368,8 +368,51 @@
       <div class="pos-overlay__actions">
         <%= action_button "Keep Current Customer", style: :outline, intent: :neutral, size: :standard,
               data: { action: "register-workspace#keepCurrentCustomer" } %>
+        <% if effective_permissions.include?("customers.create") %>
+          <%= action_button "Quick Customer", style: :outline, intent: :neutral, size: :standard,
+                data: { action: "register-workspace#openQuickCustomerOverlay", register_workspace_target: "quickCustomerButton" } %>
+        <% end %>
         <%= action_button "Attach Customer", style: :solid, intent: :brand, size: :standard,
               data: { action: "register-workspace#confirmCustomerSelection" } %>
+      </div>
+    </div>
+  </div>
+
+  <div class="pos-overlay" data-register-blocking-overlay
+       id="pos_quick_customer_overlay"
+       hidden
+       data-register-workspace-target="quickCustomerOverlay"
+       role="dialog"
+       aria-modal="true"
+       aria-labelledby="pos-quick-customer-title">
+    <div class="pos-overlay__panel pos-overlay__panel--control">
+      <h2 id="pos-quick-customer-title">Quick Customer</h2>
+      <p class="muted" data-register-workspace-target="quickCustomerContextLabel"></p>
+      <p id="pos-quick-customer-feedback" class="pos-overlay__error" data-overlay-error role="alert"></p>
+      <label for="pos-quick-customer-display-name">Display name</label>
+      <input id="pos-quick-customer-display-name" class="pos-command__field" autocomplete="off"
+             data-register-workspace-target="quickCustomerDisplayNameField">
+      <label for="pos-quick-customer-email">Email</label>
+      <input id="pos-quick-customer-email" class="pos-command__field" autocomplete="off"
+             data-register-workspace-target="quickCustomerEmailField">
+      <label for="pos-quick-customer-phone">Phone</label>
+      <input id="pos-quick-customer-phone" class="pos-command__field" autocomplete="off"
+             data-register-workspace-target="quickCustomerPhoneField">
+      <div data-register-workspace-target="quickCustomerDuplicateWrap" hidden>
+        <h3>Possible duplicates</h3>
+        <p>Review these matches before creating. Attach an existing customer from Find customer, or confirm create anyway.</p>
+        <ul class="pos-picker" role="listbox" aria-label="Possible duplicate customers"
+            data-register-workspace-target="quickCustomerDuplicateList"></ul>
+        <label>
+          <input type="checkbox" data-register-workspace-target="quickCustomerAcknowledgeField">
+          Create anyway despite possible duplicates
+        </label>
+      </div>
+      <div class="pos-overlay__actions">
+        <%= action_button "Back to Find Customer", style: :outline, intent: :neutral, size: :standard,
+              data: { action: "register-workspace#closeQuickCustomerOverlay", register_workspace_target: "quickCustomerBack" } %>
+        <%= action_button "Create and Attach", style: :solid, intent: :brand, size: :standard,
+              data: { action: "register-workspace#submitQuickCustomer", register_workspace_target: "quickCustomerSubmit" } %>
       </div>
     </div>
   </div>

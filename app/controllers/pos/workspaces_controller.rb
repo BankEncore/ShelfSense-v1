@@ -10,7 +10,8 @@ module Pos
       "stored_value_issuance" => "pos-issuance-feedback",
       "replace_tender" => "pos-edit-tender-feedback",
       "remove_tender" => "pos-remove-tender-feedback",
-      "abandon_tender" => "pos-return-to-sale-feedback"
+      "abandon_tender" => "pos-return-to-sale-feedback",
+      "quick_customer" => "pos-quick-customer-feedback"
     }.freeze
     APPROVAL_FEEDBACK_ID = "pos-approval-feedback"
 
@@ -417,6 +418,51 @@ module Pos
         @transaction.reload
         @ui_mode = "sale_entry"
         respond_workspace
+      end
+    end
+
+    def quick_customer
+      unless Authorization::PermissionEvaluator.allowed?(
+        user: current_user,
+        permission_key: "customers.create",
+        store: current_store
+      )
+        respond_to_quick_customer_forbidden
+        return
+      end
+
+      credit_account_type = params[:credit_account_type].presence
+      require_contact = ActiveModel::Type::Boolean.new.cast(params[:require_contact])
+
+      begin
+        create_result = Customers::Create.call(
+          display_name: params[:display_name],
+          email: params[:email],
+          phone: params[:phone],
+          actor: current_user,
+          store: current_store,
+          idempotency_key: params.require(:idempotency_key),
+          source_id: register_customer_create_source_id,
+          acknowledge_duplicates: params[:acknowledge_duplicates].present?,
+          require_contact: require_contact
+        )
+
+        rescue_workspace(error_mode: "sale_entry") do
+          Pos::AttachCustomer.call(
+            transaction: @transaction,
+            actor: current_user,
+            expected_lock_version: expected_lock_version,
+            customer: create_result.customer
+          )
+          @transaction.reload
+          @ui_mode = "sale_entry"
+          @feedback = quick_customer_attach_feedback(credit_account_type: credit_account_type)
+          respond_workspace
+        end
+      rescue Customers::DuplicateFoundError => e
+        respond_to_quick_customer_duplicates(e)
+      rescue Customers::Error => e
+        respond_to_quick_customer_validation(e.message)
       end
     end
 
@@ -1038,6 +1084,85 @@ module Pos
         reason: row.reason,
         tracking: row.tracking,
         open_price: row.open_price
+      }
+    end
+
+    def register_customer_create_source_id
+      @register.id
+    end
+
+    def quick_customer_attach_feedback(credit_account_type: nil)
+      customer = @transaction.customer
+      return "Customer attached." if customer.blank?
+
+      account_type = credit_account_type.presence_in(%w[store_credit trade_credit])
+      if account_type.present? && !eligible_customer_credit_account?(customer, account_type)
+        label = account_type == "trade_credit" ? "trade-credit" : "store-credit"
+        return "Customer attached. No eligible #{label} account is available yet."
+      end
+
+      "Customer attached."
+    end
+
+    def eligible_customer_credit_account?(customer, account_type)
+      StoredValueAccount.where(customer_id: customer.id, account_type: account_type)
+                        .where(status: "active")
+                        .exists?
+    end
+
+    def respond_to_quick_customer_forbidden
+      Audit::Recorder.record!(
+        action: "authorization.denied",
+        outcome: "denied",
+        actor_user: current_user,
+        actor_label: current_user.display_name,
+        store: current_store,
+        reason_code: "customers.create",
+        metadata: { path: request.fullpath }
+      )
+      respond_to do |format|
+        format.json { render json: { error: "forbidden", message: "not authorized" }, status: :forbidden }
+        format.all { redirect_to root_path, alert: "You are not authorized to perform that action." }
+      end
+    end
+
+    def respond_to_quick_customer_duplicates(error)
+      respond_to do |format|
+        format.json do
+          render json: {
+            error: "duplicates",
+            message: error.message,
+            suggestions: error.suggestions.map { |suggestion| serialize_customer_duplicate(suggestion) }
+          }, status: :unprocessable_entity
+        end
+        format.any do
+          @overlay_failure = Pos::OverlayFailure.parent_validation(error.message)
+          @feedback = error.message
+          @quick_customer_duplicates = error.suggestions
+          respond_overlay_error("sale_entry")
+        end
+      end
+    end
+
+    def respond_to_quick_customer_validation(message)
+      respond_to do |format|
+        format.json { render json: { error: "validation", message: message }, status: :unprocessable_entity }
+        format.any do
+          recover_from_workspace_error(message, "sale_entry", persist_overlay: true)
+        end
+      end
+    end
+
+    def serialize_customer_duplicate(suggestion)
+      customer = suggestion.customer
+      {
+        id: customer.id,
+        display_name: customer.display_name,
+        email: customer.email,
+        phone: customer.phone,
+        match_strength: suggestion.match_strength.to_s,
+        matched_on: suggestion.matched_on,
+        label: [ customer.display_name, customer.email, customer.phone ].compact.join(" · ")
       }
     end
   end
