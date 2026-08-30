@@ -105,11 +105,13 @@ Hide **before-count** expected till/session totals unless `Authorization::Permis
 
 ## Stored-value inquiry (Slice 6A)
 
-Three labeled find paths — not one field that might accept a complete number or prefix + last four.
+Locked in [slice6a-customer-service-plan.md](slice6a-customer-service-plan.md). Three labeled find paths — not one field that might accept a complete number or prefix + last four.
 
 1. **Exact number** — `GiftCards::Lookup` / digest possession. May lead to eligible reload, tender, cash-out.
 2. **Customer store credit** — customer identity → account relationship. Not a card possession test.
 3. **Prefix + last four** — `GiftCards::AdminInquiry` (or equivalent), `gift_cards.view`, masked candidates. Must not call the possession path, feed scan routing, or start redeem/reload/cash-out/completion ([ADR-026](../../adr/ADR-026-gift-card-number-protection.md), [ADR-027](../../adr/ADR-027-admin-gift-card-prefix-last-four-inquiry.md)).
+
+Packaging: one `Pos::StoredValueInquiriesController` with **separate POST actions** per path. No full numbers in GET. Continuations invoke existing workspace/cash-out flows; inquiry never mutates solely because a card was found.
 
 ## Current route disposition
 
