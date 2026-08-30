@@ -1,20 +1,36 @@
-<% content_for :title, "Z report" %>
+<% content_for :title, "Z period status" %>
 <%= render layout: "pos/shell/frame" do %>
   <%= render "pos/shell/feedback" %>
   <div class="pos-register-shell__body" data-controller="pos-receipt">
     <main class="pos-history">
       <div class="pos-history__title-row pos-no-print">
-        <h1>Z Report</h1>
+        <h1>Z Period Status</h1>
         <%= link_to register_inquiry_return_label, register_inquiry_return_path, class: "btn btn--ghost" %>
       </div>
+
+      <p class="pos-banner pos-no-print" role="status"><strong>CURRENT Z — PERIOD REMAINS OPEN</strong></p>
 
       <dl class="pos-history__header pos-no-print">
         <div><dt>Store</dt><dd><%= pos_padded_store_number(@period.store) %></dd></div>
         <div><dt>Register</dt><dd><%= pos_padded_register_number(@register) %></dd></div>
         <div><dt>Business date</dt><dd><%= @period.business_date.iso8601 %></dd></div>
-        <div><dt>Finalized</dt><dd><%= format_store_timestamp(@period.closed_at, @period.store) %></dd></div>
-        <div><dt>Finalized by</dt><dd><%= @period.finalized_by.display_name %></dd></div>
       </dl>
+
+      <section class="pos-no-print" aria-label="Finalize readiness">
+        <h2>Finalize readiness</h2>
+        <% if @finalize.ready? %>
+          <p role="status">Ready to finalize.</p>
+        <% else %>
+          <ul role="list">
+            <% @finalize.blockers.each do |blocker| %>
+              <li role="alert"><%= blocker %></li>
+            <% end %>
+          </ul>
+        <% end %>
+        <% @finalize.warnings.each do |warning| %>
+          <p role="status"><%= warning %></p>
+        <% end %>
+      </section>
 
       <div class="pos-no-print">
         <%= render "pos/shared/totals_groups", groups: @report_groups %>
@@ -23,27 +39,20 @@
       <div class="pos-history__nav pos-no-print actions">
         <button type="button" class="btn" data-action="pos-receipt#print">Print</button>
         <%= link_to "Session / Z Reports", pos_reports_path, class: "btn btn--outline" %>
+        <% if @finalize.ready? %>
+          <%= link_to "Finalize Z…", pos_reporting_period_finalize_confirm_path(@period), class: "btn" %>
+        <% end %>
       </div>
 
       <%= render "pos/shared/report_print",
-            title: "Z report",
-            banners: [],
+            title: "Z Period Status",
+            banners: [ "CURRENT Z — PERIOD REMAINS OPEN" ],
             meta: [
               "Store  #{pos_padded_store_number(@period.store)}",
               "Register  #{pos_padded_register_number(@register)}",
-              "Business date  #{@period.business_date.iso8601}",
-              "Finalized  #{format_store_timestamp(@period.closed_at, @period.store)}",
-              "Finalized by  #{@period.finalized_by.display_name}"
+              "Business date  #{@period.business_date.iso8601}"
             ],
             groups: @report_groups %>
-      <%= render "pos/shared/shift_end_tape",
-            groups: @report_groups,
-            identity_lines: [
-              "Z REPORT",
-              pos_padded_store_number(@period.store),
-              pos_padded_register_number(@register),
-              @period.business_date.iso8601
-            ] %>
     </main>
   </div>
 <% end %>

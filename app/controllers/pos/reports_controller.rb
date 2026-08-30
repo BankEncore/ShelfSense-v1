@@ -3,6 +3,7 @@
 module Pos
   class ReportsController < BaseController
     def index
+      prepare_inquiry_shell!(surface: :z_period)
       @closed_sessions = PosSession.closed
                                    .where(store: current_store)
                                    .includes(:register, :cashier_user, :reporting_period)

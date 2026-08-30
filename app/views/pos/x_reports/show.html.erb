@@ -39,6 +39,14 @@
               "Business date  #{@period.business_date.iso8601}"
             ],
             groups: @report_groups %>
+      <%= render "pos/shared/shift_end_tape",
+            groups: @report_groups,
+            identity_lines: [
+              "X REPORT",
+              current_store.admin_label.to_s,
+              @register.admin_label.to_s,
+              @period.business_date.iso8601
+            ] %>
     </main>
   </div>
 <% end %>

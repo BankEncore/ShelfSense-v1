@@ -1,59 +1,64 @@
 <% content_for :title, "Session / Z Reports" %>
+<%= render layout: "pos/shell/frame" do %>
+  <%= render "pos/shell/feedback" %>
+  <div class="pos-register-shell__body">
+    <main class="pos-history">
+      <div class="pos-history__title-row pos-no-print">
+        <h1>Session / Z Reports</h1>
+        <%= link_to register_inquiry_return_label, register_inquiry_return_path, class: "btn btn--ghost" %>
+      </div>
 
-<main class="pos-home">
-  <%= render "pos/shared/report_nav" %>
+      <h2>Closed Sessions</h2>
+      <% if @closed_sessions.empty? %>
+        <p>No closed Sessions at this store.</p>
+      <% else %>
+        <table class="pos-history__table">
+          <thead>
+            <tr>
+              <th>Register</th>
+              <th>Cashier</th>
+              <th>Closed</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @closed_sessions.each do |session_record| %>
+              <tr>
+                <td><%= session_record.register.admin_label %></td>
+                <td><%= session_record.cashier_user.display_name %></td>
+                <td><%= format_store_timestamp(session_record.closed_at, current_store) %></td>
+                <td><%= link_to "Session report", pos_session_details_path(session_record) %></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      <% end %>
 
-  <h1>Session / Z Reports</h1>
-
-  <h2>Closed Sessions</h2>
-  <% if @closed_sessions.empty? %>
-    <p>No closed Sessions at this store.</p>
-  <% else %>
-    <table class="pos-history__table">
-      <thead>
-        <tr>
-          <th>Register</th>
-          <th>Cashier</th>
-          <th>Closed</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        <% @closed_sessions.each do |session_record| %>
-          <tr>
-            <td><%= session_record.register.admin_label %></td>
-            <td><%= session_record.cashier_user.display_name %></td>
-            <td><%= format_store_timestamp(session_record.closed_at, current_store) %></td>
-            <td><%= link_to "Session report", pos_session_details_path(session_record) %></td>
-          </tr>
-        <% end %>
-      </tbody>
-    </table>
-  <% end %>
-
-  <h2>Z Reports</h2>
-  <% if @z_periods.empty? %>
-    <p>No finalized Z reports at this store.</p>
-  <% else %>
-    <table class="pos-history__table">
-      <thead>
-        <tr>
-          <th>Register</th>
-          <th>Business date</th>
-          <th>Finalized</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        <% @z_periods.each do |period| %>
-          <tr>
-            <td><%= period.register.admin_label %></td>
-            <td><%= period.business_date.iso8601 %></td>
-            <td><%= format_store_timestamp(period.closed_at, current_store) %></td>
-            <td><%= link_to "Z report", pos_reporting_period_z_path(period) %></td>
-          </tr>
-        <% end %>
-      </tbody>
-    </table>
-  <% end %>
-</main>
+      <h2>Z Reports</h2>
+      <% if @z_periods.empty? %>
+        <p>No finalized Z reports at this store.</p>
+      <% else %>
+        <table class="pos-history__table">
+          <thead>
+            <tr>
+              <th>Register</th>
+              <th>Business date</th>
+              <th>Finalized</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @z_periods.each do |period| %>
+              <tr>
+                <td><%= period.register.admin_label %></td>
+                <td><%= period.business_date.iso8601 %></td>
+                <td><%= format_store_timestamp(period.closed_at, current_store) %></td>
+                <td><%= link_to "Z report", pos_reporting_period_z_path(period) %></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      <% end %>
+    </main>
+  </div>
+<% end %>

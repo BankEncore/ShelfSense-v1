@@ -42,6 +42,14 @@
                 "Business date  #{@period.business_date.iso8601}"
               ],
               groups: @report_groups %>
+        <%= render "pos/shared/shift_end_tape",
+              groups: @report_groups,
+              identity_lines: [
+                "CLOSED SESSION",
+                current_store.admin_label.to_s,
+                @register.admin_label.to_s,
+                @period.business_date.iso8601
+              ] %>
       <% end %>
 
       <div class="pos-history__nav pos-no-print actions">
@@ -52,13 +60,7 @@
           <% if @period.finalized? %>
             <%= link_to "View Z", pos_reporting_period_z_path(@period), class: "btn" %>
           <% elsif @session_record.cashier_user_id == current_user.id || can_view_other_sessions? %>
-            <%= form_with url: pos_reporting_period_finalize_path(@period), method: :post do %>
-              <%= hidden_field_tag :expected_lock_version, @period.lock_version %>
-              <%= hidden_field_tag :return_to, "session_details" %>
-              <%= hidden_field_tag :session_id, @session_record.id %>
-              <%= hidden_field_tag :register_id, @register.id %>
-              <%= submit_tag "Finalize Z", class: "btn" %>
-            <% end %>
+            <%= link_to "Finalize Z…", pos_reporting_period_finalize_confirm_path(@period), class: "btn" %>
             <%= link_to "Leave period open", pos_register_enter_path(register_id: @register.id), class: "btn btn--secondary" %>
           <% end %>
         <% end %>

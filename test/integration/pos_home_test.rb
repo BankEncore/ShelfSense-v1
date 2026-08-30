@@ -248,7 +248,7 @@ class PosHomeTest < ActionDispatch::IntegrationTest
 
     get pos_reporting_period_z_path(context[:period])
     assert_response :success
-    assert_match "Z report", response.body
+    assert_match "Z Report", response.body
     assert_select "h2", text: "Sales"
     assert_select "h2", text: "Cash custody"
     assert_select "button", text: "Print"

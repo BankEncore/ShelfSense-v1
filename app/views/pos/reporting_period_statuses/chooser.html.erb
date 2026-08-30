@@ -1,0 +1,39 @@
+<% content_for :title, "Select reporting period" %>
+<%= render layout: "pos/shell/frame" do %>
+  <%= render "pos/shell/feedback" %>
+  <div class="pos-register-shell__body">
+    <main class="pos-history">
+      <div class="pos-history__title-row pos-no-print">
+        <h1>Select reporting period</h1>
+        <%= link_to register_inquiry_return_label, register_inquiry_return_path, class: "btn btn--ghost" %>
+      </div>
+
+      <% if @candidate_periods.blank? %>
+        <p>No finalized reporting periods are available for this Register.</p>
+      <% else %>
+        <table class="pos-history__table">
+          <thead>
+            <tr>
+              <th>Business date</th>
+              <th>Finalized</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @candidate_periods.each do |period| %>
+              <tr>
+                <td><%= period.business_date.iso8601 %></td>
+                <td><%= format_store_timestamp(period.closed_at, current_store) %></td>
+                <td><%= link_to "View Z", pos_reporting_period_z_path(period) %></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      <% end %>
+
+      <div class="pos-history__nav pos-no-print actions">
+        <%= link_to "All Session / Z Reports", pos_reports_path, class: "btn btn--outline" %>
+      </div>
+    </main>
+  </div>
+<% end %>

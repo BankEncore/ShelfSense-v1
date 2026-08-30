@@ -207,6 +207,12 @@ Rails.application.routes.draw do
       member { post :reversal }
     end
     get "reports", to: "reports#index", as: :reports
+    get "z_status", to: "reporting_period_statuses#show", as: :z_status
+    get "reporting_periods/:id/status", to: "reporting_period_statuses#show", as: :reporting_period_status
+    get "reporting_periods/:id/finalize", to: "reporting_period_finalizations#new", as: :reporting_period_finalize_confirm
+    post "reporting_periods/:id/finalize", to: "reporting_period_finalizations#create", as: :reporting_period_finalize
+    get "reporting_periods/:id/z", to: "reporting_period_zs#show", as: :reporting_period_z
+
     resources :transactions, only: %i[index show]
     resource :stored_value_inquiry, only: :show, controller: "stored_value_inquiries" do
       post :exact_number
@@ -260,8 +266,6 @@ Rails.application.routes.draw do
     post "sessions/:id/close", to: "session_closes#create"
     post "sessions/:id/resume_sales", to: "session_closes#resume_sales", as: :session_resume_sales
     get "sessions/:id/closed", to: "closed_sessions#show", as: :session_closed
-    post "reporting_periods/:id/finalize", to: "reporting_period_finalizations#create", as: :reporting_period_finalize
-    get "reporting_periods/:id/z", to: "reporting_period_zs#show", as: :reporting_period_z
   end
 
   root "home#show"

@@ -187,7 +187,7 @@ module PosRegisterShellHelper
 
       { key:, label: "X Report", href: href }
     when :session_z_reports
-      { key:, label: "Session / Z Reports", href: pos_reports_path }
+      { key:, label: "Session / Z Reports", href: register_menu_z_path }
     when :active_sessions
       { key:, label: "Active Sessions", href: pos_active_sessions_path(inquiry_register_params) }
     when :switch_register
@@ -210,6 +210,17 @@ module PosRegisterShellHelper
     return if @gate&.session.blank?
 
     pos_session_x_report_path(@gate.session)
+  end
+
+  def register_menu_z_path
+    period = @gate&.period
+    if period&.finalized?
+      pos_reporting_period_z_path(period)
+    elsif period&.open?
+      pos_reporting_period_status_path(period)
+    else
+      pos_z_status_path(inquiry_register_params)
+    end
   end
 
   def pos_permission?(key)

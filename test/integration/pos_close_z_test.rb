@@ -535,6 +535,43 @@ class PosCloseZTest < ActionDispatch::IntegrationTest
     assert other_session.pos_transactions.working.empty?
   end
 
+  test "z status and finalize confirmation are read-only until post" do
+    complete_http_sale
+    session_record = PosSession.open.find_by!(register: @register)
+    period = session_record.reporting_period
+
+    get pos_reporting_period_status_path(period)
+    assert_response :success
+    assert_match "CURRENT Z", response.body
+    assert_match(/open session/i, response.body)
+
+    pos_close_session!(
+      session: session_record,
+      actor: @actor,
+      expected_lock_version: session_record.lock_version,
+      closing_count_cents: 0
+    )
+
+    get pos_reporting_period_status_path(period.reload)
+    assert_response :success
+    assert_match "Ready to finalize", response.body
+    assert period.reload.open?
+
+    get pos_reporting_period_finalize_confirm_path(period)
+    assert_response :success
+    assert_match "Finalize Z", response.body
+    assert_select "input[name='expected_lock_version']"
+    assert period.reload.open?
+
+    post pos_reporting_period_finalize_path(period), params: {
+      expected_lock_version: period.lock_version,
+      return_to: "confirm",
+      register_id: @register.id
+    }
+    assert_redirected_to pos_reporting_period_z_path(period)
+    assert period.reload.finalized?
+  end
+
   private
 
   def sign_in_as(username)
