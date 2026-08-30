@@ -1,8 +1,8 @@
 # Slice 7 — Overview
 
-Status: **7.0 keyboard contract accepted** on `register-workspace-consolidation` ([#95](https://github.com/BankEncore/ShelfSense-v1/issues/95) / PR [#112](https://github.com/BankEncore/ShelfSense-v1/pull/112)). **Tender lifecycle inventory complete** ([slice7-tender-lifecycle-inventory.md](slice7-tender-lifecycle-inventory.md)). Next: lock 7A–7C implementation packets. Issues [#93](https://github.com/BankEncore/ShelfSense-v1/issues/93)–[#95](https://github.com/BankEncore/ShelfSense-v1/issues/95).
+Status: **7.0 keyboard contract accepted** on `register-workspace-consolidation` ([#95](https://github.com/BankEncore/ShelfSense-v1/issues/95) / PR [#112](https://github.com/BankEncore/ShelfSense-v1/pull/112)). **Tender lifecycle inventory complete** ([slice7-tender-lifecycle-inventory.md](slice7-tender-lifecycle-inventory.md)). **Slice 7A packet Fully locked** ([slice7a-tender-review-plan.md](slice7a-tender-review-plan.md)); implementation next under [#93](https://github.com/BankEncore/ShelfSense-v1/issues/93). Issues [#93](https://github.com/BankEncore/ShelfSense-v1/issues/93)–[#95](https://github.com/BankEncore/ShelfSense-v1/issues/95).
 
-Authority: [plan.md](plan.md) (esp. locked decision 13), [routing-and-authority.md](routing-and-authority.md), [slice5d-tender-issuance-plan.md](slice5d-tender-issuance-plan.md), [textual-wireframes.md](textual-wireframes.md) P10 / O11–O17, [slice7-keyboard-contract.md](slice7-keyboard-contract.md), [slice7-tender-lifecycle-inventory.md](slice7-tender-lifecycle-inventory.md). Historical thinking: [slice-7-draft.md](../../drafts/phase-10-followup-pos-transaction-workspace/slice-7-draft.md) (superseded for implementation; do not implement from the draft).
+Authority: [plan.md](plan.md) (esp. locked decision 13), [routing-and-authority.md](routing-and-authority.md), [slice5d-tender-issuance-plan.md](slice5d-tender-issuance-plan.md), [textual-wireframes.md](textual-wireframes.md) P10 / O11–O17, [slice7-keyboard-contract.md](slice7-keyboard-contract.md), [slice7-tender-lifecycle-inventory.md](slice7-tender-lifecycle-inventory.md), [slice7a-tender-review-plan.md](slice7a-tender-review-plan.md). Historical thinking: [slice-7-draft.md](../../drafts/phase-10-followup-pos-transaction-workspace/slice-7-draft.md) (superseded for implementation; do not implement from the draft).
 
 ## Boundary statement
 
@@ -21,7 +21,7 @@ Decision 13 requires Slice 7’s **first merge** to establish the replacement ke
 ```text
 7.0 Keyboard contract amendment (docs-only)   ✓
   → Tender lifecycle inventory                 ✓
-  → 7A Tender Review (ordinary tender correction)
+  → 7A Tender Review (ordinary tender correction)  packet locked; implement 7A.1–7A.3
   → 7B Stored value, issuance, and Quick Customer
   → 7C Dispatcher implementation and obsolete-handler deletion
 ```
@@ -30,7 +30,7 @@ Decision 13 requires Slice 7’s **first merge** to establish the replacement ke
 |---|---|---|
 | 7.0 | [slice7-keyboard-contract.md](slice7-keyboard-contract.md) | [#95](https://github.com/BankEncore/ShelfSense-v1/issues/95) (contract) |
 | Inventory | [slice7-tender-lifecycle-inventory.md](slice7-tender-lifecycle-inventory.md) (**Complete**) | gates 7A/7B lock |
-| 7A | `slice7a-tender-review-plan.md` | [#93](https://github.com/BankEncore/ShelfSense-v1/issues/93) |
+| 7A | [slice7a-tender-review-plan.md](slice7a-tender-review-plan.md) (**Fully locked**) | [#93](https://github.com/BankEncore/ShelfSense-v1/issues/93) |
 | 7B | `slice7b-stored-value-issuance-plan.md` | [#94](https://github.com/BankEncore/ShelfSense-v1/issues/94) |
 | 7C | `slice7c-keyboard-dispatcher-plan.md` + implement contract | [#95](https://github.com/BankEncore/ShelfSense-v1/issues/95) |
 

@@ -84,9 +84,9 @@ Till Activity, cash activity detail, Session Details, Active Sessions, reversal 
 
 **Docs-only** ([#95](https://github.com/BankEncore/ShelfSense-v1/issues/95) / PR [#112](https://github.com/BankEncore/ShelfSense-v1/pull/112)). Accept SALE / TENDER / overlay / Escape / scanner / Lock tables and semantic vocabulary ([slice7-keyboard-contract.md](slice7-keyboard-contract.md)). Does not implement the dispatcher and **does not close [#93](https://github.com/BankEncore/ShelfSense-v1/issues/93)**. Clarifies plan.md decision 13 “first merge.” See [slice7-overview.md](slice7-overview.md).
 
-## Slice 7A — Tender-review framework (gated)
+## Slice 7A — Tender-review framework
 
-Gated on 7.0 + tender lifecycle inventory. Tender Review mode, semantic selection, ordinary tender remove/replace, Return to Sale. No temporary global shortcuts. SV mutate deferred to 7B.
+**Packet Fully locked** ([slice7a-tender-review-plan.md](slice7a-tender-review-plan.md)). Implement 7A.1–7A.3 under [#93](https://github.com/BankEncore/ShelfSense-v1/issues/93): Tender Review selection, ordinary remove/replace with OperationLease, Return to Sale (ordinary-only; refuse when SV present). No temporary global shortcuts. SV mutate deferred to 7B.
 
 ## Slice 7B — Stored-value, issuance, and Quick Customer
 
