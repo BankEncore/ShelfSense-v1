@@ -107,6 +107,9 @@
               </div>
             </dl>
             <div class="actions">
+              <%= link_to "View Customer Summary",
+                    pos_customer_summary_path(inquiry_register_params.merge(customer_id: @store_credit_customer.id)),
+                    class: "btn btn--outline" %>
               <% if @continuations&.can_tender && @continuations.workspace_path %>
                 <%= link_to "Use as Tender", @continuations.workspace_path, class: "btn btn--outline" %>
               <% end %>

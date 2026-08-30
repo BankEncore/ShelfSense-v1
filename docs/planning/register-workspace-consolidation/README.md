@@ -29,6 +29,10 @@ This program **replaces** the current POS presentation. It does not run a parall
 | [slice5d-manual-verification.md](slice5d-manual-verification.md) | Slice 5D workstation evidence |
 | [slice6a-customer-service-plan.md](slice6a-customer-service-plan.md) | Locked Slice 6A shell context / S12–S16 contracts (6A.1–6A.3) |
 | [slice6a-manual-verification.md](slice6a-manual-verification.md) | Slice 6A workstation evidence |
+| [slice6b-till-session-plan.md](slice6b-till-session-plan.md) | Locked Slice 6B till / session / reverse-from-original contracts |
+| [slice6b-manual-verification.md](slice6b-manual-verification.md) | Slice 6B workstation evidence |
+| [slice6c-reporting-period-plan.md](slice6c-reporting-period-plan.md) | Locked Slice 6C reporting / P13 / print chrome contracts |
+| [slice6c-manual-verification.md](slice6c-manual-verification.md) | Slice 6C workstation evidence |
 
 UX adoption: follow [ux-adoption-template.md](../ux-design-system/ux-adoption-template.md) in the slice that materially changes a screen. Printed receipts stay locked unless a slice explicitly owns print.
 

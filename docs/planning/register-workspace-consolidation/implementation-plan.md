@@ -28,9 +28,9 @@ This program uses a long-lived integration branch because an incomplete Register
 | 5B Return overlays | Merged to integration ([#87](https://github.com/BankEncore/ShelfSense-v1/issues/87) / PR [#100](https://github.com/BankEncore/ShelfSense-v1/pull/100)) | [#87](https://github.com/BankEncore/ShelfSense-v1/issues/87) |
 | 5C Controlled-action overlays | Merged to integration ([#88](https://github.com/BankEncore/ShelfSense-v1/issues/88) / PR [#101](https://github.com/BankEncore/ShelfSense-v1/pull/101)) | [#88](https://github.com/BankEncore/ShelfSense-v1/issues/88) |
 | 5D Tender/issuance overlays | Complete on integration ([#89](https://github.com/BankEncore/ShelfSense-v1/issues/89) / PR [#102](https://github.com/BankEncore/ShelfSense-v1/pull/102); remediation PR [#103](https://github.com/BankEncore/ShelfSense-v1/pull/103)) | [#89](https://github.com/BankEncore/ShelfSense-v1/issues/89) |
-| 6A Customer-service surfaces | In implementation (packet locked; 6A.1–6A.3 PRs) | [#90](https://github.com/BankEncore/ShelfSense-v1/issues/90) |
-| 6B Till and session detail | Not started | [#91](https://github.com/BankEncore/ShelfSense-v1/issues/91) |
-| 6C Reporting-period surfaces | Not started | [#92](https://github.com/BankEncore/ShelfSense-v1/issues/92) |
+| 6A Customer-service surfaces | Implemented on `90-customer-service-surfaces` (awaiting merge) | [#90](https://github.com/BankEncore/ShelfSense-v1/issues/90) |
+| 6B Till and session detail | Packet locked | [#91](https://github.com/BankEncore/ShelfSense-v1/issues/91) |
+| 6C Reporting-period surfaces | Packet locked | [#92](https://github.com/BankEncore/ShelfSense-v1/issues/92) |
 | 7A Tender-review framework | Gated on 2–6 | [#93](https://github.com/BankEncore/ShelfSense-v1/issues/93) |
 | 7B Stored-value/issuance completion | Gated on 7A | [#94](https://github.com/BankEncore/ShelfSense-v1/issues/94) |
 | 7C Keyboard supersession | Gated on 7A–7B packet amendment | [#95](https://github.com/BankEncore/ShelfSense-v1/issues/95) |
