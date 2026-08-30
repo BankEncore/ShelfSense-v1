@@ -11,12 +11,12 @@ Status: **Accepted** with Slice 1.
 | 2 | Phase 6.7 **§4** POS Home and Register-entry chrome |
 | 3 | Phase 6.7 **§6 F10 binding** and **§14 F10 transaction-history entry** (done in this slice) |
 | 5D | Phase 6.7 **§6 `+` destination only**: empty-field `+` / Tender opens O11 tender selection after existing tenderability checks ([slice5d-tender-issuance-plan.md](slice5d-tender-issuance-plan.md)). F1–F5 unchanged. |
-| 7.0 | **Documentation only:** accepts the replacement SALE / TENDER / overlay / Escape / scanner / Lock contract ([slice7-keyboard-contract.md](slice7-keyboard-contract.md)). Does **not** change live key behavior. Clarifies [plan.md](plan.md) decision 13 “first merge.” |
+| 7.0 | **Documentation only:** accepts the replacement SALE / TENDER / overlay / Escape / scanner / Lock contract ([slice7-keyboard-contract.md](slice7-keyboard-contract.md)), including the focus-based printable-punctuation rule. Does **not** change live key behavior. Clarifies [plan.md](plan.md) decision 13 “first merge.” Associated with [#95](https://github.com/BankEncore/ShelfSense-v1/issues/95); does not implement [#93](https://github.com/BankEncore/ShelfSense-v1/issues/93). |
 | 7C | **Runtime:** the remainder of Phase 6.7 **§6** and affected Enter/Escape/modal sections, by implementing [slice7-keyboard-contract.md](slice7-keyboard-contract.md) via one dispatcher and deleting obsolete handlers |
 
 Slice 3 supersedes **F10 as the direct entry to Transactions**. It does **not** supersede transaction-history behavior, search, linked-return workflow, or working-basket preservation. F10 opens the Register Menu; Transactions & Receipts remains a menu destination.
 
-Slice 5D supersedes **only** the Phase 6.7 `+` destination (Cash-with-remaining / even-exchange entry via `+`). It does **not** remap F1–F5 or complete the SALE/TENDER keyboard redesign. Slice 7.0 **retains** the 5D `+` → O11 destination in the accepted contract.
+Slice 5D supersedes **only** the Phase 6.7 `+` destination (Cash-with-remaining / even-exchange entry via `+`). It does **not** remap F1–F5 or complete the SALE/TENDER keyboard redesign. Slice 7.0 **retains** the 5D `+` → O11 **destination** in the accepted contract and **supersedes empty-field punctuation interception** for 7C implementation (runtime stays 5D/6.7 empty-field until 7C).
 
 Until Slice **7C** implements the dispatcher, all other 6.7 keys (`F1`–`F9`, `/`, `-`, `.`, `*`, Enter, Escape) remain **runtime** lock. `+` follows the Slice 5D contract. 7A/7B must not add temporary global shortcuts or independent document-level key handlers ([slice7-overview.md](slice7-overview.md)).
 
