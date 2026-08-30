@@ -90,7 +90,7 @@ Gated on 7.0 + tender lifecycle inventory. Tender Review mode, semantic selectio
 
 ## Slice 7B — Stored-value, issuance, and Quick Customer
 
-Gated on 7A. Nested customer-required SV lookup (7B.1), Quick Customer (7B.2), capping / working correction / completion revalidation / issuance edit (7B.3).
+Gated on 7A. Nested customer-required SV lookup (7B.1), Quick Customer with `customers.create` (7B.2), auto-capping / idempotent working removal / atomic replacement / completion revalidation / issuance edit with tender-clear confirm (7B.3).
 
 ## Slice 7C — Keyboard dispatcher
 
