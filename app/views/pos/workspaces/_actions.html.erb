@@ -60,14 +60,16 @@
     <% if @ui_mode == "tender" && selected_tender_row %>
       <div class="pos-actions__group pos-tender-review" role="group" aria-label="Selected tender actions">
         <p class="pos-tender-review__detail" data-register-workspace-target="tenderReviewDetail"><%= selected_tender_row.inspect_detail %></p>
-        <div data-register-workspace-target="tenderMutateActions" <%= "hidden" unless selected_tender_row.mutate_available %>>
+        <div data-register-workspace-target="tenderEditAction" <%= "hidden" unless selected_tender_row.edit_available %>>
           <%= action_button "Edit Tender", style: :outline, intent: :neutral, size: :large,
                 data: { action: "register-workspace#openEditTenderOverlay" } %>
+        </div>
+        <div data-register-workspace-target="tenderRemoveAction" <%= "hidden" unless selected_tender_row.remove_available %>>
           <%= action_button "Remove Tender", style: :outline, intent: :warning, size: :large,
                 data: { action: "register-workspace#openRemoveTenderOverlay" } %>
         </div>
         <p class="muted" data-register-workspace-target="tenderUnavailableReason"
-           <%= "hidden" if selected_tender_row.mutate_available %>><%= selected_tender_row.mutate_unavailable_reason %></p>
+           <%= "hidden" unless selected_tender_row.edit_unavailable_reason.present? %>><%= selected_tender_row.edit_unavailable_reason || selected_tender_row.remove_unavailable_reason %></p>
       </div>
     <% end %>
   <% end %>

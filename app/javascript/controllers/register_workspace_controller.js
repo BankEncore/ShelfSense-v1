@@ -68,7 +68,8 @@ export default class extends Controller {
     "removeTenderDetail",
     "returnToSaleOverlay",
     "tenderReviewDetail",
-    "tenderMutateActions",
+    "tenderEditAction",
+    "tenderRemoveAction",
     "tenderUnavailableReason",
     "quantityLineInput",
     "removeLineInput",
@@ -324,7 +325,7 @@ export default class extends Controller {
       return
     }
 
-    if (this.modeValue === "tender" && (key === "ArrowUp" || key === "ArrowDown")) {
+    if (this.modeValue === "tender" && (key === "ArrowUp" || key === "ArrowDown") && this.tenderListKeyTarget(event.target)) {
       event.preventDefault()
       this.moveTenderSelection(key === "ArrowUp" ? -1 : 1, { focus: true })
       return
@@ -332,7 +333,7 @@ export default class extends Controller {
     if (this.modeValue === "tender" && key === "Enter" && event.target?.matches?.(".pos-tenders__item")) {
       event.preventDefault()
       this.selectTender({ currentTarget: event.target })
-      if (event.target.dataset.mutateAvailable === "true") this.openEditTenderOverlay()
+      if (event.target.dataset.editAvailable === "true") this.openEditTenderOverlay()
       return
     }
 
@@ -2363,12 +2364,19 @@ export default class extends Controller {
     })
     this.syncSelectedTender(row.dataset.tenderId)
     if (this.hasTenderReviewDetailTarget) this.tenderReviewDetailTarget.textContent = row.dataset.inspectDetail || ""
-    const available = row.dataset.mutateAvailable === "true"
-    if (this.hasTenderMutateActionsTarget) this.tenderMutateActionsTarget.hidden = !available
+    const editAvailable = row.dataset.editAvailable === "true"
+    const removeAvailable = row.dataset.removeAvailable === "true"
+    if (this.hasTenderEditActionTarget) this.tenderEditActionTarget.hidden = !editAvailable
+    if (this.hasTenderRemoveActionTarget) this.tenderRemoveActionTarget.hidden = !removeAvailable
     if (this.hasTenderUnavailableReasonTarget) {
-      this.tenderUnavailableReasonTarget.hidden = available
-      this.tenderUnavailableReasonTarget.textContent = available ? "" : (row.dataset.mutateUnavailableReason || "")
+      const reason = row.dataset.editUnavailableReason || row.dataset.removeUnavailableReason || ""
+      this.tenderUnavailableReasonTarget.hidden = !reason
+      this.tenderUnavailableReasonTarget.textContent = reason
     }
+  }
+
+  tenderListKeyTarget(target) {
+    return Boolean(target?.closest?.(".pos-tenders__list, .pos-tenders__item"))
   }
 
   moveTenderSelection(delta, { focus = false } = {}) {
@@ -2390,10 +2398,11 @@ export default class extends Controller {
   openRemoveTenderOverlay(event) {
     if (event) event.preventDefault()
     const row = this.selectedTenderRow()
-    if (!row || row.dataset.mutateAvailable !== "true" || !this.hasRemoveTenderOverlayTarget) return
+    if (!row || row.dataset.removeAvailable !== "true" || !this.hasRemoveTenderOverlayTarget) return
     this.syncSelectedTender(row.dataset.tenderId)
     if (this.hasRemoveTenderDetailTarget) this.removeTenderDetailTarget.textContent = row.dataset.inspectDetail || ""
-    this.showOverlay(this.removeTenderOverlayTarget)
+    const confirm = this.removeTenderOverlayTarget.querySelector("[data-action*='confirmRemoveTender']")
+    this.showOverlay(this.removeTenderOverlayTarget, confirm)
   }
 
   closeRemoveTenderOverlay(event) {
@@ -2412,7 +2421,7 @@ export default class extends Controller {
   openEditTenderOverlay(event) {
     if (event) event.preventDefault()
     const row = this.selectedTenderRow()
-    if (!row || row.dataset.mutateAvailable !== "true" || !this.hasEditTenderOverlayTarget) return
+    if (!row || row.dataset.editAvailable !== "true" || !this.hasEditTenderOverlayTarget) return
     this.syncSelectedTender(row.dataset.tenderId)
     if (this.hasEditTenderDetailTarget) this.editTenderDetailTarget.textContent = row.dataset.inspectDetail || ""
     if (this.hasEditTenderAmountTarget) this.editTenderAmountTarget.value = this.formatCents(row.dataset.amountCents)
@@ -2448,7 +2457,8 @@ export default class extends Controller {
   openReturnToSaleOverlay(event) {
     if (event) event.preventDefault()
     if (this.inFlight || !this.hasReturnToSaleOverlayTarget) return
-    this.showOverlay(this.returnToSaleOverlayTarget)
+    const confirm = this.returnToSaleOverlayTarget.querySelector("[data-action*='confirmReturnToSale']:not([disabled])")
+    this.showOverlay(this.returnToSaleOverlayTarget, confirm || this.returnToSaleOverlayTarget.querySelector("button"))
   }
 
   closeReturnToSaleOverlay(event) {
@@ -2462,6 +2472,68 @@ export default class extends Controller {
     this.returnToSaleOperationInputTarget.value = this.uuidV7()
     this.beginFlight()
     this.returnToSaleFormTarget.requestSubmit()
+  }
+
+  onEditTenderOverlayKeydown(event, key) {
+    if (key === "Escape") {
+      event.preventDefault()
+      this.closeEditTenderOverlay()
+      return
+    }
+    if (key === "F9" || key === "F10") {
+      event.preventDefault()
+      return
+    }
+    if (key !== "Enter") return
+    if (this.isActionableControl(event.target)) return
+    event.preventDefault()
+    if (this.advanceEditTenderField(event.target)) return
+    this.confirmReplaceTender()
+  }
+
+  advanceEditTenderField(target) {
+    if (!this.hasEditTenderAmountTarget || target !== this.editTenderAmountTarget) return false
+    if (this.hasEditTenderPresentedWrapTarget && !this.editTenderPresentedWrapTarget.hidden && this.hasEditTenderPresentedTarget) {
+      this.editTenderPresentedTarget.focus()
+      return true
+    }
+    if (this.hasEditTenderReferenceWrapTarget && !this.editTenderReferenceWrapTarget.hidden && this.hasEditTenderReferenceTarget) {
+      this.editTenderReferenceTarget.focus()
+      return true
+    }
+    return false
+  }
+
+  onRemoveTenderOverlayKeydown(event, key) {
+    if (key === "Escape") {
+      event.preventDefault()
+      this.closeRemoveTenderOverlay()
+      return
+    }
+    if (key === "F9" || key === "F10") {
+      event.preventDefault()
+      return
+    }
+    if (key !== "Enter") return
+    if (this.isActionableControl(event.target)) return
+    event.preventDefault()
+    this.confirmRemoveTender()
+  }
+
+  onReturnToSaleOverlayKeydown(event, key) {
+    if (key === "Escape") {
+      event.preventDefault()
+      this.closeReturnToSaleOverlay()
+      return
+    }
+    if (key === "F9" || key === "F10") {
+      event.preventDefault()
+      return
+    }
+    if (key !== "Enter") return
+    if (this.isActionableControl(event.target)) return
+    event.preventDefault()
+    this.confirmReturnToSale()
   }
 
   uuidV7() {
@@ -2490,7 +2562,10 @@ export default class extends Controller {
       return
     }
     if (this.modeValue === "tender") {
-      if (this.hasRemoveTenderInputTarget && this.removeTenderInputTarget.value) return
+      if (this.tenderRows().length > 0) {
+        this.openReturnToSaleOverlay()
+        return
+      }
       this.setMode("sale_entry", "SALE ENTRY")
       this.setFieldLabel("Scan or identifier")
       this.fieldTarget.inputMode = "text"
@@ -3308,24 +3383,15 @@ export default class extends Controller {
 
   dispatchOverlayKeydown(overlay, event, key) {
     if (this.hasEditTenderOverlayTarget && overlay === this.editTenderOverlayTarget) {
-      if (key === "Escape") {
-        event.preventDefault()
-        this.closeEditTenderOverlay()
-      }
+      this.onEditTenderOverlayKeydown(event, key)
       return
     }
     if (this.hasRemoveTenderOverlayTarget && overlay === this.removeTenderOverlayTarget) {
-      if (key === "Escape") {
-        event.preventDefault()
-        this.closeRemoveTenderOverlay()
-      }
+      this.onRemoveTenderOverlayKeydown(event, key)
       return
     }
     if (this.hasReturnToSaleOverlayTarget && overlay === this.returnToSaleOverlayTarget) {
-      if (key === "Escape") {
-        event.preventDefault()
-        this.closeReturnToSaleOverlay()
-      }
+      this.onReturnToSaleOverlayKeydown(event, key)
       return
     }
     if (this.hasProductOverlayTarget && overlay === this.productOverlayTarget) {

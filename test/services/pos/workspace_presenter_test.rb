@@ -316,10 +316,29 @@ class PosWorkspacePresenterTest < ActiveSupport::TestCase
     assert_equal tender.change_cents, row.change_cents
     assert row.ordinary
     refute row.stored_value
-    assert row.mutate_available
-    assert_nil row.mutate_unavailable_reason
+    assert row.edit_available
+    assert row.remove_available
+    assert_nil row.edit_unavailable_reason
+    assert_nil row.remove_unavailable_reason
     assert_equal "cash", row.behavioral_category
     assert_match(/Presented/, row.inspect_detail)
+  end
+
+  test "card tender row allows remove but not edit" do
+    transaction = start_sale
+    Pos::AddTender.call(
+      transaction: transaction,
+      actor: @actor,
+      expected_lock_version: transaction.lock_version,
+      tender_type: @card,
+      amount_cents: 500,
+      external_reference: "AUTH-1"
+    )
+    row = present(transaction.reload, ui_mode: "tender").tender_rows.sole
+    assert row.ordinary
+    refute row.edit_available
+    assert row.remove_available
+    assert_match(/re-authorized externally/, row.edit_unavailable_reason)
   end
 
   test "stored-value tender row is inspect-only until Slice 7B" do
@@ -337,9 +356,11 @@ class PosWorkspacePresenterTest < ActiveSupport::TestCase
     row = present(transaction.reload, ui_mode: "tender").tender_rows.sole
     refute row.ordinary
     assert row.stored_value
-    refute row.mutate_available
+    refute row.edit_available
+    refute row.remove_available
     assert_equal "stored_value", row.behavioral_category
-    assert_equal "Stored-value tender correction becomes available after Slice 7B.", row.mutate_unavailable_reason
+    assert_equal "Stored-value tender correction becomes available after Slice 7B.", row.edit_unavailable_reason
+    assert_equal "Stored-value tender correction becomes available after Slice 7B.", row.remove_unavailable_reason
     assert_kind_of String, row.inspect_detail
   end
 

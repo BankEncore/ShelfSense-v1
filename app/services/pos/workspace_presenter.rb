@@ -24,8 +24,10 @@ module Pos
       :stored_value,
       :behavioral_category,
       :external_reference,
-      :mutate_available,
-      :mutate_unavailable_reason,
+      :edit_available,
+      :remove_available,
+      :edit_unavailable_reason,
+      :remove_unavailable_reason,
       :inspect_detail
     )
     SettlementCue = Data.define(:kind, :label, :amount_cents)
@@ -316,6 +318,7 @@ module Pos
     def build_tender_rows
       distinguish_cash = @tenders.any? { |tender| tender.direction == "refund" }
       @tenders.map do |tender|
+        affordances = tender_affordances(tender)
         TenderRow.new(
           id: tender.id,
           label: tender_label(tender, distinguish_cash:),
@@ -327,12 +330,40 @@ module Pos
           stored_value: tender.stored_value?,
           behavioral_category: tender.behavioral_category,
           external_reference: tender.external_reference,
-          mutate_available: !tender.stored_value?,
-          mutate_unavailable_reason: tender.stored_value? ?
-            "Stored-value tender correction becomes available after Slice 7B." : nil,
+          edit_available: affordances.fetch(:edit_available),
+          remove_available: affordances.fetch(:remove_available),
+          edit_unavailable_reason: affordances.fetch(:edit_unavailable_reason),
+          remove_unavailable_reason: affordances.fetch(:remove_unavailable_reason),
           inspect_detail: tender_inspect_detail(tender)
         )
       end
+    end
+
+    def tender_affordances(tender)
+      if tender.stored_value?
+        return {
+          edit_available: false,
+          remove_available: false,
+          edit_unavailable_reason: "Stored-value tender correction becomes available after Slice 7B.",
+          remove_unavailable_reason: "Stored-value tender correction becomes available after Slice 7B."
+        }
+      end
+
+      if tender.behavioral_category == "card"
+        return {
+          edit_available: false,
+          remove_available: true,
+          edit_unavailable_reason: "Card tenders must be removed and re-authorized externally before recording a replacement.",
+          remove_unavailable_reason: nil
+        }
+      end
+
+      {
+        edit_available: %w[cash check other].include?(tender.behavioral_category),
+        remove_available: true,
+        edit_unavailable_reason: nil,
+        remove_unavailable_reason: nil
+      }
     end
 
     def tender_inspect_detail(tender)

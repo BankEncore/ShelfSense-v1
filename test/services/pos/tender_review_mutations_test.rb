@@ -73,7 +73,7 @@ class PosTenderReviewMutationsTest < ActiveSupport::TestCase
     assert transaction.reload.pos_tenders.exists?(tender.id)
   end
 
-  test "replace supports cash card check and manual-reference other" do
+  test "replace supports cash check and manual-reference other" do
     other = TenderType.create!(
       code: "campus_account",
       name: "Campus Account",
@@ -84,7 +84,6 @@ class PosTenderReviewMutationsTest < ActiveSupport::TestCase
 
     [
       [ @cash, nil, nil, nil ],
-      [ @card, "AUTH-2", 600, nil ],
       [ @check, "CHECK-2", 600, nil ],
       [ other, "PO-2", 600, nil ]
     ].each do |type, reference, amount, presented|
@@ -127,6 +126,28 @@ class PosTenderReviewMutationsTest < ActiveSupport::TestCase
         expected_lock_version: transaction.lock_version
       )
     end
+  end
+
+  test "replace refuses card tenders without changing the original" do
+    transaction = start_sale
+    original = add_tender(transaction, @card, 500, "AUTH-KEEP")
+    transaction.reload
+
+    error = assert_raises(Pos::Error) do
+      Pos::ReplaceTender.call(
+        transaction: transaction,
+        tender: original,
+        actor: @actor,
+        operation_id: SecureRandom.uuid_v7,
+        expected_lock_version: transaction.lock_version,
+        amount_cents: 400,
+        external_reference: "AUTH-FORGED"
+      )
+    end
+    assert_match(/re-authorized externally/, error.message)
+    assert_equal "AUTH-KEEP", original.reload.external_reference
+    assert_equal 500, original.amount_cents
+    assert_equal 1, transaction.reload.pos_tenders.count
   end
 
   test "replace failure preserves the original and successful retry replays replacement" do

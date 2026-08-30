@@ -25,6 +25,11 @@ module Pos
     def call
       lease = nil
       authorize!
+      raise Pos::Error, "stored-value tender correction becomes available after Slice 7B" if @tender.stored_value?
+      if @tender.behavioral_category == "card"
+        raise Pos::Error, "card tenders must be removed and re-authorized externally before recording a replacement"
+      end
+
       lease = Pos::OperationLease.begin!(
         register_id: @transaction.register_id,
         operation_id: @operation_id,
@@ -41,6 +46,9 @@ module Pos
         transaction = Pos::Support.lock_working_transaction!(@transaction, @expected_lock_version)
         original = transaction.pos_tenders.find(@tender.id)
         raise Pos::Error, "stored-value tender correction becomes available after Slice 7B" if original.stored_value?
+        if original.behavioral_category == "card"
+          raise Pos::Error, "card tenders must be removed and re-authorized externally before recording a replacement"
+        end
 
         replacement = build_replacement!(transaction, original)
         before = audit_snapshot(original)
