@@ -3,10 +3,11 @@
 module Pos
   class TransactionsController < BaseController
     def index
+      prepare_inquiry_shell!(surface: :transaction_history)
       @search = Pos::CompletedTransactionSearch.call(
         store: current_store,
         transaction_reference: params[:transaction_reference],
-        register_id: params[:register_id],
+        register_id: params[:filter_register_id],
         receipt_sequence: params[:receipt_sequence],
         business_date: params[:business_date],
         page: params[:page]
@@ -15,6 +16,7 @@ module Pos
     end
 
     def show
+      prepare_inquiry_shell!(surface: :transaction_history)
       @transaction = PosTransaction.completed
                                    .includes(
                                      :post_void_of,

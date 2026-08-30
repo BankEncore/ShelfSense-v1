@@ -108,11 +108,28 @@ class PosRegisterMenuTest < ActiveSupport::TestCase
 
   test "never emits reverse cash" do
     %w[selector closed between_sessions own_session occupied].each do |kind|
-      %i[state_landing workspace switch_register].each do |surface|
+      %i[state_landing workspace switch_register inquiry].each do |surface|
         keys = keys_for(kind:, surface:, permissions: ALL_PERMISSIONS)
         refute_includes keys, :reverse_cash
       end
     end
+  end
+
+  test "inquiry suppresses open finalize and close proxies" do
+    gate = Struct.new(:can_finalize_period?).new(true)
+    closed = keys_for(kind: "closed", surface: :inquiry, permissions: ALL_PERMISSIONS)
+    assert_includes closed, :transactions
+    refute_includes closed, :open_register
+    refute_includes closed, :close_session
+
+    between = keys_for(kind: "between_sessions", surface: :inquiry, permissions: ALL_PERMISSIONS, gate: gate)
+    refute_includes between, :open_session
+    refute_includes between, :finalize_z
+
+    own = keys_for(kind: "own_session", surface: :inquiry, permissions: ALL_PERMISSIONS)
+    assert_includes own, :transactions
+    assert_includes own, :drop
+    refute_includes own, :close_session
   end
 
   test "empty groups are omitted" do
