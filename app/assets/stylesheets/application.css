@@ -2213,8 +2213,7 @@ input[type="submit"]:disabled,
   display: inline-block;
   font-size: 0.65rem;
   font-weight: 700;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
+  letter-spacing: 0.02em;
   padding: 0.15rem 0.4rem;
   border-radius: var(--radius-sm);
 }

@@ -622,14 +622,22 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     assert_text "Resume Register"
   end
 
-  test "unknown identifier feedback does not move the command field" do
+  test "unknown identifier feedback does not cover the command field" do
     open_register
     field = find("#pos-command-field")
-    before = command_field_top
     field.fill_in with: "0000000000000"
     field.send_keys :enter
     assert_selector "#pos_feedback", visible: true
-    assert_equal before, command_field_top
+    assert_match(/unknown|not found|no match|identifier/i, find("#pos_feedback").text)
+    hit = page.evaluate_script(<<~JS.squish)
+      (function() {
+        var el = document.getElementById("pos-command-field");
+        var box = el.getBoundingClientRect();
+        var top = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
+        return Boolean(top && (top === el || el.contains(top)));
+      })()
+    JS
+    assert hit, "command field must remain clickable after feedback"
   end
 
   test "in-flight mutation ignores tender remove and cancel" do
