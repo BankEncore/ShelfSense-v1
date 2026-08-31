@@ -183,7 +183,7 @@ class PosMixedReturnWorkspaceTest < ActionDispatch::IntegrationTest
     assert_match original.transaction_reference, response.body
     assert_select ".pos-history__detail", text: /Original receipt/
     assert_select ".pos-receipt__print", text: /Original: #{Regexp.escape(original.transaction_reference)}/
-    assert_select ".pos-receipt__reprint", text: "*** REPRINT ***"
+    assert_select ".pos-receipt__print .pos-thermal__status", text: "*** REPRINT ***"
     assert_equal 0, Pos::Returnability.remaining_quantity(original.pos_transaction_lines.first)
   end
 

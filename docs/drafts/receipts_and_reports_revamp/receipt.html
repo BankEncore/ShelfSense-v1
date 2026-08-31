@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Thermal Receipt - S001-R01-T0000056</title>
+
+  <!-- Preconnect for fast Google Font fetching -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+  <!-- Load Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@700;800&display=swap" rel="stylesheet">
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: #e5e5e5;
+      /* Robust font stack: Google Font -> Modern System Monospace -> Sans-Serif fallback */
+      font-family: 'Noto Sans Mono', 'Cascadia Code', 'Consolas', 'SF Mono', 'Segoe UI Mono', sans-serif;
+      font-variant-numeric: slashed-zero;
+      color: #000000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+    }
+
+    /* Screen UI Control Bar (Hidden when printing) */
+    .controls-bar {
+      margin-bottom: 16px;
+    }
+
+    .btn-print {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-weight: 700;
+      font-size: 14px;
+      background-color: #000000;
+      color: #ffffff;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+      transition: background-color 0.2s ease;
+    }
+
+    .btn-print:hover {
+      background-color: #333333;
+    }
+
+    /* 80mm Thermal Paper Simulation Container */
+    .receipt-paper {
+      width: 80mm;
+      min-height: 220mm;
+      background: #ffffff;
+      padding: 6mm 4mm;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      font-size: 11px;
+      line-height: 1.35;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Typography & Utilities */
+    .text-center { text-align: center; }
+    .text-right { text-align: right; }
+    .bold { font-weight: 700; }
+    .sans { font-family: 'Plus Jakarta Sans', sans-serif; }
+
+    /* Dividers */
+    .divider-solid { border-bottom: 2px solid #000; margin: 6px 0; }
+    .divider-dashed { border-bottom: 1px dashed #000; margin: 6px 0; }
+
+    /* Alignment Rows */
+    .row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+    }
+
+    /* Store Header */
+    .store-name {
+      font-size: 16px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      margin-bottom: 2px;
+    }
+
+    .store-address {
+      font-size: 10px;
+      margin-bottom: 6px;
+    }
+
+    .reprint-badge {
+      font-weight: 700;
+      font-size: 12px;
+      margin: 4px 0;
+    }
+
+    .meta-details {
+      font-size: 10px;
+      margin-bottom: 4px;
+    }
+
+    /* Item Blocks */
+    .item-block {
+      margin-bottom: 6px;
+    }
+
+    .item-title {
+      font-weight: 600;
+      font-size: 11px;
+    }
+
+    .item-meta {
+      font-size: 9.5px;
+      padding-left: 8px;
+      color: #000;
+    }
+
+    /* Non-Reverse Outlined Badges (Prints clearly on non-reverse printers) */
+    .badge {
+      display: inline-block;
+      font-size: 8.5px;
+      font-weight: 700;
+      padding: 1px 4px;
+      border: 1px solid #000;
+      background: transparent;
+      color: #000000;
+      margin: 2px 0;
+      text-transform: uppercase;
+    }
+
+    /* Section Headers */
+    .section-title {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      margin: 6px 0 2px 0;
+    }
+
+    /* Totals & Financials */
+    .total-banner {
+      font-size: 15px;
+      font-weight: 800;
+      padding: 4px 0;
+      border-top: 2px solid #000;
+      border-bottom: 2px solid #000;
+      margin: 8px 0;
+    }
+
+    .savings-box {
+      border: 1px dashed #000;
+      padding: 4px;
+      text-align: center;
+      font-weight: 700;
+      margin: 8px 0;
+    }
+
+    /* Native SVG Barcode Container */
+    .barcode-container {
+      margin-top: 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+    }
+
+    .barcode-svg {
+      width: 180px;
+      height: 40px;
+    }
+
+    /* Thermal Print Overrides */
+    @media print {
+      body {
+        background: none;
+        padding: 0;
+      }
+      .controls-bar {
+        display: none !important;
+      }
+      .receipt-paper {
+        width: 72mm;
+        box-shadow: none;
+        padding: 0;
+      }
+      @page {
+        size: 80mm auto;
+        margin: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Screen Control Bar -->
+  <div class="controls-bar">
+    <button class="btn-print" onclick="printReceipt()">🖨️ Print Thermal Receipt</button>
+  </div>
+
+  <!-- Thermal Receipt Sheet -->
+  <div class="receipt-paper">
+    
+    <!-- Store Header -->
+    <div class="text-center sans">
+      <div class="store-name">BLOOMFIELD BOOKS</div>
+      <div class="store-address">
+        9999 S Telegraph Road<br>
+        Bloomfield Township, MI 48302<br>
+        Ph: 248-555-2665
+      </div>
+    </div>
+
+    <div class="divider-solid"></div>
+
+    <div class="text-center reprint-badge sans">*** REPRINT ***</div>
+
+    <!-- Metadata -->
+    <div class="meta-details">
+      <div class="row"><span>Date:</span> <span>30 Aug 2026 12:09 AM</span></div>
+      <div class="row"><span>Store/Reg/Trans:</span> <span>001 / 01 / 0000056</span></div>
+      <div class="row"><span>Cashier:</span> <span>Cashier C.</span></div>
+      <div class="row"><span>Customer:</span> <span>Smith, David</span></div>
+    </div>
+
+    <div class="divider-dashed"></div>
+
+    <!-- Table Header -->
+    <div class="row bold" style="font-size: 10px;">
+      <span>ITEM DESCRIPTION</span>
+      <span>PRICE</span>
+    </div>
+    <div class="divider-dashed"></div>
+
+    <!-- Purchased Items -->
+    <div class="item-block">
+      <div class="row">
+        <span class="item-title">Winnie-the-Pooh Notecards</span>
+        <span class="bold">$10.99 <span style="font-size: 9px;">[A]</span></span>
+      </div>
+      <div class="item-meta">SKU: 2210000000063</div>
+    </div>
+
+    <div class="item-block">
+      <div class="row">
+        <span class="item-title">Book (General Trade)</span>
+        <span class="bold">$16.00 <span style="font-size: 9px;">[A]</span></span>
+      </div>
+      <div class="item-meta">SKU: 2210000000001</div>
+    </div>
+
+    <div class="item-block">
+      <div class="row">
+        <span class="item-title">Winnie-the-Pooh Notecards</span>
+        <span class="bold">$8.49 <span style="font-size: 9px;">[A]</span></span>
+      </div>
+      <div class="item-meta">SKU: 2210000000063</div>
+      <div class="item-meta row"><span>Regular Price:</span> <span>$9.99</span></div>
+      <div class="item-meta row"><span>Discount (15%):</span> <span>-$1.50</span></div>
+    </div>
+
+    <!-- Returned Item (Unlinked Return) -->
+    <div class="item-block">
+      <div class="row">
+        <span class="item-title">Winnie-the-Pooh Notecards</span>
+        <span class="bold">-$10.99 <span style="font-size: 9px;">[A]</span></span>
+      </div>
+      <div class="item-meta"><span class="badge">[UNLINKED RETURN]</span></div>
+      <div class="item-meta">SKU: 2210000000063</div>
+    </div>
+
+    <div class="item-block">
+      <div class="row">
+        <span class="item-title">Book (General Trade)</span>
+        <span class="bold">$5.50 <span style="font-size: 9px;">[AB]</span></span>
+      </div>
+      <div class="item-meta">SKU: 2210000000001</div>
+      <di class="item-meta">2 @ $2.75</di>
+    </div>
+
+    <!-- Gift Cards Sold -->
+    <div class="divider-dashed"></div>
+    <div class="section-title">GIFT CARDS ACTIVATED</div>
+    
+    <div class="item-block">
+      <div class="row">
+        <span class="item-title">Store Gift Card</span>
+        <span class="bold">$15.00</span>
+      </div>
+      <div class="item-meta">Card ID: #801....5940</div>
+    </div>
+
+    <div class="item-block">
+      <div class="row">
+        <span class="item-title">Store Gift Card</span>
+        <span class="bold">$15.00</span>
+      </div>
+      <div class="item-meta">Card ID: #801....2314</div>
+    </div>
+
+    <div class="divider-dashed"></div>
+
+    <!-- Subtotals -->
+    <div class="row"><span>Merchandise Subtotal</span> <span>$42.48</span></div>
+    <div class="row"><span>Item Discounts</span> <span>-$1.50</span></div>
+    <div class="row"><span>Returns Subtotal</span> <span>-$10.99</span></div>
+    <div class="row"><span>Gift Cards Sold</span> <span>$30.00</span></div>
+    
+    <div class="divider-dashed"></div>
+    <div class="row bold"><span>TAXABLE SUBTOTAL</span> <span>$29.99</span></div>
+
+    <div style="margin-top: 4px;"></div>
+
+    <!-- Explicit Named Tax Breakdown -->
+    <div class="row" style="font-size: 10px;"><span>[A] Sales Tax (6.000% on $29.99)</span> <span>$1.80</span></div>
+    <div class="row" style="font-size: 10px;"><span>[B] Food/Bev (1.250% on $5.50)</span> <span>$0.07</span></div>
+    <div class="row bold"><span>Total Tax</span> <span>$1.87</span></div>
+
+    <!-- Final Total Banner -->
+    <div class="row total-banner sans">
+      <span>TOTAL DUE</span>
+      <span>$61.86</span>
+    </div>
+
+    <!-- Payments / Tenders -->
+    <div class="bold" style="margin-bottom: 2px;">PAYMENTS APPLIED</div>
+    <div class="row"><span>Check (Ref 12345)</span> <span>$10.00</span></div>
+    <div class="row"><span>External Card (Ref 123456)</span> <span>$40.00</span></div>
+    
+    <!-- Requested Cash Flow Sequence -->
+    <div class="row"><span>Cash Paid</span> <span>$20.00</span></div>
+    <div class="item-meta row"><span>Cash Applied:</span> <span>$11.86</span></div>
+    <div class="item-meta row"><span>Cash Change:</span> <span>$8.14</span></div>
+
+    <div class="divider-dashed"></div>
+
+    <!-- Issued Gift Card Balances -->
+    <div class="bold" style="margin-bottom: 2px;">ISSUED GIFT CARD BALANCES</div>
+    <div class="row" style="font-size: 10px;"><span>Card #801....5940</span> <span>$15.00</span></div>
+    <div class="row" style="font-size: 10px;"><span>Card #801....2314</span> <span>$15.00</span></div>
+
+    <div class="divider-dashed"></div>
+
+    <!-- Items Summary -->
+    <div class="row"><span>Items Sold / Returned:</span> <span class="bold">4 / 1</span></div>
+    <div class="savings-box sans">YOU SAVED: $1.50</div>
+
+    <!-- Native SVG Vector Barcode (Guaranteed to print on thermal drivers) -->
+    <div class="barcode-container text-center">
+      <svg class="barcode-svg" viewBox="0 0 180 40" xmlns="http://www.w3.org/2000/svg">
+        <rect x="0" y="0" width="3" height="40" fill="#000000"/>
+        <rect x="5" y="0" width="1" height="40" fill="#000000"/>
+        <rect x="8" y="0" width="2" height="40" fill="#000000"/>
+        <rect x="13" y="0" width="4" height="40" fill="#000000"/>
+        <rect x="19" y="0" width="1" height="40" fill="#000000"/>
+        <rect x="22" y="0" width="3" height="40" fill="#000000"/>
+        <rect x="27" y="0" width="2" height="40" fill="#000000"/>
+        <rect x="31" y="0" width="1" height="40" fill="#000000"/>
+        <rect x="34" y="0" width="4" height="40" fill="#000000"/>
+        <rect x="40" y="0" width="2" height="40" fill="#000000"/>
+        <rect x="44" y="0" width="3" height="40" fill="#000000"/>
+        <rect x="49" y="0" width="1" height="40" fill="#000000"/>
+        <rect x="52" y="0" width="2" height="40" fill="#000000"/>
+        <rect x="56" y="0" width="4" height="40" fill="#000000"/>
+        <rect x="62" y="0" width="1" height="40" fill="#000000"/>
+        <rect x="65" y="0" width="3" height="40" fill="#000000"/>
+        <rect x="70" y="0" width="2" height="40" fill="#000000"/>
+        <rect x="74" y="0" width="1" height="40" fill="#000000"/>
+        <rect x="77" y="0" width="4" height="40" fill="#000000"/>
+        <rect x="83" y="0" width="2" height="40" fill="#000000"/>
+        <rect x="87" y="0" width="3" height="40" fill="#000000"/>
+        <rect x="92" y="0" width="1" height="40" fill="#000000"/>
+        <rect x="95" y="0" width="2" height="40" fill="#000000"/>
+        <rect x="99" y="0" width="4" height="40" fill="#000000"/>
+        <rect x="105" y="0" width="1" height="40" fill="#000000"/>
+        <rect x="108" y="0" width="3" height="40" fill="#000000"/>
+        <rect x="113" y="0" width="2" height="40" fill="#000000"/>
+        <rect x="117" y="0" width="1" height="40" fill="#000000"/>
+        <rect x="120" y="0" width="4" height="40" fill="#000000"/>
+        <rect x="126" y="0" width="2" height="40" fill="#000000"/>
+        <rect x="130" y="0" width="3" height="40" fill="#000000"/>
+        <rect x="135" y="0" width="1" height="40" fill="#000000"/>
+        <rect x="138" y="0" width="2" height="40" fill="#000000"/>
+        <rect x="142" y="0" width="4" height="40" fill="#000000"/>
+        <rect x="148" y="0" width="1" height="40" fill="#000000"/>
+        <rect x="151" y="0" width="3" height="40" fill="#000000"/>
+        <rect x="156" y="0" width="2" height="40" fill="#000000"/>
+        <rect x="160" y="0" width="1" height="40" fill="#000000"/>
+        <rect x="163" y="0" width="4" height="40" fill="#000000"/>
+        <rect x="169" y="0" width="2" height="40" fill="#000000"/>
+        <rect x="173" y="0" width="3" height="40" fill="#000000"/>
+        <rect x="178" y="0" width="2" height="40" fill="#000000"/>
+      </svg>
+      <span style="font-size: 9.5px;">S001-R01-T0000056</span>
+    </div>
+
+    <div class="text-center sans bold" style="margin-top: 10px; font-size: 10px;">
+      Thank you for shopping with us!
+    </div>
+
+  </div>
+
+  <script>
+    function printReceipt() {
+      // Prevents the browser from print-spooling before web fonts finish loading
+      if (document.fonts && document.fonts.ready) {
+        document.fonts.ready.then(function() {
+          window.print();
+        });
+      } else {
+        window.print();
+      }
+    }
+  </script>
+
+</body>
+</html>

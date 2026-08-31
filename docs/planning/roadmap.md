@@ -106,6 +106,16 @@ Replaces generic POS Home with state-aware Register entry and a shared shell. Pr
 
 > Authorized cashiers enter Register and immediately work from the correct operational state, with consistent custody context, without a generic POS Home, and without a second financial model.
 
+### Receipts and reports revamp
+
+**Status:** **Accepted packet** — slices R1–R4. Not a numbered domain phase.
+
+Authoritative packet: [receipts-and-reports-revamp/](receipts-and-reports-revamp/README.md). Follow-on after Register workspace consolidation; owns customer receipt and gift-card voucher thermal presentation (D1 + D2). Cash-out receipts, cash slips, session tapes, and X/Z visual restyle deferred.
+
+**Deliverable:**
+
+> Customer receipts and gift-card vouchers print with description-first hierarchy, named Store Tax rows, separated stored-value sections, and a shared thermal visual system aligned to the approved mockup—without altering completed transaction facts or credential protection.
+
 ## Phase 7.1 — Purchasing workflow and presentation closeout
 
 **Status:** **Complete** — **7.1.1–7.1.3 on `main`** (PR #35, PR #40); **UDS-4.1/4.2 on `main`**; **7.1.4 deferred**.

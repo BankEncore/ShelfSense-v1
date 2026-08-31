@@ -33,12 +33,11 @@ module Pos
     def svg(module_width: 1, height: 40)
       bits = bar_widths
       quiet = 10 * module_width
-      content_width = bits.sum * module_width
-      width = content_width + (quiet * 2)
+      width = (bits.sum * module_width) + (quiet * 2)
       x = quiet
       bars = +""
-      bits.each_with_index do |w, index|
-        bar_width = w * module_width
+      bits.each_with_index do |units, index|
+        bar_width = units * module_width
         bars << %(<rect x="#{x}" y="0" width="#{bar_width}" height="#{height}"/>) if index.even?
         x += bar_width
       end

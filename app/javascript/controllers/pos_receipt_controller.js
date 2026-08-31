@@ -86,10 +86,11 @@ export default class extends Controller {
   async prepareFonts() {
     if (document.fonts && document.fonts.load) {
       try {
-        await document.fonts.load('700 12px "Inconsolata"')
+        await document.fonts.load('700 11px "Noto Sans Mono"')
+        await document.fonts.load('800 16px "Plus Jakarta Sans"')
         await document.fonts.ready
       } catch (_error) {
-        // Print with the stack fallback if the local face is unavailable.
+        // Print with the stack fallback if the Google Font is unavailable.
       }
     }
   }

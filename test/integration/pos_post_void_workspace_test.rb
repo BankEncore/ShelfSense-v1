@@ -51,7 +51,7 @@ class PosPostVoidWorkspaceTest < ActionDispatch::IntegrationTest
     follow_redirect!
     assert_response :success
     assert_select ".pos-receipt__screen .pos-receipt__reprint", text: /POST-VOID of/
-    assert_select ".pos-receipt__print .pos-receipt__reprint", text: "*** POST-VOID ***"
+    assert_select ".pos-receipt__print .pos-thermal__status", text: "*** POST-VOID ***"
     refute_match(/RETURN #{Regexp.escape("Example Book")}/, response.body)
     assert_match sale.transaction_reference, response.body
 
@@ -61,9 +61,9 @@ class PosPostVoidWorkspaceTest < ActionDispatch::IntegrationTest
     assert_select ".pos-history__detail .pos-receipt__post-void-note",
                   text: "This transaction has been post-voided and is no longer valid."
     assert_select ".pos-history__detail", text: /Post-voided by/
-    assert_select ".pos-receipt__print .pos-receipt__reprint", text: "*** POST-VOIDED ***"
-    assert_select ".pos-receipt__print .pos-receipt__post-void-note",
-                  text: "This transaction has been post-voided and is no longer valid."
+    assert_select ".pos-receipt__print .pos-thermal__status", text: "*** POST-VOIDED ***"
+    assert_select ".pos-receipt__print .pos-thermal__meta-note",
+                  text: "This transaction is no longer valid."
     assert_select ".pos-receipt__print", text: /Post-voided by:/
     assert_select "a", text: reversal.transaction_reference
     assert_select "a", text: "Return items", count: 0

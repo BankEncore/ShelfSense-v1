@@ -1,0 +1,8 @@
+<div class="pos-thermal__barcode pos-receipt__barcode pos-thermal__center">
+  <%= pos_code128_svg(receipt.compact_reference) %>
+  <p class="pos-thermal__barcode-text"><%= receipt.compact_reference %></p>
+</div>
+
+<% if receipt.footer_message.present? %>
+  <pre class="pos-thermal__message pos-thermal__center pos-thermal__display"><%= receipt.footer_message %></pre>
+<% end %>

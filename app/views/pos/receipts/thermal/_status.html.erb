@@ -1,0 +1,11 @@
+<% if receipt.post_voided_original? %>
+  <p class="pos-thermal__status pos-thermal__center pos-thermal__display">*** POST-VOIDED ***</p>
+  <p class="pos-thermal__meta-note pos-thermal__center">This transaction is no longer valid.</p>
+  <p class="pos-thermal__meta-note pos-thermal__center">Post-voided by: <%= receipt.reversing_reference %></p>
+<% elsif receipt.post_void_reversal? %>
+  <p class="pos-thermal__status pos-thermal__center pos-thermal__display">*** POST-VOID ***</p>
+  <p class="pos-thermal__meta-note pos-thermal__center">Original: <%= receipt.original_reference %></p>
+<% end %>
+<% if local_assigns.fetch(:reprint, false) %>
+  <p class="pos-thermal__status pos-thermal__center pos-thermal__display">*** REPRINT ***</p>
+<% end %>

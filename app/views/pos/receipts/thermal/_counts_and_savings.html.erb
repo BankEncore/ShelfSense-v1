@@ -1,0 +1,13 @@
+<% unless receipt.post_void_reversal? %>
+  <% if receipt.show_item_counts? %>
+    <div class="pos-thermal__row">
+      <span>Items Sold / Returned:</span>
+      <span class="pos-thermal__row--bold"><%= receipt.items_sold %> / <%= receipt.items_returned %></span>
+    </div>
+  <% end %>
+  <% if receipt.you_saved_cents.positive? %>
+    <div class="pos-thermal__savings-box pos-thermal__display pos-thermal__center">
+      YOU SAVED: <%= format_money_cents(receipt.you_saved_cents) %>
+    </div>
+  <% end %>
+<% end %>

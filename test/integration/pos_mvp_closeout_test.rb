@@ -125,7 +125,7 @@ class PosMvpCloseoutTest < ActionDispatch::IntegrationTest
     refute_match "Renamed Catalog Book", response.body
     assert_match "Applied Tax Class", response.body
     assert_match "Performed by", response.body
-    assert_select ".pos-receipt__reprint", text: "*** REPRINT ***"
+    assert_select ".pos-receipt__print .pos-thermal__status", text: "*** REPRINT ***"
 
     post pos_register_continue_path
     follow_redirect!

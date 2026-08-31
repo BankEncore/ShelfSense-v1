@@ -1,0 +1,8 @@
+<div class="pos-thermal__center pos-thermal__display">
+  <div class="pos-thermal__store-name"><%= receipt.legal_name %></div>
+  <% receipt.address_lines.each do |line| %>
+    <div class="pos-thermal__store-address"><%= line %></div>
+  <% end %>
+</div>
+
+<div class="pos-thermal__divider-solid"></div>

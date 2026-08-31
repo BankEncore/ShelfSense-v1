@@ -39,7 +39,7 @@ class PosMixedReturnTest < ApplicationSystemTestCase
     assert_text format_signed(completed.signed_net_cents)
     click_on completed.transaction_reference
     assert_text "Unlinked return"
-    assert_selector ".pos-receipt__reprint", visible: :all, text: "REPRINT"
+    assert_selector ".pos-receipt__print .pos-thermal__status", visible: :all, text: "REPRINT"
   end
 
   test "negative net split refunds cash and card" do

@@ -97,6 +97,7 @@ class GiftCardsAdminTest < ActionDispatch::IntegrationTest
     post print_recovery_admin_gift_card_path(card), params: { reason: "printer jammed" }
     assert_response :success
     assert_includes response.body, card.number
+    assert_includes response.body, "REPLACEMENT PRINT COPY"
     assert_match(/no-store/, response.headers["Cache-Control"].to_s)
   end
 

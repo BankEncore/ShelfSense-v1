@@ -1,3 +1,6 @@
+<% content_for :head do %>
+  <%= render "pos/receipts/thermal_fonts" %>
+<% end %>
 <% content_for :title, "Recover gift-card print" %>
 <%= render "shared/breadcrumbs", crumbs: [
   { name: "Home", path: root_path },
