@@ -1,7 +1,5 @@
 <% gift_card_programs = @gift_card_programs %>
-<% register_scope = { register_id: @register.id } %>
 <% show_add = %w[sale_entry tender completion_failed].include?(@ui_mode) && gift_card_programs.any? %>
-<% customer_locked = @transaction.customer.present? && Pos::CustomerDependency.dependent_working_stored_value?(@transaction) %>
 <% show_customer = @ui_mode == "sale_entry" || @ui_mode == "tender" || @transaction.customer.present? %>
 
 <% if show_add || show_customer %>
@@ -11,28 +9,8 @@
             data: { action: "register-workspace#openIssuanceOverlay" } %>
     <% end %>
 
-    <% if @transaction.customer %>
-      <div class="pos-customer">
-        <p>Customer · <%= @transaction.customer.display_name %></p>
-        <% if @ui_mode == "sale_entry" || @ui_mode == "tender" %>
-          <div class="pos-customer__actions">
-            <% if customer_locked %>
-              <p class="muted" role="status"><%= Pos::CustomerDependency::REFUSAL_MESSAGE %></p>
-            <% else %>
-              <%= action_button "Change", style: :outline, intent: :neutral, size: :standard,
-                    data: { action: "register-workspace#openCustomerOverlay", register_workspace_target: "attachCustomerButton" } %>
-              <%= form_with url: pos_register_detach_customer_path(register_scope), method: :post, class: "pos-customer-form" do %>
-                <%= hidden_field_tag :register_id, @register.id %>
-                <%= hidden_field_tag :lock_version, @transaction.lock_version %>
-                <%= submit_tag "Clear", class: "btn btn--outline" %>
-              <% end %>
-            <% end %>
-          </div>
-        <% end %>
-      </div>
-    <% elsif @ui_mode == "sale_entry" || @ui_mode == "tender" %>
-      <%= action_button "Attach customer", style: :outline, intent: :neutral, size: :standard,
-            data: { action: "register-workspace#openCustomerOverlay", register_workspace_target: "attachCustomerButton" } %>
+    <% if show_customer %>
+      <%= render "pos/workspaces/customer" %>
     <% end %>
   </div>
 <% end %>

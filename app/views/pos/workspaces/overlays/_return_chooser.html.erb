@@ -1,0 +1,28 @@
+  <div class="pos-overlay" data-register-blocking-overlay
+       id="pos_return_chooser"
+       hidden
+       data-register-workspace-target="returnChooserOverlay"
+       role="dialog"
+       aria-modal="true"
+       aria-labelledby="pos-return-chooser-title">
+    <div class="pos-overlay__panel">
+      <h2 id="pos-return-chooser-title">Start return</h2>
+      <p>Choose how to find the original purchase.</p>
+      <ul class="pos-picker" role="listbox" aria-labelledby="pos-return-chooser-title" data-register-workspace-target="returnChooserList">
+        <li data-choice="linked" class="is-selected" role="option" tabindex="0" aria-selected="true">
+          Find Original Receipt
+          <span class="muted">Best when the customer's purchase can be identified.</span>
+        </li>
+        <li data-choice="unlinked" role="option" tabindex="-1" aria-selected="false">
+          Unlinked Return
+          <span class="muted">Requires a reason and may require authorization.</span>
+        </li>
+      </ul>
+      <div class="pos-overlay__actions">
+        <%= action_button "Keep Sale Mode", style: :outline, intent: :neutral, size: :standard,
+              data: { action: "register-workspace#keepSaleMode", register_workspace_target: "returnChooserCancel" } %>
+        <%= action_button "Continue", style: :solid, intent: :brand, size: :standard,
+              data: { action: "register-workspace#confirmReturnChooser", register_workspace_target: "returnChooserContinue" } %>
+      </div>
+    </div>
+  </div>

@@ -1,0 +1,7 @@
+<%= form_with url: pos_transaction_complete_path(@transaction), method: :post, html: { class: "pos-hidden", data: { register_workspace_target: "completeForm", turbo: true } } do %>
+  <%= hidden_field_tag :lock_version, @transaction.lock_version %>
+  <%= hidden_field_tag :selected_tender_id, selected_tender_id, data: { register_workspace_target: "selectedTenderInput" } %>
+  <%= hidden_field_tag :completion_operation_id, @completion_operation_id %>
+  <%= hidden_field_tag :expected_total_cents, @transaction.total_cents %>
+  <%= hidden_field_tag :expected_signed_net_cents, @transaction.signed_net_cents %>
+<% end %>

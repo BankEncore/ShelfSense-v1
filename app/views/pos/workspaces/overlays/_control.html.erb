@@ -1,0 +1,50 @@
+  <div class="pos-overlay" data-register-blocking-overlay
+       id="pos_control_overlay"
+       hidden
+       data-register-workspace-target="controlOverlay"
+       role="dialog"
+       aria-modal="true"
+       aria-labelledby="pos-control-title">
+    <div class="pos-overlay__panel pos-overlay__panel--control">
+      <h2 id="pos-control-title" data-register-workspace-target="controlTitle">Controlled action</h2>
+      <p data-register-workspace-target="controlLineLabel"></p>
+      <p class="muted" data-register-workspace-target="controlCurrentLabel"></p>
+      <p id="pos-control-feedback" class="pos-overlay__error" data-overlay-error role="alert"></p>
+
+      <div data-register-workspace-target="controlPriceWrap">
+        <label for="pos-control-price">New selling price</label>
+        <input id="pos-control-price" class="pos-command__field" data-register-workspace-target="controlPriceField" inputmode="decimal" autocomplete="off">
+      </div>
+
+      <div data-register-workspace-target="controlDiscountWrap" hidden>
+        <label for="pos-control-discount">Discount percent</label>
+        <input id="pos-control-discount" class="pos-command__field" data-register-workspace-target="controlDiscountField" inputmode="decimal" autocomplete="off">
+      </div>
+
+      <div data-register-workspace-target="controlTaxWrap" hidden>
+        <label for="pos-control-tax-class">Tax Class</label>
+        <select id="pos-control-tax-class" class="pos-command__field" data-register-workspace-target="controlTaxField">
+          <% (@tax_classes || TaxClass.none).each do |tax_class| %>
+            <option value="<%= tax_class.id %>"><%= tax_class.admin_label %></option>
+          <% end %>
+        </select>
+      </div>
+
+      <label for="pos-control-reason">Reason</label>
+      <select id="pos-control-reason" class="pos-command__field" data-register-workspace-target="controlReasonField"></select>
+
+      <div data-register-workspace-target="controlNoteWrap" hidden>
+        <label for="pos-control-note">Note</label>
+        <input id="pos-control-note" class="pos-command__field" data-register-workspace-target="controlNoteField" maxlength="200" autocomplete="off">
+      </div>
+
+      <div class="pos-overlay__actions">
+        <%= action_button "Keep Current", style: :outline, intent: :neutral, size: :standard,
+              data: { action: "register-workspace#closeControlOverlay", register_workspace_target: "controlCancel" } %>
+        <%= action_button "Apply", style: :solid, intent: :brand, size: :standard,
+              data: { action: "register-workspace#submitControlApply", register_workspace_target: "controlApply" } %>
+        <%= action_button "Remove", style: :outline, intent: :warning, size: :standard, hidden: true,
+              data: { action: "register-workspace#submitControlRemove", register_workspace_target: "controlRemove" } %>
+      </div>
+    </div>
+  </div>

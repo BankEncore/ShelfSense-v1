@@ -1,0 +1,44 @@
+  <div class="pos-overlay" data-register-blocking-overlay
+       id="pos_linked_overlay"
+       hidden
+       data-register-workspace-target="linkedOverlay"
+       role="dialog"
+       aria-modal="true"
+       aria-labelledby="pos-linked-title">
+    <div class="pos-overlay__panel">
+      <h2 id="pos-linked-title">Return from original receipt</h2>
+      <p data-register-workspace-target="linkedInstruction">Find a receipt, then choose returnable items.</p>
+      <label class="field" data-register-workspace-target="linkedLookupWrap">
+        <span>Receipt, merchandise, or unit</span>
+        <input type="text" autocomplete="off" data-register-workspace-target="linkedLookupField"
+               data-action="input->register-workspace#invalidateLinkedResultsOnInput">
+      </label>
+      <p id="pos-linked-feedback" class="pos-overlay__error" data-register-workspace-target="linkedFeedback" data-overlay-error role="alert"></p>
+      <p class="muted" data-register-workspace-target="linkedQueryLabel" role="status" aria-live="polite"></p>
+      <ul class="pos-picker" role="listbox" aria-labelledby="pos-linked-title" data-register-workspace-target="linkedList"></ul>
+      <div data-register-workspace-target="linkedDetailsWrap" hidden>
+        <label class="field">
+          <span>Qty</span>
+          <input type="text" inputmode="numeric" autocomplete="off" value="1"
+                 data-register-workspace-target="linkedQuantityField"
+                 data-action="input->register-workspace#syncLinkedPrimaryEnabled">
+        </label>
+        <label class="field">
+          <span>Reason</span>
+          <select data-register-workspace-target="linkedReasonField"
+                  data-action="change->register-workspace#onLinkedReasonChange"></select>
+        </label>
+        <label class="field" hidden data-register-workspace-target="linkedNoteWrap">
+          <span>Note</span>
+          <input type="text" maxlength="200" autocomplete="off" data-register-workspace-target="linkedNoteField"
+                 data-action="input->register-workspace#syncLinkedPrimaryEnabled">
+        </label>
+      </div>
+      <div class="pos-overlay__actions">
+        <%= action_button "Back to Return Options", style: :outline, intent: :neutral, size: :standard,
+              data: { action: "register-workspace#linkedSecondaryAction", register_workspace_target: "linkedSecondary" } %>
+        <%= action_button "Find Receipt", style: :solid, intent: :brand, size: :standard,
+              data: { action: "register-workspace#linkedPrimaryAction", register_workspace_target: "linkedPrimary" } %>
+      </div>
+    </div>
+  </div>

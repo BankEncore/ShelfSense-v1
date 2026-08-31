@@ -1,0 +1,5 @@
+<% if effective_permissions.include?("gift_cards.cash_out") %>
+  <%= form_with url: lookup_pos_cash_outs_path, method: :post, local: true, html: { class: "pos-hidden", data: { register_workspace_target: "cashOutForm" } } do %>
+    <%= hidden_field_tag :card_number, nil, data: { register_workspace_target: "cashOutCardInput" } %>
+  <% end %>
+<% end %>

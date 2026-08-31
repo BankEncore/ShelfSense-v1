@@ -1,0 +1,30 @@
+  <div class="pos-overlay" data-register-blocking-overlay
+       id="pos_approval_overlay"
+       hidden
+       data-register-workspace-target="approvalOverlay"
+       role="dialog"
+       aria-modal="true"
+       aria-labelledby="pos-approval-title">
+    <div class="pos-overlay__panel pos-overlay__panel--control">
+      <h2 id="pos-approval-title">Manager authorization</h2>
+      <dl class="pos-overlay__context">
+        <div><dt>Action</dt><dd data-register-workspace-target="approvalActionLabel"></dd></div>
+        <div><dt>Item</dt><dd data-register-workspace-target="approvalItemLabel"></dd></div>
+        <div data-register-workspace-target="approvalCurrentWrap"><dt data-register-workspace-target="approvalCurrentHeading">Current</dt><dd data-register-workspace-target="approvalCurrentLabel"></dd></div>
+        <div data-register-workspace-target="approvalProposedWrap"><dt data-register-workspace-target="approvalProposedHeading">Proposed</dt><dd data-register-workspace-target="approvalProposedLabel"></dd></div>
+        <div data-register-workspace-target="approvalQtyWrap" hidden><dt>Qty</dt><dd data-register-workspace-target="approvalQtyLabel"></dd></div>
+        <div><dt>Reason</dt><dd data-register-workspace-target="approvalReasonLabel"></dd></div>
+      </dl>
+      <p id="pos-approval-feedback" class="pos-overlay__error" data-overlay-error role="alert"></p>
+      <label for="pos-approver-username">Approver username</label>
+      <input id="pos-approver-username" class="pos-command__field" data-register-workspace-target="approverUsername" autocomplete="off">
+      <label for="pos-approver-password">Approver password</label>
+      <input id="pos-approver-password" class="pos-command__field" type="password" data-register-workspace-target="approverPassword" autocomplete="off">
+      <div class="pos-overlay__actions">
+        <%= action_button "Back", style: :outline, intent: :neutral, size: :standard,
+              data: { action: "register-workspace#backFromApprovalOverlay", register_workspace_target: "approvalBack" } %>
+        <%= action_button "Authorize", style: :solid, intent: :brand, size: :standard,
+              data: { action: "register-workspace#authorizeAndSubmit", register_workspace_target: "approvalAuthorize" } %>
+      </div>
+    </div>
+  </div>

@@ -1,0 +1,7 @@
+<%= form_with url: pos_register_remove_tender_path(register_scope), method: :post, html: { class: "pos-hidden", data: { register_workspace_target: "removeTenderForm", turbo: true } } do %>
+  <%= hidden_field_tag :register_id, @register.id %>
+  <%= hidden_field_tag :lock_version, @transaction.lock_version %>
+  <%= hidden_field_tag :selected_tender_id, selected_tender_id, data: { register_workspace_target: "selectedTenderInput" } %>
+  <%= hidden_field_tag :tender_id, selected_tender_id || tenders.last&.id, data: { register_workspace_target: "removeTenderInput" } %>
+  <%= hidden_field_tag :operation_id, "", data: { register_workspace_target: "removeTenderOperationInput" } %>
+<% end %>

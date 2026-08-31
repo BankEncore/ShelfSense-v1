@@ -1,0 +1,10 @@
+<%= form_with url: pos_register_merchandise_path(register_scope), method: :post, html: { class: "pos-hidden", data: { register_workspace_target: "merchandiseForm", turbo: true } } do %>
+  <%= hidden_field_tag :register_id, @register.id %>
+  <%= hidden_field_tag :lock_version, @transaction.lock_version %>
+  <%= hidden_field_tag :selected_line_id, selected_id %>
+  <%= hidden_field_tag :selected_tender_id, selected_tender_id, data: { register_workspace_target: "selectedTenderInput" } %>
+  <%= hidden_field_tag :identifier, "", data: { register_workspace_target: "identifierInput" } %>
+  <%= hidden_field_tag :product_variant_id, "", data: { register_workspace_target: "variantInput" } %>
+  <%= hidden_field_tag :inventory_unit_id, "", data: { register_workspace_target: "unitInput" } %>
+  <%= hidden_field_tag :selling_price, "", data: { register_workspace_target: "openPriceInput" } %>
+<% end %>

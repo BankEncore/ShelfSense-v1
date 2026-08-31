@@ -1,0 +1,19 @@
+  <div class="pos-overlay" data-register-blocking-overlay
+       id="pos_variant_overlay"
+       hidden
+       data-register-workspace-target="variantOverlay"
+       role="dialog"
+       aria-modal="true"
+       aria-labelledby="pos-variant-title">
+    <div class="pos-overlay__panel">
+      <h2 id="pos-variant-title">Choose variant</h2>
+      <p>Select the sellable variant to continue.</p>
+      <ul class="pos-picker" role="listbox" aria-labelledby="pos-variant-title" data-register-workspace-target="variantList"></ul>
+      <div class="pos-overlay__actions">
+        <%= action_button "Back to Products", style: :outline, intent: :neutral, size: :standard,
+              data: { action: "register-workspace#backToProducts", register_workspace_target: "variantBack" } %>
+        <%= action_button "Choose Variant", style: :solid, intent: :brand, size: :standard,
+              data: { action: "register-workspace#confirmVariantSelection" } %>
+      </div>
+    </div>
+  </div>

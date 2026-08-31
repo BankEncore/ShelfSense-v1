@@ -1,0 +1,10 @@
+<%= form_with url: pos_register_stored_value_issuance_path(register_scope), method: :post, html: { class: "pos-hidden", data: { register_workspace_target: "issuanceForm", turbo: true } } do %>
+  <%= hidden_field_tag :register_id, @register.id %>
+  <%= hidden_field_tag :lock_version, @transaction.lock_version %>
+  <%= hidden_field_tag :issuance_type, "activation", data: { register_workspace_target: "issuanceTypeInput" } %>
+  <%= hidden_field_tag :gift_card_program_id, "", data: { register_workspace_target: "issuanceProgramInput" } %>
+  <%= hidden_field_tag :issuance_amount, "", data: { register_workspace_target: "issuanceAmountInput" } %>
+  <%= hidden_field_tag :card_number, "", data: { register_workspace_target: "issuanceCardInput" } %>
+  <%= hidden_field_tag :operation_id, "", data: { register_workspace_target: "issuanceOperationInput" } %>
+  <%= hidden_field_tag :confirm_clear_tenders, "", data: { register_workspace_target: "issuanceConfirmClearInput" } %>
+<% end %>

@@ -1,0 +1,8 @@
+<%= form_with url: pos_register_linked_return_path(register_scope), method: :post, html: { class: "pos-hidden", data: { register_workspace_target: "linkedReturnForm", turbo: true } } do %>
+  <%= hidden_field_tag :register_id, @register.id %>
+  <%= hidden_field_tag :lock_version, @transaction.lock_version %>
+  <%= hidden_field_tag :original_line_id, "", data: { register_workspace_target: "linkedOriginalInput" } %>
+  <%= hidden_field_tag :quantity, "1", data: { register_workspace_target: "linkedQuantityInput" } %>
+  <%= hidden_field_tag :reason_code, "", data: { register_workspace_target: "linkedReasonInput" } %>
+  <%= hidden_field_tag :reason_note, "", data: { register_workspace_target: "linkedNoteInput" } %>
+<% end %>

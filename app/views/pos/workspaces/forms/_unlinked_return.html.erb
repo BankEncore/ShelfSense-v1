@@ -1,0 +1,18 @@
+<%= form_with url: pos_register_unlinked_return_path(register_scope), method: :post, html: { class: "pos-hidden", data: { register_workspace_target: "unlinkedForm", turbo: true } } do %>
+  <%= hidden_field_tag :register_id, @register.id %>
+  <%= hidden_field_tag :lock_version, @transaction.lock_version %>
+  <%= hidden_field_tag :identifier, "", data: { register_workspace_target: "unlinkedIdentifierInput" } %>
+  <%= hidden_field_tag :product_id, "", data: { register_workspace_target: "unlinkedProductIdInput" } %>
+  <%= hidden_field_tag :product_variant_id, "", data: { register_workspace_target: "unlinkedVariantIdInput" } %>
+  <%= hidden_field_tag :inventory_unit_id, "", data: { register_workspace_target: "unlinkedUnitIdInput" } %>
+  <%= hidden_field_tag :quantity, "", data: { register_workspace_target: "unlinkedQuantityInput" } %>
+  <%= hidden_field_tag :reason_code, "", data: { register_workspace_target: "unlinkedReasonInput" } %>
+  <%= hidden_field_tag :reason_note, "", data: { register_workspace_target: "unlinkedNoteInput" } %>
+  <%= hidden_field_tag :return_price, "", data: { register_workspace_target: "unlinkedPriceInput" } %>
+  <%= hidden_field_tag :expected_product_variant_id, "", data: { register_workspace_target: "unlinkedExpectedVariantInput" } %>
+  <%= hidden_field_tag :expected_inventory_unit_id, "", data: { register_workspace_target: "unlinkedExpectedUnitInput" } %>
+  <%= hidden_field_tag :expected_reference_unit_price_cents, "", data: { register_workspace_target: "unlinkedExpectedReferenceInput" } %>
+  <%= hidden_field_tag :expected_tax_class_id, "", data: { register_workspace_target: "unlinkedExpectedTaxInput" } %>
+  <%= hidden_field_tag :approver_username, "", data: { register_workspace_target: "unlinkedApproverUserInput" } %>
+  <%= hidden_field_tag :approver_password, "", data: { register_workspace_target: "unlinkedApproverPasswordInput" } %>
+<% end %>

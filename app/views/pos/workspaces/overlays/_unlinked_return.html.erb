@@ -1,0 +1,57 @@
+  <div class="pos-overlay" data-register-blocking-overlay
+       id="pos_unlinked_overlay"
+       hidden
+       data-register-workspace-target="unlinkedOverlay"
+       role="dialog"
+       aria-modal="true"
+       aria-labelledby="pos-unlinked-title">
+    <div class="pos-overlay__panel pos-overlay__panel--control">
+      <h2 id="pos-unlinked-title">Unlinked return</h2>
+      <p>Scan or look up merchandise to return without a receipt.</p>
+      <p id="pos-unlinked-feedback" class="pos-overlay__error" data-register-workspace-target="unlinkedFeedback" data-overlay-error role="alert"></p>
+      <p class="muted" data-register-workspace-target="unlinkedQueryLabel" role="status" aria-live="polite"></p>
+
+      <label for="pos-unlinked-identifier">Scan or enter item</label>
+      <input id="pos-unlinked-identifier" class="pos-command__field"
+             data-register-workspace-target="unlinkedIdentifierField"
+             data-action="input->register-workspace#invalidateUnlinkedResultsOnInput"
+             autocomplete="off">
+
+      <div id="pos_unlinked_preview" data-register-workspace-target="unlinkedPreview" hidden>
+        <p data-register-workspace-target="unlinkedDescription"></p>
+        <p>Current price <span data-register-workspace-target="unlinkedReferenceLabel"></span></p>
+
+        <div data-register-workspace-target="unlinkedQuantityWrap">
+          <label for="pos-unlinked-quantity">Quantity</label>
+          <input id="pos-unlinked-quantity" class="pos-command__field" data-register-workspace-target="unlinkedQuantityField"
+                 data-action="input->register-workspace#syncUnlinkedPrimaryEnabled change->register-workspace#syncUnlinkedPrimaryEnabled"
+                 inputmode="numeric" autocomplete="off" value="1">
+        </div>
+
+        <label for="pos-unlinked-reason">Return reason</label>
+        <select id="pos-unlinked-reason" class="pos-command__field" data-register-workspace-target="unlinkedReasonField"
+                data-action="change->register-workspace#onUnlinkedReasonChange"></select>
+
+        <div data-register-workspace-target="unlinkedNoteWrap" hidden>
+          <label for="pos-unlinked-note">Note</label>
+          <input id="pos-unlinked-note" class="pos-command__field" data-register-workspace-target="unlinkedNoteField"
+                 data-action="input->register-workspace#syncUnlinkedPrimaryEnabled"
+                 maxlength="200" autocomplete="off">
+        </div>
+
+        <label for="pos-unlinked-price">Return unit price</label>
+        <input id="pos-unlinked-price" class="pos-command__field" data-register-workspace-target="unlinkedPriceField"
+               data-action="input->register-workspace#syncUnlinkedPrimaryEnabled"
+               inputmode="decimal" autocomplete="off">
+      </div>
+
+      <div class="pos-overlay__actions">
+        <%= action_button "Back to Return Options", style: :outline, intent: :neutral, size: :standard,
+              data: { action: "register-workspace#backFromUnlinkedOverlay", register_workspace_target: "unlinkedCancel" } %>
+        <%= action_button "Look Up Item", style: :outline, intent: :neutral, size: :standard,
+              data: { action: "register-workspace#lookUpUnlinkedItem", register_workspace_target: "unlinkedLookup" } %>
+        <%= action_button "Add Unlinked Return", style: :solid, intent: :brand, size: :standard, disabled: true,
+              data: { action: "register-workspace#submitUnlinkedReturn", register_workspace_target: "unlinkedApply" } %>
+      </div>
+    </div>
+  </div>

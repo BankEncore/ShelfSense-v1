@@ -1,0 +1,29 @@
+  <div class="pos-overlay" data-register-blocking-overlay id="pos_edit_tender_overlay" hidden
+       data-register-workspace-target="editTenderOverlay" role="dialog" aria-modal="true"
+       aria-labelledby="pos-edit-tender-title">
+    <div class="pos-overlay__panel pos-overlay__panel--control">
+      <h2 id="pos-edit-tender-title">Edit tender</h2>
+      <p data-register-workspace-target="editTenderDetail"></p>
+      <p id="pos-edit-tender-feedback" class="pos-overlay__error" data-overlay-error role="alert"></p>
+      <p data-register-workspace-target="editTenderStoredValueNote" hidden>Stored value applies up to the available balance. If the balance is lower, the applied amount is reduced and the remainder stays due. Nothing is posted until the transaction completes.</p>
+      <label for="pos-edit-tender-amount">Applied amount</label>
+      <input id="pos-edit-tender-amount" class="pos-command__field" inputmode="decimal"
+             data-register-workspace-target="editTenderAmount">
+      <div data-register-workspace-target="editTenderPresentedWrap" hidden>
+        <label for="pos-edit-tender-presented">Cash presented</label>
+        <input id="pos-edit-tender-presented" class="pos-command__field" inputmode="decimal"
+               data-register-workspace-target="editTenderPresented">
+      </div>
+      <div data-register-workspace-target="editTenderReferenceWrap">
+        <label for="pos-edit-tender-reference">Reference</label>
+        <input id="pos-edit-tender-reference" class="pos-command__field"
+               data-register-workspace-target="editTenderReference">
+      </div>
+      <div class="pos-overlay__actions">
+        <%= action_button "Keep Current", style: :outline, intent: :neutral, size: :standard,
+              data: { action: "register-workspace#closeEditTenderOverlay" } %>
+        <%= action_button "Replace Tender", style: :solid, intent: :brand, size: :standard,
+              data: { action: "register-workspace#confirmReplaceTender" } %>
+      </div>
+    </div>
+  </div>

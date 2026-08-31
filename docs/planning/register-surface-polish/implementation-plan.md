@@ -54,7 +54,7 @@ Full CI before handoff: `./dev/rails-docker bin/ci`
 | Thermal font loader | `app/views/pos/receipts/_thermal_fonts.html.erb` |
 | Print JS | `app/javascript/controllers/pos_receipt_controller.js` |
 | Shell | `app/views/pos/shell/_header.html.erb`, `_menu.html.erb`, frame/feedback as needed |
-| Workspace | `app/views/pos/workspaces/_surface.html.erb`, `_command.html.erb`, `_basket.html.erb`, `_totals.html.erb`, `_tenders.html.erb`, `_actions.html.erb`, `_basket_aux.html.erb`, `_customer.html.erb`, `_issuances.html.erb`, `_overlays.html.erb` |
+| Workspace | `app/views/pos/workspaces/_surface.html.erb`, `_command.html.erb`, `_basket.html.erb`, `_totals.html.erb`, `_tenders.html.erb`, `_actions.html.erb`, `_basket_aux.html.erb`, `_customer.html.erb`, `_issuances.html.erb`, `_overlays.html.erb` → `overlays/*`, `_forms.html.erb` → `forms/*` |
 | Optional history | `app/views/pos/transactions/index.html.erb` |
 
 ## Manual verification (cashier)

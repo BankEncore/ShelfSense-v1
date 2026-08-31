@@ -1,0 +1,32 @@
+  <div class="pos-overlay" data-register-blocking-overlay
+       id="pos_search_overlay"
+       hidden
+       data-register-workspace-target="searchOverlay"
+       role="dialog"
+       aria-modal="true"
+       aria-labelledby="pos-search-title">
+    <div class="pos-overlay__panel">
+      <h2 id="pos-search-title">Find product</h2>
+      <p>Search by SKU or product name, then choose a result.</p>
+      <label class="field">
+        <span>SKU</span>
+        <input type="text" autocomplete="off" data-register-workspace-target="searchSkuField"
+               data-action="input->register-workspace#invalidateSearchResultsOnInput">
+      </label>
+      <label class="field">
+        <span>Product name</span>
+        <input type="text" autocomplete="off" data-register-workspace-target="searchNameField"
+               data-action="input->register-workspace#invalidateSearchResultsOnInput">
+      </label>
+      <p class="muted" data-register-workspace-target="searchQueryLabel" role="status" aria-live="polite"></p>
+      <ul class="pos-picker" role="listbox" aria-labelledby="pos-search-title" data-register-workspace-target="searchList"></ul>
+      <div class="pos-overlay__actions">
+        <%= action_button "Keep Searching", style: :outline, intent: :neutral, size: :standard,
+              data: { action: "register-workspace#keepSearching" } %>
+        <%= action_button "Cancel (Esc)", style: :outline, intent: :neutral, size: :standard,
+              data: { action: "register-workspace#closeSearchOverlay" } %>
+        <%= action_button "Choose Product", style: :solid, intent: :brand, size: :standard,
+              data: { action: "register-workspace#confirmSearchSelection" } %>
+      </div>
+    </div>
+  </div>

@@ -1,0 +1,19 @@
+  <div class="pos-overlay" data-register-blocking-overlay
+       id="pos_clear_tenders_overlay"
+       hidden
+       data-register-workspace-target="clearTendersOverlay"
+       role="dialog"
+       aria-modal="true"
+       aria-labelledby="pos-clear-tenders-title">
+    <div class="pos-overlay__panel">
+      <h2 id="pos-clear-tenders-title">Clear applied tenders?</h2>
+      <p data-register-workspace-target="clearTendersConsequence">Changing gift cards changes the amount due, so every applied tender must be cleared and the transaction tendered again.</p>
+      <p>Nothing has been posted yet, so clearing a stored-value tender does not restore ledger value to the account or card.</p>
+      <div class="pos-overlay__actions">
+        <%= action_button "Keep Tenders", style: :outline, intent: :neutral, size: :standard,
+              data: { action: "register-workspace#closeClearTendersOverlay" } %>
+        <%= action_button "Clear Tenders and Continue", style: :solid, intent: :warning, size: :standard,
+              data: { action: "register-workspace#confirmClearTenders" } %>
+      </div>
+    </div>
+  </div>

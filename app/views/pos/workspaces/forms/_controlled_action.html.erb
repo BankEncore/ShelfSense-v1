@@ -1,0 +1,14 @@
+<%= form_with url: pos_register_controlled_action_path(register_scope), method: :post, html: { class: "pos-hidden", data: { register_workspace_target: "controlForm", turbo: true } } do %>
+  <%= hidden_field_tag :register_id, @register.id %>
+  <%= hidden_field_tag :lock_version, @transaction.lock_version %>
+  <%= hidden_field_tag :line_id, selected_id, data: { register_workspace_target: "controlLineInput" } %>
+  <%= hidden_field_tag :action_type, "", data: { register_workspace_target: "controlActionInput" } %>
+  <%= hidden_field_tag :operation, "apply", data: { register_workspace_target: "controlOperationInput" } %>
+  <%= hidden_field_tag :reason_code, "", data: { register_workspace_target: "controlReasonInput" } %>
+  <%= hidden_field_tag :reason_note, "", data: { register_workspace_target: "controlNoteInput" } %>
+  <%= hidden_field_tag :selling_price, "", data: { register_workspace_target: "controlPriceInput" } %>
+  <%= hidden_field_tag :discount_percent, "", data: { register_workspace_target: "controlDiscountInput" } %>
+  <%= hidden_field_tag :tax_class_id, "", data: { register_workspace_target: "controlTaxInput" } %>
+  <%= hidden_field_tag :approver_username, "", data: { register_workspace_target: "controlApproverUserInput" } %>
+  <%= hidden_field_tag :approver_password, "", data: { register_workspace_target: "controlApproverPasswordInput" } %>
+<% end %>

@@ -1,0 +1,19 @@
+  <div class="pos-overlay" data-register-blocking-overlay
+       id="pos_unit_overlay"
+       hidden
+       data-register-workspace-target="unitOverlay"
+       role="dialog"
+       aria-modal="true"
+       aria-labelledby="pos-unit-title">
+    <div class="pos-overlay__panel">
+      <h2 id="pos-unit-title">Choose used copy</h2>
+      <p>Select the individual unit to add.</p>
+      <ul class="pos-picker" role="listbox" aria-labelledby="pos-unit-title" data-register-workspace-target="unitList"></ul>
+      <div class="pos-overlay__actions">
+        <%= action_button "Back to Variants", style: :outline, intent: :neutral, size: :standard,
+              data: { action: "register-workspace#backToVariants", register_workspace_target: "unitBack" } %>
+        <%= action_button "Add to Sale", style: :solid, intent: :brand, size: :standard,
+              data: { action: "register-workspace#confirmUnitSelection" } %>
+      </div>
+    </div>
+  </div>
