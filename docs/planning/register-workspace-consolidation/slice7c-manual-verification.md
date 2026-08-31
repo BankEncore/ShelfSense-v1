@@ -29,5 +29,5 @@ Workstation assumptions: Chrome (or Chromium) on a Register-class display; Keybo
 
 - Date: 2026-08-31
 - Browser / OS: CI Chromium system tests (GitHub Actions run 33352221185) + hardening suite
-- Verified by: Slice 7C.1–7C.2 cutover + hardening system tests
+- Verified by: Slice 7C.1–7C.2 cutover + hardening system tests (cases 4, 7, 11, 13 via shell/overlay suites, 15 via command hint)
 - Follow-ups (if any): none

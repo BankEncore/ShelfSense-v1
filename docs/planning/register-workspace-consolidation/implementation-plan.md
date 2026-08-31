@@ -1,6 +1,6 @@
 # Register workspace consolidation — Implementation plan
 
-Status: **Slice 6C complete** on `register-workspace-consolidation`. **Slice 7.0** + tender lifecycle inventory complete. **Slice 7A–7C complete** ([#93](https://github.com/BankEncore/ShelfSense-v1/issues/93)–[#95](https://github.com/BankEncore/ShelfSense-v1/issues/95)). Next: program closeout toward `main` when ready.
+Status: **Slice 7C hardening complete** on `register-workspace-consolidation`. **Program closeout evidence signed** ([closeout-manual-verification.md](closeout-manual-verification.md)). Next: merge integration branch to `main`.
 
 Authority: [plan.md](plan.md), [routing-and-authority.md](routing-and-authority.md).
 
