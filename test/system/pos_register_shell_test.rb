@@ -59,9 +59,9 @@ class PosRegisterShellTest < ApplicationSystemTestCase
     assert_text(/Opening float|invalid|not a number|must be/i)
     with_viewport(width: 1280, height: 720, zoom: 2) do
       assert shell_body_scrollable?
-      submit = find(:button, "Open register")
-      scroll_to submit
-      assert submit.visible?
+      # Re-query after scroll: validation re-render + zoom can stale a held node.
+      scroll_to find(:button, "Open register")
+      assert_selector :button, "Open register", visible: true
     end
   end
 
