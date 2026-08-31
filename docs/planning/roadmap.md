@@ -116,6 +116,16 @@ Authoritative packet: [receipts-and-reports-revamp/](receipts-and-reports-revamp
 
 > Customer receipts and gift-card vouchers print with description-first hierarchy, named Store Tax rows, separated stored-value sections, and a shared thermal visual system aligned to the approved mockup—without altering completed transaction facts or credential protection.
 
+### Register surface polish
+
+**Status:** **Proposed packet**. Not a numbered domain phase.
+
+Authoritative packet: [register-surface-polish/](register-surface-polish/README.md). Follow-on after Register workspace consolidation and UDS-3; visual restyle of active Register shell/workspace toward [`docs/drafts/register-surface-revamp/`](../drafts/register-surface-revamp/), plus local packaging of Noto Sans Mono / Plus Jakarta Sans per [ADR-022](../adr/ADR-022-warm-parchment-visual-tokens.md). Keyboard, Turbo, Stimulus, and domain posting stay frozen. Transaction Complete / Review redesign deferred.
+
+**Deliverable:**
+
+> Cashiers work an active Register whose header, command, basket, summary, and keypad read as one Warm Parchment composition aligned to the approved drafts, with locally packaged faces and no runtime font CDN—without remapping shortcuts or reopening POS domain semantics.
+
 ## Phase 7.1 — Purchasing workflow and presentation closeout
 
 **Status:** **Complete** — **7.1.1–7.1.3 on `main`** (PR #35, PR #40); **UDS-4.1/4.2 on `main`**; **7.1.4 deferred**.
@@ -401,6 +411,8 @@ The following remain out of scope until a planning packet and ADR review justify
 | Phase 9 — Catalog and bibliographic enrichment | **Implemented** |
 | Phase 10 — Stored value | **Implemented** on `main`; [manual test plan](phase10-stored-value/phase10-manual-test-plan.md) executed |
 | Phase 11 — Cash accountability completion | **Implemented** on `main`; [manual test plan](phase11-cash-accountability/phase11-manual-test-plan.md) executed |
+| Receipts and reports revamp (D1/D2) | **Accepted** — [packet](receipts-and-reports-revamp/README.md) |
+| Register surface polish | **Proposed** — [packet](register-surface-polish/README.md) |
 | Phase 12 — Used buyback | After 8–11 (payout after 10–11) |
 | Phase 13 — Customer workspace | After activity sources exist |
 | Phase 14 — Financial posting and reporting | Consolidates operational domains |

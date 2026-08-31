@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Register 1 · Controlled Action Overlay · ShelfSense</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Roboto+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Plus Jakarta Sans', sans-serif; background: #f8f6f2; color: #2d2926; padding: 20px; min-height: 100vh; display: flex; flex-direction: column; gap: 16px; position: relative; overflow: hidden; }
+    .mono { font-family: 'Roboto Mono', monospace; }
+
+    /* Header Bar */
+    .header-bar { background: #ffffff; padding: 14px 20px; border-radius: 8px; border: 1px solid #e2ded7; display: flex; justify-content: space-between; align-items: center; }
+    .header-info { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: #666059; }
+    .header-info strong { color: #2d2926; }
+    .header-actions { display: flex; gap: 10px; align-items: center; }
+
+    /* Action Buttons */
+    .btn { font-family: inherit; font-size: 13px; font-weight: 600; padding: 8px 14px; border-radius: 6px; border: 1px solid #ccc7be; background: #ffffff; color: #2d2926; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; text-decoration: none; }
+    .btn:hover { background: #f4f1ea; }
+    .btn-brand { background: #8c3b1e; color: #ffffff; border-color: #8c3b1e; }
+    .btn-brand:hover { background: #733018; }
+    .btn-danger { background: #ffffff; color: #c5221f; border-color: #f1b2b0; }
+    .btn-danger:hover { background: #fce8e6; }
+
+    /* Command Bar */
+    .command-card { background: #ffffff; border: 1px solid #e2ded7; border-radius: 8px; padding: 14px 20px; display: flex; align-items: center; gap: 16px; filter: blur(2px); pointer-events: none; }
+    .command-mode { background: #2d2926; color: #ffffff; font-size: 11px; font-weight: 700; padding: 6px 12px; border-radius: 4px; letter-spacing: 0.5px; }
+    .command-input-wrap { flex: 1; display: flex; align-items: center; gap: 12px; }
+    .command-input-wrap label { font-size: 13px; font-weight: 600; color: #736c64; white-space: nowrap; }
+    .command-input { flex: 1; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 15px; font-weight: 600; padding: 10px 14px; border: 2px solid #e2ded7; border-radius: 6px; background: #fffcf9; color: #666059; }
+
+    /* Background Workspace Grid (Blurred) */
+    .pos-grid { display: grid; grid-template-columns: 1fr 380px; gap: 16px; flex: 1; filter: blur(2px); pointer-events: none; }
+    .card { background: #ffffff; border: 1px solid #e2ded7; border-radius: 8px; padding: 20px; display: flex; flex-direction: column; }
+    .card-title { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #736c64; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; }
+
+    /* Basket Table */
+    .basket-table { width: 100%; border-collapse: collapse; text-align: left; }
+    .basket-table th { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #88827a; border-bottom: 2px solid #f0ece6; padding-bottom: 10px; }
+    .basket-row { border-bottom: 1px solid #f0ece6; }
+    .basket-row td { padding: 12px 8px; vertical-align: top; }
+    .basket-row.is-selected { background: #fdf8f5; border-left: 4px solid #8c3b1e; }
+    
+    .line-title { font-size: 14px; font-weight: 600; color: #2d2926; }
+    .line-meta { font-size: 12px; color: #666059; margin-top: 3px; display: flex; gap: 10px; align-items: center; }
+    .line-provenance { font-size: 11px; color: #c5221f; margin-top: 4px; font-weight: 500; }
+    
+    .tag { font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; display: inline-block; text-transform: uppercase; }
+    .tag-discount { background: #fef3d6; color: #8a5300; }
+    .tag-return { background: #fce8e6; color: #c5221f; }
+    .tag-tax { background: #e8f0fe; color: #1a73e8; }
+
+    /* Summary Sidebar */
+    .summary-line { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 10px; color: #524d46; }
+    .summary-divider { border-top: 1px dashed #d8d3ca; margin: 12px 0; }
+    .summary-net { display: flex; justify-content: space-between; font-size: 16px; font-weight: 700; color: #2d2926; }
+    .balance-due-card { background: #fcf6f3; border: 1px solid #f2dfd5; padding: 14px 16px; border-radius: 8px; margin-top: 16px; display: flex; justify-content: space-between; align-items: center; }
+    .balance-due-card .label { font-size: 15px; font-weight: 700; color: #8c3b1e; }
+    .balance-due-card .amount { font-size: 24px; font-weight: 800; color: #8c3b1e; }
+
+    /* Keypad Bar */
+    .keypad-bar { background: #ffffff; border: 1px solid #e2ded7; border-radius: 8px; padding: 14px 20px; display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; filter: blur(2px); pointer-events: none; }
+    .keypad-group { display: flex; gap: 8px; }
+    .btn-key { font-size: 12px; padding: 10px 14px; font-weight: 600; }
+
+    /* Modal Backdrop */
+    .modal-backdrop { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(45, 41, 38, 0.45); backdrop-filter: blur(3px); z-index: 100; display: flex; justify-content: center; align-items: center; padding: 20px; }
+
+    /* Overlay Panel Styling */
+    .overlay-panel { background: #ffffff; border-radius: 12px; border: 1px solid #e2ded7; box-shadow: 0 20px 40px rgba(0,0,0,0.2); width: 100%; max-width: 540px; overflow: hidden; display: flex; flex-direction: column; }
+    .overlay-header { background: #fcfbf9; padding: 18px 24px; border-bottom: 1px solid #e2ded7; display: flex; justify-content: space-between; align-items: center; }
+    .overlay-title { font-size: 18px; font-weight: 800; color: #2d2926; display: flex; align-items: center; gap: 10px; }
+    .overlay-badge { font-size: 11px; background: #e8f0fe; color: #1a73e8; padding: 2px 8px; border-radius: 4px; font-weight: 700; text-transform: uppercase; }
+
+    .overlay-body { padding: 24px; display: flex; flex-direction: column; gap: 18px; }
+    
+    /* Target Line Card */
+    .target-item-card { background: #fcfbf9; border: 1px solid #e2ded7; border-left: 4px solid #1a73e8; padding: 12px 16px; border-radius: 6px; display: flex; flex-direction: column; gap: 4px; }
+    .target-item-title { font-size: 14px; font-weight: 700; color: #2d2926; }
+    .target-item-meta { font-size: 12px; color: #666059; display: flex; gap: 12px; }
+
+    /* Form Fields Styling */
+    .field-group { display: flex; flex-direction: column; gap: 6px; }
+    .field-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #736c64; }
+    .field-input, .field-select { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 14px; font-weight: 600; padding: 10px 14px; border: 1px solid #ccc7be; border-radius: 6px; background: #ffffff; color: #2d2926; outline: none; transition: border-color 0.15s ease; width: 100%; }
+    .field-input:focus, .field-select:focus { border-color: #8c3b1e; box-shadow: 0 0 0 3px rgba(140, 59, 30, 0.12); }
+    
+    .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+    /* Approval Grid Context */
+    .approval-box { background: #fffcf9; border: 1px dashed #d8d3ca; border-radius: 6px; padding: 12px 16px; display: flex; flex-direction: column; gap: 8px; }
+    .approval-row { display: flex; justify-content: space-between; font-size: 13px; }
+    .approval-row span:first-child { color: #666059; }
+
+    /* Overlay Footer Actions */
+    .overlay-actions { background: #fcfbf9; padding: 16px 24px; border-top: 1px solid #e2ded7; display: flex; justify-content: flex-end; gap: 10px; }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navigation Header -->
+  <header class="header-bar">
+    <div class="header-info">
+      <div><strong>001 MI/Bloomfield Hills-Bloomfield Commons</strong> | <strong>01 Register 1</strong></div>
+      <div>Business Date: <strong>Sun 30 Aug 26</strong> | Opened: <strong>30 Aug 26 02:04 am</strong> | Cashier: <strong>Cashier C.</strong></div>
+    </div>
+    <div class="header-actions">
+      <button class="btn">F10 Menu</button>
+      <button class="btn btn-danger">Return to ShelfSense</button>
+    </div>
+  </header>
+
+  <!-- Command Input Bar -->
+  <div class="command-card">
+    <span class="command-mode">SALE ENTRY</span>
+    <div class="command-input-wrap">
+      <label for="pos-command-field">Scan or identifier</label>
+      <input id="pos-command-field" class="command-input" type="text" value="" disabled>
+    </div>
+  </div>
+
+  <!-- Background Workspace (Blurred) -->
+  <div class="pos-grid">
+    <div class="card">
+      <div class="card-title">Active Basket (4 Items)</div>
+      <table class="basket-table">
+        <thead>
+          <tr>
+            <th>Qty</th>
+            <th>Description</th>
+            <th class="mono" style="text-align: right;">Unit</th>
+            <th class="mono" style="text-align: right;">Ext</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="basket-row">
+            <td class="mono bold">1</td>
+            <td>
+              <div class="line-title">Book (General Trade)</div>
+              <div class="line-meta"><span>SKU: <strong class="mono">2210000000001</strong></span></div>
+            </td>
+            <td class="mono" style="text-align: right;">$14.00</td>
+            <td class="mono bold" style="text-align: right;">+$14.00</td>
+          </tr>
+          <tr class="basket-row">
+            <td class="mono bold">1</td>
+            <td>
+              <div class="line-title">Winnie-the-Pooh Notecards</div>
+              <div class="line-meta">
+                <span>SKU: <strong class="mono">2210000000063</strong></span>
+                <span class="tag tag-discount">DISCOUNT</span>
+              </div>
+            </td>
+            <td class="mono" style="text-align: right;">$10.99</td>
+            <td class="mono bold" style="text-align: right;">+$10.99</td>
+          </tr>
+          <tr class="basket-row">
+            <td class="mono bold" style="color: #c5221f;">-1</td>
+            <td>
+              <div class="line-title" style="color: #c5221f;">RETURN · Book (General Trade)</div>
+              <div class="line-provenance">From S001-R01-T0000043 · Defective</div>
+            </td>
+            <td class="mono" style="text-align: right;">$4.50</td>
+            <td class="mono bold" style="text-align: right; color: #c5221f;">-$4.50</td>
+          </tr>
+          <tr class="basket-row is-selected">
+            <td class="mono bold">&gt; 1</td>
+            <td>
+              <div class="line-title">Book (General Trade)</div>
+              <div class="line-meta"><span class="tag tag-tax">Tax Class</span></div>
+            </td>
+            <td class="mono" style="text-align: right;">$5.75</td>
+            <td class="mono bold" style="text-align: right;">+$5.75</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Live Summary</div>
+      <div class="summary-line"><span>Merchandise</span><span class="mono">$30.74</span></div>
+      <div class="summary-line"><span>Discount</span><span class="mono">-$1.65</span></div>
+      <div class="summary-line"><span>Returns</span><span class="mono" style="color: #c5221f;">-$4.50</span></div>
+      <div class="summary-line"><span>Sales Tax 6%</span><span class="mono">$1.48</span></div>
+      <div class="summary-line"><span>Food/Bev 1.25%</span><span class="mono">$0.01</span></div>
+      <div class="summary-divider"></div>
+      <div class="summary-net"><span>Net Total</span><span class="mono">$26.08</span></div>
+      <div class="balance-due-card">
+        <span class="label">Balance Due</span>
+        <span class="amount mono">$26.08</span>
+      </div>
+    </div>
+  </div>
+
+  <footer class="keypad-bar">
+    <div class="keypad-group"><button class="btn btn-key">Return (-)</button></div>
+    <div class="keypad-group"><button class="btn btn-key">Cash (F1)</button></div>
+  </footer>
+
+  <!-- Controlled Action / Authorization Modal Overlay -->
+  <div class="modal-backdrop" id="pos_control_overlay" role="dialog" aria-modal="true" aria-labelledby="pos-control-title">
+    <div class="overlay-panel">
+      
+      <!-- Modal Header -->
+      <div class="overlay-header">
+        <h2 id="pos-control-title" class="overlay-title">
+          <span>Controlled Action</span>
+          <span class="overlay-badge">Tax Class Override</span>
+        </h2>
+        <button class="btn" onclick="document.getElementById('pos_control_overlay').style.display='none'">✕</button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="overlay-body">
+        
+        <!-- Target Line Information -->
+        <div class="target-item-card">
+          <div class="target-item-title">Book (General Trade)</div>
+          <div class="target-item-meta">
+            <span>SKU: <strong class="mono">2210000000001</strong></span>
+            <span>Qty: <strong>1</strong></span>
+            <span>Current Price: <strong class="mono">$5.75</strong></span>
+          </div>
+        </div>
+
+        <!-- Controlled Action Configuration Form -->
+        <div class="field-group">
+          <label class="field-label" for="pos-control-tax-class">New Tax Class</label>
+          <select id="pos-control-tax-class" class="field-select">
+            <option value="01a03a2c-620d-7bc5-b5e0-109134d45a31" selected>Food/Bev: Prepared Beverages (Tax Rate: 1.250%)</option>
+            <option value="01a03a2a-9450-7180-837d-06a80194ef06">Merchandise: Books (Tax Rate: 6.000%)</option>
+            <option value="01a03a2a-76f2-7fe4-8fa3-2db670aede53">Merchandise: General (Tax Rate: 6.000%)</option>
+            <option value="01a03a2d-6a0e-7361-9bd2-d082cbb4e391">Other: Non-Taxable (Tax Rate: 0.000%)</option>
+          </select>
+        </div>
+
+        <div class="field-group">
+          <label class="field-label" for="pos-control-reason">Override Reason</label>
+          <select id="pos-control-reason" class="field-select">
+            <option value="tax_configuration_exception" selected>Tax configuration exception</option>
+            <option value="classification_correction">Classification correction</option>
+            <option value="manager_discretion">Manager discretion</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+
+        <!-- Context & Change Preview -->
+        <div class="approval-box">
+          <div class="approval-row">
+            <span>Default Classification:</span>
+            <strong class="mono">Merchandise: Books (6.000%)</strong>
+          </div>
+          <div class="approval-row">
+            <span>Proposed Classification:</span>
+            <strong class="mono" style="color: #1a73e8;">Food/Bev: Prepared Beverages (1.250%)</strong>
+          </div>
+          <div class="approval-row">
+            <span>Policy Status:</span>
+            <strong style="color: #8a5300;">Approval Required</strong>
+          </div>
+        </div>
+
+        <!-- Manager Credentials Prompt -->
+        <div class="field-group">
+          <label class="field-label">Manager Authorization Required</label>
+          <div class="field-row">
+            <input class="field-input" type="text" placeholder="Approver username" value="Admin User" autocomplete="off">
+            <input class="field-input" type="password" placeholder="Approver password" value="••••••••" autocomplete="off">
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Modal Footer Actions -->
+      <div class="overlay-actions">
+        <button class="btn" onclick="document.getElementById('pos_control_overlay').style.display='none'">Keep Current (Esc)</button>
+        <button class="btn btn-brand">Authorize &amp; Apply</button>
+      </div>
+
+    </div>
+  </div>
+
+</body>
+</html>

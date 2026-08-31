@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Active Register Workspace - Register 1 · ShelfSense</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Roboto+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Plus Jakarta Sans', sans-serif; background: #f8f6f2; color: #2d2926; padding: 20px; min-height: 100vh; display: flex; flex-direction: column; gap: 16px; }
+    .mono { font-family: 'Roboto Mono', monospace; }
+
+    /* Header Bar */
+    .header-bar { background: #ffffff; padding: 14px 20px; border-radius: 8px; border: 1px solid #e2ded7; display: flex; justify-content: space-between; align-items: center; }
+    .header-info { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: #666059; }
+    .header-info strong { color: #2d2926; }
+    .header-actions { display: flex; gap: 10px; align-items: center; }
+
+    /* Action Buttons */
+    .btn { font-family: inherit; font-size: 13px; font-weight: 600; padding: 8px 14px; border-radius: 6px; border: 1px solid #ccc7be; background: #ffffff; color: #2d2926; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+    .btn:hover { background: #f4f1ea; }
+    .btn-brand { background: #8c3b1e; color: #ffffff; border-color: #8c3b1e; }
+    .btn-brand:hover { background: #733018; }
+    .btn-danger { background: #ffffff; color: #c5221f; border-color: #f1b2b0; }
+    .btn-danger:hover { background: #fce8e6; }
+    .btn-disabled { opacity: 0.5; cursor: not-allowed; pointer-events: none; }
+
+    /* Scanner Command Bar */
+    .command-card { background: #ffffff; border: 1px solid #e2ded7; border-radius: 8px; padding: 14px 20px; display: flex; align-items: center; gap: 16px; }
+    .command-mode { background: #2d2926; color: #ffffff; font-size: 11px; font-weight: 700; padding: 6px 12px; border-radius: 4px; letter-spacing: 0.5px; }
+    .command-input-wrap { flex: 1; display: flex; align-items: center; gap: 12px; }
+    .command-input-wrap label { font-size: 13px; font-weight: 600; color: #736c64; white-space: nowrap; }
+    .command-input { flex: 1; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 15px; font-weight: 600; padding: 10px 14px; border: 2px solid #8c3b1e; border-radius: 6px; outline: none; background: #fffcf9; }
+
+    /* Workspace Main Layout Grid */
+    .pos-grid { display: grid; grid-template-columns: 1fr 380px; gap: 16px; flex: 1; }
+    .card { background: #ffffff; border: 1px solid #e2ded7; border-radius: 8px; padding: 20px; display: flex; flex-direction: column; }
+    .card-title { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #736c64; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; }
+
+    /* Basket Table */
+    .basket-table { width: 100%; border-collapse: collapse; text-align: left; }
+    .basket-table th { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #88827a; border-bottom: 2px solid #f0ece6; padding-bottom: 10px; }
+    .basket-row { border-bottom: 1px solid #f0ece6; }
+    .basket-row td { padding: 12px 8px; vertical-align: top; }
+    .basket-row.is-selected { background: #fdf8f5; border-left: 4px solid #8c3b1e; }
+    .basket-row.is-selected td:first-child { padding-left: 4px; }
+    
+    .line-title { font-size: 14px; font-weight: 600; color: #2d2926; }
+    .line-meta { font-size: 12px; color: #666059; margin-top: 3px; display: flex; gap: 10px; align-items: center; }
+    .line-provenance { font-size: 11px; color: #c5221f; margin-top: 4px; font-weight: 500; }
+    
+    /* Tags & Flags */
+    .tag { font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; display: inline-block; text-transform: uppercase; }
+    .tag-discount { background: #fef3d6; color: #8a5300; }
+    .tag-return { background: #fce8e6; color: #c5221f; }
+    .tag-tax { background: #e8f0fe; color: #1a73e8; }
+
+    /* Auxiliary Actions Bar (below basket) */
+    .aux-actions { margin-top: auto; padding-top: 16px; border-top: 1px solid #f0ece6; display: flex; gap: 12px; }
+
+    /* Summary Sidebar Rail */
+    .summary-line { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 10px; color: #524d46; }
+    .summary-divider { border-top: 1px dashed #d8d3ca; margin: 12px 0; }
+    .summary-net { display: flex; justify-content: space-between; font-size: 16px; font-weight: 700; color: #2d2926; }
+    .balance-due-card { background: #fcf6f3; border: 1px solid #f2dfd5; padding: 14px 16px; border-radius: 8px; margin-top: 16px; display: flex; justify-content: space-between; align-items: center; }
+    .balance-due-card .label { font-size: 15px; font-weight: 700; color: #8c3b1e; }
+    .balance-due-card .amount { font-size: 24px; font-weight: 800; color: #8c3b1e; }
+
+    /* Bottom Function Keypad Bar */
+    .keypad-bar { background: #ffffff; border: 1px solid #e2ded7; border-radius: 8px; padding: 14px 20px; display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; }
+    .keypad-group { display: flex; gap: 8px; }
+    .btn-key { font-size: 12px; padding: 10px 14px; font-weight: 600; }
+    .btn-key span { opacity: 0.6; margin-left: 2px; }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navigation Header -->
+  <header class="header-bar">
+    <div class="header-info">
+      <div><strong>001 MI/Bloomfield Hills-Bloomfield Commons</strong> | <strong>01 Register 1</strong></div>
+      <div>Business Date: <strong>Sun 30 Aug 26</strong> | Opened: <strong>30 Aug 26 02:04 am</strong> | Cashier: <strong>Cashier C.</strong></div>
+    </div>
+    <div class="header-actions">
+      <button class="btn">F10 Menu</button>
+      <button class="btn btn-danger">Return to ShelfSense</button>
+    </div>
+  </header>
+
+  <!-- Scanner Command Input Bar -->
+  <div class="command-card">
+    <span class="command-mode">SALE ENTRY</span>
+    <div class="command-input-wrap">
+      <label for="pos-command-field">Scan or identifier</label>
+      <input id="pos-command-field" class="command-input" type="text" placeholder="Scan barcode or enter SKU..." autofocus>
+    </div>
+  </div>
+
+  <!-- Workspace Grid Layout -->
+  <div class="pos-grid">
+
+    <!-- Active Basket Area -->
+    <div class="card">
+      <div class="card-title">
+        <span>Active Basket (4 Items)</span>
+        <span style="font-size: 11px; color: #8c3b1e; font-weight: 600;">Line #4 Selected</span>
+      </div>
+
+      <table class="basket-table">
+        <thead>
+          <tr>
+            <th style="width: 50px;">Qty</th>
+            <th>Description</th>
+            <th class="mono" style="text-align: right; width: 90px;">Unit</th>
+            <th class="mono" style="text-align: right; width: 90px;">Ext</th>
+          </tr>
+        </thead>
+        <tbody>
+
+          <!-- Line Item 1 -->
+          <tr class="basket-row">
+            <td class="mono bold">1</td>
+            <td>
+              <div class="line-title">Book (General Trade)</div>
+              <div class="line-meta">
+                <span>SKU: <strong class="mono">2210000000001</strong></span>
+                <span>Tax: Merchandise: Books</span>
+              </div>
+            </td>
+            <td class="mono" style="text-align: right;">$14.00</td>
+            <td class="mono bold" style="text-align: right;">+$14.00</td>
+          </tr>
+
+          <!-- Line Item 2 -->
+          <tr class="basket-row">
+            <td class="mono bold">1</td>
+            <td>
+              <div class="line-title">Winnie-the-Pooh Notecards</div>
+              <div class="line-meta">
+                <span>SKU: <strong class="mono">2210000000063</strong></span>
+                <span class="tag tag-discount">DISCOUNT 15%</span>
+              </div>
+            </td>
+            <td class="mono" style="text-align: right;">$10.99</td>
+            <td class="mono bold" style="text-align: right;">+$10.99</td>
+          </tr>
+
+          <!-- Line Item 3 (Linked Return) -->
+          <tr class="basket-row">
+            <td class="mono bold" style="color: #c5221f;">-1</td>
+            <td>
+              <div class="line-title" style="color: #c5221f;">RETURN · Book (General Trade)</div>
+              <div class="line-meta">
+                <span>SKU: <strong class="mono">2210000000001</strong></span>
+                <span class="tag tag-return">LINKED RETURN</span>
+              </div>
+              <div class="line-provenance">From S001-R01-T0000043 · Reason: Defective</div>
+            </td>
+            <td class="mono" style="text-align: right;">$4.50</td>
+            <td class="mono bold" style="text-align: right; color: #c5221f;">-$4.50</td>
+          </tr>
+
+          <!-- Line Item 4 (Active Selected Row) -->
+          <tr class="basket-row is-selected">
+            <td class="mono bold">&gt; 1</td>
+            <td>
+              <div class="line-title">Book (General Trade)</div>
+              <div class="line-meta">
+                <span>SKU: <strong class="mono">2210000000001</strong></span>
+                <span class="tag tag-tax">TAX OVERRIDE</span>
+              </div>
+              <div class="line-meta" style="font-size: 11px; color: #1a73e8;">Applied Tax: Food/Bev: Prepared Beverages</div>
+            </td>
+            <td class="mono" style="text-align: right;">$5.75</td>
+            <td class="mono bold" style="text-align: right;">+$5.75</td>
+          </tr>
+
+        </tbody>
+      </table>
+
+      <!-- Auxiliary Controls (Gift Cards & Customer Attachment) -->
+      <div class="aux-actions">
+        <button class="btn btn-brand">＋ Add Gift Card</button>
+        <button class="btn">👤 Attach Customer</button>
+      </div>
+    </div>
+
+    <!-- Live Totals & Settlement Sidebar -->
+    <div class="card">
+      <div class="card-title">Live Transaction Summary</div>
+
+      <div class="summary-line"><span>Merchandise</span><span class="mono">$30.74</span></div>
+      <div class="summary-line"><span>Discount</span><span class="mono">-$1.65</span></div>
+      <div class="summary-line"><span>Returns</span><span class="mono" style="color: #c5221f;">-$4.50</span></div>
+      <div class="summary-line"><span>Sales Tax (6.000%)</span><span class="mono">$1.48</span></div>
+      <div class="summary-line"><span>Food/Bev Tax (1.250%)</span><span class="mono">$0.01</span></div>
+
+      <div class="summary-divider"></div>
+      <div class="summary-net"><span>Net Total</span><span class="mono">$26.08</span></div>
+      <div class="summary-divider"></div>
+
+      <div class="card-title" style="margin-top: 10px;">Applied Tenders</div>
+      <div style="font-size: 13px; color: #88827a; font-style: italic; margin-bottom: 12px;">No tenders applied</div>
+
+      <div class="balance-due-card">
+        <span class="label">Balance Due</span>
+        <span class="amount mono">$26.08</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Bottom Function Keypad Bar -->
+  <footer class="keypad-bar">
+    <div class="keypad-group">
+      <button class="btn btn-key">Return <span>(-)</span></button>
+      <button class="btn btn-key">Pickup</button>
+    </div>
+
+    <div class="keypad-group">
+      <button class="btn btn-key">Quantity <span>(*)</span></button>
+      <button class="btn btn-key">Price <span>(F6)</span></button>
+      <button class="btn btn-key">Discount <span>(F7)</span></button>
+      <button class="btn btn-key">Tax Class</button>
+    </div>
+
+    <div class="keypad-group">
+      <button class="btn btn-key btn-brand">Cash <span>(F1)</span></button>
+      <button class="btn btn-key">Card <span>(F2)</span></button>
+      <button class="btn btn-key">Check <span>(F3)</span></button>
+      <button class="btn btn-key">Other <span>(F4)</span></button>
+      <button class="btn btn-key">Stored Value <span>(F5)</span></button>
+      <button class="btn btn-key">Tender <span>(+)</span></button>
+    </div>
+
+    <div class="keypad-group">
+      <button class="btn btn-key btn-danger">Remove <span>(F8)</span></button>
+      <button class="btn btn-key btn-danger">Cancel <span>(F9)</span></button>
+    </div>
+  </footer>
+
+</body>
+</html>

@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>POS Receipt Screen - S001-R01-T0000056</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Roboto+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Plus Jakarta Sans', sans-serif; background: #f8f6f2; color: #2d2926; padding: 24px; }
+    .mono { font-family: 'Roboto Mono', monospace; }
+    
+    /* Top Navigation Header */
+    .header-bar { background: #ffffff; padding: 16px 20px; border-radius: 8px; border: 1px solid #e2ded7; display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .header-title { font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 12px; }
+    .badge-success { background: #e6f4ea; color: #137333; font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 12px; }
+    .meta-group { display: flex; gap: 20px; font-size: 13px; color: #666059; }
+    .meta-group span strong { color: #2d2926; }
+
+    /* Action Buttons Bar */
+    .action-bar { display: flex; gap: 10px; margin-bottom: 20px; }
+    .btn { font-family: inherit; font-size: 13px; font-weight: 600; padding: 10px 16px; border-radius: 6px; border: 1px solid #ccc7be; background: #ffffff; cursor: pointer; }
+    .btn-primary { background: #8c3b1e; color: #ffffff; border-color: #8c3b1e; }
+    
+    /* Main Layout Grid */
+    .pos-grid { display: grid; grid-template-columns: 1fr 380px; gap: 20px; }
+    .card { background: #ffffff; border: 1px solid #e2ded7; border-radius: 8px; padding: 20px; }
+    .card-title { font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #736c64; margin-bottom: 16px; }
+
+    /* Item List Styling */
+    .item-row { border-bottom: 1px solid #f0ece6; padding: 14px 0; }
+    .item-row:last-child { border-bottom: none; }
+    .item-header { display: flex; justify-content: space-between; align-items: baseline; font-weight: 600; font-size: 15px; }
+    .item-sub { font-size: 12px; color: #666059; margin-top: 6px; display: flex; gap: 16px; align-items: center; }
+    .item-tag { background: #fef3d6; color: #8a5300; font-size: 11px; padding: 2px 6px; border-radius: 4px; font-weight: 600; }
+    .item-tag-red { background: #fce8e6; color: #c5221f; font-size: 11px; padding: 2px 6px; border-radius: 4px; font-weight: 600; }
+    .item-tag-blue { background: #e8f0fe; color: #1a73e8; font-size: 11px; padding: 2px 6px; border-radius: 4px; font-weight: 600; }
+    .item-tag-purple { background: #f3e8fd; color: #7b1fa2; font-size: 11px; padding: 2px 6px; border-radius: 4px; font-weight: 600; }
+    
+    .line-detail-box { background: #fcfbf9; border-left: 3px solid #8c3b1e; padding: 8px 12px; margin-top: 8px; font-size: 12px; color: #524d46; display: flex; flex-direction: column; gap: 4px; }
+
+    /* Summary Sidebar Styling */
+    .summary-line { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 10px; color: #524d46; }
+    .summary-divider { border-top: 1px dashed #d8d3ca; margin: 14px 0; }
+    .summary-total { display: flex; justify-content: space-between; font-size: 20px; font-weight: 700; color: #2d2926; }
+    .change-due { background: #f2f8f3; padding: 12px; border-radius: 6px; margin-top: 14px; }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <div class="header-bar">
+    <div class="header-title">
+      <span>Receipt S001-R01-T0000056</span>
+      <span class="badge-success">COMPLETED</span>
+    </div>
+    <div class="meta-group">
+      <span>Date: <strong>2026-08-30 00:09</strong></span>
+      <span>Register: <strong>01</strong></span>
+      <span>Cashier: <strong>Cashier C.</strong></span>
+      <span>Customer: <strong>Smith, David</strong></span>
+    </div>
+  </div>
+
+  <!-- Primary Actions -->
+  <div class="action-bar">
+    <button class="btn">← Back to Transactions</button>
+    <button class="btn">Return to Register</button>
+    <button class="btn btn-primary">Return Items</button>
+    <button class="btn">Post-Void</button>
+    <button class="btn">Reprint Receipt</button>
+  </div>
+
+  <!-- Content Grid -->
+  <div class="pos-grid">
+    
+    <!-- Left Panel: Line Items & Activity -->
+    <div class="card">
+      <div class="card-title">Purchased & Returned Items (5)</div>
+
+      <!-- Item 1 -->
+      <div class="item-row">
+        <div class="item-header">
+          <span>Winnie-the-Pooh Notecards</span>
+          <span class="mono">+$11.65</span>
+        </div>
+        <div class="item-sub">
+          <span>SKU: <strong class="mono">2210000000063</strong></span>
+          <span>Qty: 1 (Sold 1 · Ret 0 · Rem 1)</span>
+        </div>
+        <div class="item-sub">
+          <span>Base: <span class="mono">$10.99</span></span>
+          <span>Tax Class: <strong>Merchandise: General</strong></span>
+          <span>Tax (6%): <span class="mono">+$0.66</span></span>
+        </div>
+      </div>
+
+      <!-- Item 2 -->
+      <div class="item-row">
+        <div class="item-header">
+          <span>Book (General Trade)</span>
+          <span class="mono">+$16.96</span>
+        </div>
+        <div class="item-sub">
+          <span>SKU: <strong class="mono">2210000000001</strong></span>
+          <span>Qty: 1 (Sold 1 · Ret 0 · Rem 1)</span>
+        </div>
+        <div class="item-sub">
+          <span>Base: <span class="mono">$16.00</span></span>
+          <span>Tax Class: <strong>Merchandise: Books</strong></span>
+          <span>Tax (6%): <span class="mono">+$0.96</span></span>
+        </div>
+      </div>
+
+      <!-- Item 3 -->
+      <div class="item-row">
+        <div class="item-header">
+          <span>Winnie-the-Pooh Notecards</span>
+          <span class="mono">+$9.00</span>
+        </div>
+        <div class="item-sub">
+          <span>SKU: <strong class="mono">2210000000063</strong></span>
+          <span>Qty: 1 (Sold 1 · Ret 0 · Rem 1)</span>
+          <span class="item-tag">DISCOUNT -15%</span>
+        </div>
+        <div class="line-detail-box">
+          <div>Pricing: Base <span class="mono">$9.99</span> (Ref <span class="mono">$10.99</span>) | Disc <span class="mono">-$1.50</span> | Tax <span class="mono">+$0.51</span> (6.000%)</div>
+          <div>Price Override & Disc Detail: Reason: Customer service | Performed: Cashier C. | Approved: Admin User</div>
+        </div>
+      </div>
+
+      <!-- Item 4 (Unlinked Return) -->
+      <div class="item-row">
+        <div class="item-header">
+          <span>Winnie-the-Pooh Notecards</span>
+          <span class="mono" style="color: #c5221f;">-$11.65</span>
+        </div>
+        <div class="item-sub">
+          <span>SKU: <strong class="mono">2210000000063</strong></span>
+          <span class="item-tag-red">UNLINKED RETURN</span>
+        </div>
+        <div class="line-detail-box" style="border-left-color: #c5221f;">
+          <div>Return Amounts: Net <span class="mono">-$10.99</span> | Tax Reversal <span class="mono">-$0.66</span></div>
+          <div>Return Detail: Reason: Changed mind | Performed: Cashier C. | Approved: Admin User</div>
+        </div>
+      </div>
+
+      <!-- Item 5 -->
+      <div class="item-row">
+        <div class="item-header">
+          <span>Book (General Trade)</span>
+          <span class="mono">+$5.90</span>
+        </div>
+        <div class="item-sub">
+          <span>SKU: <strong class="mono">2210000000001</strong></span>
+          <span>Qty: 1 (Sold 1 · Ret 0 · Rem 1)</span>
+          <span class="item-tag-blue">TAX OVERRIDE</span>
+        </div>
+        <div class="line-detail-box">
+          <div>Pricing: Base <span class="mono">$5.50</span> | Tax <span class="mono">+$0.40</span> (Sales Tax 6%: <span class="mono">$0.33</span> + Food/Bev 1.25%: <span class="mono">$0.07</span>)</div>
+          <div>Tax Override: Default: Merchandise: Books → Applied: Food/Bev: Prepared Beverages</div>
+          <div>Override Detail: Reason: Tax configuration exception | Approved: Admin User</div>
+        </div>
+      </div>
+
+      <!-- Gift Cards Section -->
+      <div class="card-title" style="margin-top: 24px; margin-bottom: 12px;">Gift Cards Activated (2)</div>
+
+      <div class="item-row">
+        <div class="item-header">
+          <span>Store Gift Card Activation</span>
+          <span class="mono">+$15.00</span>
+        </div>
+        <div class="item-sub">
+          <span>Card ID: <strong class="mono">#8015940</strong></span>
+          <span class="item-tag-purple">STORE CREDIT</span>
+        </div>
+      </div>
+
+      <div class="item-row">
+        <div class="item-header">
+          <span>Store Gift Card Activation</span>
+          <span class="mono">+$15.00</span>
+        </div>
+        <div class="item-sub">
+          <span>Card ID: <strong class="mono">#8012314</strong></span>
+          <span class="item-tag-purple">STORE CREDIT</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Right Panel: Financial Totals & Tenders -->
+    <div class="card">
+      <div class="card-title">Transaction Summary</div>
+      
+      <div class="summary-line"><span>Sales Subtotal</span><span class="mono">$42.48</span></div>
+      <div class="summary-line"><span>Sales Discount</span><span class="mono">-$1.50</span></div>
+      <div class="summary-line"><span>Returns Subtotal</span><span class="mono" style="color: #c5221f;">-$10.99</span></div>
+      <div class="summary-line"><span>Gift Cards Issued</span><span class="mono">+$30.00</span></div>
+      <div class="summary-line"><span>Sales Tax</span><span class="mono">$2.53</span></div>
+      
+      <div class="summary-divider"></div>
+      <div class="summary-total"><span>Net Total</span><span class="mono">$61.86</span></div>
+      <div class="summary-divider"></div>
+
+      <div class="card-title" style="margin-top: 10px;">Tenders Applied</div>
+      <div class="summary-line"><span>Check (Ref 12345)</span><span class="mono">$10.00</span></div>
+      <div class="summary-line"><span>External Card (Ref 123456)</span><span class="mono">$40.00</span></div>
+      <div class="summary-line"><span>Cash Paid</span><span class="mono">$20.00</span></div>
+      <div class="summary-line" style="font-size: 12px; color: #88827a;"><span>└ Cash Applied</span><span class="mono">$11.86</span></div>
+      
+      <div class="summary-total change-due">
+        <span style="font-size: 16px; color: #1e4620;">Cash Change</span>
+        <span class="mono" style="color: #1e4620;">$8.14</span>
+      </div>
+    </div>
+
+  </div>
+
+</body>
+</html>

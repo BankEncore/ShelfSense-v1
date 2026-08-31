@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Transactions &amp; Receipts · ShelfSense</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Roboto+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Plus Jakarta Sans', sans-serif; background: #f8f6f2; color: #2d2926; padding: 20px; min-height: 100vh; display: flex; flex-direction: column; gap: 16px; }
+    .mono { font-family: 'Roboto Mono', monospace; }
+
+    /* Header Bar */
+    .header-bar { background: #ffffff; padding: 14px 20px; border-radius: 8px; border: 1px solid #e2ded7; display: flex; justify-content: space-between; align-items: center; }
+    .header-info { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: #666059; }
+    .header-info strong { color: #2d2926; }
+    .header-actions { display: flex; gap: 10px; align-items: center; }
+
+    /* Action Buttons */
+    .btn { font-family: inherit; font-size: 13px; font-weight: 600; padding: 8px 14px; border-radius: 6px; border: 1px solid #ccc7be; background: #ffffff; color: #2d2926; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; }
+    .btn:hover { background: #f4f1ea; }
+    .btn-brand { background: #8c3b1e; color: #ffffff; border-color: #8c3b1e; }
+    .btn-brand:hover { background: #733018; }
+
+    /* Page Title Row */
+    .title-row { display: flex; justify-content: space-between; align-items: center; margin-top: 4px; }
+    .page-title { font-size: 22px; font-weight: 800; color: #2d2926; letter-spacing: -0.3px; }
+
+    /* Search & Filter Card */
+    .filter-card { background: #ffffff; border: 1px solid #e2ded7; border-radius: 8px; padding: 16px 20px; display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)) auto; gap: 12px; align-items: end; }
+    .field-group { display: flex; flex-direction: column; gap: 6px; }
+    .field-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #736c64; }
+    .field-input, .field-select { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 13px; font-weight: 600; padding: 8px 12px; border: 1px solid #ccc7be; border-radius: 6px; background: #ffffff; color: #2d2926; outline: none; transition: border-color 0.15s ease; width: 100%; }
+    .field-input:focus, .field-select:focus { border-color: #8c3b1e; box-shadow: 0 0 0 3px rgba(140, 59, 30, 0.12); }
+
+    /* Table Container Card */
+    .table-card { background: #ffffff; border: 1px solid #e2ded7; border-radius: 8px; overflow: hidden; display: flex; flex-direction: column; }
+    .history-table { width: 100%; border-collapse: collapse; text-align: left; }
+    .history-table th { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #88827a; background: #fcfbf9; border-bottom: 2px solid #e2ded7; padding: 12px 16px; }
+    .history-table td { padding: 12px 16px; border-bottom: 1px solid #f0ece6; font-size: 13px; vertical-align: middle; }
+    .history-table tr:hover { background: #fcf6f3; }
+
+    /* Receipt & Link Styling */
+    .receipt-link { font-family: 'Roboto Mono', monospace; font-weight: 600; color: #8c3b1e; text-decoration: none; }
+    .receipt-link:hover { text-decoration: underline; }
+
+    /* Status Badges */
+    .badge { font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 12px; display: inline-flex; align-items: center; gap: 4px; text-transform: uppercase; letter-spacing: 0.3px; }
+    .badge-completed { background: #e6f4ea; color: #137333; }
+    .badge-postvoid { background: #fce8e6; color: #c5221f; border: 1px solid #f1b2b0; }
+    .badge-reversed { background: #fef3d6; color: #8a5300; }
+    .badge-refund { background: #e8f0fe; color: #1a73e8; }
+
+    .reversal-note { font-size: 11px; color: #666059; margin-top: 2px; font-family: 'Roboto Mono', monospace; }
+
+    /* Pagination Footer */
+    .pagination-bar { padding: 14px 20px; background: #fcfbf9; border-top: 1px solid #e2ded7; display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: #666059; }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navigation Header -->
+  <header class="header-bar">
+    <div class="header-info">
+      <div><strong>001 MI/Bloomfield Hills-Bloomfield Commons</strong> | <strong>01 Register 1</strong></div>
+      <div>Business Date: <strong>Sun 30 Aug 26</strong> | Opened: <strong>30 Aug 26 02:04 am</strong> | Cashier: <strong>Cashier C.</strong></div>
+    </div>
+    <div class="header-actions">
+      <button class="btn">F10 Menu</button>
+      <a class="btn btn-brand" href="/pos/register?register_id=01a03a47-5471-706f-81b6-4ba05c494068">Return to Register</a>
+    </div>
+  </header>
+
+  <!-- Page Title -->
+  <div class="title-row">
+    <h1 class="page-title">Transactions &amp; Receipts History</h1>
+  </div>
+
+  <!-- Search & Filter Controls -->
+  <form class="filter-card" action="/pos/transactions" method="get">
+    <div class="field-group">
+      <label class="field-label" for="transaction_reference">Receipt Reference</label>
+      <input class="field-input" type="text" name="transaction_reference" id="transaction_reference" placeholder="e.g. S001-R01-T0000068">
+    </div>
+
+    <div class="field-group">
+      <label class="field-label" for="filter_register_id">Register</label>
+      <select class="field-select" name="filter_register_id" id="filter_register_id">
+        <option value="">Any register</option>
+        <option value="1" selected>01 — Register 1</option>
+        <option value="2">02 — Register 2</option>
+      </select>
+    </div>
+
+    <div class="field-group">
+      <label class="field-label" for="receipt_sequence">Transaction #</label>
+      <input class="field-input" type="text" name="receipt_sequence" id="receipt_sequence" placeholder="e.g. 0000068">
+    </div>
+
+    <div class="field-group">
+      <label class="field-label" for="business_date">Business Date</label>
+      <input class="field-input" type="date" name="business_date" id="business_date" value="2026-08-30">
+    </div>
+
+    <button class="btn btn-brand" type="submit" style="padding: 9px 20px;">Find</button>
+  </form>
+
+  <!-- Transactions Data Table -->
+  <div class="table-card">
+    <table class="history-table">
+      <thead>
+        <tr>
+          <th>Receipt Reference</th>
+          <th>Status</th>
+          <th>Business Date</th>
+          <th>Completed</th>
+          <th>Register</th>
+          <th>Cashier</th>
+          <th class="mono" style="text-align: right;">Net Total</th>
+          <th>Applied Tenders</th>
+        </tr>
+      </thead>
+      <tbody>
+
+        <!-- Row 1: Post-Void Reversal -->
+        <tr>
+          <td>
+            <a class="receipt-link" href="/pos/transactions/01a054f4-d026-77a8-9499-8b9ecaaf4792">S001-R01-T0000069</a>
+          </td>
+          <td>
+            <span class="badge badge-postvoid">POST-VOID</span>
+            <div class="reversal-note">Reverses T0000068</div>
+          </td>
+          <td>2026-08-30</td>
+          <td>2026-08-30 19:15</td>
+          <td>01</td>
+          <td>Cashier C.</td>
+          <td class="mono bold" style="text-align: right; color: #c5221f;">-$26.50</td>
+          <td>Gift card refund + Cash refund</td>
+        </tr>
+
+        <!-- Row 2: Reversed Original -->
+        <tr>
+          <td>
+            <a class="receipt-link" href="/pos/transactions/01a054ec-5a5a-7692-997d-34611ea8563f">S001-R01-T0000068</a>
+          </td>
+          <td>
+            <span class="badge badge-reversed">REVERSED</span>
+            <div class="reversal-note">Voided by T0000069</div>
+          </td>
+          <td>2026-08-30</td>
+          <td>2026-08-30 19:15</td>
+          <td>01</td>
+          <td>Cashier C.</td>
+          <td class="mono bold" style="text-align: right; opacity: 0.6; text-decoration: line-through;">+$26.50</td>
+          <td>Gift card + Cash</td>
+        </tr>
+
+        <!-- Row 3: Standard Sale -->
+        <tr>
+          <td>
+            <a class="receipt-link" href="/pos/transactions/01a0540c-3f85-7da0-94c1-4db82f2feb0b">S001-R01-T0000067</a>
+          </td>
+          <td><span class="badge badge-completed">COMPLETED</span></td>
+          <td>2026-08-30</td>
+          <td>2026-08-30 18:16</td>
+          <td>01</td>
+          <td>Cashier C.</td>
+          <td class="mono bold" style="text-align: right;">+$46.63</td>
+          <td>Gift card + Cash</td>
+        </tr>
+
+        <!-- Row 4: Standard Refund -->
+        <tr>
+          <td>
+            <a class="receipt-link" href="/pos/transactions/01a05407-763e-7232-bb67-8472db64591b">S001-R01-T0000065</a>
+          </td>
+          <td><span class="badge badge-refund">REFUND</span></td>
+          <td>2026-08-30</td>
+          <td>2026-08-30 15:00</td>
+          <td>01</td>
+          <td>Cashier C.</td>
+          <td class="mono bold" style="text-align: right; color: #c5221f;">-$9.57</td>
+          <td>External Card refund</td>
+        </tr>
+
+        <!-- Row 5: Split Tender Sale -->
+        <tr>
+          <td>
+            <a class="receipt-link" href="/pos/transactions/01a05147-d4c6-7961-96d1-32c681e66d1d">S001-R01-T0000061</a>
+          </td>
+          <td><span class="badge badge-completed">COMPLETED</span></td>
+          <td>2026-08-30</td>
+          <td>2026-08-30 02:09</td>
+          <td>01</td>
+          <td>Cashier C.</td>
+          <td class="mono bold" style="text-align: right;">+$44.70</td>
+          <td>Gift card + Coupon + Card + Cash</td>
+        </tr>
+
+      </tbody>
+    </table>
+
+    <!-- Table Pagination -->
+    <footer class="pagination-bar">
+      <span>Page <strong>1</strong> of <strong>2</strong> (69 total transactions)</span>
+      <div style="display: flex; gap: 8px;">
+        <button class="btn" disabled style="opacity: 0.5;">Previous</button>
+        <a class="btn" href="/pos/transactions?page=2">Next →</a>
+      </div>
+    </footer>
+  </div>
+
+</body>
+</html>

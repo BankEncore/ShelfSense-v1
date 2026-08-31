@@ -29,7 +29,7 @@ Make customer receipts and gift-card vouchers easier to read on 80 mm thermal ou
 6. **Store Tax names:** persisted `store_tax_name_snapshot` on customer receipt tax rows; Tax Class names are not customer labels.
 7. **No universal taxable subtotal:** omit `TAXABLE SUBTOTAL` unless a row is semantically valid for all applicable Store Taxes.
 8. **Historical stored-value balances:** balance notes use the applicable persisted `stored_value_entries.balance_after_cents` for the operation, not live account balance.
-9. **Typography:** Noto Sans Mono + Plus Jakarta Sans via Google Fonts for thermal customer documents only ([ADR-022](../../adr/ADR-022-warm-parchment-visual-tokens.md) amendment). Screen chrome stays locally packaged. Reports/tapes keep Inconsolata until a later packet.
+9. **Typography:** Noto Sans Mono + Plus Jakarta Sans packaged locally for thermal customer documents ([ADR-022](../../adr/ADR-022-warm-parchment-visual-tokens.md)). Register screen chrome may adopt the same faces via an accepted presentation packet. Reports/tapes keep Inconsolata until a later packet. No runtime font CDN.
 10. **Receipt-only / voucher-only print modes** preserved via `pos_receipt_controller.js` body classes.
 11. **Operator screen vs thermal print** remain distinct projections; this packet changes hidden print markup and voucher print, not Transaction Complete screen layout.
 

@@ -33,7 +33,7 @@ CSS variables:
 --font-thermal-display: "Plus Jakarta Sans", "Source Sans 3", system-ui, sans-serif
 ```
 
-Load from Google Fonts in print-capable layouts only. Print waits for `document.fonts.ready`. Fallback stack prints when CDN is unavailable.
+Package faces locally under `app/assets/fonts/` per [ADR-022](../../adr/ADR-022-warm-parchment-visual-tokens.md) (no runtime Google Fonts CDN). Print waits for `document.fonts.ready`. Fallback stacks print when a face is unavailable.
 
 ## Layout
 
