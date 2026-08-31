@@ -1505,23 +1505,47 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     assert_equal "pos-command-field", page.evaluate_script("document.activeElement && document.activeElement.id")
   end
 
-  test "plus in the command field is literal and does not open O11" do
+  test "plus in the command field is literal when the field has content" do
     open_register
     add_current_sku
     field = find("#pos-command-field")
+    field.fill_in with: "abc"
     field.send_keys "+"
-    assert_equal "+", field.value
+    assert_equal "abc+", field.value
     assert_no_selector "#pos_other_overlay", visible: true
-    assert_text "Punctuation shortcuts"
+    assert_text "When this field is empty"
   end
 
-  test "scanner-like punctuation in the command field stays literal" do
+  test "empty command field punctuation opens workspace actions" do
     open_register
     add_current_sku
     field = find("#pos-command-field")
     field.fill_in with: ""
+    field.send_keys "/"
+    assert_selector "#pos_search_overlay", visible: true
+    send_keys :escape
+    assert_no_selector "#pos_search_overlay", visible: true
+
+    field.fill_in with: ""
+    field.send_keys "-"
+    assert_selector "#pos_return_chooser", visible: true
+    send_keys :escape
+    assert_no_selector "#pos_return_chooser", visible: true
+
+    field.fill_in with: ""
+    field.send_keys "+"
+    assert_selector "#pos_other_overlay", visible: true
+    send_keys :escape
+    assert_no_selector "#pos_other_overlay", visible: true
+  end
+
+  test "scanner-like punctuation in the command field stays literal once the field has content" do
+    open_register
+    add_current_sku
+    field = find("#pos-command-field")
+    field.fill_in with: "scan"
     field.send_keys "/12345"
-    assert_equal "/12345", field.value
+    assert_equal "scan/12345", field.value
     assert_no_selector "#pos_search_overlay", visible: true
     assert_no_selector "#pos_other_overlay", visible: true
     assert_no_selector "#pos_return_chooser", visible: true

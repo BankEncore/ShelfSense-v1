@@ -211,7 +211,9 @@ export function resolveBinding(context) {
     key,
     overlayOpen,
     inFlight,
-    repeat
+    repeat,
+    commandFieldEmpty = false,
+    pickupAllowed = false
   } = context
 
   if (!key) return { kind: "none" }
@@ -260,6 +262,13 @@ export function resolveBinding(context) {
     }
     if (key === "Escape") return actionResult("escape", repeat)
     if (key === "F9") return actionResult("cancel-transaction", repeat)
+    if (commandFieldEmpty && mode === MODES.sale) {
+      if (key === "*") return actionResult("set-quantity", repeat)
+      if (key === "+") return actionResult("open-tender-selection", repeat)
+      if (key === "/") return actionResult("open-product-lookup", repeat)
+      if (key === "." && pickupAllowed) return actionResult("open-pickup-lookup", repeat)
+      if (key === "-") return actionResult("open-return-chooser", repeat)
+    }
     if (key.length === 1 || key === " ") return { kind: "literal", key }
     if (COMMAND_FIELD_NATIVE_KEYS.has(key)) return { kind: "none" }
   }

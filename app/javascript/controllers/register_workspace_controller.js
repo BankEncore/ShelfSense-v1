@@ -962,7 +962,9 @@ export default class extends Controller {
       key,
       overlayOpen: this.overlayOpen(),
       inFlight: this.inFlight,
-      repeat: Boolean(event.repeat)
+      repeat: Boolean(event.repeat),
+      commandFieldEmpty: this.commandFieldEmpty(),
+      pickupAllowed: Boolean(this.pickupAllowedValue)
     }
   }
 
