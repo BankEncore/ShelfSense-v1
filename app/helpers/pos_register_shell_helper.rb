@@ -29,7 +29,7 @@ module PosRegisterShellHelper
     when "between_sessions", "own_session", "occupied"
       date = @gate&.period&.business_date
       if date.present?
-        "Business Date #{date.strftime("%a %d %b %y")}"
+        "Business Date: #{date.strftime("%a %d %b %y")}"
       else
         "Business date not open"
       end

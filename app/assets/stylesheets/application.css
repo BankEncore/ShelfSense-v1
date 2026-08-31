@@ -1602,31 +1602,29 @@ input[type="submit"]:disabled,
 .pos-header__row {
   display: flex;
   justify-content: space-between;
-  align-items: baseline;
+  align-items: center;
   gap: var(--space-4);
 }
 
 .pos-header--register {
   font-variant-numeric: tabular-nums;
-  font-size: 0.9rem;
+  font-size: 0.8125rem;
   color: var(--color-text-secondary);
+  padding: 0.875rem 1.25rem;
 }
 
-.pos-header--register .pos-header__row + .pos-header__row {
-  margin-top: var(--space-1);
-}
-
-.pos-header--register strong,
-.pos-header--register .pos-header__cashier {
+.pos-header--register strong {
   color: var(--color-text-primary);
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .pos-header__facts {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
+  align-items: center;
+  gap: 0;
   min-width: 0;
+  line-height: 1.35;
 }
 
 .pos-header__sep {
@@ -1655,7 +1653,7 @@ input[type="submit"]:disabled,
 
 .pos-main {
   display: grid;
-  grid-template-columns: 1fr 18rem;
+  grid-template-columns: 1fr 23.75rem;
   gap: var(--space-4);
   min-height: 0;
 }
@@ -1734,9 +1732,10 @@ input[type="submit"]:disabled,
 
 .pos-money-row--net {
   font-weight: 700;
-  margin-top: var(--space-2);
-  padding-top: var(--space-2);
+  margin-block: var(--space-3);
+  padding-block: var(--space-3);
   border-top: 1px dashed var(--color-border);
+  border-bottom: 1px dashed var(--color-border);
   color: var(--color-text-primary);
   font-size: 1.05rem;
 }
@@ -1809,6 +1808,17 @@ input[type="submit"]:disabled,
 
 .pos-issuances {
   margin-top: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.pos-basket-aux {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: auto;
   padding-top: var(--space-3);
   border-top: 1px solid var(--color-border-subtle);
 }
@@ -1818,7 +1828,7 @@ input[type="submit"]:disabled,
   flex-wrap: wrap;
   gap: var(--space-3);
   align-items: center;
-  margin-top: var(--space-3);
+  margin: 0;
 }
 
 .pos-customer__actions {
@@ -2034,8 +2044,8 @@ input[type="submit"]:disabled,
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-3);
-  padding: var(--space-3) var(--space-5);
+  gap: 0.625rem;
+  padding: 0.875rem 1.25rem;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
@@ -2044,7 +2054,7 @@ input[type="submit"]:disabled,
 .pos-actions__group {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-2);
+  gap: 0.5rem;
   padding-inline-end: 0;
   border-inline-end: none;
 }
@@ -2303,12 +2313,24 @@ body.is-authorized-print .pos-shift-end-tape {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-2);
+  gap: 0.625rem;
   margin-left: auto;
+  flex-shrink: 0;
+}
+
+.pos-header__actions .btn {
+  min-height: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  padding: 0.5rem 0.875rem;
+  border-width: 1px;
 }
 
 .pos-header__actions .pos-header__link {
   margin-left: 0;
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
   color: var(--color-danger-fg);
   border-color: var(--color-danger-border, #f1b2b0);
   background: var(--color-surface);
@@ -2413,12 +2435,29 @@ body.is-authorized-print .pos-shift-end-tape {
 .pos-register-shell .pos-shell > [data-register-workspace-target="background"] > .pos-actions,
 .pos-register-shell .pos-shell > .pos-actions {
   flex: 0 0 auto;
-  padding-block: var(--space-2);
+  padding-block: 0.875rem;
 }
 
-.pos-register-shell .pos-shell > [data-register-workspace-target="background"] > .pos-actions .btn,
-.pos-register-shell .pos-shell > .pos-actions .btn {
-  padding-block: 0.4rem;
+/* Match draft keypad: 12px type, 10×14 padding — keep ActionButtonHelper size tokens. */
+.pos-register-shell .pos-actions .btn,
+.pos-register-shell .pos-actions .btn--large,
+.pos-register-shell .pos-actions .btn--standard {
+  min-height: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.2;
+  padding: 0.625rem 0.875rem;
+  border-width: 1px;
+  border-radius: 0.375rem;
+}
+
+.pos-register-shell .pos-issuances .btn,
+.pos-register-shell .pos-basket-aux .btn {
+  min-height: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  padding: 0.5rem 0.875rem;
+  border-width: 1px;
 }
 
 .pos-register-shell .pos-basket-region,

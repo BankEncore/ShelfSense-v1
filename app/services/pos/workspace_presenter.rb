@@ -6,7 +6,7 @@ module Pos
     TaxGroup = Data.define(:store_tax_id, :code, :name, :rate_percent, :calculation_order, :signed_cents) do
       def label
         percent = format("%.3f", rate_percent)
-        "#{name} #{percent}%"
+        "#{name} (#{percent}%)"
       end
 
       def key
