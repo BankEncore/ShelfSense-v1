@@ -1,8 +1,8 @@
 <% unless receipt.post_void_reversal? %>
   <% if receipt.show_item_counts? %>
     <div class="pos-thermal__row">
-      <span>Items Sold / Returned:</span>
-      <span class="pos-thermal__row--bold"><%= receipt.items_sold %> / <%= receipt.items_returned %></span>
+      <span><%= receipt.item_counts_label %></span>
+      <span class="pos-thermal__row--bold"><%= receipt.item_counts_value %></span>
     </div>
   <% end %>
   <% if receipt.you_saved_cents.positive? %>

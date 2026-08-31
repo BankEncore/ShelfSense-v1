@@ -60,7 +60,7 @@ Make customer receipts and gift-card vouchers easier to read on 80 mm thermal ou
 | Issuance balance note | `New Balance` |
 | Redemption balance note | `Remaining Balance` |
 | Issued balances section | `ISSUED GIFT CARD BALANCES` (when multiple activations) |
-| Item counts | `Items Sold / Returned:` |
+| Item counts | `Items Sold:` or `Items Returned` when one direction only; `Items Sold / Returned:` when both |
 | Savings | `YOU SAVED:` |
 | Date/time | Store timezone, four-digit year (e.g. `30 Aug 2026 12:09 AM`) |
 

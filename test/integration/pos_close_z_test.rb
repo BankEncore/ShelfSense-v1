@@ -35,7 +35,7 @@ class PosCloseZTest < ActionDispatch::IntegrationTest
     assert_select ".pos-no-print"
     assert_select ".pos-thermal__store-name", text: "Example Books LLC"
     assert_select ".pos-receipt__print .pos-thermal__meta"
-    assert_select ".pos-receipt__print", text: /Items Sold \/ Returned:/
+    assert_select ".pos-receipt__print", text: /Items Sold:/
     assert_select ".pos-receipt__print .pos-thermal__total-banner"
     assert_select ".pos-receipt__print .pos-thermal__item-meta"
     assert_select ".pos-receipt__print .pos-thermal__tax-row"

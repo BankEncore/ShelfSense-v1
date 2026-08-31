@@ -236,6 +236,30 @@ module Pos
       !post_void_reversal? && (items_sold.positive? || items_returned.positive?)
     end
 
+    def item_counts_label
+      sold = items_sold.positive?
+      returned = items_returned.positive?
+      if sold && returned
+        "Items Sold / Returned:"
+      elsif sold
+        "Items Sold:"
+      else
+        "Items Returned"
+      end
+    end
+
+    def item_counts_value
+      sold = items_sold.positive?
+      returned = items_returned.positive?
+      if sold && returned
+        "#{items_sold} / #{items_returned}"
+      elsif sold
+        items_sold.to_s
+      else
+        items_returned.to_s
+      end
+    end
+
     def you_saved_cents
       return 0 if @transaction.post_void?
 
