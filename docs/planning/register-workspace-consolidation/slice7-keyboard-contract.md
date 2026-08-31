@@ -60,7 +60,7 @@ Applies when the workspace is in commercial Sale entry (basket / command surface
 | `F5` | `tender-stored-value` | Stored-value tender family |
 | `F6` | `edit-price` | Price on selected sale line |
 | `F7` | `edit-discount` | Line discount on selected sale line |
-| `F8` | `remove-selected-record` | Remove selected commercial line (or selected working issuance when that is the selected record) |
+| `F8` | `remove-selected-record` | Remove selected merchandise line (gift-card issuance correction uses visible Edit/Remove controls) |
 | `F9` | `cancel-transaction` | Cancel confirmation; second confirm per existing cancel contract — **never** silent cancel |
 | `F10` | `open-register-menu` | Register Menu (shell-owned) |
 | `↑` / `↓` | `move-basket-selection` | Move selected basket line |

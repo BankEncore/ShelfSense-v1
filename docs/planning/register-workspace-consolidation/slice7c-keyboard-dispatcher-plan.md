@@ -94,9 +94,11 @@ Ignore Ctrl/Cmd/Alt chords. Allow Shift where needed for `+`/`*`. Ignore IME com
 
 Produces facts; does not perform an action.
 
-- **mode:** `sale` | `tender` | `completion_pending` | `completion_failed`
+- **mode:** `sale` | `tender` | `quantity` | `completion_pending` | `completion_failed` | `restricted` (unknown runtime modes; never default to `sale`)
 - **focusZone:** as locked above
-- **state:** selected line / issuance / tender; in flight; top overlay; composing; `event.repeat`
+- **state:** selected line / tender; in flight; top overlay; composing; `event.repeat`
+
+`quantity` mode permits only Enter (submit quantity), Escape (leave quantity), F9 (cancel confirmation), F10 (shell), and literal command-field input. Issuance rows are not basket shortcut targets; gift-card issuance correction remains on visible Edit/Remove controls.
 
 ### Binding resolver
 
@@ -115,7 +117,7 @@ Must not call Rails endpoints, inspect permissions, calculate settlement, or mut
 | `set-quantity` | `enterQuantity` |
 | `tender-cash` … `tender-stored-value` | `chooseCash` … `chooseStoredValue` |
 | `edit-price` / `edit-discount` | `openPriceOverride` / `openLineDiscount` |
-| `remove-selected-record` | selected sale/issuance removal |
+| `remove-selected-record` | selected merchandise line removal (not issuance; issuance uses visible controls) |
 | `remove-selected-tender` | selected tender remove path (**not** last) |
 | `open-selected-tender-actions` | tender review/detail (+ reason when edit unavailable) |
 | `return-to-sale` | existing O17 path |
@@ -181,7 +183,7 @@ Prefer presenter/service-provided reasons already used by controls.
 Implement accepted tables as written. Notable deltas from Phase 6.7 runtime:
 
 - Tender F8 / `-` → `remove-selected-tender` for **selected** tender; delete `removeLastTender`
-- SALE F8 → `remove-selected-record` (line or selected issuance)
+- SALE F8 → `remove-selected-record` (selected merchandise line only)
 - Enter on selected tender → `open-selected-tender-actions` (expose detail + reason when edit unavailable)
 - F2 remains Card; Customer Lookup / Quick Customer / Tax Class stay visible controls with **no** new shortcuts
 - Add concise help so labels like `Tender (+)` / `Return (-)` are not read as applying from the focused command field

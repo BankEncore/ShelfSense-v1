@@ -85,6 +85,38 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
     field.click
   end
 
+  def focus_workspace_background_for_shortcuts
+    page.execute_script(<<~JS)
+      const root = document.querySelector("[data-register-workspace-target='background']")
+      if (!root) throw new Error("workspace background missing")
+      if (!root.hasAttribute("tabindex")) root.tabIndex = -1
+      root.focus()
+    JS
+  end
+
+  def open_product_lookup_via_slash
+    focus_workspace_background_for_shortcuts
+    page.execute_script(<<~JS)
+      document.activeElement.dispatchEvent(new KeyboardEvent("keydown", {
+        key: "/",
+        code: "Slash",
+        bubbles: true,
+        cancelable: true
+      }))
+    JS
+    assert_selector "#pos_search_overlay", visible: true
+  end
+
+  def focus_selected_basket_row
+    row = find("tbody tr.is-selected[data-line-id]", wait: 5)
+    page.execute_script(<<~JS, row.native)
+      const row = arguments[0]
+      row.tabIndex = 0
+      row.focus()
+    JS
+    row
+  end
+
   def teardown
     reset_uds_viewport!
   end

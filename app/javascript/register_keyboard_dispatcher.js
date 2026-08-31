@@ -15,8 +15,10 @@ export const FOCUS_ZONES = Object.freeze({
 export const MODES = Object.freeze({
   sale: "sale",
   tender: "tender",
+  quantity: "quantity",
   completion_pending: "completion_pending",
-  completion_failed: "completion_failed"
+  completion_failed: "completion_failed",
+  restricted: "restricted"
 })
 
 /** Actions that ignore event.repeat (packet lock). */
@@ -37,6 +39,20 @@ export const REPEAT_IGNORED_ACTIONS = new Set([
   "tender-check",
   "tender-other",
   "tender-stored-value"
+])
+
+const COMMAND_FIELD_NATIVE_KEYS = new Set([
+  "ArrowLeft",
+  "ArrowRight",
+  "ArrowUp",
+  "ArrowDown",
+  "Home",
+  "End",
+  "Backspace",
+  "Delete",
+  "Tab",
+  "PageUp",
+  "PageDown"
 ])
 
 const EDITABLE_INPUT_TYPES = new Set([
@@ -73,7 +89,6 @@ export function normalizeKey(event) {
     case "NumpadAdd":
       return "+"
     case "NumpadSubtract":
-    case "Minus":
       return "-"
     case "NumpadMultiply":
       return "*"
@@ -148,7 +163,7 @@ export function classifyFocusZone({ target, commandField, workspaceRoot, activeO
   if (target?.closest?.(".pos-tenders__item")) {
     return FOCUS_ZONES.tender_row
   }
-  if (target?.closest?.("[data-line-id], [data-issuance-id]")) {
+  if (target?.closest?.("[data-line-id]")) {
     return FOCUS_ZONES.basket_row
   }
   if (workspaceRoot && target && workspaceRoot.contains(target)) {
@@ -164,15 +179,18 @@ export function classifyFocusZone({ target, commandField, workspaceRoot, activeO
  */
 export function classifyMode(modeValue) {
   switch (modeValue) {
+    case "sale_entry":
+      return MODES.sale
     case "tender":
       return MODES.tender
+    case "quantity":
+      return MODES.quantity
     case "completion_pending":
       return MODES.completion_pending
     case "completion_failed":
       return MODES.completion_failed
-    case "sale_entry":
     default:
-      return MODES.sale
+      return MODES.restricted
   }
 }
 
@@ -222,15 +240,36 @@ export function resolveBinding(context) {
     return { kind: "none" }
   }
 
-  if (focusZone === FOCUS_ZONES.command_input || focusZone === FOCUS_ZONES.other_editable) {
+  if (mode === MODES.quantity) {
+    if (key === "Enter") return actionResult("submit-command", repeat)
+    if (key === "Escape") return actionResult("escape", repeat)
+    if (key === "F9") return actionResult("cancel-transaction", repeat)
+    if (focusZone === FOCUS_ZONES.command_input && (key.length === 1 || key === " ")) {
+      return { kind: "literal", key }
+    }
+    return { kind: "none" }
+  }
+
+  if (mode === MODES.restricted) {
+    return { kind: "none" }
+  }
+
+  if (focusZone === FOCUS_ZONES.command_input) {
     if (key === "Enter") {
-      if (focusZone === FOCUS_ZONES.workspace_control) return { kind: "native_control" }
       return actionResult("submit-command", repeat)
     }
     if (key === "Escape") return actionResult("escape", repeat)
     if (key === "F9") return actionResult("cancel-transaction", repeat)
     if (key.length === 1 || key === " ") return { kind: "literal", key }
-    // F-keys and arrows still resolve in sale/tender below when not swallowed
+    if (COMMAND_FIELD_NATIVE_KEYS.has(key)) return { kind: "none" }
+  }
+
+  if (focusZone === FOCUS_ZONES.other_editable) {
+    if (key === "Enter") return actionResult("submit-command", repeat)
+    if (key === "Escape") return actionResult("escape", repeat)
+    if (key === "F9") return actionResult("cancel-transaction", repeat)
+    if (key.length === 1 || key === " ") return { kind: "literal", key }
+    if (COMMAND_FIELD_NATIVE_KEYS.has(key)) return { kind: "none" }
   }
 
   if (key === "Enter" && focusZone === FOCUS_ZONES.workspace_control) {
