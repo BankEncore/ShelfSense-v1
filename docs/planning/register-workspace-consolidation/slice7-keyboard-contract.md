@@ -95,7 +95,7 @@ Applies when at least one working tender is applied and the workspace is in Tend
 
 **Omitted:** `+1`–`+9`.
 
-Stored-value Edit/Remove remain unavailable until 7B; selection and inspect are allowed in 7A.
+Stored-value Edit/Remove are available after Slice 7B ([slice7b-stored-value-issuance-plan.md](slice7b-stored-value-issuance-plan.md)).
 
 ---
 
