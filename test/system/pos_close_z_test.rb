@@ -66,7 +66,7 @@ class PosCloseZTest < ApplicationSystemTestCase
     assert_button "Print receipt"
     assert_text "New transaction"
     assert_text "Close register"
-    assert_selector ".pos-receipt__print-header", visible: :all, text: /Store: 001\s+Reg: 01\s+Trans:/
+    assert_selector ".pos-receipt__print .pos-thermal__meta", visible: :all, text: /Store\/Reg\/Trans:/
     transaction = PosTransaction.completed.find_by!(register: @register)
     send_keys :enter
     assert_text "Transaction complete"
@@ -127,7 +127,7 @@ class PosCloseZTest < ApplicationSystemTestCase
     assert_text "Transaction complete", wait: 10
     assert_text "Change"
     assert_button "Print receipt"
-    assert_selector ".pos-receipt__print-header", visible: :all, text: /Store: 001\s+Reg: 01\s+Trans:/
+    assert_selector ".pos-receipt__print .pos-thermal__meta", visible: :all, text: /Store\/Reg\/Trans:/
     transaction = PosTransaction.completed.find_by!(register: @register)
     assert transaction.completed?
 

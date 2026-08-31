@@ -1,0 +1,46 @@
+<% if receipt.show_merchandise_section? || receipt.show_stored_value_section? || receipt.show_tax_section? %>
+  <div class="pos-thermal__divider-dashed"></div>
+
+  <% if receipt.show_detail_totals? %>
+    <% if receipt.merchandise_cents != 0 %>
+      <div class="pos-thermal__row"><span>Merchandise Subtotal</span> <span><%= pos_print_amount(receipt.merchandise_cents) %></span></div>
+    <% end %>
+    <% if receipt.discounts_cents != 0 %>
+      <div class="pos-thermal__row"><span>Item Discounts</span> <span><%= pos_print_amount(receipt.discounts_cents) %></span></div>
+    <% end %>
+    <% if receipt.returns_cents != 0 %>
+      <div class="pos-thermal__row"><span>Returns Subtotal</span> <span><%= pos_print_amount(receipt.returns_cents) %></span></div>
+    <% end %>
+    <% if receipt.activation_issuance_cents != 0 %>
+      <div class="pos-thermal__row"><span>Gift Cards Activated</span> <span><%= pos_print_amount(receipt.activation_issuance_cents) %></span></div>
+    <% end %>
+    <% if receipt.reload_issuance_cents != 0 %>
+      <div class="pos-thermal__row"><span>Gift Cards Reloaded</span> <span><%= pos_print_amount(receipt.reload_issuance_cents) %></span></div>
+    <% end %>
+  <% elsif receipt.net_merchandise_cents != 0 %>
+    <div class="pos-thermal__row"><span>Merchandise Subtotal</span> <span><%= pos_print_amount(receipt.net_merchandise_cents) %></span></div>
+  <% end %>
+
+  <% if receipt.show_tax_section? %>
+    <% receipt.tax_groups.each do |group| %>
+      <div class="pos-thermal__row pos-thermal__tax-row">
+        <span><%= pos_tax_group_summary_label(group) %></span>
+        <span><%= pos_print_amount(group.tax_cents) %></span>
+      </div>
+    <% end %>
+    <% if receipt.tax_groups.size > 1 %>
+      <div class="pos-thermal__row pos-thermal__row--bold"><span>Total Tax</span> <span><%= pos_print_amount(receipt.total_tax_cents) %></span></div>
+    <% end %>
+  <% end %>
+
+  <div class="pos-thermal__row pos-thermal__total-banner pos-thermal__display">
+    <span><%= receipt.total_label %></span>
+    <span><%= pos_print_amount(receipt.total_display_cents) %></span>
+  </div>
+<% elsif receipt.show_stored_value_section? %>
+  <div class="pos-thermal__divider-dashed"></div>
+  <div class="pos-thermal__row pos-thermal__total-banner pos-thermal__display">
+    <span><%= receipt.total_label %></span>
+    <span><%= pos_print_amount(receipt.total_display_cents) %></span>
+  </div>
+<% end %>

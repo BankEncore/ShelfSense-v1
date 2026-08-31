@@ -1,0 +1,23 @@
+<% if receipt.show_payments_section? %>
+  <div class="pos-thermal__section-title">PAYMENTS APPLIED</div>
+  <% receipt.payments.each do |payment| %>
+    <% if payment.cash_tendered_cents %>
+      <div class="pos-thermal__row"><span>Cash Tendered</span> <span><%= pos_print_amount(payment.cash_tendered_cents) %></span></div>
+      <div class="pos-thermal__item-meta pos-thermal__row"><span>Cash Applied:</span> <span><%= pos_print_amount(payment.cash_applied_cents) %></span></div>
+      <div class="pos-thermal__item-meta pos-thermal__row"><span>Change:</span> <span><%= pos_print_amount(payment.change_cents) %></span></div>
+    <% else %>
+      <div class="pos-thermal__row"><span><%= payment.label %></span> <span><%= pos_print_amount(payment.amount_cents) %></span></div>
+    <% end %>
+    <% if payment.inline_balance_note %>
+      <% note = payment.inline_balance_note %>
+      <div class="pos-thermal__item-meta pos-thermal__row">
+        <span><%= note.label %></span>
+        <span><%= pos_print_amount(note.balance_cents) %></span>
+      </div>
+      <% if note.masked_card.present? %>
+        <div class="pos-thermal__item-meta"><%= note.masked_card %></div>
+      <% end %>
+    <% end %>
+  <% end %>
+  <div class="pos-thermal__divider-dashed"></div>
+<% end %>

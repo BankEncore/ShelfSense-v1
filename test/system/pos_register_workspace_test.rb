@@ -804,7 +804,7 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     click_on "Transactions"
     assert_text completed.transaction_reference
     click_on completed.transaction_reference
-    assert_selector ".pos-receipt__reprint", text: "REPRINT", visible: :all
+    assert_selector ".pos-receipt__print .pos-thermal__status", text: "REPRINT", visible: :all
     assert_text "Example Book"
     assert_equal counts[:transactions], PosTransaction.count
     assert_equal counts[:tenders], PosTender.count

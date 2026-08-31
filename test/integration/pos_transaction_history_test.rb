@@ -39,7 +39,7 @@ class PosTransactionHistoryTest < ActionDispatch::IntegrationTest
     assert_match transaction.transaction_reference, response.body
     assert_match "Example Book", response.body
     assert_match "REPRINT", response.body
-    assert_select ".pos-receipt__reprint", text: "*** REPRINT ***"
+    assert_select ".pos-receipt__print .pos-thermal__status", text: "*** REPRINT ***"
     assert_nil session[:pos_register_id]
   end
 
@@ -179,7 +179,7 @@ class PosTransactionHistoryTest < ActionDispatch::IntegrationTest
     refute_match "Bank Card", response.body
     assert_select ".pos-history__header dd", text: "Not captured"
     assert_select ".pos-receipt__print", text: /AUTH-77/, count: 0
-    assert_select ".pos-receipt__reprint", text: "*** REPRINT ***"
+    assert_select ".pos-receipt__print .pos-thermal__status", text: "*** REPRINT ***"
     assert_equal counts, commercial_counts
     assert_equal transaction.receipt_sequence, transaction.reload.receipt_sequence
   end
@@ -253,8 +253,8 @@ class PosTransactionHistoryTest < ActionDispatch::IntegrationTest
     transaction = complete_cash_sale!
     get pos_transaction_path(transaction)
     assert_response :success
-    assert_select ".pos-receipt"
-    assert_select ".pos-receipt__line-description", text: /Example Book/
+    assert_select ".pos-receipt", text: /Example Book/
+    assert_select ".pos-receipt__print .pos-thermal__item-title", text: /Example Book/
     assert_match transaction.transaction_reference, response.body
   end
 
@@ -266,7 +266,7 @@ class PosTransactionHistoryTest < ActionDispatch::IntegrationTest
     assert_select "header.pos-header.pos-no-print"
     assert_select "[data-register-shell-target=status].pos-no-print"
     assert_select ".pos-register-menu.pos-no-print"
-    assert_select ".pos-receipt__print .pos-receipt__reprint", text: "*** REPRINT ***"
+    assert_select ".pos-receipt__print .pos-thermal__status", text: "*** REPRINT ***"
     assert_select ".pos-history__title-row.pos-no-print"
     assert_select ".pos-history__detail.pos-no-print"
   end

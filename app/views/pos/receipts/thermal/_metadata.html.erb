@@ -1,0 +1,10 @@
+<div class="pos-thermal__meta">
+  <div class="pos-thermal__row"><span>Date:</span> <span><%= receipt.completed_at_label %></span></div>
+  <div class="pos-thermal__row"><span>Store/Reg/Trans:</span> <span><%= receipt.identity_compact_label %></span></div>
+  <div class="pos-thermal__row"><span>Cashier:</span> <span><%= receipt.cashier_name %></span></div>
+  <% if receipt.customer_name.present? %>
+    <div class="pos-thermal__row"><span>Customer:</span> <span><%= receipt.customer_name %></span></div>
+  <% end %>
+</div>
+
+<div class="pos-thermal__divider-dashed"></div>

@@ -64,7 +64,7 @@ class PosLinkedReturnTest < ApplicationSystemTestCase
     click_on "Transactions"
     assert_text format_signed(returned.signed_net_cents)
     click_on returned.transaction_reference
-    assert_selector ".pos-receipt__reprint", visible: :all, text: "REPRINT"
+    assert_selector ".pos-receipt__print .pos-thermal__status", visible: :all, text: "REPRINT"
 
     visit pos_completed_transaction_path(returned)
     click_on "Close register"

@@ -5,29 +5,40 @@ module Pos
     MISSING_LEGAL_NAME = "This Store cannot print a customer receipt until its legal name is configured."
     LETTERS = ("A".."Z").to_a.freeze
 
-    Line = Struct.new(
-      :kind_banner, :identifier, :condition, :description, :amount_cents, :tax_indicators,
-      :quantity, :unit_price_cents, :show_unit_price, :extended_price_cents, :discount_cents,
-      :discount_label, :original_reference, :unlinked, keyword_init: true
+    MerchandiseLine = Struct.new(
+      :kind_banner, :description, :amount_cents, :tax_indicators,
+      :identifier_label, :identifier_value, :condition,
+      :quantity, :unit_price_cents, :show_quantity_detail,
+      :regular_price_cents, :discount_cents, :discount_label,
+      :original_reference, :unlinked, keyword_init: true
+    )
+    StoredValueIssuanceLine = Struct.new(
+      :title, :masked_card, :amount_cents, :activation, keyword_init: true
     )
     TaxGroup = Struct.new(:letter, :name, :rate_percent, :basis_cents, :tax_cents, keyword_init: true)
-    TenderLine = Struct.new(:label, :amount_cents, :presented_cents, :change_cents, keyword_init: true)
-    RemainingBalanceNote = Struct.new(:label, :masked_card, :balance_cents, keyword_init: true)
+    PaymentLine = Struct.new(
+      :label, :amount_cents, :cash_tendered_cents, :cash_applied_cents, :change_cents,
+      :inline_balance_note, keyword_init: true
+    )
+    BalanceNote = Struct.new(:label, :masked_card, :balance_cents, keyword_init: true)
 
     def self.build(transaction)
       new(transaction).tap(&:prepare!)
     end
 
-    attr_reader :transaction, :error, :lines, :tax_groups, :tenders, :remaining_balance_notes
+    attr_reader :transaction, :error, :merchandise_lines, :stored_value_issuances,
+                :tax_groups, :payments, :tender_balance_notes, :issued_balance_notes
 
     def initialize(transaction)
       @transaction = transaction
       @store = transaction.store
       @error = nil
-      @lines = []
+      @merchandise_lines = []
+      @stored_value_issuances = []
       @tax_groups = []
-      @tenders = []
-      @remaining_balance_notes = []
+      @payments = []
+      @tender_balance_notes = []
+      @issued_balance_notes = []
       @indicator_by_key = {}
     end
 
@@ -38,11 +49,26 @@ module Pos
       end
 
       assign_tax_groups!
-      @lines = customer_lines
-      @tenders = customer_tenders
-      @remaining_balance_notes = remaining_balance_notes_for_print
+      @merchandise_lines = build_merchandise_lines
+      @stored_value_issuances = build_stored_value_issuances
+      @payments = build_payments
+      @tender_balance_notes = tender_balance_notes_for_print
+      @issued_balance_notes = issued_balance_notes_for_print
       verify_total!
       self
+    end
+
+    # Backward-compatible alias for tests and callers expecting a single line list.
+    def lines
+      merchandise_lines
+    end
+
+    def tenders
+      payments
+    end
+
+    def remaining_balance_notes
+      tender_balance_notes + issued_balance_notes
     end
 
     def printable?
@@ -64,7 +90,7 @@ module Pos
       locality = [ @store.city.presence, @store.region_code.presence ].compact.join(", ")
       locality = [ locality.presence, @store.postal_code.presence ].compact.join(" ")
       lines << locality.presence
-      lines << @store.phone.presence
+      lines << "Ph: #{@store.phone}" if @store.phone.present?
       lines.compact
     end
 
@@ -78,7 +104,7 @@ module Pos
 
     def completed_at_label
       zone = ActiveSupport::TimeZone[@store.timezone] || ActiveSupport::TimeZone["UTC"]
-      @transaction.completed_at.in_time_zone(zone).strftime("%-d %b %y %-l:%M%P")
+      @transaction.completed_at.in_time_zone(zone).strftime("%-d %b %Y %-l:%M%P")
     end
 
     def identity_header
@@ -87,6 +113,13 @@ module Pos
         register_number: @transaction.register_number_snapshot,
         receipt_sequence: @transaction.receipt_sequence
       )
+    end
+
+    def identity_compact_label
+      store = Pos::ReceiptIdentity.pad(@transaction.store_number_snapshot, 3)
+      register = Pos::ReceiptIdentity.pad(@transaction.register_number_snapshot, 2)
+      trans = Pos::ReceiptIdentity.pad(@transaction.receipt_sequence, 7)
+      "#{store} / #{register} / #{trans}"
     end
 
     def compact_reference
@@ -117,8 +150,16 @@ module Pos
       -(@transaction.return_subtotal_cents - @transaction.return_discount_cents)
     end
 
-    def subtotal_cents
+    def net_merchandise_cents
       merchandise_cents + discounts_cents + returns_cents
+    end
+
+    def activation_issuance_cents
+      stored_value_issuances.select(&:activation).sum(&:amount_cents)
+    end
+
+    def reload_issuance_cents
+      stored_value_issuances.reject(&:activation).sum(&:amount_cents)
     end
 
     def total_tax_cents
@@ -129,26 +170,58 @@ module Pos
       @transaction.signed_net_cents
     end
 
+    def show_merchandise_section?
+      merchandise_lines.any?
+    end
+
+    def show_stored_value_section?
+      stored_value_issuances.any?
+    end
+
+    def show_activation_section?
+      stored_value_issuances.any?(&:activation)
+    end
+
+    def show_reload_section?
+      stored_value_issuances.any? { |line| !line.activation }
+    end
+
     def show_detail_totals?
       @transaction.discount_cents.positive? || @transaction.return_total_cents.positive? ||
-        @transaction.stored_value_issuance_cents.to_i != 0 ||
+        activation_issuance_cents != 0 || reload_issuance_cents != 0 ||
         @transaction.pos_transaction_lines.any?(&:return?)
+    end
+
+    def show_tax_section?
+      tax_groups.any? && total_tax_cents != 0
     end
 
     def refund_total?
       signed_net_cents.negative?
     end
 
+    def even_exchange?
+      signed_net_cents.zero? && show_merchandise_section? &&
+        @transaction.pos_transaction_lines.any?(&:return?)
+    end
+
     def total_label
-      refund_total? ? "REFUND TOTAL" : "TOTAL"
+      return "REFUND TOTAL" if refund_total?
+      return "NET TOTAL" if even_exchange?
+
+      "TOTAL DUE"
     end
 
     def total_display_cents
       signed_net_cents.abs
     end
 
-    def show_tenders?
-      signed_net_cents != 0
+    def show_payments_section?
+      signed_net_cents != 0 && payments.any?
+    end
+
+    def show_issued_balances_section?
+      issued_balance_notes.any?
     end
 
     def items_sold
@@ -157,6 +230,34 @@ module Pos
 
     def items_returned
       ordinary_lines.select(&:return?).sum(&:quantity)
+    end
+
+    def show_item_counts?
+      !post_void_reversal? && (items_sold.positive? || items_returned.positive?)
+    end
+
+    def item_counts_label
+      sold = items_sold.positive?
+      returned = items_returned.positive?
+      if sold && returned
+        "Items Sold / Returned:"
+      elsif sold
+        "Items Sold:"
+      else
+        "Items Returned"
+      end
+    end
+
+    def item_counts_value
+      sold = items_sold.positive?
+      returned = items_returned.positive?
+      if sold && returned
+        "#{items_sold} / #{items_returned}"
+      elsif sold
+        items_sold.to_s
+      else
+        items_returned.to_s
+      end
     end
 
     def you_saved_cents
@@ -203,9 +304,9 @@ module Pos
         ]
       end
 
-      @tax_groups = ordered.each_with_index.map do |(key, members), index|
+      @tax_groups = ordered.each_with_index.map do |(_key, members), index|
         letter = LETTERS.fetch(index)
-        @indicator_by_key[key] = letter
+        @indicator_by_key[[ members.first.last.store_tax_id, members.first.last.rate_percent ]] = letter
         sample = members.first.last
         basis = members.sum { |line, component| signed_amount(line, component.taxable_basis_cents) }
         tax = members.sum { |line, component| signed_amount(line, component.tax_cents) }
@@ -223,52 +324,50 @@ module Pos
       line.return? ? -cents : cents
     end
 
-    def customer_lines
-      @transaction.pos_transaction_lines.map { |line| build_line(line) } + issuance_lines
+    def build_merchandise_lines
+      @transaction.pos_transaction_lines.map { |line| build_merchandise_line(line) }
     end
 
-    def issuance_lines
-      @transaction.pos_stored_value_issuances.ordered.map do |issuance|
-        label = issuance.activation? ? "Gift card activation" : "Gift card reload"
-        masked = issuance.masked_card_snapshot
-        Line.new(
-          kind_banner: nil,
-          identifier: masked.to_s,
-          condition: nil,
-          description: [ label, issuance.gift_card_program&.name, masked ].compact.join(" · "),
-          amount_cents: issuance.post_void_generated? ? -issuance.amount_cents : issuance.amount_cents,
-          tax_indicators: "",
-          quantity: 1,
-          unit_price_cents: issuance.amount_cents,
-          show_unit_price: false,
-          extended_price_cents: issuance.amount_cents,
-          discount_cents: 0,
-          discount_label: nil,
-          original_reference: nil,
-          unlinked: false
-        )
-      end
-    end
-
-    def build_line(line)
+    def build_merchandise_line(line)
       snapshot = line.merchandise_snapshot.is_a?(Hash) ? line.merchandise_snapshot : {}
-      identifier = snapshot["unit_identifier"].presence || snapshot["sku"].presence || ""
-      Line.new(
+      identifier_value = snapshot["unit_identifier"].presence || snapshot["sku"].presence
+      identifier_label =
+        if snapshot["unit_identifier"].present?
+          "Unit"
+        elsif snapshot["sku"].present?
+          "SKU"
+        end
+      has_discount = line.manual_discount_cents.to_i.positive?
+      MerchandiseLine.new(
         kind_banner: line_banner(line),
-        identifier: identifier,
-        condition: used_condition(snapshot),
         description: snapshot["description"].presence || "Description unavailable",
         amount_cents: signed_amount(line, line.net_merchandise_amount_cents),
         tax_indicators: tax_indicators_for(line),
+        identifier_label: identifier_label,
+        identifier_value: identifier_value,
+        condition: used_condition(snapshot),
         quantity: line.quantity,
         unit_price_cents: line.selling_unit_price_cents,
-        show_unit_price: line.quantity > 1 || line.manual_discount_cents.to_i.positive?,
-        extended_price_cents: line.extended_selling_amount_cents,
-        discount_cents: line.manual_discount_cents.to_i.positive? ? -line.manual_discount_cents : 0,
+        show_quantity_detail: line.quantity > 1,
+        regular_price_cents: has_discount ? line.extended_selling_amount_cents : nil,
+        discount_cents: has_discount ? -line.manual_discount_cents : 0,
         discount_label: discount_label(line),
         original_reference: original_reference_for(line),
         unlinked: line.unlinked_return?
       )
+    end
+
+    def build_stored_value_issuances
+      @transaction.pos_stored_value_issuances.ordered.map do |issuance|
+        program_name = issuance.gift_card_program&.name.presence || "Store Gift Card"
+        masked = issuance.masked_card_snapshot
+        StoredValueIssuanceLine.new(
+          title: program_name,
+          masked_card: masked,
+          amount_cents: issuance.post_void_generated? ? -issuance.amount_cents : issuance.amount_cents,
+          activation: issuance.activation?
+        )
+      end
     end
 
     def line_banner(line)
@@ -298,7 +397,7 @@ module Pos
 
       percent = line.manual_discount_basis_points / 100.0
       formatted = (percent % 1).zero? ? percent.to_i.to_s : ActiveSupport::NumberHelper.number_to_rounded(percent, precision: 2)
-      "Discount #{formatted}%:"
+      "Discount (#{formatted}%):"
     end
 
     def original_reference_for(line)
@@ -310,14 +409,31 @@ module Pos
       original.transaction_reference
     end
 
-    def customer_tenders
-      return [] unless show_tenders?
+    def build_payments
+      return [] if signed_net_cents.zero?
 
       @transaction.pos_tenders.sort_by(&:tender_number).map do |tender|
         label = tender.direction == "refund" ? "#{tender.tender_name} Refund" : tender.tender_name
-        presented = pos_cash_payment?(tender) ? tender.amount_presented_cents : nil
-        change = pos_cash_payment?(tender) ? tender.change_cents : nil
-        TenderLine.new(label: label, amount_cents: tender.amount_cents, presented_cents: presented, change_cents: change)
+        inline_balance = inline_balance_note_for_tender(tender)
+        if pos_cash_payment?(tender)
+          PaymentLine.new(
+            label: label,
+            amount_cents: tender.amount_cents,
+            cash_tendered_cents: tender.amount_presented_cents,
+            cash_applied_cents: tender.amount_cents,
+            change_cents: tender.change_cents,
+            inline_balance_note: inline_balance
+          )
+        else
+          PaymentLine.new(
+            label: label,
+            amount_cents: tender.amount_cents,
+            cash_tendered_cents: nil,
+            cash_applied_cents: nil,
+            change_cents: nil,
+            inline_balance_note: inline_balance
+          )
+        end
       end
     end
 
@@ -325,30 +441,64 @@ module Pos
       tender.cash? && tender.direction == "payment"
     end
 
-    def remaining_balance_notes_for_print
+    def inline_balance_note_for_tender(tender)
+      detail = tender.stored_value_tender_detail
+      return if detail.blank?
+
+      balance_cents = balance_after_cents_for_tender(detail)
+      return if balance_cents.nil?
+
+      masked = masked_reference_for_tender(detail)
+      BalanceNote.new(label: balance_label_for_tender(detail), masked_card: masked, balance_cents: balance_cents)
+    end
+
+    def tender_balance_notes_for_print
+      payments.filter_map(&:inline_balance_note)
+    end
+
+    def issued_balance_notes_for_print
       notes = []
       @transaction.pos_stored_value_issuances.ordered.each do |issuance|
         card = issuance.gift_card
         next unless card
 
-        notes << RemainingBalanceNote.new(
-          label: "Remaining balance",
-          masked_card: issuance.masked_card_snapshot.presence || card.masked_number,
-          balance_cents: card.balance_cents
-        )
-      end
-      @transaction.pos_tenders.ordered.each do |tender|
-        detail = tender.stored_value_tender_detail
-        card = detail&.gift_card
-        next unless card
+        balance_cents = balance_after_cents_for_issuance(issuance)
+        next if balance_cents.nil?
 
-        notes << RemainingBalanceNote.new(
-          label: "Remaining balance",
-          masked_card: detail.masked_card_snapshot.presence || card.masked_number,
-          balance_cents: card.balance_cents
+        notes << BalanceNote.new(
+          label: "New Balance",
+          masked_card: issuance.masked_card_snapshot.presence || card.masked_number,
+          balance_cents: balance_cents
         )
       end
       notes
+    end
+
+    def balance_after_cents_for_issuance(issuance)
+      account_id = issuance.gift_card&.stored_value_account_id
+      balance_after_cents_for_operation(issuance.stored_value_operation, account_id)
+    end
+
+    def balance_after_cents_for_tender(detail)
+      account_id = detail.stored_value_account_id || detail.gift_card&.stored_value_account_id
+      balance_after_cents_for_operation(detail.stored_value_operation, account_id)
+    end
+
+    def balance_after_cents_for_operation(operation, account_id)
+      return if operation.blank? || account_id.blank?
+
+      entry = operation.stored_value_entries.find_by(stored_value_account_id: account_id)
+      entry&.balance_after_cents
+    end
+
+    def masked_reference_for_tender(detail)
+      detail.masked_card_snapshot.presence ||
+        detail.gift_card&.masked_number ||
+        "Store Credit"
+    end
+
+    def balance_label_for_tender(detail)
+      detail.new_gift_card? ? "New Balance" : "Remaining Balance"
     end
 
     def verify_total!
@@ -357,7 +507,7 @@ module Pos
         raise Pos::Error, "receipt tax components do not equal persisted tax"
       end
 
-      computed = subtotal_cents + total_tax_cents + @transaction.stored_value_issuance_cents.to_i
+      computed = net_merchandise_cents + total_tax_cents + @transaction.stored_value_issuance_cents.to_i
       return if computed == signed_net_cents
 
       raise Pos::Error, "receipt total does not equal signed_net_cents"

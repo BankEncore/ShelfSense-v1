@@ -1,0 +1,10 @@
+<% if notes.any? %>
+  <div class="pos-thermal__section-title"><%= title %></div>
+  <% notes.each do |note| %>
+    <div class="pos-thermal__row pos-thermal__balance-row">
+      <span>Card <%= note.masked_card %></span>
+      <span><%= pos_print_amount(note.balance_cents) %></span>
+    </div>
+  <% end %>
+  <div class="pos-thermal__divider-dashed"></div>
+<% end %>

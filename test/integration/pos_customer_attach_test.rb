@@ -90,7 +90,7 @@ class PosCustomerAttachTest < ActionDispatch::IntegrationTest
     }
     follow_redirect!
     assert_match "Customer · Attachable Reader", response.body
-    assert_match "Customer: Attachable Reader", response.body
+    assert_select ".pos-receipt__print .pos-thermal__row", text: /Customer:\s*Attachable Reader/
 
     receipt = Pos::CustomerReceipt.build(transaction.reload)
     assert_equal "Attachable Reader", receipt.customer_name

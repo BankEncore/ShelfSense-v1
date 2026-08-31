@@ -2,156 +2,40 @@
   locals: transaction:, tenders: nil, reprint: false
 %>
 <% receipt = Pos::CustomerReceipt.build(transaction) %>
-<section class="pos-receipt__print pos-print-only" aria-hidden="true">
+<section class="pos-receipt__print pos-print-only pos-thermal" aria-hidden="true">
   <% unless receipt.printable? %>
-    <p class="pos-receipt__print-error" role="alert"><%= receipt.error %></p>
+    <p class="pos-thermal__error" role="alert"><%= receipt.error %></p>
   <% else %>
-    <% if receipt.post_voided_original? %>
-      <p class="pos-receipt__reprint">*** POST-VOIDED ***</p>
-      <p class="pos-receipt__post-void-note">This transaction has been post-voided and is no longer valid.</p>
-      <p>Post-voided by: <%= receipt.reversing_reference %></p>
-    <% elsif receipt.post_void_reversal? %>
-      <p class="pos-receipt__reprint">*** POST-VOID ***</p>
-      <p>Original: <%= receipt.original_reference %></p>
-    <% end %>
-    <% if local_assigns.fetch(:reprint, false) %>
-      <p class="pos-receipt__reprint">*** REPRINT ***</p>
-    <% end %>
-
-    <div class="pos-receipt__store">
-      <p class="pos-receipt__legal-name"><%= receipt.legal_name %></p>
-      <% receipt.address_lines.each do |line| %>
-        <p class="pos-receipt__address"><%= line %></p>
-      <% end %>
-    </div>
+    <%= render "pos/receipts/thermal/store_header", receipt: receipt %>
 
     <% if receipt.header_message.present? %>
-      <pre class="pos-receipt__message"><%= receipt.header_message %></pre>
+      <pre class="pos-thermal__message pos-thermal__center"><%= receipt.header_message %></pre>
     <% end %>
 
-    <div class="pos-receipt__identity">
-      <p><%= receipt.completed_at_label %></p>
-      <p class="pos-receipt__print-header"><%= receipt.identity_header %></p>
-      <p>Cashier: <%= receipt.cashier_name %></p>
-      <% if receipt.customer_name.present? %>
-        <p>Customer: <%= receipt.customer_name %></p>
-      <% end %>
-    </div>
+    <%= render "pos/receipts/thermal/status", receipt: receipt, reprint: local_assigns.fetch(:reprint, false) %>
 
-    <div class="pos-receipt__print-lines">
-      <% receipt.lines.each do |line| %>
-        <div class="pos-receipt__line-group">
-          <% if line.kind_banner.present? %>
-            <p class="pos-receipt__line-banner"><%= line.kind_banner %></p>
-          <% end %>
-          <p class="pos-receipt__line-main">
-            <span>
-              <%= line.identifier %>
-              <% if line.condition.present? %>
-                <%= line.condition %>
-              <% end %>
-            </span>
-            <span class="pos-receipt__amount">
-              <%= pos_print_amount(line.amount_cents) %>
-              <% if line.tax_indicators.present? %>
-                <%= line.tax_indicators %>
-              <% end %>
-            </span>
-          </p>
-          <div class="pos-receipt__line-rest">
-            <p class="pos-receipt__line-description"><%= line.description %></p>
-            <% if line.quantity > 1 %>
-              <p class="pos-receipt__line-detail"><%= line.quantity %> @ <%= format_money_cents(line.unit_price_cents) %></p>
-            <% elsif line.discount_cents.negative? %>
-              <p class="pos-receipt__line-main">
-                <span>Price:</span>
-                <span class="pos-receipt__amount"><%= pos_print_amount(line.extended_price_cents) %></span>
-              </p>
-            <% end %>
-            <% if line.discount_cents.negative? %>
-              <p class="pos-receipt__line-main">
-                <span><%= line.discount_label %></span>
-                <span class="pos-receipt__amount"><%= pos_print_amount(line.discount_cents) %></span>
-              </p>
-            <% end %>
-            <% if line.unlinked %>
-              <p class="pos-receipt__line-detail">Original receipt: Not provided</p>
-            <% elsif line.original_reference.present? %>
-              <p class="pos-receipt__line-detail">Original: <%= line.original_reference %></p>
-            <% end %>
-          </div>
-        </div>
-      <% end %>
-    </div>
+    <%= render "pos/receipts/thermal/metadata", receipt: receipt %>
 
-    <dl class="pos-receipt__print-totals">
-      <% if receipt.show_detail_totals? %>
-        <% if receipt.merchandise_cents != 0 %>
-          <div><dt>Merchandise</dt><dd><%= pos_print_amount(receipt.merchandise_cents) %></dd></div>
-        <% end %>
-        <% if receipt.discounts_cents != 0 %>
-          <div><dt>Discounts</dt><dd><%= pos_print_amount(receipt.discounts_cents) %></dd></div>
-        <% end %>
-        <% if receipt.returns_cents != 0 %>
-          <div><dt>Returns</dt><dd><%= pos_print_amount(receipt.returns_cents) %></dd></div>
-        <% end %>
-      <% end %>
-      <div><dt>Subtotal</dt><dd><%= pos_print_amount(receipt.subtotal_cents) %></dd></div>
-      <% receipt.tax_groups.each do |group| %>
-        <div class="pos-receipt__tax">
-          <dt>
-            Tax <%= group.letter %>
-            <% if receipt.tax_groups.size > 1 %>
-              (<%= format_money_cents(group.basis_cents) %> @ <%= number_with_precision(group.rate_percent, precision: 3) %>%)
-            <% end %>
-          </dt>
-          <dd><%= pos_print_amount(group.tax_cents) %></dd>
-        </div>
-      <% end %>
-      <% if receipt.tax_groups.size > 1 %>
-        <div><dt>Total Tax</dt><dd><%= pos_print_amount(receipt.total_tax_cents) %></dd></div>
-      <% end %>
-      <div class="pos-receipt__total">
-        <dt><%= receipt.total_label %></dt>
-        <dd><%= pos_print_amount(receipt.total_display_cents) %></dd>
+    <% if receipt.show_merchandise_section? %>
+      <div class="pos-thermal__divider-dashed"></div>
+      <div class="pos-thermal__row pos-thermal__column-header">
+        <span>ITEM DESCRIPTION</span>
+        <span>PRICE</span>
       </div>
-      <% if receipt.show_tenders? %>
-        <% receipt.tenders.each do |tender| %>
-          <div><dt><%= tender.label %></dt><dd><%= pos_print_amount(tender.amount_cents) %></dd></div>
-          <% if tender.presented_cents %>
-            <div><dt>Cash presented</dt><dd><%= pos_print_amount(tender.presented_cents) %></dd></div>
-            <div><dt>Change</dt><dd><%= pos_print_amount(tender.change_cents) %></dd></div>
-          <% end %>
-        <% end %>
-      <% end %>
-      <% receipt.remaining_balance_notes.each do |note| %>
-        <div><dt><%= note.label %> <%= note.masked_card %></dt><dd><%= pos_print_amount(note.balance_cents) %></dd></div>
-      <% end %>
-    </dl>
-
-    <% unless receipt.post_void_reversal? %>
-      <% if receipt.items_sold.positive? || receipt.items_returned.positive? %>
-        <div class="pos-receipt__counts">
-          <% if receipt.items_sold.positive? %>
-            <p>Items Sold: <%= receipt.items_sold %></p>
-          <% end %>
-          <% if receipt.items_returned.positive? %>
-            <p>Items Returned: <%= receipt.items_returned %></p>
-          <% end %>
-        </div>
-      <% end %>
-      <% if receipt.you_saved_cents.positive? %>
-        <p class="pos-receipt__saved">You Saved: <%= format_money_cents(receipt.you_saved_cents) %></p>
-      <% end %>
+      <div class="pos-thermal__divider-dashed"></div>
+      <%= render "pos/receipts/thermal/merchandise_lines", lines: receipt.merchandise_lines %>
     <% end %>
 
-    <div class="pos-receipt__barcode">
-      <%= pos_code128_svg(receipt.compact_reference) %>
-      <p class="pos-receipt__barcode-text"><%= receipt.compact_reference %></p>
-    </div>
+    <%= render "pos/receipts/thermal/issuance_lines", receipt: receipt %>
 
-    <% if receipt.footer_message.present? %>
-      <pre class="pos-receipt__message"><%= receipt.footer_message %></pre>
-    <% end %>
+    <%= render "pos/receipts/thermal/summary", receipt: receipt %>
+
+    <%= render "pos/receipts/thermal/payments", receipt: receipt %>
+
+    <%= render "pos/receipts/thermal/balance_notes", notes: receipt.issued_balance_notes, title: "ISSUED GIFT CARD BALANCES" %>
+
+    <%= render "pos/receipts/thermal/counts_and_savings", receipt: receipt %>
+
+    <%= render "pos/receipts/thermal/barcode_footer", receipt: receipt %>
   <% end %>
 </section>

@@ -61,6 +61,12 @@ module PosHelper
     Pos::Code128.svg(payload).html_safe
   end
 
+  def pos_tax_group_summary_label(group)
+    rate = number_with_precision(group.rate_percent, precision: 3)
+    basis = format_money_cents(group.basis_cents.abs)
+    "[#{group.letter}] #{group.name} (#{rate}% on #{basis})"
+  end
+
   def pos_receipt_print_header(transaction)
     Pos::ReceiptIdentity.header(
       store_number: transaction.store_number_snapshot,

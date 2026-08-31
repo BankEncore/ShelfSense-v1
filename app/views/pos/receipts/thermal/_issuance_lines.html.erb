@@ -1,0 +1,31 @@
+<% if receipt.show_activation_section? %>
+  <div class="pos-thermal__divider-dashed"></div>
+  <div class="pos-thermal__section-title">GIFT CARDS ACTIVATED</div>
+  <% receipt.stored_value_issuances.select(&:activation).each do |line| %>
+    <div class="pos-thermal__item-block">
+      <div class="pos-thermal__row">
+        <span class="pos-thermal__item-title"><%= line.title %></span>
+        <span class="pos-thermal__amount pos-thermal__amount--bold"><%= pos_print_amount(line.amount_cents) %></span>
+      </div>
+      <% if line.masked_card.present? %>
+        <div class="pos-thermal__item-meta">Card ID: <%= line.masked_card %></div>
+      <% end %>
+    </div>
+  <% end %>
+<% end %>
+
+<% if receipt.show_reload_section? %>
+  <div class="pos-thermal__divider-dashed"></div>
+  <div class="pos-thermal__section-title">GIFT CARDS RELOADED</div>
+  <% receipt.stored_value_issuances.reject(&:activation).each do |line| %>
+    <div class="pos-thermal__item-block">
+      <div class="pos-thermal__row">
+        <span class="pos-thermal__item-title"><%= line.title %></span>
+        <span class="pos-thermal__amount pos-thermal__amount--bold"><%= pos_print_amount(line.amount_cents) %></span>
+      </div>
+      <% if line.masked_card.present? %>
+        <div class="pos-thermal__item-meta">Card ID: <%= line.masked_card %></div>
+      <% end %>
+    </div>
+  <% end %>
+<% end %>

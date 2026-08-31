@@ -29,29 +29,27 @@ class PosCloseZTest < ActionDispatch::IntegrationTest
     assert_select "button", text: "Print receipt"
     assert_match "New transaction", response.body
     assert_match "Close register", response.body
-    assert_match "Store: 001   Reg: 01   Trans:", response.body
+    assert_match "Store/Reg/Trans:", response.body
     assert_match "Example Book", response.body
     assert_select ".pos-print-only"
     assert_select ".pos-no-print"
-    assert_select ".pos-receipt__legal-name", text: "Example Books LLC"
-    assert_select ".pos-receipt__print .pos-receipt__store"
-    assert_select ".pos-receipt__print .pos-receipt__identity"
-    assert_select ".pos-receipt__print .pos-receipt__counts", text: /Items Sold:/
-    assert_select ".pos-receipt__print .pos-receipt__total"
-    assert_select ".pos-receipt__print .pos-receipt__line-rest"
-    assert_select ".pos-receipt__print .pos-receipt__tax"
+    assert_select ".pos-thermal__store-name", text: "Example Books LLC"
+    assert_select ".pos-receipt__print .pos-thermal__meta"
+    assert_select ".pos-receipt__print", text: /Items Sold:/
+    assert_select ".pos-receipt__print .pos-thermal__total-banner"
+    assert_select ".pos-receipt__print .pos-thermal__item-meta"
+    assert_select ".pos-receipt__print .pos-thermal__tax-row"
     assert_select ".pos-receipt__print", text: /Business date/, count: 0
-    assert_select ".pos-receipt__barcode"
+    assert_select ".pos-thermal__barcode"
     assert_select "input[name='session_id'][value='#{transaction.pos_session_id}']"
-    assert_select "link[rel=preload][as=font][type='font/woff2']"
+    assert_select "link[href*='fonts.googleapis.com']"
     assert_select ".pos-receipt-font-loader", text: "0"
-    stylesheet_href = css_select("link[rel=stylesheet]").first["href"]
-    get stylesheet_href
+    stylesheet_href = css_select("link[rel='stylesheet'][href*='application']").first["href"]
+    get stylesheet_href.sub(/\Ahttps?:\/\/[^\/]+/, "")
     assert_response :success
     assert_match "@font-face", response.body
     assert_match "Inconsolata", response.body
-    assert_match "inconsolata-latin-700", response.body
-    refute_match "fonts.googleapis.com", response.body
+    assert_match "Noto Sans Mono", response.body
     assert transaction.reload.completed?
     assert_equal 1, PosTransaction.completed.where(id: transaction.id).count
   end

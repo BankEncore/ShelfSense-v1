@@ -1,0 +1,47 @@
+<% lines.each do |line| %>
+  <div class="pos-thermal__item-block">
+    <% if line.kind_banner.present? && line.kind_banner != "UNLINKED RETURN" %>
+      <p class="pos-thermal__item-meta"><%= line.kind_banner %></p>
+    <% end %>
+    <div class="pos-thermal__row">
+      <span class="pos-thermal__item-title"><%= line.description %></span>
+      <span class="pos-thermal__amount">
+        <%= pos_print_amount(line.amount_cents) %>
+        <% if line.tax_indicators.present? %>
+          <span class="pos-thermal__tax-indicator">[<%= line.tax_indicators %>]</span>
+        <% end %>
+      </span>
+    </div>
+    <% if line.unlinked %>
+      <div class="pos-thermal__item-meta"><span class="pos-thermal__badge">[UNLINKED RETURN]</span></div>
+    <% end %>
+    <% if line.condition.present? %>
+      <div class="pos-thermal__item-meta"><%= line.condition %></div>
+    <% end %>
+    <% if line.identifier_value.present? %>
+      <div class="pos-thermal__item-meta"><%= line.identifier_label %>: <%= line.identifier_value %></div>
+    <% end %>
+    <% if line.show_quantity_detail %>
+      <div class="pos-thermal__item-meta pos-thermal__row">
+        <span><%= line.quantity %> @ <%= format_money_cents(line.unit_price_cents) %></span>
+      </div>
+    <% end %>
+    <% if line.regular_price_cents %>
+      <div class="pos-thermal__item-meta pos-thermal__row">
+        <span>Regular Price:</span>
+        <span><%= pos_print_amount(line.regular_price_cents) %></span>
+      </div>
+    <% end %>
+    <% if line.discount_cents.negative? %>
+      <div class="pos-thermal__item-meta pos-thermal__row">
+        <span><%= line.discount_label %></span>
+        <span><%= pos_print_amount(line.discount_cents) %></span>
+      </div>
+    <% end %>
+    <% if line.original_reference.present? %>
+      <div class="pos-thermal__item-meta">Original: <%= line.original_reference %></div>
+    <% elsif line.unlinked %>
+      <div class="pos-thermal__item-meta">Original receipt: Not provided</div>
+    <% end %>
+  </div>
+<% end %>

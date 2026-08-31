@@ -6,8 +6,8 @@
     <%= csrf_meta_tags %>
     <%= csp_meta_tag %>
     <%= yield :head %>
+    <%= render "pos/receipts/thermal_fonts" %>
     <%= stylesheet_link_tag "application" %>
-    <%= preload_link_tag "inconsolata-latin-700.woff2", as: :font, type: "font/woff2", crossorigin: "anonymous" %>
     <%= javascript_importmap_tags "pos" %>
   </head>
   <body class="pos-body density-standard">

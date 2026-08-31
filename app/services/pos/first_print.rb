@@ -6,8 +6,18 @@ module Pos
       :kind, :masked_number, :number, :number_prefix, :amount_cents, :program_name, :store, :issued_at,
       keyword_init: true
     ) do
+      RECOVERY_KINDS = %w[print_recovery replacement].freeze
+
       def presented_number
         GiftCards::Number.present(number, prefix: number_prefix)
+      end
+
+      def recovery?
+        RECOVERY_KINDS.include?(kind.to_s)
+      end
+
+      def status_banner
+        recovery? ? "*** REPLACEMENT PRINT COPY ***" : nil
       end
 
       def legal_name
@@ -31,7 +41,7 @@ module Pos
         return if issued_at.blank? || store.blank?
 
         zone = ActiveSupport::TimeZone[store.timezone] || ActiveSupport::TimeZone["UTC"]
-        issued_at.in_time_zone(zone).strftime("%-d %b %y %-l:%M%P")
+        issued_at.in_time_zone(zone).strftime("%-d %b %Y %-l:%M%P")
       end
     end
 
