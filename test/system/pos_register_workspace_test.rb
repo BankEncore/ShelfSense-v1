@@ -1298,9 +1298,7 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
   test "linked return Escape ladder restores stages then chooser" do
     open_register
     2.times do
-      field = find("#pos-command-field")
-      field.fill_in with: @variant.sku
-      field.send_keys :enter
+      add_current_sku
       start_cash_tender_via_plus
       field = find("#pos-command-field")
       field.fill_in with: "25.00"
@@ -1338,9 +1336,7 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
   test "linked return Escape during lines fetch ignores the late response" do
     open_register
     2.times do
-      field = find("#pos-command-field")
-      field.fill_in with: @variant.sku
-      field.send_keys :enter
+      add_current_sku
       start_cash_tender_via_plus
       field = find("#pos-command-field")
       field.fill_in with: "25.00"

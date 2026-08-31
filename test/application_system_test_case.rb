@@ -71,12 +71,14 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
   end
 
   def start_cash_tender_via_plus
+    assert_button "Tender (+)", wait: 10
     click_on "Tender (+)"
     choose_tender_from_overlay("Cash")
-    assert_text "CASH TENDER"
+    assert_text "CASH TENDER", wait: 10
   end
 
   def start_cash_refund_via_plus
+    assert_button "Refund (+)", wait: 10
     click_on "Refund (+)"
     choose_tender_from_overlay("Cash")
     assert_text "REFUND"
