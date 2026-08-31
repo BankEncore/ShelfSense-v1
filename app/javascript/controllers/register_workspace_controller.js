@@ -864,10 +864,6 @@ export default class extends Controller {
     }
   }
 
-  selectedTenderRow() {
-    return this.element.querySelector(".pos-tenders__item.is-selected, .pos-tenders__item[aria-selected='true']")
-  }
-
   keyboardFocusZone(target) {
     return classifyFocusZone({
       target,
