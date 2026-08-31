@@ -1,6 +1,6 @@
 # Register workspace consolidation — Implementation plan
 
-Status: **Slice 6C complete** on `register-workspace-consolidation`. **Slice 7.0** + tender lifecycle inventory complete. **Slice 7A complete** ([#93](https://github.com/BankEncore/ShelfSense-v1/issues/93) / PRs [#115](https://github.com/BankEncore/ShelfSense-v1/pull/115)–[#116](https://github.com/BankEncore/ShelfSense-v1/pull/116)). **Slice 7B complete** ([#94](https://github.com/BankEncore/ShelfSense-v1/issues/94) / PRs [#118](https://github.com/BankEncore/ShelfSense-v1/pull/118)–[#121](https://github.com/BankEncore/ShelfSense-v1/pull/121); remediation [#123](https://github.com/BankEncore/ShelfSense-v1/pull/123)). **7C packet accepted** ([slice7c-keyboard-dispatcher-plan.md](slice7c-keyboard-dispatcher-plan.md)). Next: 7C.1 foundation → 7C.2 cutover ([#95](https://github.com/BankEncore/ShelfSense-v1/issues/95)).
+Status: **Slice 6C complete** on `register-workspace-consolidation`. **Slice 7.0** + tender lifecycle inventory complete. **Slice 7A–7C complete** ([#93](https://github.com/BankEncore/ShelfSense-v1/issues/93)–[#95](https://github.com/BankEncore/ShelfSense-v1/issues/95)). Next: program closeout toward `main` when ready.
 
 Authority: [plan.md](plan.md), [routing-and-authority.md](routing-and-authority.md).
 
@@ -35,7 +35,7 @@ This program uses a long-lived integration branch because an incomplete Register
 | Inventory (7A/7B gate) | **Complete** ([slice7-tender-lifecycle-inventory.md](slice7-tender-lifecycle-inventory.md)) | — |
 | 7A Tender-review framework | **Complete** on integration ([#93](https://github.com/BankEncore/ShelfSense-v1/issues/93) / PRs [#115](https://github.com/BankEncore/ShelfSense-v1/pull/115)–[#116](https://github.com/BankEncore/ShelfSense-v1/pull/116); [slice7a-tender-review-plan.md](slice7a-tender-review-plan.md)) | [#93](https://github.com/BankEncore/ShelfSense-v1/issues/93) |
 | 7B Stored-value / issuance / Quick Customer | **Complete** on integration ([#94](https://github.com/BankEncore/ShelfSense-v1/issues/94) / PRs [#118](https://github.com/BankEncore/ShelfSense-v1/pull/118)–[#121](https://github.com/BankEncore/ShelfSense-v1/pull/121); [slice7b-stored-value-issuance-plan.md](slice7b-stored-value-issuance-plan.md)) | [#94](https://github.com/BankEncore/ShelfSense-v1/issues/94) |
-| 7C Keyboard dispatcher | **Packet accepted** ([slice7c-keyboard-dispatcher-plan.md](slice7c-keyboard-dispatcher-plan.md)); 7C.1 foundation → 7C.2 cutover implement 7.0 contract | [#95](https://github.com/BankEncore/ShelfSense-v1/issues/95) |
+| 7C Keyboard dispatcher | **Complete** ([slice7c-keyboard-dispatcher-plan.md](slice7c-keyboard-dispatcher-plan.md); implements 7.0 contract) | [#95](https://github.com/BankEncore/ShelfSense-v1/issues/95) |
 
 ## Testing stack
 

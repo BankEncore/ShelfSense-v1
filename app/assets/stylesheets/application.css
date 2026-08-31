@@ -1857,6 +1857,11 @@ input[type="submit"]:disabled,
   margin-top: var(--space-2);
 }
 
+.pos-command__hint {
+  margin: var(--space-2) 0 0;
+  font-size: 0.875rem;
+}
+
 .pos-actions {
   display: flex;
   flex-wrap: wrap;

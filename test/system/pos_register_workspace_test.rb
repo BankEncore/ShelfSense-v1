@@ -468,17 +468,21 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
       assert_selector "tbody tr.is-selected", text: "Scroll Book #{index}", wait: 10
     end
     assert_selector "tbody tr.is-selected", text: "Scroll Book 5", wait: 10
+    wait_for_selected_row_in_basket_viewport
     assert selected_row_fully_in_basket?, "newly selected line must stay in the basket viewport"
 
     page.execute_script("document.getElementById('pos_basket').scrollTop = 0")
     refute selected_row_fully_in_basket?, "precondition: selected line starts out of view"
 
+    focus_selected_basket_row
     send_keys :arrow_down
     assert_selector "tbody tr.is-selected", text: "Scroll Book 5"
+    wait_for_selected_row_in_basket_viewport
     assert selected_row_fully_in_basket?, "selection change must scroll the highlighted line into view"
 
     5.times { send_keys :arrow_up }
     assert_selector "tbody tr.is-selected", text: "Scroll Book 0"
+    wait_for_selected_row_in_basket_viewport
     assert selected_row_fully_in_basket?, "arrow selection must scroll the highlighted line into view"
   end
 
@@ -916,9 +920,7 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
 
   test "slash search always lists results and enter adds the highlighted item" do
     open_register
-    field = find("#pos-command-field")
-    field.send_keys "/"
-    assert_selector "#pos_search_overlay", visible: true
+    open_product_lookup_via_slash
     assert page.evaluate_script("document.activeElement === document.querySelector('[data-register-workspace-target=searchSkuField]')")
     assert page.evaluate_script("document.querySelector('[data-register-workspace-target=background]').inert === true")
     fill_in "SKU", with: @variant.sku
@@ -931,7 +933,7 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
 
   test "slash search can be completed with pointer confirmation" do
     open_register
-    find("#pos-command-field").send_keys "/"
+    open_product_lookup_via_slash
     fill_in "SKU", with: @variant.sku
     find("[data-register-workspace-target='searchSkuField']").send_keys :enter
     assert_selector "#pos_search_overlay li.is-selected", wait: 10
@@ -1028,8 +1030,7 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
 
   test "escape during search leaves a late response ignored" do
     open_register
-    find("#pos-command-field").send_keys "/"
-    assert_selector "#pos_search_overlay", visible: true
+    open_product_lookup_via_slash
     page.evaluate_script(<<~JS.squish)
       (function() {
         window.__ssSearchFetch = window.fetch.bind(window);
@@ -1069,8 +1070,7 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
 
   test "late search response after close does not populate a reopened overlay" do
     open_register
-    find("#pos-command-field").send_keys "/"
-    assert_selector "#pos_search_overlay", visible: true
+    open_product_lookup_via_slash
     page.evaluate_script(<<~JS.squish)
       (function() {
         window.__ssSearchFetch = window.fetch.bind(window);
@@ -1090,8 +1090,7 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     assert_text "Searching…", wait: 5
     send_keys :escape
     assert_no_selector "#pos_search_overlay", visible: true
-    find("#pos-command-field").send_keys "/"
-    assert_selector "#pos_search_overlay", visible: true
+    open_product_lookup_via_slash
     assert_no_selector "#pos_search_overlay li"
     page.execute_script(<<~JS.squish)
       (function() {
@@ -1114,7 +1113,7 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     other = pos_sellable_variant(actor: @actor, tax_class: @tax, name: "Other Search Book")
     open_quantity_stock(store: @store, variant: other, actor: @actor, quantity: 3)
     open_register
-    find("#pos-command-field").send_keys "/"
+    open_product_lookup_via_slash
     fill_in "SKU", with: @variant.sku
     find("[data-register-workspace-target='searchSkuField']").send_keys :enter
     assert_selector "#pos_search_overlay li.is-selected", text: /Example Book/, wait: 10
@@ -1183,7 +1182,7 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     other = pos_sellable_variant(actor: @actor, tax_class: @tax, name: "Zed Enabled Book")
     open_quantity_stock(store: @store, variant: other, actor: @actor, quantity: 2)
     open_register
-    find("#pos-command-field").send_keys "/"
+    open_product_lookup_via_slash
     fill_in "Product name", with: "Book"
     find("[data-register-workspace-target='searchNameField']").send_keys :enter
     assert_selector "#pos_search_overlay li.is-selected:not(.is-disabled)", wait: 10
@@ -1490,14 +1489,16 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     assert_text "Customer · Overlay Customer"
   end
 
-  test "plus opens O11 after tenderability checks and restores sale on escape" do
+  test "plus opens O11 from selected basket focus and restores sale on escape" do
     open_register
-    find("#pos-command-field").send_keys "+"
-    assert_text "Add merchandise before taking a tender."
-    assert_no_selector "#pos_other_overlay", visible: true
-
     add_current_sku
-    find("#pos-command-field").send_keys "+"
+    row = find("tr.is-selected[data-line-id]")
+    page.execute_script(<<~JS, row.native)
+      const row = arguments[0]
+      row.tabIndex = 0
+      row.focus()
+      row.dispatchEvent(new KeyboardEvent("keydown", { key: "+", code: "Equal", bubbles: true, cancelable: true }))
+    JS
     assert_selector "#pos_other_overlay", visible: true
     assert_selector "#pos-other-title", text: "Add tender"
     assert_text "Back to Sale"
@@ -1506,6 +1507,84 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     assert_no_selector "#pos_other_overlay", visible: true
     assert_text "SALE ENTRY"
     assert_equal "pos-command-field", page.evaluate_script("document.activeElement && document.activeElement.id")
+  end
+
+  test "plus in the command field is literal and does not open O11" do
+    open_register
+    add_current_sku
+    field = find("#pos-command-field")
+    field.send_keys "+"
+    assert_equal "+", field.value
+    assert_no_selector "#pos_other_overlay", visible: true
+    assert_text "Punctuation shortcuts"
+  end
+
+  test "scanner-like punctuation in the command field stays literal" do
+    open_register
+    add_current_sku
+    field = find("#pos-command-field")
+    field.fill_in with: ""
+    field.send_keys "/12345"
+    assert_equal "/12345", field.value
+    assert_no_selector "#pos_search_overlay", visible: true
+    assert_no_selector "#pos_other_overlay", visible: true
+    assert_no_selector "#pos_return_chooser", visible: true
+  end
+
+  test "underscore in the command field stays literal and does not open return chooser" do
+    open_register
+    add_current_sku
+    field = find("#pos-command-field")
+    field.send_keys "_"
+    assert_equal "_", field.value
+    assert_no_selector "#pos_return_chooser", visible: true
+  end
+
+  test "quantity mode ignores tender-family keys" do
+    open_register
+    add_current_sku
+    click_on "Quantity (*)"
+    assert_text "QUANTITY", wait: 5
+    send_keys :f1
+    assert_text "QUANTITY"
+    assert_no_text "CASH TENDER"
+    send_keys :escape
+    assert_text "SALE ENTRY"
+  end
+
+  test "F8 without a selected line announces unavailable remove" do
+    open_register
+    add_current_sku
+    page.execute_script("document.querySelectorAll('.pos-lines tbody tr.is-selected').forEach((row) => row.classList.remove('is-selected'))")
+    find("#pos-command-field").click
+    send_keys :f8
+    assert_text "Select a sale line first."
+  end
+
+  test "tender F8 removes the selected tender not the last tender only" do
+    open_register
+    add_current_sku
+    start_cash_tender_via_plus
+    send_keys :f2
+    field = find("#pos-command-field")
+    field.fill_in with: "5.00"
+    field.send_keys :enter
+    send_keys :f2
+    field = find("#pos-command-field")
+    field.fill_in with: "5.00"
+    field.send_keys :enter
+    assert_selector ".pos-tenders__item", minimum: 2, wait: 10
+
+    rows = all(".pos-tenders__item")
+    first_id = rows.first["data-tender-id"]
+    last_id = rows.last["data-tender-id"]
+    page.execute_script("arguments[0].click()", rows.first.native)
+    assert_equal "true", find(%(.pos-tenders__item[data-tender-id="#{first_id}"]))["aria-selected"]
+    send_keys :f8
+    assert_selector "#pos_remove_tender_overlay", visible: true, wait: 5
+    send_keys :enter
+    assert_no_selector %([data-tender-id="#{first_id}"]), wait: 10
+    assert_selector %([data-tender-id="#{last_id}"])
   end
 
   test "O11 choose tender changes entry chrome only and F1 still bypasses O11" do
@@ -1783,9 +1862,21 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
         if (!basket || !row) return false;
         var basketBox = basket.getBoundingClientRect();
         var rowBox = row.getBoundingClientRect();
+        if (rowBox.height > basketBox.height + 1) {
+          return rowBox.top >= basketBox.top - 1 && Math.abs(rowBox.top - basketBox.top) <= 2;
+        }
         return rowBox.top >= basketBox.top - 1 && rowBox.bottom <= basketBox.bottom + 1;
       })()
     JS
+  end
+
+  def wait_for_selected_row_in_basket_viewport
+    deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + Capybara.default_max_wait_time
+    until selected_row_fully_in_basket?
+      raise "selected row did not scroll into the basket viewport" if Process.clock_gettime(Process::CLOCK_MONOTONIC) > deadline
+
+      sleep 0.05
+    end
   end
 
   def seed_in_flight_completion

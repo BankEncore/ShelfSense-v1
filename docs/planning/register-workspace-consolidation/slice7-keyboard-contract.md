@@ -1,12 +1,10 @@
 # Slice 7.0 — Keyboard contract amendment
 
-Status: **Accepted as documentation** (implementation deferred to Slice 7C). Delivered via PR toward `register-workspace-consolidation` as the **[#95](https://github.com/BankEncore/ShelfSense-v1/issues/95) documentation gate** (does not implement or close [#93](https://github.com/BankEncore/ShelfSense-v1/issues/93)). Parent: [slice7-overview.md](slice7-overview.md).
+Status: **Implemented at runtime** by Slice 7C ([slice7c-keyboard-dispatcher-plan.md](slice7c-keyboard-dispatcher-plan.md) / [#95](https://github.com/BankEncore/ShelfSense-v1/issues/95)). Parent: [slice7-overview.md](slice7-overview.md).
 
-This document is the replacement keyboard **authority** for Register workspace consolidation. It satisfies [plan.md](plan.md) locked decision 13’s “first merge” requirement without remapping live keys.
+This document is the replacement keyboard **authority** for Register workspace consolidation. It satisfied [plan.md](plan.md) locked decision 13’s “first merge” as documentation; **7C** owns live dispatcher behavior.
 
-**Runtime until 7C:** Phase 6.7 [pos-workflow.md](../phase4-6-point-of-sale/phase6-pos-mvp/pos-workflow.md) §6 remains live, as staged in [routing-and-authority.md](routing-and-authority.md) (Slice 3 F10; Slice 5D `+` → O11, including today’s empty-field interception). Slice 7.0 **supersedes empty-field punctuation interception** for the *accepted* contract; 7C implements the focus rule below.
-
-**Implementation:** One mode-aware dispatcher and deletion of obsolete handlers occur only in **7C**, after 7A/7B expose final semantic actions.
+**Runtime:** One mode-aware dispatcher implements the tables below. Shell remains sole `navigator.keyboard.lock` owner and F10 handler. Empty-field punctuation interception is superseded by the focus rule.
 
 ---
 
@@ -62,7 +60,7 @@ Applies when the workspace is in commercial Sale entry (basket / command surface
 | `F5` | `tender-stored-value` | Stored-value tender family |
 | `F6` | `edit-price` | Price on selected sale line |
 | `F7` | `edit-discount` | Line discount on selected sale line |
-| `F8` | `remove-selected-record` | Remove selected commercial line (or selected working issuance when that is the selected record) |
+| `F8` | `remove-selected-record` | Remove selected merchandise line (gift-card issuance correction uses visible Edit/Remove controls) |
 | `F9` | `cancel-transaction` | Cancel confirmation; second confirm per existing cancel contract — **never** silent cancel |
 | `F10` | `open-register-menu` | Register Menu (shell-owned) |
 | `↑` / `↓` | `move-basket-selection` | Move selected basket line |

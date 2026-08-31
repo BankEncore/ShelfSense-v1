@@ -4,8 +4,7 @@ import {
   classifyFocusZone,
   classifyMode,
   resolveBinding,
-  isEditableControl,
-  REPEAT_IGNORED_ACTIONS
+  isEditableControl
 } from "register_keyboard_dispatcher"
 
 export default class extends Controller {
@@ -336,7 +335,7 @@ export default class extends Controller {
     }
     this.enableReadyActions()
     this.restoreFocus()
-    this.scrollSelectedRowIntoView()
+    this.scheduleScrollSelectedRowIntoView()
     if (this.hasFeedbackTarget && /customer is required/i.test(this.feedbackTarget.textContent || "")) {
       this.openCustomerOverlay()
     }
@@ -352,136 +351,41 @@ export default class extends Controller {
   }
 
   onKeydown(event) {
-    const functionKey = this.functionKey(event)
-    const key = functionKey || event.key
-    if (key === "F10") return
-    if (this.claimedFunctionKey(functionKey)) this.claimFunctionKey(event)
+    const key = normalizeKey(event)
+    if (key === "F10" || key == null) return
+    if (this.claimedFunctionKey(key)) this.claimFunctionKey(event)
 
-    const overlay = this.activeOverlayElement()
-    if (overlay && key === "Tab") {
-      this.trapTabInOverlay(overlay, event)
-      return
-    }
+    const binding = resolveBinding(this.keyboardContext(event, key))
 
-    if (overlay) {
+    if (binding.kind === "delegate_overlay") {
+      const overlay = this.activeOverlayElement()
+      if (!overlay) return
+      if (key === "Tab") {
+        this.trapTabInOverlay(overlay, event)
+        return
+      }
       this.dispatchOverlayKeydown(overlay, event, key)
       return
     }
 
-    if (this.modeValue === "tender" && (key === "ArrowUp" || key === "ArrowDown") && this.tenderListKeyTarget(event.target)) {
-      event.preventDefault()
-      this.moveTenderSelection(key === "ArrowUp" ? -1 : 1, { focus: true })
-      return
-    }
-    if (this.modeValue === "tender" && key === "Enter" && event.target?.matches?.(".pos-tenders__item")) {
-      event.preventDefault()
-      this.selectTender({ currentTarget: event.target })
-      if (event.target.dataset.editAvailable === "true") this.openEditTenderOverlay()
+    if (binding.kind === "native_control") return
+
+    if (binding.kind === "literal") {
+      this.redirectPrintableToCommandField(event, binding.key)
       return
     }
 
-    this.redirectPrintableToCommandField(event)
-
-    if (this.inFlight || this.modeValue === "completion_pending") {
-      if (key === "Enter" && this.isActionableControl(event.target)) return
-      if (key === "Enter" || key === "F9") event.preventDefault()
-      return
-    }
-
-    if (this.modeValue === "completion_failed") {
-      if (key === "Enter") {
-        if (this.isActionableControl(event.target)) return
+    if (binding.kind === "none") {
+      if (key === "Escape" && this.modeValue === "completion_failed") event.preventDefault()
+      if ((this.inFlight || this.modeValue === "completion_pending") && (key === "Enter" || key === "F9")) {
         event.preventDefault()
-        this.submitComplete()
-      }
-      if (key === "F9") {
-        event.preventDefault()
-        this.openOverlay()
-      }
-      if (key === "Escape") event.preventDefault()
-      return
-    }
-
-    if (key === "Enter") {
-      if (this.isActionableControl(event.target)) return
-      event.preventDefault()
-      this.submitMode()
-      return
-    }
-    if (key === "Escape") {
-      event.preventDefault()
-      this.escape()
-      return
-    }
-    if (key === "F9") {
-      event.preventDefault()
-      this.openOverlay()
-      return
-    }
-    if (this.modeValue !== "sale_entry" && this.modeValue !== "tender") return
-
-    if (key === "F1") {
-      event.preventDefault()
-      this.chooseCash()
-      return
-    }
-    if (key === "F2") {
-      event.preventDefault()
-      this.chooseCard()
-      return
-    }
-    if (key === "F3") {
-      event.preventDefault()
-      this.chooseCheck()
-      return
-    }
-    if (key === "F4") {
-      event.preventDefault()
-      this.chooseOther()
-      return
-    }
-    if (key === "F5") {
-      event.preventDefault()
-      this.chooseStoredValue()
-      return
-    }
-
-    if (this.modeValue === "tender") {
-      if (key === "F8") {
-        event.preventDefault()
-        this.removeLastTender()
       }
       return
     }
 
-    const fieldEmpty = this.commandFieldEmpty()
-    if (key === "*" && fieldEmpty) {
+    if (binding.kind === "action") {
       event.preventDefault()
-      this.enterQuantity()
-    } else if (key === "+" && fieldEmpty) {
-      event.preventDefault()
-      this.enterTender()
-    } else if (key === "/" && fieldEmpty) {
-      event.preventDefault()
-      this.openSearchOverlay()
-    } else if (key === "." && fieldEmpty && this.pickupAllowedValue) {
-      event.preventDefault()
-      this.openPickupOverlay()
-    } else if ((key === "-" || event.code === "Minus") && fieldEmpty) {
-      event.preventDefault()
-      this.openReturnChooser()
-    } else if (key === "F6") {
-      event.preventDefault()
-      this.openPriceOverride()
-    } else if (key === "F7") {
-      event.preventDefault()
-      this.openLineDiscount()
-    } else if (key === "F8") {
-      event.preventDefault()
-      this.removeSelected()
-    } else if (key === "ArrowUp" || key === "ArrowDown") {
-      event.preventDefault()
-      this.moveSelection(key === "ArrowUp" ? -1 : 1)
+      this.performSemanticAction(binding.action, { announceUnavailable: true })
     }
   }
 
@@ -699,169 +603,346 @@ export default class extends Controller {
   }
 
   chooseCash() {
-    this.performSemanticAction("tender-cash")
+    this.performSemanticAction("tender-cash", { announceUnavailable: true })
   }
 
   chooseCard() {
-    this.performSemanticAction("tender-card")
+    this.performSemanticAction("tender-card", { announceUnavailable: true })
   }
 
   chooseCheck() {
-    this.performSemanticAction("tender-check")
+    this.performSemanticAction("tender-check", { announceUnavailable: true })
   }
 
   chooseOther() {
-    this.performSemanticAction("tender-other")
+    this.performSemanticAction("tender-other", { announceUnavailable: true })
   }
 
   chooseStoredValue() {
-    this.performSemanticAction("tender-stored-value")
+    this.performSemanticAction("tender-stored-value", { announceUnavailable: true })
   }
 
   /**
    * Slice 7C semantic action executor. Keyboard and visible controls converge here.
-   * Eligibility remains in the underlying methods / live control state.
    */
   performSemanticAction(action, { announceUnavailable = false } = {}) {
     if (!action) return false
-
-    const run = (fn) => {
-      fn.call(this)
-      return true
+    if (!this.invokeSemanticAction(action)) {
+      if (announceUnavailable) {
+        const reason = this.semanticActionUnavailableReason(action)
+        if (reason) this.showFeedback(reason)
+      }
+      return false
     }
+    return true
+  }
 
+  invokeSemanticAction(action) {
     switch (action) {
       case "tender-cash":
-        return run(() => this.chooseTenderCategory("cash"))
+        return this.invokeTenderCategory("cash")
       case "tender-card":
-        return run(() => this.chooseTenderCategory("card"))
+        return this.invokeTenderCategory("card")
       case "tender-check":
-        return run(() => this.chooseTenderCategory("check"))
+        return this.invokeTenderCategory("check")
       case "tender-other":
-        return run(() => this.executeTenderOther())
+        return this.invokeTenderOther()
       case "tender-stored-value":
-        return run(() => this.executeTenderStoredValue())
+        return this.invokeTenderStoredValue()
       case "open-tender-selection":
-        return run(() => this.enterTender())
+        return this.invokeEnterTender()
       case "open-product-lookup":
-        return run(() => this.openSearchOverlay())
+        if (this.inFlight || this.overlayOpen()) return false
+        this.openSearchOverlay()
+        return true
       case "open-pickup-lookup":
-        return run(() => this.openPickupOverlay())
+        if (this.inFlight || this.overlayOpen()) return false
+        if (!this.pickupAllowedValue) return false
+        this.openPickupOverlay()
+        return true
       case "open-return-chooser":
-        return run(() => this.openReturnChooser())
+        if (this.inFlight || this.overlayOpen()) return false
+        this.openReturnChooser()
+        return true
       case "open-customer-lookup":
-        return run(() => this.openCustomerOverlay())
+        if (this.inFlight) return false
+        this.openCustomerOverlay()
+        return true
       case "open-quick-customer":
-        return run(() => this.openQuickCustomerOverlay())
+        if (this.inFlight) return false
+        this.openQuickCustomerOverlay()
+        return true
       case "set-quantity":
-        return run(() => this.enterQuantity())
+        return this.invokeEnterQuantity()
       case "edit-price":
-        return run(() => this.openPriceOverride())
+        return this.invokeOpenPriceOverride()
       case "edit-discount":
-        return run(() => this.openLineDiscount())
+        return this.invokeOpenLineDiscount()
       case "remove-selected-record":
-        return run(() => this.removeSelected())
+        return this.invokeRemoveSelectedLine()
       case "remove-selected-tender":
-        return run(() => this.executeRemoveSelectedTender())
+        return this.invokeRemoveSelectedTender()
       case "open-selected-tender-actions":
-        return run(() => this.executeOpenSelectedTenderActions())
+        return this.invokeOpenSelectedTenderActions()
       case "return-to-sale":
-        return run(() => this.openReturnToSaleOverlay())
+        if (this.inFlight) return false
+        this.openReturnToSaleOverlay()
+        return true
       case "cancel-transaction":
-        return run(() => this.openOverlay())
+        if (this.inFlight) return false
+        this.openOverlay()
+        return true
       case "submit-command":
-        return run(() => this.submitMode())
+        if (this.inFlight) return false
+        this.submitMode()
+        return true
       case "submit-complete":
-        return run(() => this.submitComplete())
+        if (this.inFlight) return false
+        this.submitComplete()
+        return true
       case "escape":
-        return run(() => this.escape())
+        if (this.inFlight) return false
+        this.escape()
+        return true
       case "move-basket-selection-up":
-        return run(() => this.moveSelection(-1))
+        if (this.inFlight) return false
+        this.moveSelection(-1)
+        return true
       case "move-basket-selection-down":
-        return run(() => this.moveSelection(1))
+        if (this.inFlight) return false
+        this.moveSelection(1)
+        return true
       case "move-tender-selection-up":
-        return run(() => this.moveTenderSelection(-1, { focus: true }))
+        if (this.inFlight) return false
+        this.moveTenderSelection(-1, { focus: true })
+        return true
       case "move-tender-selection-down":
-        return run(() => this.moveTenderSelection(1, { focus: true }))
+        if (this.inFlight) return false
+        this.moveTenderSelection(1, { focus: true })
+        return true
       default:
-        if (announceUnavailable) {
-          this.showFeedback(`Action "${action}" is not available.`)
-        }
         return false
     }
   }
 
-  executeTenderOther() {
-    if (this.inFlight) return
-    if (this.modeValue !== "sale_entry" && this.modeValue !== "tender") return
-    if (!this.ensureTenderable()) return
-    const types = this.otherTypes()
-    if (types.length === 0) {
-      this.showFeedback("No Other tender types are configured.")
-      return
+  semanticActionUnavailableReason(action) {
+    switch (action) {
+      case "set-quantity":
+        if (this.modeValue !== "sale_entry") return "Quantity is only available during sale entry."
+        if (!this.selectedRow()) return "Select a quantity-tracked sale line first."
+        if (this.selectedUnitLine()) return "Quantity is not available on individually tracked units."
+        if (this.selectedQuantityBlocked()) return "Remove the price override or discount before changing quantity."
+        return "Quantity is not available."
+      case "edit-price":
+        if (this.modeValue !== "sale_entry") return "Price is only available during sale entry."
+        if (!this.selectedRow()) return "Select a sale line first."
+        if (this.selectedReturnLine()) return "Price is not available on a return line."
+        if (this.policyFor("price_override") === "prohibited") return "Price change is not available."
+        if (this.selectedRow()?.dataset?.discounted === "true" && this.selectedRow()?.dataset?.pricingMethodSnapshot === "open_price") {
+          return "Remove the line discount before changing the price."
+        }
+        return "Price is not available."
+      case "edit-discount":
+        if (this.modeValue !== "sale_entry") return "Discount is only available during sale entry."
+        if (!this.selectedRow()) return "Select a sale line first."
+        if (this.selectedReturnLine()) return "Discount is not available on a return line."
+        if (this.policyFor("line_discount") === "prohibited") return "Line discount is not available."
+        return "Discount is not available."
+      case "open-pickup-lookup":
+        return "No pickup can be added in the current transaction state."
+      case "remove-selected-record":
+        if (this.modeValue !== "sale_entry") return "Remove is only available during sale entry."
+        if (!this.selectedRow()) return "Select a sale line first."
+        return "Remove is not available."
+      case "open-tender-selection":
+        if (this.modeValue !== "sale_entry" && this.modeValue !== "tender") return "Tender is not available in the current mode."
+        if (!this.hasCommercialContent()) return "Add merchandise before taking a tender."
+        if (this.settlementValue === "none") return null
+        if (this.cashierTenderTypes().length === 0) {
+          return this.settlementValue === "refund" ? "No refund tender types are available." : "No tender types are available."
+        }
+        return "Tender is not available."
+      case "tender-cash":
+      case "tender-card":
+      case "tender-check":
+      case "tender-other":
+      case "tender-stored-value":
+        return this.tenderFamilyUnavailableReason(action)
+      case "remove-selected-tender":
+        if (this.modeValue !== "tender") return "Select a tender in Tender Review first."
+        if (!this.selectedTenderRow()) return "Select a tender before removing."
+        if (this.selectedTenderRow()?.dataset?.removeAvailable === "false") {
+          return this.selectedTenderRow().dataset.removeUnavailableReason || "This tender cannot be removed."
+        }
+        return "Remove is not available for the selected tender."
+      case "open-selected-tender-actions":
+        if (this.modeValue !== "tender") return "Select a tender in Tender Review first."
+        if (!this.selectedTenderRow()) return "Select a tender first."
+        return this.selectedTenderRow()?.dataset?.editUnavailableReason ||
+          this.selectedTenderRow()?.dataset?.removeUnavailableReason ||
+          "No actions are available for the selected tender."
+      default:
+        return null
     }
+  }
+
+  tenderFamilyUnavailableReason(action) {
+    if (this.modeValue !== "sale_entry" && this.modeValue !== "tender") {
+      return "Tender is not available in the current mode."
+    }
+    if (this.modeValue === "sale_entry" && !this.hasCommercialContent()) {
+      return "Add merchandise before taking a tender."
+    }
+    const category = {
+      "tender-cash": "cash",
+      "tender-card": "card",
+      "tender-check": "check",
+      "tender-other": "other",
+      "tender-stored-value": "stored_value"
+    }[action]
+    const label = this.categoryLabel(category)
+    const types = category === "other" ? this.otherTypes() : this.typesForCategory(category)
+    if (types.length > 0) return null
+    if (category === "other") return "No Other tender types are configured."
+    if (category === "stored_value") return "Stored-value tender is not available."
+    if (this.settlementValue === "refund") return `${label} refunds are not enabled.`
+    return `${label} tender is not available.`
+  }
+
+  invokeEnterQuantity() {
+    if (this.inFlight) return false
+    if (this.modeValue !== "sale_entry" || !this.selectedRow()) return false
+    if (this.selectedUnitLine() || this.selectedQuantityBlocked()) return false
+    this.enterQuantity()
+    return true
+  }
+
+  invokeOpenPriceOverride() {
+    if (this.inFlight) return false
+    if (this.modeValue !== "sale_entry") return false
+    const row = this.selectedRow()
+    if (!row) return false
+    if (this.selectedReturnLine()) return false
+    if (this.policyFor("price_override") === "prohibited") return false
+    if (row.dataset.discounted === "true" && row.dataset.pricingMethodSnapshot === "open_price") return false
+    this.openPriceOverride()
+    return true
+  }
+
+  invokeOpenLineDiscount() {
+    if (this.inFlight) return false
+    if (this.modeValue !== "sale_entry") return false
+    if (!this.selectedRow()) return false
+    if (this.selectedReturnLine()) return false
+    if (this.policyFor("line_discount") === "prohibited") return false
+    this.openLineDiscount()
+    return true
+  }
+
+  invokeRemoveSelectedLine() {
+    if (this.inFlight) return false
+    if (this.modeValue !== "sale_entry" || !this.selectedRow()) return false
+    this.removeSelected()
+    return true
+  }
+
+  invokeEnterTender() {
+    if (this.inFlight) return false
+    if (this.modeValue !== "sale_entry" && this.modeValue !== "tender") return false
+    if (this.modeValue === "sale_entry") {
+      if (!this.hasCommercialContent()) return false
+      if (this.settlementValue === "none") {
+        this.submitComplete()
+        return true
+      }
+      if (this.cashierTenderTypes().length === 0) return false
+    }
+    this.enterTender()
+    return true
+  }
+
+  invokeTenderCategory(category) {
+    if (this.inFlight) return false
+    if (this.modeValue !== "sale_entry" && this.modeValue !== "tender") return false
+    if (this.modeValue === "sale_entry") {
+      if (!this.hasCommercialContent()) return false
+      if (this.settlementValue === "none") {
+        this.submitComplete()
+        return true
+      }
+    }
+    const types = category === "other" ? this.otherTypes() : this.typesForCategory(category)
+    if (types.length === 0) return false
+    this.beginTenderMode()
+    this.applyTenderType(types[0])
+    this.prefillRemaining()
+    return true
+  }
+
+  invokeTenderOther() {
+    if (this.inFlight) return false
+    if (this.modeValue !== "sale_entry" && this.modeValue !== "tender") return false
+    if (this.modeValue === "sale_entry") {
+      if (!this.hasCommercialContent()) return false
+      if (this.settlementValue === "none") {
+        this.submitComplete()
+        return true
+      }
+    }
+    const types = this.otherTypes()
+    if (types.length === 0) return false
     if (types.length === 1) {
       this.beginTenderMode()
       this.applyTenderType(types[0])
       this.prefillRemaining()
-      return
+      return true
     }
     this.openTenderPicker(types, { source: "other_key" })
+    return true
   }
 
-  executeTenderStoredValue() {
-    if (this.inFlight) return
-    if (this.modeValue !== "sale_entry" && this.modeValue !== "tender") return
-    if (!this.ensureTenderable()) return
-    const types = this.typesForCategory("stored_value")
-    if (types.length === 0) {
-      this.showFeedback("Stored-value tender is not available.")
-      return
+  invokeTenderStoredValue() {
+    if (this.inFlight) return false
+    if (this.modeValue !== "sale_entry" && this.modeValue !== "tender") return false
+    if (this.modeValue === "sale_entry") {
+      if (!this.hasCommercialContent()) return false
+      if (this.settlementValue === "none") {
+        this.submitComplete()
+        return true
+      }
     }
+    const types = this.typesForCategory("stored_value")
+    if (types.length === 0) return false
     if (types.length === 1) {
       this.beginTenderMode()
       this.applyTenderType(types[0])
       this.prefillRemaining()
-      return
+      return true
     }
     this.openTenderPicker(types, { source: "stored_value_key" })
+    return true
   }
 
-  executeRemoveSelectedTender() {
-    if (this.inFlight) return
-    if (this.modeValue !== "tender") return
+  invokeRemoveSelectedTender() {
+    if (this.inFlight) return false
+    if (this.modeValue !== "tender") return false
     const selected = this.selectedTenderRow()
-    if (!selected) {
-      this.showFeedback("Select a tender before removing.")
-      return
-    }
-    if (selected.dataset.removeAvailable === "false") {
-      this.showFeedback(selected.dataset.removeUnavailableReason || "This tender cannot be removed.")
-      return
-    }
+    if (!selected) return false
+    if (selected.dataset.removeAvailable === "false") return false
     this.openRemoveTenderOverlay()
+    return true
   }
 
-  executeOpenSelectedTenderActions() {
-    if (this.modeValue !== "tender") return
+  invokeOpenSelectedTenderActions() {
+    if (this.modeValue !== "tender") return false
     const selected = this.selectedTenderRow()
-    if (!selected) {
-      this.showFeedback("Select a tender first.")
-      return
-    }
+    if (!selected) return false
     this.selectTender({ currentTarget: selected })
     if (selected.dataset.editAvailable === "true") {
       this.openEditTenderOverlay()
-      return
+      return true
     }
-    if (this.hasTenderReviewDetailTarget) {
-      // Detail region already visible for selection; surface unavailability when present.
-    }
-    if (selected.dataset.editUnavailableReason) {
-      this.showFeedback(selected.dataset.editUnavailableReason)
-    } else if (selected.dataset.removeUnavailableReason) {
-      this.showFeedback(selected.dataset.removeUnavailableReason)
-    }
+    return false
   }
 
   keyboardFocusZone(target) {
@@ -2841,17 +2922,6 @@ export default class extends Controller {
     if (!show && this.hasReferenceFieldTarget) this.referenceFieldTarget.value = ""
   }
 
-  removeLastTender() {
-    if (this.inFlight) return
-    if (!this.hasRemoveTenderFormTarget || !this.hasRemoveTenderInputTarget) return
-    const last = this.tenderRows().at(-1)
-    if (last?.dataset?.tenderId) this.removeTenderInputTarget.value = last.dataset.tenderId
-    if (!this.removeTenderInputTarget.value) return
-    if (this.hasRemoveTenderOperationInputTarget) this.removeTenderOperationInputTarget.value = this.uuidV7()
-    this.beginFlight()
-    this.removeTenderFormTarget.requestSubmit()
-  }
-
   tenderRows() {
     return Array.from(this.element.querySelectorAll(".pos-tenders__item[data-tender-id]"))
   }
@@ -3873,13 +3943,40 @@ export default class extends Controller {
     })
     this.syncSelectedLine()
     this.enableReadyActions()
-    this.scrollSelectedRowIntoView()
+    this.scheduleScrollSelectedRowIntoView()
+  }
+
+  scheduleScrollSelectedRowIntoView() {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => this.scrollSelectedRowIntoView())
+    })
   }
 
   scrollSelectedRowIntoView() {
     const row = this.selectedRow()
-    if (!row || typeof row.scrollIntoView !== "function") return
-    row.scrollIntoView({ block: "nearest", inline: "nearest" })
+    if (!row) return
+    const basket = document.getElementById("pos_basket")
+    if (!basket) {
+      if (typeof row.scrollIntoView === "function") {
+        row.scrollIntoView({ block: "nearest", inline: "nearest" })
+      }
+      return
+    }
+
+    const rowTop = row.getBoundingClientRect().top - basket.getBoundingClientRect().top + basket.scrollTop
+    const rowBottom = rowTop + row.offsetHeight
+    const maxScroll = Math.max(0, basket.scrollHeight - basket.clientHeight)
+    let nextScroll = basket.scrollTop
+
+    if (row.offsetHeight >= basket.clientHeight) {
+      nextScroll = rowTop
+    } else if (rowTop < basket.scrollTop) {
+      nextScroll = rowTop
+    } else if (rowBottom > basket.scrollTop + basket.clientHeight) {
+      nextScroll = rowBottom - basket.clientHeight
+    }
+
+    basket.scrollTop = Math.max(0, Math.min(maxScroll, nextScroll))
   }
 
   overlayOpen() {
@@ -4331,6 +4428,7 @@ export default class extends Controller {
       this.setActionEnabled("removeButton", hasSelection)
       this.setActionEnabled("cancelButton", hasLines)
       this.enableTenderIdentityButtons()
+      this.scheduleScrollSelectedRowIntoView()
       return
     }
     if (this.modeValue === "tender") {
@@ -4387,27 +4485,20 @@ export default class extends Controller {
   }
 
   isCommandSurfaceInput(target) {
-    if (!target) return false
-    if (this.hasFieldTarget && target === this.fieldTarget) return true
-    if (this.hasReferenceFieldTarget && target === this.referenceFieldTarget) return true
-    if (this.hasGiftCardNumberFieldTarget && target === this.giftCardNumberFieldTarget) return true
-    return false
+    return isEditableControl(target)
   }
 
-  reservedCommandGlyph(key, event) {
-    return key === "*" || key === "+" || key === "/" || key === "." || key === "-" || event.code === "Minus"
-  }
-
-  redirectPrintableToCommandField(event) {
+  redirectPrintableToCommandField(event, normalizedKey = null) {
     if (event.defaultPrevented) return
     if (!this.hasFieldTarget || this.fieldTarget.disabled) return
     if (this.overlayOpen() && this.topOverlay()?.contains(event.target)) return
-    if (this.isCommandSurfaceInput(event.target)) return
+    if (isEditableControl(event.target)) return
     if (event.isComposing) return
     if (event.metaKey || event.ctrlKey || event.altKey) return
-    const key = event.key
+    const key = (typeof event.key === "string" && event.key.length === 1)
+      ? event.key
+      : (normalizedKey || normalizeKey(event))
     if (typeof key !== "string" || key.length !== 1 || key === " ") return
-    if (this.commandFieldEmpty() && this.reservedCommandGlyph(key, event)) return
 
     event.preventDefault()
     const field = this.fieldTarget

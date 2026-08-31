@@ -1,8 +1,8 @@
 # Slice 7C — Keyboard dispatcher and Phase 6.7 supersession
 
-Status: **Accepted packet** (docs lock). Implementation under [#95](https://github.com/BankEncore/ShelfSense-v1/issues/95). Parent: [slice7-overview.md](slice7-overview.md). Authority: [slice7-keyboard-contract.md](slice7-keyboard-contract.md), [plan.md](plan.md), [routing-and-authority.md](routing-and-authority.md), [implementation-plan.md](implementation-plan.md), [user-stories.md](user-stories.md). Evidence template: [slice7c-manual-verification.md](slice7c-manual-verification.md).
+Status: **Complete** on `register-workspace-consolidation` ([#95](https://github.com/BankEncore/ShelfSense-v1/issues/95)). Parent: [slice7-overview.md](slice7-overview.md). Authority: [slice7-keyboard-contract.md](slice7-keyboard-contract.md), [plan.md](plan.md), [routing-and-authority.md](routing-and-authority.md), [implementation-plan.md](implementation-plan.md), [user-stories.md](user-stories.md). Evidence: [slice7c-manual-verification.md](slice7c-manual-verification.md).
 
-Issue: [#95](https://github.com/BankEncore/ShelfSense-v1/issues/95). Packet-lock branch: `95-slice7c-keyboard-dispatcher-plan` (docs only; does not complete implementation of #95).
+Issue: [#95](https://github.com/BankEncore/ShelfSense-v1/issues/95).
 
 7B remediation ([#123](https://github.com/BankEncore/ShelfSense-v1/pull/123) — issuance Edit/replace, Quick Customer duplicate-ack) is already on `register-workspace-consolidation` and is **not** a 7C blocker.
 
@@ -94,9 +94,11 @@ Ignore Ctrl/Cmd/Alt chords. Allow Shift where needed for `+`/`*`. Ignore IME com
 
 Produces facts; does not perform an action.
 
-- **mode:** `sale` | `tender` | `completion_pending` | `completion_failed`
+- **mode:** `sale` | `tender` | `quantity` | `completion_pending` | `completion_failed` | `restricted` (unknown runtime modes; never default to `sale`)
 - **focusZone:** as locked above
-- **state:** selected line / issuance / tender; in flight; top overlay; composing; `event.repeat`
+- **state:** selected line / tender; in flight; top overlay; composing; `event.repeat`
+
+`quantity` mode permits only Enter (submit quantity), Escape (leave quantity), F9 (cancel confirmation), F10 (shell), and literal command-field input. Issuance rows are not basket shortcut targets; gift-card issuance correction remains on visible Edit/Remove controls.
 
 ### Binding resolver
 
@@ -115,7 +117,7 @@ Must not call Rails endpoints, inspect permissions, calculate settlement, or mut
 | `set-quantity` | `enterQuantity` |
 | `tender-cash` … `tender-stored-value` | `chooseCash` … `chooseStoredValue` |
 | `edit-price` / `edit-discount` | `openPriceOverride` / `openLineDiscount` |
-| `remove-selected-record` | selected sale/issuance removal |
+| `remove-selected-record` | selected merchandise line removal (not issuance; issuance uses visible controls) |
 | `remove-selected-tender` | selected tender remove path (**not** last) |
 | `open-selected-tender-actions` | tender review/detail (+ reason when edit unavailable) |
 | `return-to-sale` | existing O17 path |
@@ -181,7 +183,7 @@ Prefer presenter/service-provided reasons already used by controls.
 Implement accepted tables as written. Notable deltas from Phase 6.7 runtime:
 
 - Tender F8 / `-` → `remove-selected-tender` for **selected** tender; delete `removeLastTender`
-- SALE F8 → `remove-selected-record` (line or selected issuance)
+- SALE F8 → `remove-selected-record` (selected merchandise line only)
 - Enter on selected tender → `open-selected-tender-actions` (expose detail + reason when edit unavailable)
 - F2 remains Card; Customer Lookup / Quick Customer / Tax Class stay visible controls with **no** new shortcuts
 - Add concise help so labels like `Tender (+)` / `Return (-)` are not read as applying from the focused command field
