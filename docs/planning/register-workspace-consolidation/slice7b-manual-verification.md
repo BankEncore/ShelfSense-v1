@@ -1,6 +1,6 @@
 # Slice 7B — Manual verification evidence
 
-Status: **Complete** on `register-workspace-consolidation` ([#94](https://github.com/BankEncore/ShelfSense-v1/issues/94) / PRs [#118](https://github.com/BankEncore/ShelfSense-v1/pull/118)–[#121](https://github.com/BankEncore/ShelfSense-v1/pull/121); remediation on `94-slice7b-remediation`). Packet: [slice7b-stored-value-issuance-plan.md](slice7b-stored-value-issuance-plan.md).
+Status: **Complete** on `register-workspace-consolidation` ([#94](https://github.com/BankEncore/ShelfSense-v1/issues/94) / PRs [#118](https://github.com/BankEncore/ShelfSense-v1/pull/118)–[#121](https://github.com/BankEncore/ShelfSense-v1/pull/121); remediation [#123](https://github.com/BankEncore/ShelfSense-v1/pull/123)). Packet: [slice7b-stored-value-issuance-plan.md](slice7b-stored-value-issuance-plan.md).
 
 Workstation assumptions: Chrome (or Chromium) on a Register-class display; print not required for 7B.
 
