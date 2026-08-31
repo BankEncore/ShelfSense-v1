@@ -33,4 +33,4 @@ Workstation assumptions: Chrome (or Chromium) on a Register-class display; print
 - Date: 2026-08-30
 - Browser / OS: CI Chromium system tests + focused Docker suite; remediation covers issuance Edit + Quick Customer Create Anyway
 - Verified by: automated 7B suite including replace-issuance and Quick Customer acknowledge/bypass tests
-- Follow-ups (if any): Slice 7C ([#95](https://github.com/BankEncore/ShelfSense-v1/issues/95))
+- Follow-ups (if any): none (Slice 7C complete)
