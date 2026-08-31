@@ -362,7 +362,7 @@ module Pos
     end
 
     def stored_value_issuance
-      rescue_workspace(error_mode: "sale_entry") do
+      rescue_workspace(error_mode: issuance_error_mode) do
         amount = Money::ParseCents.call(params[:issuance_amount])
         raise Pos::Error, "issuance amount is required" if amount.nil?
 
@@ -378,13 +378,13 @@ module Pos
           confirm_clear_tenders: confirm_clear_tenders?
         )
         @transaction.reload
-        @ui_mode = "sale_entry"
+        @ui_mode = @transaction.pos_tenders.any? ? "tender" : "sale_entry"
         respond_workspace
       end
     end
 
     def remove_stored_value_issuance
-      rescue_workspace(error_mode: "sale_entry") do
+      rescue_workspace(error_mode: issuance_error_mode) do
         issuance = @transaction.pos_stored_value_issuances.find(params.require(:issuance_id))
         Pos::RemoveStoredValueIssuance.call(
           transaction: @transaction,
@@ -395,7 +395,31 @@ module Pos
           confirm_clear_tenders: confirm_clear_tenders?
         )
         @transaction.reload
-        @ui_mode = "sale_entry"
+        @ui_mode = @transaction.pos_tenders.any? ? "tender" : "sale_entry"
+        respond_workspace
+      end
+    end
+
+    def replace_stored_value_issuance
+      rescue_workspace(error_mode: issuance_error_mode) do
+        amount = Money::ParseCents.call(params[:issuance_amount])
+        raise Pos::Error, "issuance amount is required" if amount.nil?
+
+        issuance = @transaction.pos_stored_value_issuances.find(params.require(:issuance_id))
+        Pos::ReplaceStoredValueIssuance.call(
+          transaction: @transaction,
+          actor: current_user,
+          expected_lock_version: expected_lock_version,
+          issuance: issuance,
+          issuance_type: params.require(:issuance_type),
+          amount_cents: amount,
+          operation_id: params.require(:operation_id),
+          gift_card_program: find_optional_gift_card_program,
+          card_number: params[:card_number],
+          confirm_clear_tenders: confirm_clear_tenders?
+        )
+        @transaction.reload
+        @ui_mode = @transaction.pos_tenders.any? ? "tender" : "sale_entry"
         respond_workspace
       end
     end
@@ -438,10 +462,11 @@ module Pos
         return
       end
 
-      credit_account_type = params[:credit_account_type].presence
-      require_contact = ActiveModel::Type::Boolean.new.cast(params[:require_contact])
-
       begin
+        customer_context = resolve_quick_customer_context!
+        require_contact = quick_customer_requires_contact?(customer_context)
+        credit_account_type = credit_account_type_for_context(customer_context)
+
         create_result = Customers::Create.call(
           display_name: params[:display_name],
           email: params[:email],
@@ -705,9 +730,18 @@ module Pos
           pickup_available: @pickup_allowed,
           gift_card_programs_available: @gift_card_programs.any?,
           close_session_available: @ui_mode == "sale_entry" && @lines.empty? && @tenders.empty? && @issuances.empty?,
-          issuance_remove_available: @ui_mode == "sale_entry"
+          issuance_remove_available: issuance_mutate_available?,
+          issuance_edit_available: issuance_mutate_available?
         }
       )
+    end
+
+    def issuance_mutate_available?
+      %w[sale_entry tender completion_failed].include?(@ui_mode)
+    end
+
+    def issuance_error_mode
+      @transaction.pos_tenders.any? ? "tender" : "sale_entry"
     end
 
     def apply_completion_view_state
@@ -1121,6 +1155,40 @@ module Pos
 
     def register_customer_create_source_id
       @register.id
+    end
+
+    QUICK_CUSTOMER_CONTEXTS = %w[sale store_credit trade_credit customer_store_credit].freeze
+    QUICK_CUSTOMER_CONTACT_REQUIRED_CONTEXTS = %w[store_credit trade_credit customer_store_credit].freeze
+
+    # Prefer semantic customer_context. Legacy credit_account_type is accepted only when
+    # it maps to an allowlisted context; require_contact is never trusted from the client.
+    def resolve_quick_customer_context!
+      raw = params[:customer_context].presence || legacy_credit_account_context
+      context = raw.to_s.strip.presence || "sale"
+      unless QUICK_CUSTOMER_CONTEXTS.include?(context)
+        raise Customers::Error, "customer context is invalid"
+      end
+
+      context
+    end
+
+    def legacy_credit_account_context
+      value = params[:credit_account_type].to_s.strip.presence
+      return if value.blank?
+      return value if QUICK_CUSTOMER_CONTEXTS.include?(value)
+
+      nil
+    end
+
+    def quick_customer_requires_contact?(customer_context)
+      QUICK_CUSTOMER_CONTACT_REQUIRED_CONTEXTS.include?(customer_context)
+    end
+
+    def credit_account_type_for_context(customer_context)
+      case customer_context
+      when "store_credit", "trade_credit" then customer_context
+      when "customer_store_credit" then "store_credit"
+      end
     end
 
     def quick_customer_attach_feedback(credit_account_type: nil)

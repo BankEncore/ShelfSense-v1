@@ -69,16 +69,30 @@ module Customers
       assert error.suggestions.any?
       assert_nil Customer.find_by(display_name: "Another Reader")
 
+      # Same key may retry after a failed duplicate probe because acknowledgment is
+      # not part of the identity payload; a rotated key is also accepted.
       result = Customers::Create.call(
         display_name: "Another Reader",
         email: "dup.create@example.com",
         actor: @actor,
         store: @store,
-        idempotency_key: SecureRandom.uuid_v7,
+        idempotency_key: key,
         source_id: @source_id,
         acknowledge_duplicates: true
       )
       assert result.customer.persisted?
+
+      replay = Customers::Create.call(
+        display_name: "Another Reader",
+        email: "dup.create@example.com",
+        actor: @actor,
+        store: @store,
+        idempotency_key: key,
+        source_id: @source_id,
+        acknowledge_duplicates: true
+      )
+      assert replay.replayed
+      assert_equal result.customer.id, replay.customer.id
     end
 
     test "require_contact rejects missing email and phone for contextual credit flows" do

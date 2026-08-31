@@ -37,6 +37,7 @@ export default class extends Controller {
     "issuanceAmountField",
     "issuanceCardWrap",
     "issuanceResultLabel",
+    "issuanceTitle",
     "issuanceCancel",
     "issuanceApply",
     "issuanceForm",
@@ -50,6 +51,14 @@ export default class extends Controller {
     "removeIssuanceIdInput",
     "removeIssuanceOperationInput",
     "removeIssuanceConfirmClearInput",
+    "replaceIssuanceForm",
+    "replaceIssuanceIdInput",
+    "replaceIssuanceTypeInput",
+    "replaceIssuanceProgramInput",
+    "replaceIssuanceAmountInput",
+    "replaceIssuanceCardInput",
+    "replaceIssuanceOperationInput",
+    "replaceIssuanceConfirmClearInput",
     "clearTendersOverlay",
     "clearTendersConsequence",
     "tenderOperationInput",
@@ -1536,12 +1545,8 @@ export default class extends Controller {
       if (email) body.set("email", email)
       if (phone) body.set("phone", phone)
       body.set("idempotency_key", this.quickCustomerIdempotencyKey)
-      body.set("require_contact", this.quickCustomerRequiresContact() ? "1" : "0")
       if (this.customerLookupContext) {
-        const creditAccountType = this.customerLookupContext === "customer_store_credit"
-          ? "store_credit"
-          : this.customerLookupContext
-        body.set("credit_account_type", creditAccountType)
+        body.set("customer_context", this.customerLookupContext)
       }
       if (acknowledge) body.set("acknowledge_duplicates", "1")
 
@@ -1563,6 +1568,9 @@ export default class extends Controller {
           return
         }
         if (payload.error === "duplicates") {
+          // Acknowledged create is a new deliberate command — rotate the key so the
+          // acknowledge_duplicates change cannot collide with the failed probe payload.
+          this.quickCustomerIdempotencyKey = this.uuidV7()
           this.setQuickCustomerFeedback(payload.message || "Possible duplicate customers found.")
           this.renderQuickCustomerDuplicates(payload.suggestions || [])
           if (this.hasQuickCustomerAcknowledgeFieldTarget) this.focusOverlayEntry(this.quickCustomerAcknowledgeFieldTarget)
@@ -2379,7 +2387,7 @@ export default class extends Controller {
     this.restoreFocus()
   }
 
-  openIssuanceOverlay({ cardNumber = "", preferManual = false } = {}) {
+  openIssuanceOverlay({ cardNumber = "", preferManual = false, editIssuanceId = null } = {}) {
     if (!this.hasIssuanceOverlayTarget) return
     const programs = this.hasIssuanceProgramFieldTarget
       ? Array.from(this.issuanceProgramFieldTarget.options).filter((option) => option.value)
@@ -2387,6 +2395,13 @@ export default class extends Controller {
     if (programs.length === 0) {
       this.showFeedback("No gift-card programs are available.")
       return
+    }
+    this.editingIssuanceId = editIssuanceId
+    if (this.hasIssuanceTitleTarget) {
+      this.issuanceTitleTarget.textContent = editIssuanceId ? "Edit gift card" : "Add gift card"
+    }
+    if (this.hasIssuanceApplyTarget) {
+      this.issuanceApplyTarget.textContent = editIssuanceId ? "Replace Gift Card" : "Add Gift Card"
     }
     if (this.hasIssuanceTypeFieldTarget) this.issuanceTypeFieldTarget.value = "activation"
     if (this.hasIssuanceAmountFieldTarget) this.issuanceAmountFieldTarget.value = ""
@@ -2396,10 +2411,33 @@ export default class extends Controller {
     this.syncIssuanceCardVisibility({ preserveCard: Boolean(cardNumber) })
     this.showOverlay(this.issuanceOverlayTarget, this.hasIssuanceAmountFieldTarget && this.issuanceAmountFieldTarget)
     if (cardNumber && this.issuanceNeedsCard() && this.hasIssuanceCardNumberTarget) {
-      // Pre-scanned cards keep Amount as entry start; card value is already present.
       this.issuanceAmountFieldTarget?.focus()
       this.issuanceAmountFieldTarget?.select()
     }
+  }
+
+  requestEditIssuance(event) {
+    if (event) event.preventDefault()
+    if (this.inFlight) return
+    const button = event?.currentTarget
+    const issuanceId = button?.dataset?.issuanceId
+    if (!issuanceId) return
+    const row = button.closest(".pos-issuance")
+    this.openIssuanceOverlay({ editIssuanceId: issuanceId })
+    if (row && this.hasIssuanceTypeFieldTarget) this.issuanceTypeFieldTarget.value = row.dataset.issuanceType || "activation"
+    if (row && this.hasIssuanceProgramFieldTarget && row.dataset.issuanceProgramId) {
+      this.issuanceProgramFieldTarget.value = row.dataset.issuanceProgramId
+    }
+    if (row && this.hasIssuanceAmountFieldTarget && row.dataset.issuanceAmountCents) {
+      const cents = Number(row.dataset.issuanceAmountCents)
+      this.issuanceAmountFieldTarget.value = Number.isFinite(cents) ? (cents / 100).toFixed(2) : ""
+    }
+    if (this.hasIssuanceResultLabelTarget && row?.dataset?.issuanceMasked) {
+      this.issuanceResultLabelTarget.textContent = `Current card ${row.dataset.issuanceMasked}. Enter a new amount or card as needed.`
+    }
+    this.syncIssuanceCardVisibility({ preserveCard: true })
+    this.issuanceAmountFieldTarget?.focus()
+    this.issuanceAmountFieldTarget?.select()
   }
 
   selectIssuanceProgram({ preferManual = false } = {}) {
@@ -2455,14 +2493,6 @@ export default class extends Controller {
     }
   }
 
-  closeIssuanceOverlay() {
-    if (!this.hasIssuanceOverlayTarget) return
-    if (this.hasIssuanceAmountFieldTarget) this.issuanceAmountFieldTarget.value = ""
-    if (this.hasIssuanceCardNumberTarget) this.issuanceCardNumberTarget.value = ""
-    if (this.hasIssuanceResultLabelTarget) this.issuanceResultLabelTarget.textContent = ""
-    this.hideOverlay(this.issuanceOverlayTarget)
-  }
-
   onIssuanceOverlayKeydown(event, key) {
     if (key === "Escape") {
       event.preventDefault()
@@ -2483,8 +2513,19 @@ export default class extends Controller {
     this.submitIssuance()
   }
 
+  closeIssuanceOverlay() {
+    if (!this.hasIssuanceOverlayTarget) return
+    this.editingIssuanceId = null
+    if (this.hasIssuanceAmountFieldTarget) this.issuanceAmountFieldTarget.value = ""
+    if (this.hasIssuanceCardNumberTarget) this.issuanceCardNumberTarget.value = ""
+    if (this.hasIssuanceResultLabelTarget) this.issuanceResultLabelTarget.textContent = ""
+    if (this.hasIssuanceTitleTarget) this.issuanceTitleTarget.textContent = "Add gift card"
+    if (this.hasIssuanceApplyTarget) this.issuanceApplyTarget.textContent = "Add Gift Card"
+    this.hideOverlay(this.issuanceOverlayTarget)
+  }
+
   submitIssuance() {
-    if (this.inFlight || !this.hasIssuanceFormTarget) return
+    if (this.inFlight) return
     const amount = this.hasIssuanceAmountFieldTarget ? this.issuanceAmountFieldTarget.value.trim() : ""
     const programId = this.hasIssuanceProgramFieldTarget ? this.issuanceProgramFieldTarget.value : ""
     if (!amount) {
@@ -2499,12 +2540,32 @@ export default class extends Controller {
     }
     const needsCard = this.issuanceNeedsCard()
     const cardNumber = this.hasIssuanceCardNumberTarget ? this.issuanceCardNumberTarget.value.trim() : ""
-    if (needsCard && !cardNumber) {
+    if (needsCard && !cardNumber && !this.editingIssuanceId) {
       this.showOverlayLocalError(this.issuanceOverlayTarget, "Card number is required for this program.")
       this.issuanceCardNumberTarget?.focus()
       return
     }
     this.clearOverlayError(this.issuanceOverlayTarget)
+
+    if (this.editingIssuanceId) {
+      if (!this.hasReplaceIssuanceFormTarget) return
+      if (this.hasReplaceIssuanceIdInputTarget) this.replaceIssuanceIdInputTarget.value = this.editingIssuanceId
+      if (this.hasReplaceIssuanceTypeInputTarget) this.replaceIssuanceTypeInputTarget.value = this.issuanceTypeFieldTarget.value
+      if (this.hasReplaceIssuanceProgramInputTarget) this.replaceIssuanceProgramInputTarget.value = programId
+      if (this.hasReplaceIssuanceAmountInputTarget) this.replaceIssuanceAmountInputTarget.value = amount
+      if (this.hasReplaceIssuanceCardInputTarget) this.replaceIssuanceCardInputTarget.value = needsCard ? cardNumber : ""
+      if (this.hasReplaceIssuanceOperationInputTarget) this.replaceIssuanceOperationInputTarget.value = this.uuidV7()
+      if (this.hasReplaceIssuanceConfirmClearInputTarget) this.replaceIssuanceConfirmClearInputTarget.value = ""
+      if (this.tendersApplied()) {
+        this.requestClearTendersConfirmation("replace")
+        return
+      }
+      this.beginFlight()
+      this.replaceIssuanceFormTarget.requestSubmit()
+      return
+    }
+
+    if (!this.hasIssuanceFormTarget) return
     if (this.hasIssuanceTypeInputTarget) this.issuanceTypeInputTarget.value = this.issuanceTypeFieldTarget.value
     if (this.hasIssuanceProgramInputTarget) this.issuanceProgramInputTarget.value = programId
     if (this.hasIssuanceAmountInputTarget) this.issuanceAmountInputTarget.value = amount
@@ -2543,9 +2604,11 @@ export default class extends Controller {
     this.pendingIssuanceAction = pendingIssuanceAction
     if (!this.hasClearTendersOverlayTarget) return
     if (this.hasClearTendersConsequenceTarget) {
-      this.clearTendersConsequenceTarget.textContent = pendingIssuanceAction === "remove"
-        ? "Removing this gift card changes the amount due, so every applied tender must be cleared and the transaction tendered again."
-        : "Adding this gift card changes the amount due, so every applied tender must be cleared and the transaction tendered again."
+      const verb = pendingIssuanceAction === "remove"
+        ? "Removing"
+        : (pendingIssuanceAction === "replace" ? "Replacing" : "Adding")
+      this.clearTendersConsequenceTarget.textContent =
+        `${verb} this gift card changes the amount due, so every applied tender must be cleared and the transaction tendered again.`
     }
     const confirm = this.clearTendersOverlayTarget.querySelector("[data-action*='confirmClearTenders']")
     this.showOverlay(this.clearTendersOverlayTarget, confirm)
@@ -2566,6 +2629,12 @@ export default class extends Controller {
       if (this.hasRemoveIssuanceConfirmClearInputTarget) this.removeIssuanceConfirmClearInputTarget.value = "true"
       this.beginFlight()
       this.removeIssuanceFormTarget.requestSubmit()
+      return
+    }
+    if (pending === "replace" && this.hasReplaceIssuanceFormTarget) {
+      if (this.hasReplaceIssuanceConfirmClearInputTarget) this.replaceIssuanceConfirmClearInputTarget.value = "true"
+      this.beginFlight()
+      this.replaceIssuanceFormTarget.requestSubmit()
       return
     }
     if (pending === "add" && this.hasIssuanceFormTarget) {

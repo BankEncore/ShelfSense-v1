@@ -150,6 +150,9 @@ module Customers
       }
     end
 
+    # Acknowledgment is a deliberate UX step after a failed duplicate probe, not part of
+    # the customer identity. Including it in the hash made "Create anyway" reuse a key
+    # with a different payload and raise PayloadMismatchError.
     def command_payload(display_name)
       {
         display_name: display_name,
@@ -158,8 +161,7 @@ module Customers
         email: Customers::NormalizeContact.email(@email),
         phone: Customers::NormalizeContact.phone(@phone),
         preferred_contact_method: @preferred_contact_method.to_s.strip.presence || "none",
-        require_contact: @require_contact,
-        acknowledge_duplicates: @acknowledge_duplicates
+        require_contact: @require_contact
       }
     end
   end
