@@ -625,7 +625,7 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     before = command_field_top
     field.fill_in with: "0000000000000"
     field.send_keys :enter
-    assert_css "#pos_feedback"
+    assert_selector "#pos_feedback", visible: true
     assert_equal before, command_field_top
   end
 
@@ -1513,7 +1513,6 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     field.send_keys "+"
     assert_equal "abc+", field.value
     assert_no_selector "#pos_other_overlay", visible: true
-    assert_text "When this field is empty"
   end
 
   test "empty command field punctuation opens workspace actions" do

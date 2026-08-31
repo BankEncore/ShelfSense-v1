@@ -3,7 +3,13 @@
 <% completion_recovery = workspace.completion_recovery %>
 <% show_reference = @ui_mode == "tender" && @selected_tender_type&.reference_captured? %>
 
-<div id="pos_feedback" class="pos-feedback" data-register-workspace-target="feedback" role="<%= workspace.feedback.present? ? "alert" : "status" %>" aria-live="<%= workspace.feedback.present? ? "assertive" : "polite" %>">
+<% feedback_visible = workspace.feedback.present? || @ui_mode == "completion_pending" %>
+<div id="pos_feedback"
+     class="pos-feedback"
+     data-register-workspace-target="feedback"
+     role="<%= workspace.feedback.present? ? "alert" : "status" %>"
+     aria-live="<%= workspace.feedback.present? ? "assertive" : "polite" %>"
+     <%= "hidden" unless feedback_visible %>>
   <% if @ui_mode == "completion_pending" && workspace.feedback.blank? %>
     Completing transaction…
   <% elsif workspace.feedback.present? %>
@@ -25,7 +31,6 @@
          autocomplete="off"
          <%= "disabled" if locked || @ui_mode == "completion_pending" %>
          <%= "autofocus" unless locked || completion_recovery %>>
-  <p class="pos-command__hint muted">When this field is empty, punctuation shortcuts (+ − / * .) open workspace actions. Typed or scanned punctuation stays part of the input once the field has content.</p>
   <div data-register-workspace-target="giftCardNumberWrap" hidden>
     <label for="pos-gift-card-number-field">Gift card number</label>
     <input id="pos-gift-card-number-field"
