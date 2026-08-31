@@ -16,7 +16,7 @@ Authority: [plan.md](plan.md), [visual-system.md](visual-system.md), [change-all
 |---|---|---|
 | S1 Packet | **Complete** | Docs, roadmap pointer, allowlist |
 | S2 Local fonts | **Complete** | Package faces; remove CDN; thermal font-ready |
-| S3 Workspace polish | Pending | Header/command/basket/summary/actions |
+| S3 Workspace polish | **Complete** | Header/command/basket/summary/actions |
 | S4 Menu/overlay (+ optional history) | Pending | Panel chrome; closeout |
 
 ## Testing stack
