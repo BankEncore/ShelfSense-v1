@@ -6,7 +6,7 @@ Status: **Accepted / implemented** on `main` (PR #131). Follow-on hierarchy poli
 
 This program **restyles** the live Register shell and active workspace to approach the approved HTML drafts under [`docs/drafts/register-surface-revamp/`](../../drafts/register-surface-revamp/), while freezing Scan/Turbo/Stimulus/keyboard contracts. It also completes **local packaging** of Noto Sans Mono and Plus Jakarta Sans per [ADR-022](../../adr/ADR-022-warm-parchment-visual-tokens.md).
 
-**Hierarchy follow-on (in progress):** restore basket title/selection context, card rhythm, action emphasis, collapse empty feedback, remove sale-entry shortcut hint, Close Session F10-only (hidden keypad proxy). Turbo Stream / Stimulus boundary splits remain deferred.
+**Hierarchy follow-on (ready for review):** restore basket title/selection context, card rhythm, action emphasis, collapse empty feedback, remove sale-entry shortcut hint, Close Session F10-only (hidden keypad proxy). Turbo Stream / Stimulus boundary splits remain deferred. **Do not merge until manual Register surface review is signed off.**
 
 | Document | Purpose |
 |---|---|

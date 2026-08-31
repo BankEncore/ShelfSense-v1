@@ -18,7 +18,7 @@ Authority: [plan.md](plan.md), [visual-system.md](visual-system.md), [change-all
 | S2 Local fonts | **Complete** | Package faces; remove CDN; thermal font-ready |
 | S3 Workspace polish | **Complete** | Header/command/basket/summary/actions |
 | S4 Menu/overlay (+ optional history) | **Complete** | Panel chrome; history skin; closeout |
-| Hierarchy follow-on | **In progress** | Basket header, feedback collapse, card rhythm, Cash/Remove emphasis, F10 Close Session, hint removal; Turbo deferred |
+| Hierarchy follow-on | **Ready for review** | Basket header, feedback collapse, card rhythm, Cash/Remove emphasis, F10 Close Session, hint removal; Turbo deferred; hold merge for manual sign-off |
 
 ## Testing stack
 
