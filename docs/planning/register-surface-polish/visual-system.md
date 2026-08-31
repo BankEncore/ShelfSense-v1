@@ -29,7 +29,7 @@ Does **not** apply to:
 | Header bar | `shell/_header.html.erb` → `.pos-header--register` |
 | Scanner command card | `workspaces/_command.html.erb` → `.pos-command*` |
 | Basket card + table | `workspaces/_basket.html.erb` → `#pos_basket`, `.pos-lines`, `.pos-line__*` |
-| Aux gift/customer | `workspaces/_issuances.html.erb`, `_customer.html.erb` |
+| Aux gift/customer | `workspaces/_issuances.html.erb`, `_basket_aux.html.erb`, `_customer.html.erb` |
 | Summary sidebar | `workspaces/_totals.html.erb`, `_tenders.html.erb` → `.pos-summary-rail` |
 | Keypad bar | `workspaces/_actions.html.erb` → `.pos-actions*` |
 | F10 menu panel | `shell/_menu.html.erb` → `#register-menu`, `.pos-register-menu*` |
