@@ -966,25 +966,6 @@ export default class extends Controller {
     }
   }
 
-  chooseTenderCategory(category) {
-    if (this.inFlight) return
-    if (this.modeValue !== "sale_entry" && this.modeValue !== "tender") return
-    if (!this.ensureTenderable()) return
-    const types = this.typesForCategory(category)
-    const label = this.categoryLabel(category)
-    if (types.length === 0) {
-      if (this.settlementValue === "refund") {
-        this.showFeedback(`${label} refunds are not enabled.`)
-      } else {
-        this.showFeedback(`${label} tender is not available.`)
-      }
-      return
-    }
-    this.beginTenderMode()
-    this.applyTenderType(types[0])
-    this.prefillRemaining()
-  }
-
   ensureTenderable() {
     if (this.modeValue === "tender") return true
     if (!this.hasCommercialContent()) {

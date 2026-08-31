@@ -208,7 +208,7 @@ Controllers and (later) the dispatcher consume these actions. Keys are bindings;
 | `/` merchandise search, `*` quantity, `-` return (Sale) | **Retained** on SALE as actions; speculative P12 remap rejected |
 | F8 removes last tender only (current UI) | Superseded in **7A** by selected-tender remove; key binding in **7C** |
 | Document-scattered key handlers | Superseded by one dispatcher in **7C** |
-| pos-workflow.md §6 as live authority | Remains live until **7C** updates it to point here |
+| pos-workflow.md §6 as live authority | **Superseded** — [pos-workflow.md](../phase4-6-point-of-sale/phase6-pos-mvp/pos-workflow.md) §6 points here at 7C runtime |
 
 ---
 

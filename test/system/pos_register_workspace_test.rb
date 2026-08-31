@@ -1587,6 +1587,101 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     assert_selector %([data-tender-id="#{last_id}"])
   end
 
+  test "tender minus on selected row opens remove for the selected tender" do
+    open_register
+    add_current_sku
+    start_cash_tender_via_plus
+    send_keys :f2
+    field = find("#pos-command-field")
+    field.fill_in with: "5.00"
+    field.send_keys :enter
+    send_keys :f2
+    field = find("#pos-command-field")
+    field.fill_in with: "5.00"
+    field.send_keys :enter
+    assert_selector ".pos-tenders__item", minimum: 2, wait: 10
+
+    rows = all(".pos-tenders__item")
+    first_id = rows.first["data-tender-id"]
+    last_id = rows.last["data-tender-id"]
+    row = find(%(.pos-tenders__item[data-tender-id="#{first_id}"]))
+    page.execute_script(<<~JS, row.native)
+      const row = arguments[0]
+      row.tabIndex = 0
+      row.focus()
+      row.dispatchEvent(new KeyboardEvent("keydown", { key: "-", code: "NumpadSubtract", bubbles: true, cancelable: true }))
+    JS
+    assert_selector "#pos_remove_tender_overlay", visible: true, wait: 5
+    send_keys :escape
+    assert_selector %([data-tender-id="#{first_id}"])
+    assert_selector %([data-tender-id="#{last_id}"])
+  end
+
+  test "repeat F8 on selected tender ignores held key repeats" do
+    open_register
+    add_current_sku
+    start_cash_tender_via_plus
+    send_keys :f2
+    field = find("#pos-command-field")
+    field.fill_in with: "10.00"
+    field.send_keys :enter
+    row = find(".pos-tenders__item")
+    page.execute_script(<<~JS, row.native)
+      const row = arguments[0]
+      row.tabIndex = 0
+      row.focus()
+      const event = { key: "F8", code: "F8", bubbles: true, cancelable: true }
+      row.dispatchEvent(new KeyboardEvent("keydown", { ...event, repeat: false }))
+      row.dispatchEvent(new KeyboardEvent("keydown", { ...event, repeat: true }))
+    JS
+    assert_selector "#pos_remove_tender_overlay", visible: true, wait: 5
+    assert_equal 1, all("#pos_remove_tender_overlay", visible: true).size
+    send_keys :escape
+    assert_selector ".pos-tenders__item", count: 1
+  end
+
+  test "slash in the reference field stays literal and does not open product search" do
+    open_register
+    add_current_sku
+    send_keys :f3
+    assert_text "TENDER", wait: 5
+    reference = find("#pos-reference-field")
+    reference.click
+    reference.send_keys "/"
+    assert_equal "/", reference.value
+    assert_no_selector "#pos_search_overlay", visible: true
+  end
+
+  test "F6 on a return line announces that price is unavailable" do
+    open_register
+    field = find("#pos-command-field")
+    field.fill_in with: @variant.sku
+    field.send_keys :enter
+    start_cash_tender_via_plus
+    field = find("#pos-command-field")
+    field.fill_in with: "25.00"
+    field.send_keys :enter
+    send_keys :enter
+    assert_text "Transaction complete", wait: 10
+    sale = PosTransaction.completed.find_by!(register: @register)
+    click_on "New transaction"
+    assert_text "SALE ENTRY", wait: 10
+
+    click_on "Return (-)"
+    click_on "Continue"
+    lookup = find("[data-register-workspace-target='linkedLookupField']")
+    lookup.fill_in with: sale.transaction_reference
+    click_on "Find Receipt"
+    assert_selector "#pos_linked_overlay li.is-selected", wait: 10
+    find("[data-register-workspace-target='linkedReasonField']").select "Changed mind"
+    click_on "Add Return"
+    assert_selector "tr.is-selected[data-direction='return']", wait: 10
+
+    focus_selected_basket_row
+    send_keys :f6
+    assert_text "Price is not available on a return line."
+  end
+
   test "O11 choose tender changes entry chrome only and F1 still bypasses O11" do
     open_register
     add_current_sku
