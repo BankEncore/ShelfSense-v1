@@ -90,7 +90,7 @@ export default class extends Controller {
         await document.fonts.load('800 16px "Plus Jakarta Sans"')
         await document.fonts.ready
       } catch (_error) {
-        // Print with the stack fallback if the Google Font is unavailable.
+        // Print with the stack fallback if a packaged face fails to load.
       }
     }
   }

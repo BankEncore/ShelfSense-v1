@@ -118,7 +118,7 @@ Authoritative packet: [receipts-and-reports-revamp/](receipts-and-reports-revamp
 
 ### Register surface polish
 
-**Status:** **Proposed packet**. Not a numbered domain phase.
+**Status:** **Accepted packet** — implementation in progress on `register-surface-polish`. Not a numbered domain phase.
 
 Authoritative packet: [register-surface-polish/](register-surface-polish/README.md). Follow-on after Register workspace consolidation and UDS-3; visual restyle of active Register shell/workspace toward [`docs/drafts/register-surface-revamp/`](../drafts/register-surface-revamp/), plus local packaging of Noto Sans Mono / Plus Jakarta Sans per [ADR-022](../adr/ADR-022-warm-parchment-visual-tokens.md). Keyboard, Turbo, Stimulus, and domain posting stay frozen. Transaction Complete / Review redesign deferred.
 
@@ -412,7 +412,7 @@ The following remain out of scope until a planning packet and ADR review justify
 | Phase 10 — Stored value | **Implemented** on `main`; [manual test plan](phase10-stored-value/phase10-manual-test-plan.md) executed |
 | Phase 11 — Cash accountability completion | **Implemented** on `main`; [manual test plan](phase11-cash-accountability/phase11-manual-test-plan.md) executed |
 | Receipts and reports revamp (D1/D2) | **Accepted** — [packet](receipts-and-reports-revamp/README.md) |
-| Register surface polish | **Proposed** — [packet](register-surface-polish/README.md) |
+| Register surface polish | **Accepted** (in progress) — [packet](register-surface-polish/README.md) |
 | Phase 12 — Used buyback | After 8–11 (payout after 10–11) |
 | Phase 13 — Customer workspace | After activity sources exist |
 | Phase 14 — Financial posting and reporting | Consolidates operational domains |

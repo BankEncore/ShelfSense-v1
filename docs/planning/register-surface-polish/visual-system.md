@@ -1,6 +1,6 @@
 # Register surface polish — Visual system
 
-Status: **Proposed**
+Status: **Accepted**
 
 Typography authority: [ADR-022](../../adr/ADR-022-warm-parchment-visual-tokens.md). Color/token authority: [warm-parchment.md](../ux-design-system/warm-parchment.md).
 

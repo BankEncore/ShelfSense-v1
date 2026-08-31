@@ -1,6 +1,6 @@
 # Register surface polish — Plan
 
-Status: **Proposed**
+Status: **Accepted**
 
 Companions: [visual-system.md](visual-system.md), [change-allowlist.md](change-allowlist.md), [ADR-022](../../adr/ADR-022-warm-parchment-visual-tokens.md), [UDS-3](../ux-design-system/uds-3-plan.md).
 

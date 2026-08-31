@@ -14,7 +14,7 @@
   <% end %>
 </div>
 
-<div id="pos_command" class="pos-command">
+<div id="pos_command" class="pos-command" data-ui-mode="<%= @ui_mode %>">
   <div class="pos-command__mode" data-register-workspace-target="modeLabel"><%= workspace.mode_label %></div>
   <label for="pos-command-field" data-register-workspace-target="fieldLabel"><%= workspace.command_label %></label>
   <input id="pos-command-field"

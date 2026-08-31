@@ -1,24 +1,23 @@
 # Register surface polish — Implementation plan
 
-Status: **Proposed**
+Status: **Accepted** — in progress on `register-surface-polish`.
 
 Authority: [plan.md](plan.md), [visual-system.md](visual-system.md), [change-allowlist.md](change-allowlist.md).
 
 ## Merge policy
 
-- Slice branches from `main`: `<issue-number>-register-surface-s<n>-<short-description>` (or focused PR per slice).
-- Each slice PR targets `main` directly (no long-lived integration branch required).
+- Development branch `register-surface-polish` from `main`; sequential commits S1→S4; one PR to `main`.
 - Do not combine S3 workspace polish with completed-transaction redesign.
-- Font packaging (S2) should land before or with the first PR that removes CDN loaders from thermal layouts.
+- Font packaging (S2) lands before thermal CDN loaders are removed.
 
 ## Slice status
 
 | Slice | Status | Scope |
 |---|---|---|
-| S1 Packet | **Proposed** | Docs, roadmap pointer, allowlist |
-| S2 Local fonts | Pending | Package faces; remove CDN; thermal font-ready |
-| S3 Workspace polish | Pending | Header/command/basket/summary/actions |
-| S4 Menu/overlay (+ optional history) | Pending | Panel chrome; closeout |
+| S1 Packet | **Complete** | Docs, roadmap pointer, allowlist |
+| S2 Local fonts | **Complete** | Package faces; remove CDN; thermal font-ready |
+| S3 Workspace polish | **Complete** | Header/command/basket/summary/actions |
+| S4 Menu/overlay (+ optional history) | **Complete** | Panel chrome; history skin; closeout |
 
 ## Testing stack
 

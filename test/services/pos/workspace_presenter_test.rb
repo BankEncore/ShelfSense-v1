@@ -97,6 +97,7 @@ class PosWorkspacePresenterTest < ActiveSupport::TestCase
     refute(result.summary_rows.any? { |row| row.label == "Sales" })
     assert_equal "Net", result.summary_rows.last.label
     assert result.tax_groups.any?
+    assert(result.summary_rows.any? { |row| row.label.match?(/\A.+\(\d+\.\d{3}%\)\z/) })
     refute result.tax_fallback
   end
 

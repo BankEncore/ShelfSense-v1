@@ -42,7 +42,8 @@ class PosCloseZTest < ActionDispatch::IntegrationTest
     assert_select ".pos-receipt__print", text: /Business date/, count: 0
     assert_select ".pos-thermal__barcode"
     assert_select "input[name='session_id'][value='#{transaction.pos_session_id}']"
-    assert_select "link[href*='fonts.googleapis.com']"
+    assert_select "link[rel='preload'][href*='noto-sans-mono']"
+    assert_select "link[href*='fonts.googleapis.com']", count: 0
     assert_select ".pos-receipt-font-loader", text: "0"
     stylesheet_href = css_select("link[rel='stylesheet'][href*='application']").first["href"]
     get stylesheet_href.sub(/\Ahttps?:\/\/[^\/]+/, "")
@@ -50,6 +51,8 @@ class PosCloseZTest < ActionDispatch::IntegrationTest
     assert_match "@font-face", response.body
     assert_match "Inconsolata", response.body
     assert_match "Noto Sans Mono", response.body
+    assert_match "Plus Jakarta Sans", response.body
+    refute_match "fonts.googleapis.com", response.body
     assert transaction.reload.completed?
     assert_equal 1, PosTransaction.completed.where(id: transaction.id).count
   end
