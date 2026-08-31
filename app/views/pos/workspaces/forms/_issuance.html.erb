@@ -1,3 +1,8 @@
+<% register_scope = { register_id: @register.id } %>
+<% selected_id = @selected_line&.id %>
+<% selected_tender_type = @selected_tender_type %>
+<% selected_tender_id = @selected_tender&.id %>
+<% tenders = @tenders %>
 <%= form_with url: pos_register_stored_value_issuance_path(register_scope), method: :post, html: { class: "pos-hidden", data: { register_workspace_target: "issuanceForm", turbo: true } } do %>
   <%= hidden_field_tag :register_id, @register.id %>
   <%= hidden_field_tag :lock_version, @transaction.lock_version %>

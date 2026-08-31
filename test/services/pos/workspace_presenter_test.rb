@@ -40,7 +40,7 @@ class PosWorkspacePresenterTest < ActiveSupport::TestCase
 
   test "basket item count and selected line number come from presenter lines" do
     transaction = start_sale
-    lines = transaction.pos_transaction_lines.ordered.to_a
+    lines = transaction.pos_transaction_lines.order(:line_number).to_a
     result = present(transaction, ui_mode: "sale_entry", selected_line: lines.last)
 
     assert_equal lines.size, result.basket_item_count

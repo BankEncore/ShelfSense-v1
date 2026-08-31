@@ -1,31 +1,19 @@
-<% register_scope = { register_id: @register.id } %>
-<% selected_id = @selected_line&.id %>
-<% selected_tender_type = @selected_tender_type %>
-<% selected_tender_id = @selected_tender&.id %>
-<% tenders = @tenders %>
-<% form_locals = {
-  register_scope: register_scope,
-  selected_id: selected_id,
-  selected_tender_type: selected_tender_type,
-  selected_tender_id: selected_tender_id,
-  tenders: tenders
-} %>
-<%= render "pos/workspaces/forms/cash_out", locals: form_locals %>
-<%= render "pos/workspaces/forms/merchandise", locals: form_locals %>
-<%= render "pos/workspaces/forms/pickup", locals: form_locals %>
-<%= render "pos/workspaces/forms/attach_customer", locals: form_locals %>
-<%= render "pos/workspaces/forms/quantity", locals: form_locals %>
-<%= render "pos/workspaces/forms/remove_line", locals: form_locals %>
-<%= render "pos/workspaces/forms/tender", locals: form_locals %>
-<%= render "pos/workspaces/forms/remove_tender", locals: form_locals %>
-<%= render "pos/workspaces/forms/replace_tender", locals: form_locals %>
-<%= render "pos/workspaces/forms/return_to_sale", locals: form_locals %>
-<%= render "pos/workspaces/forms/complete", locals: form_locals %>
-<%= render "pos/workspaces/forms/controlled_action", locals: form_locals %>
-<%= render "pos/workspaces/forms/unlinked_return", locals: form_locals %>
-<%= render "pos/workspaces/forms/open_price", locals: form_locals %>
-<%= render "pos/workspaces/forms/linked_return", locals: form_locals %>
-<%= render "pos/workspaces/forms/cancel", locals: form_locals %>
-<%= render "pos/workspaces/forms/issuance", locals: form_locals %>
-<%= render "pos/workspaces/forms/remove_issuance", locals: form_locals %>
-<%= render "pos/workspaces/forms/replace_issuance", locals: form_locals %>
+<%= render "pos/workspaces/forms/cash_out" %>
+<%= render "pos/workspaces/forms/merchandise" %>
+<%= render "pos/workspaces/forms/pickup" %>
+<%= render "pos/workspaces/forms/attach_customer" %>
+<%= render "pos/workspaces/forms/quantity" %>
+<%= render "pos/workspaces/forms/remove_line" %>
+<%= render "pos/workspaces/forms/tender" %>
+<%= render "pos/workspaces/forms/remove_tender" %>
+<%= render "pos/workspaces/forms/replace_tender" %>
+<%= render "pos/workspaces/forms/return_to_sale" %>
+<%= render "pos/workspaces/forms/complete" %>
+<%= render "pos/workspaces/forms/controlled_action" %>
+<%= render "pos/workspaces/forms/unlinked_return" %>
+<%= render "pos/workspaces/forms/open_price" %>
+<%= render "pos/workspaces/forms/linked_return" %>
+<%= render "pos/workspaces/forms/cancel" %>
+<%= render "pos/workspaces/forms/issuance" %>
+<%= render "pos/workspaces/forms/remove_issuance" %>
+<%= render "pos/workspaces/forms/replace_issuance" %>
