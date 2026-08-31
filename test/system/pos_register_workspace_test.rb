@@ -422,7 +422,10 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
   test "empty basket disables cancel" do
     open_register
     assert_button "Cancel (F9)", disabled: true
+    assert_selector "[data-register-shell-proxy='close-session']", visible: :hidden
+    open_register_menu
     assert_button "Close Session"
+    send_keys :escape
   end
 
   test "command field stays clickable above the basket" do
@@ -908,12 +911,12 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
 
   test "nonempty basket hides close session in the register menu" do
     open_register
-    assert_button "Close Session"
+    assert_selector "[data-register-shell-proxy='close-session']", visible: :hidden
     open_register_menu
     assert_button "Close Session"
     send_keys :escape
     add_current_sku
-    assert_no_button "Close Session"
+    assert_no_selector "[data-register-shell-proxy='close-session']", visible: :all
     open_register_menu
     assert_no_button "Close Session"
   end

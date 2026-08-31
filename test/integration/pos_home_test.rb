@@ -291,7 +291,8 @@ class PosHomeTest < ActionDispatch::IntegrationTest
     assert_select "a", text: "Transactions & Receipts"
     assert_select "a", text: "X Report"
     assert_select "a", text: "Switch Register"
-    assert_select "button, input[type=submit]", text: "Close Session"
+    assert_select "[data-register-shell-proxy='close-session']"
+    assert_select ".pos-actions__group[aria-label='Session']", count: 0
     assert_select "header.pos-header--register a[href='#{root_path}'][target=_blank]", count: 0
     assert_select "header.pos-header--register a[href='#{root_path}']", text: "Return to ShelfSense"
     assert_match "#{Pos::ReceiptIdentity.pad(@store.store_number, 3)} #{@store.name}", response.body
