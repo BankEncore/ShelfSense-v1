@@ -616,7 +616,8 @@ class PosWorkspacePresenterTest < ActiveSupport::TestCase
     direction = settlement_direction || Pos::Support.settlement_direction(transaction)
     defaults = {
       close_session_available: ui_mode == "sale_entry" && lines.empty? && tenders.empty? && issuances.empty?,
-      issuance_remove_available: ui_mode == "sale_entry",
+      issuance_remove_available: %w[sale_entry tender completion_failed].include?(ui_mode),
+      issuance_edit_available: %w[sale_entry tender completion_failed].include?(ui_mode),
       pickup_available: false,
       gift_card_programs_available: false
     }

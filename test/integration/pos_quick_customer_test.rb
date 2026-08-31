@@ -22,8 +22,7 @@ class PosQuickCustomerTest < ActionDispatch::IntegrationTest
       email: "register.quick@example.com",
       idempotency_key: key,
       lock_version: transaction.lock_version,
-      credit_account_type: "store_credit",
-      require_contact: "1"
+      customer_context: "store_credit"
     }
     assert_response :success
 
@@ -162,6 +161,52 @@ class PosQuickCustomerTest < ActionDispatch::IntegrationTest
     assert_equal "duplicates", payload.fetch("error")
     assert payload.fetch("suggestions").any?
     assert_not Customer.exists?(display_name: "Different Quick")
+  end
+
+  test "quick customer create anyway succeeds after duplicate probe with a new key" do
+    Customer.create!(display_name: "Existing Dup", email: "anyway.quick@example.com", phone: "555-903-0303")
+    post pos_register_enter_path, params: enter_params
+    follow_redirect!
+    transaction = PosTransaction.working.find_by!(register: @register)
+    probe_key = SecureRandom.uuid_v7
+
+    post pos_register_quick_customer_path(register_id: @register.id), params: {
+      display_name: "Anyway Quick",
+      email: "anyway.quick@example.com",
+      idempotency_key: probe_key,
+      lock_version: transaction.lock_version
+    }, as: :json
+    assert_response :unprocessable_entity
+    assert_equal "duplicates", JSON.parse(response.body).fetch("error")
+
+    post pos_register_quick_customer_path(register_id: @register.id), params: {
+      display_name: "Anyway Quick",
+      email: "anyway.quick@example.com",
+      idempotency_key: SecureRandom.uuid_v7,
+      acknowledge_duplicates: "1",
+      lock_version: transaction.lock_version
+    }
+    assert_response :success
+    assert Customer.exists?(display_name: "Anyway Quick")
+    assert_equal Customer.find_by!(display_name: "Anyway Quick").id, transaction.reload.customer_id
+  end
+
+  test "store-credit context requires contact even when require_contact is forged off" do
+    post pos_register_enter_path, params: enter_params
+    follow_redirect!
+    transaction = PosTransaction.working.find_by!(register: @register)
+
+    post pos_register_quick_customer_path(register_id: @register.id), params: {
+      display_name: "Forged Contact Bypass",
+      customer_context: "store_credit",
+      require_contact: "0",
+      idempotency_key: SecureRandom.uuid_v7,
+      lock_version: transaction.lock_version
+    }, as: :json
+    assert_response :unprocessable_entity
+    payload = JSON.parse(response.body)
+    assert_match(/email or phone/i, payload.fetch("message"))
+    assert_not Customer.exists?(display_name: "Forged Contact Bypass")
   end
 
   private

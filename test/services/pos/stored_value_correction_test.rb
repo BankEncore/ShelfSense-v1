@@ -237,6 +237,64 @@ class PosStoredValueCorrectionTest < ActiveSupport::TestCase
     assert Pos::RemoveStoredValueIssuance.call(**attrs).replayed
   end
 
+  test "replacing an issuance without tenders updates amount under lease" do
+    transaction = Pos::StartTransaction.call(session: @context[:session], actor: @actor)
+    original = add_issuance(transaction, amount_cents: 2500).issuance
+    transaction.reload
+    attrs = issuance_attrs(transaction, amount_cents: 3000, operation_id: SecureRandom.uuid_v7)
+              .merge(issuance: original)
+
+    result = Pos::ReplaceStoredValueIssuance.call(**attrs)
+    assert_equal 3000, result.issuance.amount_cents
+    assert_equal 1, transaction.reload.pos_stored_value_issuances.count
+    assert_equal 3000, transaction.pos_stored_value_issuances.sole.amount_cents
+
+    replay = Pos::ReplaceStoredValueIssuance.call(**attrs)
+    assert replay.replayed
+    assert_equal 1, transaction.reload.pos_stored_value_issuances.count
+  end
+
+  test "replacing an issuance with tenders requires confirmation and clears them" do
+    transaction = Pos::StartTransaction.call(session: @context[:session], actor: @actor)
+    original = add_issuance(transaction, amount_cents: 2500).issuance
+    tender_cash!(transaction.reload, transaction.signed_net_cents)
+
+    error = assert_raises(Pos::Error) do
+      Pos::ReplaceStoredValueIssuance.call(
+        **issuance_attrs(transaction.reload, amount_cents: 3000, operation_id: SecureRandom.uuid_v7)
+          .merge(issuance: original)
+      )
+    end
+    assert_match(/must be cleared/, error.message)
+    assert_equal 1, transaction.reload.pos_tenders.count
+    assert_equal 2500, transaction.pos_stored_value_issuances.sole.amount_cents
+
+    Pos::ReplaceStoredValueIssuance.call(
+      **issuance_attrs(transaction.reload, amount_cents: 3000, operation_id: SecureRandom.uuid_v7)
+        .merge(issuance: original, confirm_clear_tenders: true)
+    )
+    assert_empty transaction.reload.pos_tenders
+    assert_equal 3000, transaction.pos_stored_value_issuances.sole.amount_cents
+  end
+
+  test "failed issuance replacement preserves the original and applied tenders" do
+    @program.update!(minimum_activation_cents: 5000)
+    transaction = Pos::StartTransaction.call(session: @context[:session], actor: @actor)
+    original = add_issuance(transaction, amount_cents: 5500).issuance
+    tender_cash!(transaction.reload, transaction.signed_net_cents)
+
+    error = assert_raises(Pos::Error) do
+      Pos::ReplaceStoredValueIssuance.call(
+        **issuance_attrs(transaction.reload, amount_cents: 100, operation_id: SecureRandom.uuid_v7)
+          .merge(issuance: original, confirm_clear_tenders: true)
+      )
+    end
+    assert_match(/below the program minimum/, error.message)
+    assert_equal 1, transaction.reload.pos_tenders.count
+    assert_equal original.id, transaction.pos_stored_value_issuances.sole.id
+    assert_equal 5500, transaction.pos_stored_value_issuances.sole.amount_cents
+  end
+
   test "issuance audit records masked identity only" do
     transaction = Pos::StartTransaction.call(session: @context[:session], actor: @actor)
     manual = GiftCardProgram.find_by!(code: "manual")

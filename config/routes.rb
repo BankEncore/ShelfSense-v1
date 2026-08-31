@@ -251,6 +251,7 @@ Rails.application.routes.draw do
     post "register/tender", to: "workspaces#tender"
     post "register/stored_value_issuance", to: "workspaces#stored_value_issuance"
     post "register/remove_stored_value_issuance", to: "workspaces#remove_stored_value_issuance"
+    post "register/replace_stored_value_issuance", to: "workspaces#replace_stored_value_issuance"
     post "register/attach_customer", to: "workspaces#attach_customer"
     post "register/detach_customer", to: "workspaces#detach_customer"
     post "register/quick_customer", to: "workspaces#quick_customer", as: :register_quick_customer

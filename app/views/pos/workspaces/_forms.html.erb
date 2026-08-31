@@ -166,3 +166,15 @@
   <%= hidden_field_tag :confirm_clear_tenders, "", data: { register_workspace_target: "removeIssuanceConfirmClearInput" } %>
 <% end %>
 
+<%= form_with url: pos_register_replace_stored_value_issuance_path(register_scope), method: :post, html: { class: "pos-hidden", data: { register_workspace_target: "replaceIssuanceForm", turbo: true } } do %>
+  <%= hidden_field_tag :register_id, @register.id %>
+  <%= hidden_field_tag :lock_version, @transaction.lock_version %>
+  <%= hidden_field_tag :issuance_id, "", data: { register_workspace_target: "replaceIssuanceIdInput" } %>
+  <%= hidden_field_tag :issuance_type, "activation", data: { register_workspace_target: "replaceIssuanceTypeInput" } %>
+  <%= hidden_field_tag :gift_card_program_id, "", data: { register_workspace_target: "replaceIssuanceProgramInput" } %>
+  <%= hidden_field_tag :issuance_amount, "", data: { register_workspace_target: "replaceIssuanceAmountInput" } %>
+  <%= hidden_field_tag :card_number, "", data: { register_workspace_target: "replaceIssuanceCardInput" } %>
+  <%= hidden_field_tag :operation_id, "", data: { register_workspace_target: "replaceIssuanceOperationInput" } %>
+  <%= hidden_field_tag :confirm_clear_tenders, "", data: { register_workspace_target: "replaceIssuanceConfirmClearInput" } %>
+<% end %>
+
