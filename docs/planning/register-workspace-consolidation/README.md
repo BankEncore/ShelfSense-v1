@@ -42,6 +42,8 @@ This program **replaces** the current POS presentation. It does not run a parall
 | [slice7a-manual-verification.md](slice7a-manual-verification.md) | Slice 7A evidence (signed off) |
 | [slice7b-stored-value-issuance-plan.md](slice7b-stored-value-issuance-plan.md) | Slice 7B **Complete**; SV / issuance / Quick Customer |
 | [slice7b-manual-verification.md](slice7b-manual-verification.md) | Slice 7B evidence (signed off) |
+| [slice7c-keyboard-dispatcher-plan.md](slice7c-keyboard-dispatcher-plan.md) | Slice 7C packet (**Accepted**); dispatcher / Phase 6.7 supersession |
+| [slice7c-manual-verification.md](slice7c-manual-verification.md) | Slice 7C verification template (sign in cutover) |
 
 UX adoption: follow [ux-adoption-template.md](../ux-design-system/ux-adoption-template.md) in the slice that materially changes a screen. Printed receipts stay locked unless a slice explicitly owns print.
 
