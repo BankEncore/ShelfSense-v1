@@ -1,6 +1,6 @@
 # Register workspace consolidation
 
-Status: **Closeout complete** on `register-workspace-consolidation`; ready to merge to `main`. Slice 1 on `main`; slices 2–7C on integration branch ([closeout-manual-verification.md](closeout-manual-verification.md)).
+Status: **Complete** — merged to `main` ([#129](https://github.com/BankEncore/ShelfSense-v1/pull/129) / `a563e0c`). Closeout evidence: [closeout-manual-verification.md](closeout-manual-verification.md).
 
 GitHub: [milestone](https://github.com/BankEncore/ShelfSense-v1/milestone/7); slice issues in [user-stories.md](user-stories.md).
 

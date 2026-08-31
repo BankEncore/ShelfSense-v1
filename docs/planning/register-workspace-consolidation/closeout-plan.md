@@ -1,6 +1,6 @@
 # Register workspace consolidation — Closeout
 
-Status: **Complete** — evidence in [closeout-manual-verification.md](closeout-manual-verification.md). Required before integration branch → `main`.
+Status: **Complete** — evidence in [closeout-manual-verification.md](closeout-manual-verification.md). Integration branch merged to `main` ([#129](https://github.com/BankEncore/ShelfSense-v1/pull/129) / `a563e0c`).
 
 Complements automated tests. Register zoom, print, and keyboard-only checks need a browser.
 
