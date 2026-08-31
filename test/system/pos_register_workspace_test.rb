@@ -1490,14 +1490,16 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     assert_text "Customer · Overlay Customer"
   end
 
-  test "plus opens O11 after tenderability checks and restores sale on escape" do
+  test "plus opens O11 from selected basket focus and restores sale on escape" do
     open_register
-    find("#pos-command-field").send_keys "+"
-    assert_text "Add merchandise before taking a tender."
-    assert_no_selector "#pos_other_overlay", visible: true
-
     add_current_sku
-    find("#pos-command-field").send_keys "+"
+    row = find("tr.is-selected[data-line-id]")
+    page.execute_script(<<~JS, row.native)
+      const row = arguments[0]
+      row.tabIndex = 0
+      row.focus()
+      row.dispatchEvent(new KeyboardEvent("keydown", { key: "+", code: "Equal", bubbles: true, cancelable: true }))
+    JS
     assert_selector "#pos_other_overlay", visible: true
     assert_selector "#pos-other-title", text: "Add tender"
     assert_text "Back to Sale"
@@ -1506,6 +1508,54 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     assert_no_selector "#pos_other_overlay", visible: true
     assert_text "SALE ENTRY"
     assert_equal "pos-command-field", page.evaluate_script("document.activeElement && document.activeElement.id")
+  end
+
+  test "plus in the command field is literal and does not open O11" do
+    open_register
+    add_current_sku
+    field = find("#pos-command-field")
+    field.send_keys "+"
+    assert_equal "+", field.value
+    assert_no_selector "#pos_other_overlay", visible: true
+    assert_text "Punctuation shortcuts"
+  end
+
+  test "scanner-like punctuation in the command field stays literal" do
+    open_register
+    add_current_sku
+    field = find("#pos-command-field")
+    field.fill_in with: ""
+    field.send_keys "/12345"
+    assert_equal "/12345", field.value
+    assert_no_selector "#pos_search_overlay", visible: true
+    assert_no_selector "#pos_other_overlay", visible: true
+    assert_no_selector "#pos_return_chooser", visible: true
+  end
+
+  test "tender F8 removes the selected tender not the last tender only" do
+    open_register
+    add_current_sku
+    start_cash_tender_via_plus
+    send_keys :f2
+    field = find("#pos-command-field")
+    field.fill_in with: "5.00"
+    field.send_keys :enter
+    send_keys :f2
+    field = find("#pos-command-field")
+    field.fill_in with: "5.00"
+    field.send_keys :enter
+    assert_selector ".pos-tenders__item", minimum: 2, wait: 10
+
+    rows = all(".pos-tenders__item")
+    first_id = rows.first["data-tender-id"]
+    last_id = rows.last["data-tender-id"]
+    page.execute_script("arguments[0].click()", rows.first.native)
+    assert_equal "true", find(%(.pos-tenders__item[data-tender-id="#{first_id}"]))["aria-selected"]
+    send_keys :f8
+    assert_selector "#pos_remove_tender_overlay", visible: true, wait: 5
+    send_keys :enter
+    assert_no_selector %([data-tender-id="#{first_id}"]), wait: 10
+    assert_selector %([data-tender-id="#{last_id}"])
   end
 
   test "O11 choose tender changes entry chrome only and F1 still bypasses O11" do

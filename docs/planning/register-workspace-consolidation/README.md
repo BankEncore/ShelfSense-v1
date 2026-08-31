@@ -36,14 +36,14 @@ This program **replaces** the current POS presentation. It does not run a parall
 | [report-content-inventory.md](report-content-inventory.md) | Code-backed row dispositions (complete; no 6C snapshot extensions) |
 | [slice6c-manual-verification.md](slice6c-manual-verification.md) | Slice 6C workstation evidence |
 | [slice7-overview.md](slice7-overview.md) | Slice 7 boundary, sequencing, product defaults |
-| [slice7-keyboard-contract.md](slice7-keyboard-contract.md) | Slice 7.0 accepted SALE/TENDER keyboard contract (docs; runtime in 7C) |
+| [slice7-keyboard-contract.md](slice7-keyboard-contract.md) | Slice 7.0 SALE/TENDER keyboard contract (**implemented** by 7C) |
 | [slice7-tender-lifecycle-inventory.md](slice7-tender-lifecycle-inventory.md) | Code-backed tender/issuance dispositions; gates 7A/7B packets |
 | [slice7a-tender-review-plan.md](slice7a-tender-review-plan.md) | Slice 7A **Complete**; Tender Review / ordinary remove-replace |
 | [slice7a-manual-verification.md](slice7a-manual-verification.md) | Slice 7A evidence (signed off) |
 | [slice7b-stored-value-issuance-plan.md](slice7b-stored-value-issuance-plan.md) | Slice 7B **Complete**; SV / issuance / Quick Customer |
 | [slice7b-manual-verification.md](slice7b-manual-verification.md) | Slice 7B evidence (signed off) |
-| [slice7c-keyboard-dispatcher-plan.md](slice7c-keyboard-dispatcher-plan.md) | Slice 7C packet (**Accepted**); dispatcher / Phase 6.7 supersession |
-| [slice7c-manual-verification.md](slice7c-manual-verification.md) | Slice 7C verification template (sign in cutover) |
+| [slice7c-keyboard-dispatcher-plan.md](slice7c-keyboard-dispatcher-plan.md) | Slice 7C **Complete**; dispatcher / Phase 6.7 supersession |
+| [slice7c-manual-verification.md](slice7c-manual-verification.md) | Slice 7C evidence (signed off) |
 
 UX adoption: follow [ux-adoption-template.md](../ux-design-system/ux-adoption-template.md) in the slice that materially changes a screen. Printed receipts stay locked unless a slice explicitly owns print.
 

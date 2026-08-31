@@ -61,7 +61,8 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
     assert_no_selector "#register-menu", visible: true
   end
 
-  # Slice 5D: empty-field Tender (+) / Refund (+) opens O11; Cash is first in cashier_selectable order.
+  # Slice 5D/7C: Tender (+) / Refund (+) opens O11; Cash is first in cashier_selectable order.
+  # Punctuation `+` is a shortcut only from non-input workspace focus (not the command field).
   def choose_tender_from_overlay(name = "Cash")
     assert_selector "#pos_other_overlay", visible: true
     find("#pos_other_overlay li", text: name).click

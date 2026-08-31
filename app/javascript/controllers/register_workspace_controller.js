@@ -4,8 +4,7 @@ import {
   classifyFocusZone,
   classifyMode,
   resolveBinding,
-  isEditableControl,
-  REPEAT_IGNORED_ACTIONS
+  isEditableControl
 } from "register_keyboard_dispatcher"
 
 export default class extends Controller {
@@ -352,136 +351,41 @@ export default class extends Controller {
   }
 
   onKeydown(event) {
-    const functionKey = this.functionKey(event)
-    const key = functionKey || event.key
-    if (key === "F10") return
-    if (this.claimedFunctionKey(functionKey)) this.claimFunctionKey(event)
+    const key = normalizeKey(event)
+    if (key === "F10" || key == null) return
+    if (this.claimedFunctionKey(key)) this.claimFunctionKey(event)
 
-    const overlay = this.activeOverlayElement()
-    if (overlay && key === "Tab") {
-      this.trapTabInOverlay(overlay, event)
-      return
-    }
+    const binding = resolveBinding(this.keyboardContext(event, key))
 
-    if (overlay) {
+    if (binding.kind === "delegate_overlay") {
+      const overlay = this.activeOverlayElement()
+      if (!overlay) return
+      if (key === "Tab") {
+        this.trapTabInOverlay(overlay, event)
+        return
+      }
       this.dispatchOverlayKeydown(overlay, event, key)
       return
     }
 
-    if (this.modeValue === "tender" && (key === "ArrowUp" || key === "ArrowDown") && this.tenderListKeyTarget(event.target)) {
-      event.preventDefault()
-      this.moveTenderSelection(key === "ArrowUp" ? -1 : 1, { focus: true })
-      return
-    }
-    if (this.modeValue === "tender" && key === "Enter" && event.target?.matches?.(".pos-tenders__item")) {
-      event.preventDefault()
-      this.selectTender({ currentTarget: event.target })
-      if (event.target.dataset.editAvailable === "true") this.openEditTenderOverlay()
+    if (binding.kind === "native_control") return
+
+    if (binding.kind === "literal") {
+      this.redirectPrintableToCommandField(event)
       return
     }
 
-    this.redirectPrintableToCommandField(event)
-
-    if (this.inFlight || this.modeValue === "completion_pending") {
-      if (key === "Enter" && this.isActionableControl(event.target)) return
-      if (key === "Enter" || key === "F9") event.preventDefault()
-      return
-    }
-
-    if (this.modeValue === "completion_failed") {
-      if (key === "Enter") {
-        if (this.isActionableControl(event.target)) return
+    if (binding.kind === "none") {
+      if (key === "Escape" && this.modeValue === "completion_failed") event.preventDefault()
+      if ((this.inFlight || this.modeValue === "completion_pending") && (key === "Enter" || key === "F9")) {
         event.preventDefault()
-        this.submitComplete()
-      }
-      if (key === "F9") {
-        event.preventDefault()
-        this.openOverlay()
-      }
-      if (key === "Escape") event.preventDefault()
-      return
-    }
-
-    if (key === "Enter") {
-      if (this.isActionableControl(event.target)) return
-      event.preventDefault()
-      this.submitMode()
-      return
-    }
-    if (key === "Escape") {
-      event.preventDefault()
-      this.escape()
-      return
-    }
-    if (key === "F9") {
-      event.preventDefault()
-      this.openOverlay()
-      return
-    }
-    if (this.modeValue !== "sale_entry" && this.modeValue !== "tender") return
-
-    if (key === "F1") {
-      event.preventDefault()
-      this.chooseCash()
-      return
-    }
-    if (key === "F2") {
-      event.preventDefault()
-      this.chooseCard()
-      return
-    }
-    if (key === "F3") {
-      event.preventDefault()
-      this.chooseCheck()
-      return
-    }
-    if (key === "F4") {
-      event.preventDefault()
-      this.chooseOther()
-      return
-    }
-    if (key === "F5") {
-      event.preventDefault()
-      this.chooseStoredValue()
-      return
-    }
-
-    if (this.modeValue === "tender") {
-      if (key === "F8") {
-        event.preventDefault()
-        this.removeLastTender()
       }
       return
     }
 
-    const fieldEmpty = this.commandFieldEmpty()
-    if (key === "*" && fieldEmpty) {
+    if (binding.kind === "action") {
       event.preventDefault()
-      this.enterQuantity()
-    } else if (key === "+" && fieldEmpty) {
-      event.preventDefault()
-      this.enterTender()
-    } else if (key === "/" && fieldEmpty) {
-      event.preventDefault()
-      this.openSearchOverlay()
-    } else if (key === "." && fieldEmpty && this.pickupAllowedValue) {
-      event.preventDefault()
-      this.openPickupOverlay()
-    } else if ((key === "-" || event.code === "Minus") && fieldEmpty) {
-      event.preventDefault()
-      this.openReturnChooser()
-    } else if (key === "F6") {
-      event.preventDefault()
-      this.openPriceOverride()
-    } else if (key === "F7") {
-      event.preventDefault()
-      this.openLineDiscount()
-    } else if (key === "F8") {
-      event.preventDefault()
-      this.removeSelected()
-    } else if (key === "ArrowUp" || key === "ArrowDown") {
-      event.preventDefault()
-      this.moveSelection(key === "ArrowUp" ? -1 : 1)
+      this.performSemanticAction(binding.action, { announceUnavailable: true })
     }
   }
 
@@ -746,6 +650,10 @@ export default class extends Controller {
       case "open-product-lookup":
         return run(() => this.openSearchOverlay())
       case "open-pickup-lookup":
+        if (!this.pickupAllowedValue) {
+          this.showFeedback("No pickup can be added in the current transaction state.")
+          return false
+        }
         return run(() => this.openPickupOverlay())
       case "open-return-chooser":
         return run(() => this.openReturnChooser())
@@ -2841,17 +2749,6 @@ export default class extends Controller {
     if (!show && this.hasReferenceFieldTarget) this.referenceFieldTarget.value = ""
   }
 
-  removeLastTender() {
-    if (this.inFlight) return
-    if (!this.hasRemoveTenderFormTarget || !this.hasRemoveTenderInputTarget) return
-    const last = this.tenderRows().at(-1)
-    if (last?.dataset?.tenderId) this.removeTenderInputTarget.value = last.dataset.tenderId
-    if (!this.removeTenderInputTarget.value) return
-    if (this.hasRemoveTenderOperationInputTarget) this.removeTenderOperationInputTarget.value = this.uuidV7()
-    this.beginFlight()
-    this.removeTenderFormTarget.requestSubmit()
-  }
-
   tenderRows() {
     return Array.from(this.element.querySelectorAll(".pos-tenders__item[data-tender-id]"))
   }
@@ -4387,27 +4284,18 @@ export default class extends Controller {
   }
 
   isCommandSurfaceInput(target) {
-    if (!target) return false
-    if (this.hasFieldTarget && target === this.fieldTarget) return true
-    if (this.hasReferenceFieldTarget && target === this.referenceFieldTarget) return true
-    if (this.hasGiftCardNumberFieldTarget && target === this.giftCardNumberFieldTarget) return true
-    return false
-  }
-
-  reservedCommandGlyph(key, event) {
-    return key === "*" || key === "+" || key === "/" || key === "." || key === "-" || event.code === "Minus"
+    return isEditableControl(target)
   }
 
   redirectPrintableToCommandField(event) {
     if (event.defaultPrevented) return
     if (!this.hasFieldTarget || this.fieldTarget.disabled) return
     if (this.overlayOpen() && this.topOverlay()?.contains(event.target)) return
-    if (this.isCommandSurfaceInput(event.target)) return
+    if (isEditableControl(event.target)) return
     if (event.isComposing) return
     if (event.metaKey || event.ctrlKey || event.altKey) return
-    const key = event.key
+    const key = normalizeKey(event)
     if (typeof key !== "string" || key.length !== 1 || key === " ") return
-    if (this.commandFieldEmpty() && this.reservedCommandGlyph(key, event)) return
 
     event.preventDefault()
     const field = this.fieldTarget

@@ -1,8 +1,8 @@
 # Slice 7C — Keyboard dispatcher and Phase 6.7 supersession
 
-Status: **Accepted packet** (docs lock). Implementation under [#95](https://github.com/BankEncore/ShelfSense-v1/issues/95). Parent: [slice7-overview.md](slice7-overview.md). Authority: [slice7-keyboard-contract.md](slice7-keyboard-contract.md), [plan.md](plan.md), [routing-and-authority.md](routing-and-authority.md), [implementation-plan.md](implementation-plan.md), [user-stories.md](user-stories.md). Evidence template: [slice7c-manual-verification.md](slice7c-manual-verification.md).
+Status: **Complete** on `register-workspace-consolidation` ([#95](https://github.com/BankEncore/ShelfSense-v1/issues/95)). Parent: [slice7-overview.md](slice7-overview.md). Authority: [slice7-keyboard-contract.md](slice7-keyboard-contract.md), [plan.md](plan.md), [routing-and-authority.md](routing-and-authority.md), [implementation-plan.md](implementation-plan.md), [user-stories.md](user-stories.md). Evidence: [slice7c-manual-verification.md](slice7c-manual-verification.md).
 
-Issue: [#95](https://github.com/BankEncore/ShelfSense-v1/issues/95). Packet-lock branch: `95-slice7c-keyboard-dispatcher-plan` (docs only; does not complete implementation of #95).
+Issue: [#95](https://github.com/BankEncore/ShelfSense-v1/issues/95).
 
 7B remediation ([#123](https://github.com/BankEncore/ShelfSense-v1/pull/123) — issuance Edit/replace, Quick Customer duplicate-ack) is already on `register-workspace-consolidation` and is **not** a 7C blocker.
 

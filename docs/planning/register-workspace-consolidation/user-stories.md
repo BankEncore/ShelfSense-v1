@@ -104,13 +104,13 @@ Till Activity, cash activity detail, Session Details, Active Sessions, reversal 
 
 ## Slice 7C — Keyboard dispatcher
 
-**Packet accepted** ([slice7c-keyboard-dispatcher-plan.md](slice7c-keyboard-dispatcher-plan.md)). Implementation under [#95](https://github.com/BankEncore/ShelfSense-v1/issues/95): 7C.1 semantic foundation (no remap) → 7C.2 atomic cutover. Evidence: [slice7c-manual-verification.md](slice7c-manual-verification.md).
+**Complete** ([slice7c-keyboard-dispatcher-plan.md](slice7c-keyboard-dispatcher-plan.md) / [#95](https://github.com/BankEncore/ShelfSense-v1/issues/95)). Evidence: [slice7c-manual-verification.md](slice7c-manual-verification.md).
 
 **Acceptance:**
 
-- [ ] One mode-aware dispatcher implements [slice7-keyboard-contract.md](slice7-keyboard-contract.md) SALE/TENDER/overlay tables
-- [ ] Focus-based punctuation; empty-field interception deleted; scanner glyphs literal in inputs
-- [ ] Tender F8/`-` removes selected tender; `removeLastTender` gone
-- [ ] Shell owns F10 + Keyboard Lock; workspace claims F1–F9
-- [ ] Obsolete Phase 6.7 handlers deleted; pos-workflow §6 superseded
-- [ ] System tests + manual verification for the replacement contract
+- [x] One mode-aware dispatcher implements [slice7-keyboard-contract.md](slice7-keyboard-contract.md) SALE/TENDER/overlay tables
+- [x] Focus-based punctuation; empty-field interception deleted; scanner glyphs literal in inputs
+- [x] Tender F8/`-` removes selected tender; `removeLastTender` gone
+- [x] Shell owns F10 + Keyboard Lock; workspace claims F1–F9
+- [x] Obsolete Phase 6.7 handlers deleted; pos-workflow §6 superseded
+- [x] System tests + manual verification for the replacement contract

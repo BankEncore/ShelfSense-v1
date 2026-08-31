@@ -1,8 +1,8 @@
 # Phase 6 Slice 6.7 — POS operator workflow
 
-**Status:** Implemented. Implementation authority for cashier interaction: POS Home, preferred Register, X Report, keyboard contract, merchandise pickers, `/` search, open-price Standard, return entry, and tender selection **until the Register workspace consolidation owning slice merges**.
+**Status:** Partially superseded by Register workspace consolidation. Keyboard §6 live authority is Slice 7 ([slice7-keyboard-contract.md](../../register-workspace-consolidation/slice7-keyboard-contract.md) / 7C dispatcher). Remaining sections apply until their owning consolidation slice replaces them.
 
-Staged supersession is locked in [routing-and-authority.md](../../register-workspace-consolidation/routing-and-authority.md): Slice 2 replaces §4 (POS Home); Slice 3 replaces the §6 F10 binding and §14 F10 history entry (not history behavior); Slice 5D replaces **only** the §6 / §12 `+` destination (empty-field `+` opens O11 tender selection after tenderability checks — see [slice5d-tender-issuance-plan.md](../../register-workspace-consolidation/slice5d-tender-issuance-plan.md)); Slice **7.0** accepts the replacement keyboard **contract** as documentation ([slice7-keyboard-contract.md](../../register-workspace-consolidation/slice7-keyboard-contract.md)) without changing live keys; Slice **7C** implements that contract and supersedes the remainder of §6. Until Slice 7C, remaining §6 keys other than the Slice 5D `+` exception remain runtime lock.
+Staged supersession is locked in [routing-and-authority.md](../../register-workspace-consolidation/routing-and-authority.md): Slice 2 replaces §4 (POS Home); Slice 3 replaces the §6 F10 binding and §14 F10 history entry (not history behavior); Slice 5D replaces the §6 / §12 `+` **destination** (O11); Slice **7.0** accepted the replacement keyboard contract as documentation; Slice **7C** implements that contract and supersedes the remainder of §6 (including empty-field punctuation interception).
 
 **Authority:** How the cashier operates MVP capabilities that 6.1–6.6 already made commercially true. Completion, inventory posting, settlement math, controlled-action *policy*, linked/unlinked return *engines*, and post-void *facts* remain those contracts. Receipt *print layout* is 6.8 ([receipt-presentation.md](receipt-presentation.md) / [mvp-closeout.md](mvp-closeout.md)).
 
@@ -192,33 +192,29 @@ The cookie confers neither authorization nor Session ownership.
 
 ## 6. Keyboard map
 
-6.7 is the lock. Phase 5 “wireframe-validatable” bindings are superseded.
+**Live authority (Slice 7C):** [slice7-keyboard-contract.md](../../register-workspace-consolidation/slice7-keyboard-contract.md), implemented via [slice7c-keyboard-dispatcher-plan.md](../../register-workspace-consolidation/slice7c-keyboard-dispatcher-plan.md).
 
-| Key | Action |
+Phase 6.7 empty-field interception of `/`, `*`, `-`, and `+` is **superseded**. Punctuation shortcuts apply only from non-input workspace focus (selected basket/tender row or workspace background). While the command field (or any editable control) owns focus — including Slice 2 printable redirection into the command field — those characters are literal input / scanner characters.
+
+| Key | Action (summary) |
 |---|---|
-| Enter | per §7 |
-| Esc | cancel current dialog / mode; restore scanner focus |
-| `/` | `MERCHANDISE_SEARCH` (empty scan field only) |
-| `*` | `QUANTITY` on selected quantity-tracked sale line |
-| `-` | `RETURN` chooser (empty scan field only) |
-| `+` | **Slice 5D:** empty-field `+` opens O11 tender selection after tenderability checks ([slice5d-tender-issuance-plan.md](../../register-workspace-consolidation/slice5d-tender-issuance-plan.md)). Historical 6.7 behavior was Cash-with-remaining (§12.3) / even-exchange complete (§12.4); even-exchange and empty-basket preconditions remain. |
-| F1 | Cash |
-| F2 | Card |
-| F3 | Check |
-| F4 | Other |
-| F5 | stored-value tenders |
-| F6 | **Price** on selected sale line (§9.3) |
-| F7 | line discount on selected sale line |
-| F8 | remove selected line or selected tender |
-| F9 | cancel confirmation; second F9 confirms cancel |
-| F10 | Register Menu (Slice 3). Transactions & Receipts is a menu destination; working basket unchanged. |
-| ↑ / ↓ | move highlight in lists / selected line in `SALE_ENTRY` |
+| Enter | per §7 / Slice 7 Escape/Enter overlay rules |
+| Esc | innermost reversible layer only; never cancels the transaction (F9 path) |
+| `/` `.` `-` `+` `*` | SALE shortcuts from non-input focus only (Search / Pickup / Return / Tender O11 / Quantity) |
+| F1–F5 | Cash / Card / Check / Other / Stored value (**F2 remains Card**) |
+| F6 / F7 | Price / line discount on selected sale line |
+| F8 | SALE: remove selected record; TENDER: remove **selected** tender |
+| F9 | cancel confirmation |
+| F10 | Register Menu (shell-owned) |
+| ↑ / ↓ | move basket or tender selection by mode |
 
-Intercept `/`, `*`, `-`, `+` only when the primary field is **empty** (same pattern as today’s `*` / `+`). A hyphen or slash inside a typed/scanned identifier is not Return or Search.
+`+1`–`+9` sequences are omitted. Customer Lookup / Quick Customer / Tax Class remain visible controls without new shortcuts.
 
-Extend Keyboard Lock to F1–F10 **on the selling workspace**. Other Register shell surfaces lock F10 only (Slice 3). Phase 10.4 binds F5 to stored-value tenders (6.7 left it unbound). Postpone Ctrl/Cmd/Alt.
+Historical 6.7 table (superseded at 7C runtime): empty-field `/` `*` `-` `+`; F8 last-tender remove in some UI paths. See Slice 7.0 supersession map.
 
-Every shortcut has a visible, focusable control. Unavailable keys explain why (§12.2) — no silent no-op for F1–F5 / F6 / F7 / F8 / `*` / `+` when the cashier has reason to think they should work.
+Extend Keyboard Lock to F1–F10 **on the selling workspace**. Other Register shell surfaces lock F10 only (Slice 3). Postpone Ctrl/Cmd/Alt.
+
+Every shortcut has a visible, focusable control. Unavailable keys explain why (§12.2) — no silent no-op when the cashier has reason to think they should work.
 
 F6/F7 remain disabled on **return** lines ([returns.md](returns.md)). Tax Class stays a **visible control** only (no F-key).
 

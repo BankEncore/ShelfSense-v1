@@ -148,7 +148,7 @@ export function classifyFocusZone({ target, commandField, workspaceRoot, activeO
   if (target?.closest?.(".pos-tenders__item")) {
     return FOCUS_ZONES.tender_row
   }
-  if (target?.closest?.(".pos-basket__item, .pos-lines__item, [data-line-id], [data-issuance-id]")) {
+  if (target?.closest?.("[data-line-id], [data-issuance-id]")) {
     return FOCUS_ZONES.basket_row
   }
   if (workspaceRoot && target && workspaceRoot.contains(target)) {

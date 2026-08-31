@@ -25,6 +25,7 @@
          autocomplete="off"
          <%= "disabled" if locked || @ui_mode == "completion_pending" %>
          <%= "autofocus" unless locked || completion_recovery %>>
+  <p class="pos-command__hint muted">Punctuation shortcuts (+ − / * .) apply when a basket or tender row is focused. Typed or scanned punctuation in this field stays part of the input.</p>
   <div data-register-workspace-target="giftCardNumberWrap" hidden>
     <label for="pos-gift-card-number-field">Gift card number</label>
     <input id="pos-gift-card-number-field"
