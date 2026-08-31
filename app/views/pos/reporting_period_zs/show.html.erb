@@ -1,32 +1,33 @@
 <% content_for :title, "Z report" %>
+<%= render layout: "pos/shell/frame" do %>
+  <%= render "pos/shell/feedback" %>
+  <div class="pos-register-shell__body"
+       data-controller="pos-receipt"
+       data-pos-receipt-print-url-value="<%= @report_print_url %>"
+       data-pos-receipt-tape-url-value="<%= @tape_print_url %>">
+    <main class="pos-history">
+      <div class="pos-history__title-row pos-no-print">
+        <h1>Z Report</h1>
+        <%= link_to register_inquiry_return_label, register_inquiry_return_path, class: "btn btn--ghost" %>
+      </div>
 
-<main class="pos-z" data-controller="pos-receipt">
-  <div class="pos-no-print">
-    <%= render "pos/shared/report_nav" %>
+      <dl class="pos-history__header pos-no-print">
+        <div><dt>Store</dt><dd><%= pos_padded_store_number(@period.store) %></dd></div>
+        <div><dt>Register</dt><dd><%= pos_padded_register_number(@register) %></dd></div>
+        <div><dt>Business date</dt><dd><%= @period.business_date.iso8601 %></dd></div>
+        <div><dt>Finalized</dt><dd><%= format_store_timestamp(@period.closed_at, @period.store) %></dd></div>
+        <div><dt>Finalized by</dt><dd><%= @period.finalized_by.display_name %></dd></div>
+      </dl>
 
-    <h1>Z report</h1>
-    <p>Store  <%= pos_padded_store_number(@period.store) %></p>
-    <p>Register  <%= pos_padded_register_number(@register) %></p>
-    <p>Business date  <%= @period.business_date.iso8601 %></p>
-    <p>Finalized  <%= format_store_timestamp(@period.closed_at, @period.store) %></p>
-    <p>Finalized by  <%= @period.finalized_by.display_name %></p>
+      <div class="pos-no-print">
+        <%= render "pos/shared/totals_groups", groups: @report_groups %>
+      </div>
 
-    <%= render "pos/shared/totals_groups", groups: @report_groups %>
-
-    <div class="pos-z__actions">
-      <button type="button" class="btn" data-action="pos-receipt#print">Print</button>
-    </div>
+      <div class="pos-history__nav pos-no-print actions">
+        <button type="button" class="btn" data-action="pos-receipt#print">Print</button>
+        <button type="button" class="btn btn--outline" data-action="pos-receipt#printTape">Print tape</button>
+        <%= link_to "Session / Z Reports", pos_reports_path, class: "btn btn--outline" %>
+      </div>
+    </main>
   </div>
-
-  <%= render "pos/shared/report_print",
-        title: "Z report",
-        banners: [],
-        meta: [
-          "Store  #{pos_padded_store_number(@period.store)}",
-          "Register  #{pos_padded_register_number(@register)}",
-          "Business date  #{@period.business_date.iso8601}",
-          "Finalized  #{format_store_timestamp(@period.closed_at, @period.store)}",
-          "Finalized by  #{@period.finalized_by.display_name}"
-        ],
-        groups: @report_groups %>
-</main>
+<% end %>

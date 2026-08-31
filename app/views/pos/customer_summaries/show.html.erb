@@ -1,0 +1,108 @@
+<% content_for :title, "Customer Summary" %>
+<%= render layout: "pos/shell/frame" do %>
+  <%= render "pos/shell/feedback" %>
+  <div class="pos-register-shell__body">
+    <main class="pos-inquiry">
+      <div class="pos-history__title-row pos-no-print">
+        <h1>Customer Summary</h1>
+        <%= link_to register_inquiry_return_label, register_inquiry_return_path, class: "btn btn--ghost" %>
+      </div>
+
+      <%= form_with url: pos_customer_summary_path,
+            method: :get,
+            local: true,
+            data: { turbo: false },
+            class: "pos-inquiry__form" do %>
+        <% inquiry_register_params.each do |key, value| %>
+          <%= hidden_field_tag key, value %>
+        <% end %>
+        <div class="form-field">
+          <%= label_tag :q, "Search customer" %>
+          <%= text_field_tag :q, params[:q], autocomplete: "off", autofocus: @customer.blank? && @matches.blank? %>
+        </div>
+        <%= submit_tag "Search", class: "btn" %>
+      <% end %>
+
+      <% if @matches.present? %>
+        <section class="pos-inquiry__result" id="customer-summary-result" aria-live="polite">
+          <h2>Matching customers</h2>
+          <ul class="pos-inquiry__matches">
+            <% @matches.each do |row| %>
+              <li>
+                <%= link_to [ row.customer.display_name, row.customer.email, row.customer.phone ].compact.join(" · "),
+                      pos_customer_summary_path(inquiry_register_params.merge(customer_id: row.customer.id)),
+                      class: "btn btn--outline" %>
+              </li>
+            <% end %>
+          </ul>
+        </section>
+      <% end %>
+
+      <% if @customer %>
+        <section class="pos-inquiry__result" id="customer-summary-result" aria-label="Customer summary">
+          <div class="pos-history__title-row">
+            <h2><%= @customer.display_name %></h2>
+            <% if @can_open_customer %>
+              <%= link_to "Open Customer", admin_customer_path(@customer), class: "btn btn--outline" %>
+            <% end %>
+          </div>
+          <p class="muted"><%= [ @customer.email, @customer.phone ].compact.join(" · ") %></p>
+
+          <dl class="pos-history__header">
+            <div>
+              <dt>Store credit</dt>
+              <dd>
+                <% if @store_credit_account %>
+                  <%= format_money_cents(@store_credit_account.balance_cents) %> available
+                <% else %>
+                  None
+                <% end %>
+              </dd>
+            </div>
+            <div>
+              <dt>Pickups &amp; requests</dt>
+              <dd><%= @ready_pickups.size %> ready · <%= @open_requests.size %> open</dd>
+            </div>
+          </dl>
+
+          <% if @ready_pickups.any? %>
+            <p>
+              <%= link_to "View ready pickups",
+                    pos_pickup_queue_path(inquiry_register_params.merge(q: @customer.display_name, status: "available")),
+                    class: "btn btn--outline" %>
+            </p>
+          <% end %>
+
+          <h3>Recent transactions</h3>
+          <% if @recent_transactions.empty? %>
+            <p class="muted">No completed transactions for this customer at this store.</p>
+          <% else %>
+            <ul class="pos-inquiry__activity">
+              <% @recent_transactions.each do |transaction| %>
+                <li>
+                  <%= transaction.business_date %> ·
+                  <%= link_to transaction.transaction_reference, pos_transaction_path(transaction, inquiry_register_params) %> ·
+                  <%= format_signed_money_cents(transaction.signed_net_cents) %>
+                </li>
+              <% end %>
+            </ul>
+          <% end %>
+
+          <h3>Open requests</h3>
+          <% if @open_requests.empty? %>
+            <p class="muted">No open requests at this store.</p>
+          <% else %>
+            <ul class="pos-inquiry__activity">
+              <% @open_requests.each do |request| %>
+                <li>
+                  #<%= request.number %> · <%= request.status.humanize %> ·
+                  <%= request.product_variant&.product&.name || "Merchandise" %>
+                </li>
+              <% end %>
+            </ul>
+          <% end %>
+        </section>
+      <% end %>
+    </main>
+  </div>
+<% end %>

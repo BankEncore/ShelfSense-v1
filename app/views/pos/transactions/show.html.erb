@@ -1,95 +1,101 @@
 <% content_for :title, "Transaction #{@transaction.transaction_reference}" %>
+<%= render layout: "pos/shell/frame" do %>
+  <%= render "pos/shell/feedback" %>
+  <div class="pos-register-shell__body">
+    <main class="pos-history pos-receipt" data-controller="pos-receipt" data-action="keydown@document->pos-receipt#onKeydown">
+      <div class="pos-history__title-row pos-no-print">
+        <h1>Receipt  <%= @transaction.transaction_reference %></h1>
+        <%= link_to register_inquiry_return_label, register_inquiry_return_path, class: "btn btn--ghost" %>
+      </div>
 
-<main class="pos-history pos-receipt" data-controller="pos-receipt" data-action="keydown@document->pos-receipt#onKeydown">
-  <%= render "pos/transactions/chrome" %>
-
-  <div class="pos-history__detail pos-no-print">
-    <h1>Receipt  <%= @transaction.transaction_reference %></h1>
-    <%= render "pos/receipts/post_void_banner", transaction: @transaction, linked: true %>
-    <dl class="pos-history__header">
-      <div><dt>Business date</dt><dd><%= @transaction.business_date.iso8601 %></dd></div>
-      <div><dt>Completed</dt><dd><%= format_store_timestamp(@transaction.completed_at, @transaction.store) %></dd></div>
-      <div><dt>Register</dt><dd><%= pos_padded_register_snapshot(@transaction.register_number_snapshot) %></dd></div>
-      <div><dt>Cashier</dt><dd><%= pos_cashier_name(@transaction) %></dd></div>
-      <% if @transaction.customer %>
-        <div><dt>Customer</dt><dd><%= @transaction.customer.display_name %></dd></div>
-      <% end %>
-    </dl>
-
-    <dl class="pos-history__header">
-      <%= render "pos/receipts/directional_totals", transaction: @transaction %>
-    </dl>
-
-    <div class="actions pos-history__actions">
-      <% if @returnable %>
-        <%= action_link_to(
-              "Return items",
-              pos_transaction_return_items_path(@transaction),
-              style: :outline,
-              intent: :neutral
-            ) %>
-      <% end %>
-      <% if @post_void_eligible %>
-        <%= action_link_to(
-              "Post-void",
-              pos_transaction_post_void_path(@transaction),
-              style: :outline,
-              intent: :danger
-            ) %>
-      <% end %>
-    </div>
-
-    <% @transaction.pos_controlled_actions.select { |action| action.action_type == "post_void" }.each do |action| %>
-      <section aria-label="post void">
-        <h2>Post-void</h2>
+      <div class="pos-history__detail pos-no-print">
+        <%= render "pos/receipts/post_void_banner", transaction: @transaction, linked: true %>
         <dl class="pos-history__header">
-          <div><dt>Performed by</dt><dd><%= action.performed_by_name_snapshot %></dd></div>
-          <% if action.approved_by_name_snapshot.present? %>
-            <div><dt>Approved by</dt><dd><%= action.approved_by_name_snapshot %></dd></div>
-          <% end %>
-          <div><dt>Reason</dt><dd><%= action.reason_name_snapshot %></dd></div>
-          <% if action.reason_note.present? %>
-            <div><dt>Note</dt><dd><%= action.reason_note %></dd></div>
+          <div><dt>Business date</dt><dd><%= @transaction.business_date.iso8601 %></dd></div>
+          <div><dt>Completed</dt><dd><%= format_store_timestamp(@transaction.completed_at, @transaction.store) %></dd></div>
+          <div><dt>Register</dt><dd><%= pos_padded_register_snapshot(@transaction.register_number_snapshot) %></dd></div>
+          <div><dt>Cashier</dt><dd><%= pos_cashier_name(@transaction) %></dd></div>
+          <% if @transaction.customer %>
+            <div><dt>Customer</dt><dd><%= @transaction.customer.display_name %></dd></div>
           <% end %>
         </dl>
-      </section>
-    <% end %>
 
-    <section aria-label="Lines">
-      <% @lines.each do |line| %>
-        <%= render "pos/transactions/line", line: line, summary: @summaries[line.id] %>
-      <% end %>
-    </section>
+        <dl class="pos-history__header">
+          <%= render "pos/receipts/directional_totals", transaction: @transaction %>
+        </dl>
 
-    <section aria-label="Tenders">
-      <h2>Tenders</h2>
-      <% @tenders.each do |tender| %>
-        <div class="pos-history__tender">
-          <div>
-            <%= tender.tender_number %>
-            <%= pos_tender_label(tender) %>
-            <%= format_money_cents(tender.amount_cents) %>
-          </div>
-          <% if pos_cash_payment?(tender) %>
-            <div>Presented  <%= format_money_cents(tender.amount_presented_cents) %></div>
-            <div>Change  <%= format_money_cents(tender.change_cents) %></div>
-          <% elsif tender.external_reference.present? %>
-            <div>Reference  <%= tender.external_reference %></div>
+        <div class="actions pos-history__actions">
+          <% if @returnable %>
+            <%= action_link_to(
+                  "Return items",
+                  pos_transaction_return_items_path(@transaction, inquiry_register_params),
+                  style: :outline,
+                  intent: :neutral
+                ) %>
+          <% end %>
+          <% if @post_void_eligible %>
+            <%= action_link_to(
+                  "Post-void",
+                  pos_transaction_post_void_path(@transaction, inquiry_register_params),
+                  style: :outline,
+                  intent: :danger
+                ) %>
           <% end %>
         </div>
-      <% end %>
-    </section>
-  </div>
 
-  <%= render "pos/receipts/print", transaction: @transaction, tenders: @tenders, reprint: true %>
+        <% @transaction.pos_controlled_actions.select { |action| action.action_type == "post_void" }.each do |action| %>
+          <section aria-label="post void">
+            <h2>Post-void</h2>
+            <dl class="pos-history__header">
+              <div><dt>Performed by</dt><dd><%= action.performed_by_name_snapshot %></dd></div>
+              <% if action.approved_by_name_snapshot.present? %>
+                <div><dt>Approved by</dt><dd><%= action.approved_by_name_snapshot %></dd></div>
+              <% end %>
+              <div><dt>Reason</dt><dd><%= action.reason_name_snapshot %></dd></div>
+              <% if action.reason_note.present? %>
+                <div><dt>Note</dt><dd><%= action.reason_note %></dd></div>
+              <% end %>
+            </dl>
+          </section>
+        <% end %>
 
-  <div class="pos-receipt__actions pos-no-print">
-    <% receipt = Pos::CustomerReceipt.build(@transaction) %>
-    <% if receipt.printable? %>
-      <%= action_button("Reprint receipt", style: :outline, intent: :neutral, data: { action: "pos-receipt#print" }) %>
-    <% else %>
-      <p class="pos-enter__alert" role="alert"><%= receipt.error %></p>
-    <% end %>
-    <%= action_link_to("Back to transactions", pos_transactions_path, style: :ghost, intent: :neutral) %>
+        <section aria-label="Lines">
+          <% @lines.each do |line| %>
+            <%= render "pos/transactions/line", line: line, summary: @summaries[line.id] %>
+          <% end %>
+        </section>
+
+        <section aria-label="Tenders">
+          <h2>Tenders</h2>
+          <% @tenders.each do |tender| %>
+            <div class="pos-history__tender">
+              <div>
+                <%= tender.tender_number %>
+                <%= pos_tender_label(tender) %>
+                <%= format_money_cents(tender.amount_cents) %>
+              </div>
+              <% if pos_cash_payment?(tender) %>
+                <div>Presented  <%= format_money_cents(tender.amount_presented_cents) %></div>
+                <div>Change  <%= format_money_cents(tender.change_cents) %></div>
+              <% elsif tender.external_reference.present? %>
+                <div>Reference  <%= tender.external_reference %></div>
+              <% end %>
+            </div>
+          <% end %>
+        </section>
+      </div>
+
+      <%= render "pos/receipts/print", transaction: @transaction, tenders: @tenders, reprint: true %>
+
+      <div class="pos-receipt__actions pos-no-print">
+        <% receipt = Pos::CustomerReceipt.build(@transaction) %>
+        <% if receipt.printable? %>
+          <%= action_button("Reprint receipt", style: :outline, intent: :neutral, data: { action: "pos-receipt#print" }) %>
+        <% else %>
+          <p class="pos-enter__alert" role="alert"><%= receipt.error %></p>
+        <% end %>
+        <%= action_link_to("Back to transactions", pos_transactions_path(inquiry_register_params), style: :ghost, intent: :neutral) %>
+      </div>
+    </main>
   </div>
-</main>
+<% end %>

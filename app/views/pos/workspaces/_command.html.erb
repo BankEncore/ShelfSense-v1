@@ -1,0 +1,45 @@
+<% workspace = @workspace %>
+<% locked = workspace.locked %>
+<% completion_recovery = workspace.completion_recovery %>
+<% show_reference = @ui_mode == "tender" && @selected_tender_type&.reference_captured? %>
+
+<div id="pos_feedback" class="pos-feedback" data-register-workspace-target="feedback" role="<%= workspace.feedback.present? ? "alert" : "status" %>" aria-live="<%= workspace.feedback.present? ? "assertive" : "polite" %>">
+  <% if @ui_mode == "completion_pending" && workspace.feedback.blank? %>
+    Completing transaction…
+  <% elsif workspace.feedback.present? %>
+    <%= workspace.feedback %>
+    <% if completion_recovery %>
+      Tender is kept. Retry does not take it again.
+    <% end %>
+  <% end %>
+</div>
+
+<div id="pos_command" class="pos-command">
+  <div class="pos-command__mode" data-register-workspace-target="modeLabel"><%= workspace.mode_label %></div>
+  <label for="pos-command-field" data-register-workspace-target="fieldLabel"><%= workspace.command_label %></label>
+  <input id="pos-command-field"
+         class="pos-command__field"
+         data-register-workspace-target="field"
+         value="<%= workspace.command_value %>"
+         inputmode="<%= workspace.command_inputmode %>"
+         autocomplete="off"
+         <%= "disabled" if locked || @ui_mode == "completion_pending" %>
+         <%= "autofocus" unless locked || completion_recovery %>>
+  <p class="pos-command__hint muted">When this field is empty, punctuation shortcuts (+ − / * .) open workspace actions. Typed or scanned punctuation stays part of the input once the field has content.</p>
+  <div data-register-workspace-target="giftCardNumberWrap" hidden>
+    <label for="pos-gift-card-number-field">Gift card number</label>
+    <input id="pos-gift-card-number-field"
+           class="pos-command__field"
+           data-register-workspace-target="giftCardNumberField"
+           autocomplete="off">
+  </div>
+  <div data-register-workspace-target="referenceWrap" <%= "hidden" unless show_reference %>>
+    <label for="pos-reference-field" data-register-workspace-target="referenceLabel">
+      <%= @selected_tender_type&.reference_field_label || "Reference" %>
+    </label>
+    <input id="pos-reference-field"
+           class="pos-command__field"
+           data-register-workspace-target="referenceField"
+           autocomplete="off">
+  </div>
+</div>

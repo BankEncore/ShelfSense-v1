@@ -1,6 +1,6 @@
 # Register workspace consolidation — Plan
 
-Status: **Accepted** (Slice 1). Implementation not started on `main`.
+Status: **Accepted** (Slice 1). Slice 2 implementation on `register-workspace-consolidation`.
 
 Companions: [routing-and-authority.md](routing-and-authority.md), [implementation-plan.md](implementation-plan.md), [pos-workflow.md](../phase4-6-point-of-sale/phase6-pos-mvp/pos-workflow.md) (6.7 remains lock until the owning slice supersedes it).
 
@@ -32,7 +32,13 @@ This is presentation replacement. It must not introduce a second transaction, ca
 9. Delete replaced presentation in the same slice. Replace obsolete tests in the same PR. Never weaken financial, custody, stored-value, cash, auth, concurrency, receipt, or cross-store tests.
 10. Keyboard and overlay interaction tests are **system tests**. Do not add a JavaScript unit runner for this program.
 11. Wrap the **existing** workspace in the shell in Slice 2. Slice 4 only splits `_surface`.
-12. Slice 7 does not start until slices 2–6 are on the integration branch and green. Slice 7’s first merge is a packet amendment (SALE / TENDER / overlay tables), then 7A → 7B → 7C.
+12. **Slice 2 shell-containment interaction (authorized):** Once the Register shell is a fixed workstation viewport, Slice 2 may also change selling-chrome composition and scan input routing as required for containment—not as silent scope into Slice 4/7:
+    - Place feedback and the command area above the basket; give the basket an internal scroll region.
+    - Keep the selected basket line scrolled into view on add/rescan and ArrowUp/ArrowDown.
+    - Redirect printable scan/typed input into the command field when no overlay/dialog field owns the keystroke.
+    - Reacquire Keyboard Lock from shell-wide pointer/focus (header, status, cluster, workspace), and tolerate `navigator.keyboard.lock` absence or rejection.
+    - This does **not** authorize key remapping, new F-key bindings, or overlay family migration (Slices 3–5 / 7C).
+13. Slice 7 does not start until slices 2–6 are on the integration branch and green. Slice 7’s first merge is a packet amendment (SALE / TENDER / overlay tables), then 7A → 7B → 7C. Clarified in [slice7-overview.md](slice7-overview.md): “first merge” accepts the keyboard **contract** ([slice7-keyboard-contract.md](slice7-keyboard-contract.md)); dispatcher **implementation** is 7C only.
 
 ## States
 
@@ -58,11 +64,11 @@ This is presentation replacement. It must not introduce a second transaction, ca
 
 ## UX adoption targets
 
-- **Screens created or materially changed:** Slice 2+ (`/pos`, Register shell, later F10 destinations and workspace partials). Slice 1 changes no screens.
-- **Current migration-matrix state:** Register workspace is UDS-3 refined; POS Home is legacy chrome.
+- **Screens created or materially changed:** Slice 2 (`/pos` state entry, Register shell partials, wrapped workspace, selector/closed/between/occupied bodies, destination cluster). Later slices: F10 destinations and workspace composition.
+- **Current migration-matrix state:** Register workspace remains verified-automated for basket/overlays; POS Home markup deleted; entry is state-aware shell.
 - **Accepted primitives:** Warm Parchment, `ActionButtonHelper`, Register layout contracts.
-- **Applicable automated evidence:** existing `test/system/pos_*` plus slice system tests; Layer A where new surfaces warrant it.
-- **Matrix rows:** update in the slice that changes the screen.
+- **Applicable automated evidence:** `test/services/pos/register_state_resolver_test.rb`, retargeted `pos_home` / enter request tests, existing `test/system/pos_*`.
+- **Matrix rows:** `pos/homes/**` replaced; `pos/workspaces/**` shell wrap; `layouts/pos.html.erb` shared shell chrome.
 
 ## Deliverable
 

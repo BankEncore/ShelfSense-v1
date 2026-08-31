@@ -1,0 +1,190 @@
+<% content_for :title, "Stored Value Inquiry" %>
+<%= render layout: "pos/shell/frame" do %>
+  <%= render "pos/shell/feedback" %>
+  <div class="pos-register-shell__body">
+    <main class="pos-inquiry">
+      <div class="pos-history__title-row pos-no-print">
+        <h1>Stored Value Inquiry</h1>
+        <%= link_to register_inquiry_return_label, register_inquiry_return_path, class: "btn btn--ghost" %>
+      </div>
+
+      <% if @inquiry_result_present %>
+        <section class="pos-inquiry__result" id="sv-inquiry-result" tabindex="-1" autofocus aria-live="polite">
+          <% if @exact_card %>
+            <h2>Gift card</h2>
+            <dl class="pos-history__header">
+              <div><dt>Program</dt><dd><%= @exact_card.gift_card_program.name %></dd></div>
+              <div><dt>Card</dt><dd><%= @exact_card.masked_number %></dd></div>
+              <div><dt>Status</dt><dd><%= @exact_card.status.humanize %></dd></div>
+              <div><dt>Available balance</dt><dd><%= format_money_cents(@exact_card.balance_cents) %></dd></div>
+            </dl>
+            <% if @exact_activity && @exact_activity.rows.any? %>
+              <h3>Recent activity</h3>
+              <ul class="pos-inquiry__activity">
+                <% @exact_activity.rows.first(5).each do |row| %>
+                  <li>
+                    <%= row.business_date %>
+                    <%= row.operation_label %>
+                    <%= format_signed_money_cents(row.amount_cents) %>
+                  </li>
+                <% end %>
+              </ul>
+            <% end %>
+            <% if @continuations %>
+              <div class="actions pos-inquiry__actions">
+                <% if @continuations.can_tender && @continuations.workspace_path %>
+                  <%= link_to "Use as Tender", @continuations.workspace_path, class: "btn btn--outline" %>
+                <% end %>
+                <% if @continuations.can_reload && @continuations.workspace_path %>
+                  <%= link_to "Reload", @continuations.workspace_path, class: "btn btn--outline" %>
+                <% end %>
+                <% if @continuations.can_cash_out && @continuations.cash_out_path %>
+                  <%= link_to "Cash Out Eligible Balance", @continuations.cash_out_path, class: "btn btn--outline" %>
+                <% end %>
+              </div>
+            <% end %>
+          <% end %>
+
+          <% if @store_credit_matches.present? %>
+            <h2>Matching customers</h2>
+            <ul class="pos-inquiry__matches">
+              <% @store_credit_matches.each do |row| %>
+                <li>
+                  <%= form_with url: store_credit_pos_stored_value_inquiry_path,
+                        method: :post,
+                        local: true,
+                        data: { turbo: false } do %>
+                    <% inquiry_register_params.each do |key, value| %>
+                      <%= hidden_field_tag key, value %>
+                    <% end %>
+                    <%= hidden_field_tag :customer_id, row.customer.id %>
+                    <%= submit_tag [ row.customer.display_name, row.customer.email, row.customer.phone ].compact.join(" · "),
+                          class: "btn btn--outline" %>
+                  <% end %>
+                </li>
+              <% end %>
+            </ul>
+          <% end %>
+
+          <% if @store_credit_customer %>
+            <h2>Customer store credit</h2>
+            <dl class="pos-history__header">
+              <div><dt>Customer</dt><dd><%= @store_credit_customer.display_name %></dd></div>
+              <div>
+                <dt>Available</dt>
+                <dd>
+                  <% if @store_credit_account %>
+                    <%= format_money_cents(@store_credit_account.balance_cents) %>
+                  <% else %>
+                    No store-credit account
+                  <% end %>
+                </dd>
+              </div>
+            </dl>
+            <div class="actions pos-inquiry__actions">
+              <%= link_to "View Customer Summary",
+                    pos_customer_summary_path(inquiry_register_params.merge(customer_id: @store_credit_customer.id)),
+                    class: "btn btn--outline" %>
+              <% if @continuations&.can_tender && @continuations.workspace_path %>
+                <%= link_to "Use as Tender", @continuations.workspace_path, class: "btn btn--outline" %>
+              <% end %>
+            </div>
+          <% end %>
+
+          <% if @admin_candidates.present? %>
+            <h2>Gift-card history (masked)</h2>
+            <ul class="pos-inquiry__matches">
+              <% @admin_candidates.each do |candidate| %>
+                <li>
+                  <%= candidate.masked_number %> · <%= candidate.status.humanize %> ·
+                  <%= format_money_cents(candidate.balance_cents) %> · <%= candidate.program_name %>
+                </li>
+              <% end %>
+            </ul>
+            <p class="muted">This find does not prove possession. Use as Tender, Reload, and Cash Out are not offered.</p>
+          <% end %>
+
+          <% if @admin_card %>
+            <h2>Gift-card history (masked)</h2>
+            <dl class="pos-history__header">
+              <div><dt>Card</dt><dd><%= @admin_card.masked_number %></dd></div>
+              <div><dt>Program</dt><dd><%= @admin_card.gift_card_program.name %></dd></div>
+              <div><dt>Status</dt><dd><%= @admin_card.status.humanize %></dd></div>
+              <div><dt>Balance</dt><dd><%= format_money_cents(@admin_card.balance_cents) %></dd></div>
+            </dl>
+            <p class="muted">This find does not prove possession. Use as Tender, Reload, and Cash Out are not offered.</p>
+          <% end %>
+        </section>
+      <% end %>
+
+      <section class="pos-inquiry__path" aria-labelledby="sv-exact-heading">
+        <h2 id="sv-exact-heading">Scan or enter complete gift-card number</h2>
+        <p class="muted">For balance, reload, redemption, or cash-out eligibility. Uses exact possession-based lookup.</p>
+        <%= form_with url: exact_number_pos_stored_value_inquiry_path,
+              method: :post,
+              local: true,
+              data: { turbo: false },
+              class: "pos-inquiry__form" do %>
+          <% inquiry_register_params.each do |key, value| %>
+            <%= hidden_field_tag key, value %>
+          <% end %>
+          <div class="form-field">
+            <%= label_tag :card_number, "Gift-card number" %>
+            <%= password_field_tag :card_number, nil,
+                  id: "card_number",
+                  autocomplete: "off",
+                  inputmode: "numeric",
+                  autofocus: !@inquiry_result_present,
+                  aria: { describedby: "sv-exact-hint" } %>
+          </div>
+          <p id="sv-exact-hint" class="muted">Focus this field, then scan or type the full number and press Enter or Look up card.</p>
+          <%= submit_tag "Look up card", class: "btn" %>
+        <% end %>
+      </section>
+
+      <section class="pos-inquiry__path" aria-labelledby="sv-credit-heading">
+        <h2 id="sv-credit-heading">Find customer store credit</h2>
+        <p class="muted">Search by customer identity. Not a card possession test.</p>
+        <%= form_with url: store_credit_pos_stored_value_inquiry_path,
+              method: :post,
+              local: true,
+              data: { turbo: false },
+              class: "pos-inquiry__form" do %>
+          <% inquiry_register_params.each do |key, value| %>
+            <%= hidden_field_tag key, value %>
+          <% end %>
+          <div class="form-field">
+            <%= label_tag :customer_query, "Customer" %>
+            <%= text_field_tag :customer_query, @customer_query, autocomplete: "off" %>
+          </div>
+          <%= submit_tag "Find store credit", class: "btn" %>
+        <% end %>
+      </section>
+
+      <% if @can_admin_inquire %>
+        <section class="pos-inquiry__path" aria-labelledby="sv-admin-heading">
+          <h2 id="sv-admin-heading">Find gift-card history by prefix and last four</h2>
+          <p class="muted">Masked inquiry only; cannot begin a value-moving action. Requires gift_cards.view.</p>
+          <%= form_with url: admin_prefix_last_four_pos_stored_value_inquiry_path,
+                method: :post,
+                local: true,
+                data: { turbo: false },
+                class: "pos-inquiry__form" do %>
+            <% inquiry_register_params.each do |key, value| %>
+              <%= hidden_field_tag key, value %>
+            <% end %>
+            <div class="form-field">
+              <%= label_tag :number_prefix, "Prefix" %>
+              <%= text_field_tag :number_prefix, nil, autocomplete: "off", inputmode: "numeric" %>
+            </div>
+            <div class="form-field">
+              <%= label_tag :number_last_four, "Last four" %>
+              <%= text_field_tag :number_last_four, nil, autocomplete: "off", inputmode: "numeric", maxlength: 4 %>
+            </div>
+            <%= submit_tag "Find masked history", class: "btn" %>
+          <% end %>
+        </section>
+      <% end %>
+    </main>
+  </div>
+<% end %>

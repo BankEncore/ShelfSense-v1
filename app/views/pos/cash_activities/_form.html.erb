@@ -2,7 +2,7 @@
   <p class="pos-enter__alert" role="alert"><%= @error %></p>
 <% end %>
 
-<%= form_with url: url, method: :post, local: true, class: "pos-return-items" do %>
+<%= form_with url: url, method: :post, local: true, class: "pos-inquiry__form", data: { turbo: false } do %>
   <%= hidden_field_tag :source_id, SecureRandom.uuid_v7 %>
   <%= hidden_field_tag :idempotency_key, SecureRandom.uuid_v7 %>
   <% if local_assigns[:sessions].present? %>
@@ -41,6 +41,5 @@
   <% end %>
   <div class="actions">
     <%= submit_tag submit, class: "btn" %>
-    <%= link_to "POS Home", pos_path, class: "btn btn--ghost" %>
   </div>
 <% end %>

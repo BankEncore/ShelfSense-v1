@@ -1,11 +1,18 @@
 import { Controller } from "@hotwired/stimulus"
+import {
+  normalizeKey,
+  classifyFocusZone,
+  classifyMode,
+  resolveBinding,
+  isEditableControl
+} from "register_keyboard_dispatcher"
 
 export default class extends Controller {
   static targets = [
     "field",
     "fieldLabel",
     "modeLabel",
-    "chrome",
+    "background",
     "overlay",
     "controlOverlay",
     "unlinkedOverlay",
@@ -13,6 +20,8 @@ export default class extends Controller {
     "completeForm",
     "tenderForm",
     "removeTenderForm",
+    "replaceTenderForm",
+    "returnToSaleForm",
     "merchandiseForm",
     "quantityForm",
     "removeForm",
@@ -29,11 +38,65 @@ export default class extends Controller {
     "giftCardNumberField",
     "cardNumberInput",
     "issuanceCardNumber",
+    "issuanceOverlay",
+    "issuanceTypeField",
+    "issuanceProgramField",
+    "issuanceAmountField",
+    "issuanceCardWrap",
+    "issuanceResultLabel",
+    "issuanceTitle",
+    "issuanceCancel",
+    "issuanceApply",
+    "issuanceForm",
+    "issuanceTypeInput",
+    "issuanceProgramInput",
+    "issuanceAmountInput",
+    "issuanceCardInput",
+    "issuanceOperationInput",
+    "issuanceConfirmClearInput",
+    "removeIssuanceForm",
+    "removeIssuanceIdInput",
+    "removeIssuanceOperationInput",
+    "removeIssuanceConfirmClearInput",
+    "replaceIssuanceForm",
+    "replaceIssuanceIdInput",
+    "replaceIssuanceTypeInput",
+    "replaceIssuanceProgramInput",
+    "replaceIssuanceAmountInput",
+    "replaceIssuanceCardInput",
+    "replaceIssuanceOperationInput",
+    "replaceIssuanceConfirmClearInput",
+    "clearTendersOverlay",
+    "clearTendersConsequence",
+    "tenderOperationInput",
+    "editTenderStoredValueNote",
     "cashOutForm",
     "cashOutCardInput",
     "destinationModeInput",
     "referenceLabel",
     "removeTenderInput",
+    "removeTenderOperationInput",
+    "selectedTenderInput",
+    "replaceTenderInput",
+    "replaceTenderOperationInput",
+    "replaceTenderAmountInput",
+    "replaceTenderPresentedInput",
+    "replaceTenderReferenceInput",
+    "returnToSaleOperationInput",
+    "editTenderOverlay",
+    "editTenderDetail",
+    "editTenderAmount",
+    "editTenderPresentedWrap",
+    "editTenderPresented",
+    "editTenderReferenceWrap",
+    "editTenderReference",
+    "removeTenderOverlay",
+    "removeTenderDetail",
+    "returnToSaleOverlay",
+    "tenderReviewDetail",
+    "tenderEditAction",
+    "tenderRemoveAction",
+    "tenderUnavailableReason",
     "quantityLineInput",
     "removeLineInput",
     "controlLineInput",
@@ -48,6 +111,7 @@ export default class extends Controller {
     "controlApproverPasswordInput",
     "controlTitle",
     "controlLineLabel",
+    "controlCurrentLabel",
     "controlPriceWrap",
     "controlDiscountWrap",
     "controlTaxWrap",
@@ -57,12 +121,27 @@ export default class extends Controller {
     "controlReasonField",
     "controlNoteWrap",
     "controlNoteField",
-    "controlApproverWrap",
-    "approverUsername",
-    "approverPassword",
     "controlCancel",
     "controlApply",
     "controlRemove",
+    "approvalOverlay",
+    "approvalActionLabel",
+    "approvalItemLabel",
+    "approvalCurrentWrap",
+    "approvalCurrentHeading",
+    "approvalCurrentLabel",
+    "approvalProposedWrap",
+    "approvalProposedHeading",
+    "approvalProposedLabel",
+    "approvalQtyWrap",
+    "approvalQtyLabel",
+    "approvalReasonLabel",
+    "approvalBack",
+    "approvalAuthorize",
+    "approverUsername",
+    "approverPassword",
+    "overlayFailureMeta",
+    "cancelConsequence",
     "unlinkedIdentifierField",
     "unlinkedIdentifierInput",
     "unlinkedProductIdInput",
@@ -79,6 +158,7 @@ export default class extends Controller {
     "unlinkedApproverUserInput",
     "unlinkedApproverPasswordInput",
     "unlinkedFeedback",
+    "unlinkedQueryLabel",
     "unlinkedPreview",
     "unlinkedDescription",
     "unlinkedReferenceLabel",
@@ -88,10 +168,8 @@ export default class extends Controller {
     "unlinkedNoteWrap",
     "unlinkedNoteField",
     "unlinkedPriceField",
-    "unlinkedApproverWrap",
-    "unlinkedApproverUsername",
-    "unlinkedApproverPassword",
     "unlinkedCancel",
+    "unlinkedLookup",
     "unlinkedApply",
     "dontCancel",
     "confirmCancel",
@@ -111,6 +189,10 @@ export default class extends Controller {
     "storedValueButton",
     "otherOverlay",
     "otherList",
+    "otherTitle",
+    "otherSettlementLabel",
+    "otherCancel",
+    "otherChoose",
     "searchOverlay",
     "searchList",
     "searchSkuField",
@@ -130,13 +212,27 @@ export default class extends Controller {
     "customerList",
     "customerQueryField",
     "customerQueryLabel",
+    "quickCustomerButton",
+    "quickCustomerOverlay",
+    "quickCustomerContextLabel",
+    "quickCustomerDisplayNameField",
+    "quickCustomerEmailField",
+    "quickCustomerPhoneField",
+    "quickCustomerDuplicateWrap",
+    "quickCustomerDuplicateList",
+    "quickCustomerAcknowledgeField",
+    "quickCustomerBack",
+    "quickCustomerSubmit",
     "productOverlay",
     "productList",
     "variantOverlay",
     "variantList",
+    "variantBack",
     "unitOverlay",
     "unitList",
+    "unitBack",
     "openPriceOverlay",
+    "openPriceTitle",
     "openPricePrompt",
     "openPriceField",
     "openPriceForm",
@@ -148,14 +244,22 @@ export default class extends Controller {
     "returnButton",
     "returnChooserOverlay",
     "returnChooserList",
+    "returnChooserCancel",
+    "returnChooserContinue",
     "linkedOverlay",
+    "linkedInstruction",
+    "linkedLookupWrap",
     "linkedLookupField",
     "linkedFeedback",
+    "linkedQueryLabel",
     "linkedList",
+    "linkedDetailsWrap",
     "linkedQuantityField",
     "linkedReasonField",
     "linkedNoteWrap",
     "linkedNoteField",
+    "linkedSecondary",
+    "linkedPrimary",
     "linkedReturnForm",
     "linkedOriginalInput",
     "linkedQuantityInput",
@@ -179,17 +283,35 @@ export default class extends Controller {
     searchUrl: String,
     pickupSearchUrl: String,
     customerSearchUrl: String,
+    quickCustomerUrl: String,
+    quickCustomerAllowed: Boolean,
+    customerAttached: Boolean,
     pickupAllowed: Boolean,
     openPriceUrl: String,
     settlement: String,
     refundRemaining: Number,
     paymentRemaining: Number,
-    transactionsUrl: String,
     cashOutAllowed: Boolean
   }
 
   connect() {
     this.inFlight = false
+    this.overlayStack = []
+    this.confirmationInvocation = null
+    this.tenderPickerInvocation = null
+    this.searchRequestToken = 0
+    this.pickupRequestToken = 0
+    this.customerRequestToken = 0
+    this.linkedInvocation = 0
+    this.unlinkedInvocation = 0
+    this.searchAbort = null
+    this.pickupAbort = null
+    this.customerAbort = null
+    this.linkedAbort = null
+    this.unlinkedAbort = null
+    this.customerLookupContext = null
+    this.quickCustomerIdempotencyKey = null
+    this.linkedStage = "lookup"
     this.bindFunctionKeyCapture()
     if (this.hasControlReasonFieldTarget) {
       this.controlReasonFieldTarget.addEventListener("change", () => {
@@ -199,6 +321,12 @@ export default class extends Controller {
     if (this.hasUnlinkedReasonFieldTarget) {
       this.unlinkedReasonFieldTarget.addEventListener("change", () => {
         this.toggleHidden(this.hasUnlinkedNoteWrapTarget && this.unlinkedNoteWrapTarget, this.unlinkedReasonFieldTarget.value !== "other")
+        this.syncUnlinkedPrimaryEnabled()
+      })
+    }
+    if (this.hasLinkedReasonFieldTarget) {
+      this.linkedReasonFieldTarget.addEventListener("change", () => {
+        this.onLinkedReasonChange()
       })
     }
     if (this.autoCompleteValue) {
@@ -207,6 +335,7 @@ export default class extends Controller {
     }
     this.enableReadyActions()
     this.restoreFocus()
+    this.scheduleScrollSelectedRowIntoView()
     if (this.hasFeedbackTarget && /customer is required/i.test(this.feedbackTarget.textContent || "")) {
       this.openCustomerOverlay()
     }
@@ -214,195 +343,49 @@ export default class extends Controller {
 
   disconnect() {
     this.unbindFunctionKeyCapture()
-    if (this.hasChromeTarget) this.chromeTarget.inert = false
+    this.abortPendingLookups()
+    this.clearConfirmationCredentials()
+    this.confirmationInvocation = null
+    this.clearOverlayStack({ restoreCommand: false })
+    if (this.hasBackgroundTarget) this.backgroundTarget.inert = false
   }
 
   onKeydown(event) {
-    const functionKey = this.functionKey(event)
-    const key = functionKey || event.key
-    if (this.claimedFunctionKey(functionKey)) this.claimFunctionKey(event)
+    const key = normalizeKey(event)
+    if (key === "F10" || key == null) return
+    if (this.claimedFunctionKey(key)) this.claimFunctionKey(event)
 
-    if (key === "F10") {
-      event.preventDefault()
-      this.openTransactions()
-      return
-    }
+    const binding = resolveBinding(this.keyboardContext(event, key))
 
-    const overlay = this.activeOverlayElement()
-    if (overlay && key === "Tab") {
-      this.trapTabInOverlay(overlay, event)
-      return
-    }
-
-    // Child pickers (product/variant/unit/open-price) must beat parent overlays
-    // (unlinked/search) when stacked on top.
-    if (this.productOverlayOpen()) {
-      this.onProductOverlayKeydown(event, key)
-      return
-    }
-
-    if (this.variantOverlayOpen()) {
-      this.onVariantOverlayKeydown(event, key)
-      return
-    }
-
-    if (this.unitOverlayOpen()) {
-      this.onUnitOverlayKeydown(event, key)
-      return
-    }
-
-    if (this.openPriceOverlayOpen()) {
-      this.onOpenPriceOverlayKeydown(event, key)
-      return
-    }
-
-    if (this.unlinkedOverlayOpen()) {
-      this.onUnlinkedOverlayKeydown(event, key)
-      return
-    }
-
-    if (this.returnChooserOpen()) {
-      this.onReturnChooserKeydown(event, key)
-      return
-    }
-
-    if (this.linkedOverlayOpen()) {
-      this.onLinkedOverlayKeydown(event, key)
-      return
-    }
-
-    if (this.controlOverlayOpen()) {
-      this.onControlOverlayKeydown(event, key)
-      return
-    }
-
-    if (this.otherOverlayOpen()) {
-      this.onOtherOverlayKeydown(event, key)
-      return
-    }
-
-    if (this.searchOverlayOpen()) {
-      this.onSearchOverlayKeydown(event, key)
-      return
-    }
-
-    if (this.pickupOverlayOpen()) {
-      this.onPickupOverlayKeydown(event, key)
-      return
-    }
-
-    if (this.customerOverlayOpen()) {
-      this.onCustomerOverlayKeydown(event, key)
-      return
-    }
-
-    if (this.cancelOverlayOpen()) {
-      event.preventDefault()
-      if (key === "Escape") this.closeOverlay()
-      if (key === "F9") this.confirmCancel()
-      return
-    }
-
-    if (this.inFlight || this.modeValue === "completion_pending") {
-      if (key === "Enter" && this.isActionableControl(event.target)) return
-      if (key === "Enter" || key === "F9") event.preventDefault()
-      return
-    }
-
-    if (this.modeValue === "completion_failed") {
-      if (key === "Enter") {
-        if (this.isActionableControl(event.target)) return
-        event.preventDefault()
-        this.submitComplete()
+    if (binding.kind === "delegate_overlay") {
+      const overlay = this.activeOverlayElement()
+      if (!overlay) return
+      if (key === "Tab") {
+        this.trapTabInOverlay(overlay, event)
+        return
       }
-      if (key === "F9") {
+      this.dispatchOverlayKeydown(overlay, event, key)
+      return
+    }
+
+    if (binding.kind === "native_control") return
+
+    if (binding.kind === "literal") {
+      this.redirectPrintableToCommandField(event, binding.key)
+      return
+    }
+
+    if (binding.kind === "none") {
+      if (key === "Escape" && this.modeValue === "completion_failed") event.preventDefault()
+      if ((this.inFlight || this.modeValue === "completion_pending") && (key === "Enter" || key === "F9")) {
         event.preventDefault()
-        this.openOverlay()
-      }
-      if (key === "Escape") event.preventDefault()
-      return
-    }
-
-    if (key === "Enter") {
-      if (this.isActionableControl(event.target)) return
-      event.preventDefault()
-      this.submitMode()
-      return
-    }
-    if (key === "Escape") {
-      event.preventDefault()
-      this.escape()
-      return
-    }
-    if (key === "F9") {
-      event.preventDefault()
-      this.openOverlay()
-      return
-    }
-    if (this.modeValue !== "sale_entry" && this.modeValue !== "tender") return
-
-    if (key === "F1") {
-      event.preventDefault()
-      this.chooseCash()
-      return
-    }
-    if (key === "F2") {
-      event.preventDefault()
-      this.chooseCard()
-      return
-    }
-    if (key === "F3") {
-      event.preventDefault()
-      this.chooseCheck()
-      return
-    }
-    if (key === "F4") {
-      event.preventDefault()
-      this.chooseOther()
-      return
-    }
-    if (key === "F5") {
-      event.preventDefault()
-      this.chooseStoredValue()
-      return
-    }
-
-    if (this.modeValue === "tender") {
-      if (key === "F8") {
-        event.preventDefault()
-        this.removeLastTender()
       }
       return
     }
 
-    const fieldEmpty = this.commandFieldEmpty()
-    if (key === "*" && fieldEmpty) {
+    if (binding.kind === "action") {
       event.preventDefault()
-      this.enterQuantity()
-    } else if (key === "+" && fieldEmpty) {
-      event.preventDefault()
-      this.enterTender()
-    } else if (key === "/" && fieldEmpty) {
-      event.preventDefault()
-      this.openSearchOverlay()
-    } else if (key === "." && fieldEmpty && this.pickupAllowedValue) {
-      event.preventDefault()
-      this.openPickupOverlay()
-    } else if ((key === "-" || event.code === "Minus") && fieldEmpty) {
-      event.preventDefault()
-      this.openReturnChooser()
-    } else if (key === "F6") {
-      event.preventDefault()
-      this.openPriceOverride()
-    } else if (key === "F7") {
-      event.preventDefault()
-      this.openLineDiscount()
-    } else if (key === "F8") {
-      event.preventDefault()
-      this.removeSelected()
-    } else if (key === "ArrowUp" || key === "ArrowDown") {
-      event.preventDefault()
-      this.moveSelection(key === "ArrowUp" ? -1 : 1)
+      this.performSemanticAction(binding.action, { announceUnavailable: true })
     }
   }
 
@@ -416,46 +399,22 @@ export default class extends Controller {
       this.closeControlOverlay()
       return
     }
-    if (key === "F9") {
+    if (key === "F9" || key === "F10") {
       event.preventDefault()
       return
     }
     if (key !== "Enter") return
 
     const target = event.target
-    if (this.hasApproverUsernameTarget && target === this.approverUsernameTarget) {
-      event.preventDefault()
-      if (this.hasApproverPasswordTarget) this.approverPasswordTarget.focus()
-      return
-    }
-    if (this.hasApproverPasswordTarget && target === this.approverPasswordTarget) {
-      event.preventDefault()
-      if (this.approverPasswordTarget.value.trim() !== "") this.submitControlApply()
-      return
-    }
     if (this.isActionableControl(target)) return
     event.preventDefault()
     this.advanceOrApplyControlOverlay()
   }
 
   advanceOrApplyControlOverlay() {
-    if (this.policyFor(this.currentControlAction) !== "approval_required") {
-      this.submitControlApply()
-      return
-    }
     if (this.controlReasonNeedsNote()) {
       this.controlNoteFieldTarget.focus()
       return
-    }
-    if (this.hasApproverUsernameTarget && !this.controlApproverWrapTarget?.hidden) {
-      if (this.approverUsernameTarget.value.trim() === "") {
-        this.approverUsernameTarget.focus()
-        return
-      }
-      if (this.hasApproverPasswordTarget) {
-        this.approverPasswordTarget.focus()
-        return
-      }
     }
     this.submitControlApply()
   }
@@ -469,13 +428,41 @@ export default class extends Controller {
       !this.controlNoteWrapTarget.hidden
   }
 
+  onApprovalOverlayKeydown(event, key = this.functionKey(event) || event.key) {
+    if (key === "Escape") {
+      event.preventDefault()
+      this.backFromApprovalOverlay()
+      return
+    }
+    if (key === "F9" || key === "F10") {
+      event.preventDefault()
+      return
+    }
+    if (key !== "Enter") return
+
+    const target = event.target
+    if (this.hasApproverUsernameTarget && target === this.approverUsernameTarget) {
+      event.preventDefault()
+      if (this.hasApproverPasswordTarget) this.approverPasswordTarget.focus()
+      return
+    }
+    if (this.hasApproverPasswordTarget && target === this.approverPasswordTarget) {
+      event.preventDefault()
+      if (this.approverPasswordTarget.value.trim() !== "") this.authorizeAndSubmit()
+      return
+    }
+    if (this.isActionableControl(target)) return
+    event.preventDefault()
+    this.authorizeAndSubmit()
+  }
+
   onUnlinkedOverlayKeydown(event, key = this.functionKey(event) || event.key) {
     if (key === "Escape") {
       event.preventDefault()
-      this.closeUnlinkedOverlay()
+      this.backFromUnlinkedOverlay()
       return
     }
-    if (key === "F9") {
+    if (key === "F9" || key === "F10") {
       event.preventDefault()
       return
     }
@@ -484,17 +471,7 @@ export default class extends Controller {
     const target = event.target
     if (this.hasUnlinkedIdentifierFieldTarget && target === this.unlinkedIdentifierFieldTarget) {
       event.preventDefault()
-      this.resolveUnlinkedIdentifier()
-      return
-    }
-    if (this.hasUnlinkedApproverUsernameTarget && target === this.unlinkedApproverUsernameTarget) {
-      event.preventDefault()
-      if (this.hasUnlinkedApproverPasswordTarget) this.unlinkedApproverPasswordTarget.focus()
-      return
-    }
-    if (this.hasUnlinkedApproverPasswordTarget && target === this.unlinkedApproverPasswordTarget) {
-      event.preventDefault()
-      if (this.unlinkedApproverPasswordTarget.value.trim() !== "") this.submitUnlinkedReturn()
+      this.lookUpUnlinkedItem()
       return
     }
     if (this.isActionableControl(target)) return
@@ -503,30 +480,11 @@ export default class extends Controller {
   }
 
   advanceOrApplyUnlinkedOverlay() {
-    if (!this.unlinkedPreviewPayload) return
-    if (this.policyFor("unlinked_return") !== "approval_required") {
-      this.submitUnlinkedReturn()
+    if (!this.unlinkedPreviewPayload) {
+      this.lookUpUnlinkedItem()
       return
     }
-    if (this.hasUnlinkedReasonFieldTarget &&
-        this.unlinkedReasonFieldTarget.value === "other" &&
-        this.hasUnlinkedNoteFieldTarget &&
-        this.unlinkedNoteFieldTarget.value.trim() === "" &&
-        this.hasUnlinkedNoteWrapTarget &&
-        !this.unlinkedNoteWrapTarget.hidden) {
-      this.unlinkedNoteFieldTarget.focus()
-      return
-    }
-    if (this.hasUnlinkedApproverUsernameTarget && !this.unlinkedApproverWrapTarget?.hidden) {
-      if (this.unlinkedApproverUsernameTarget.value.trim() === "") {
-        this.unlinkedApproverUsernameTarget.focus()
-        return
-      }
-      if (this.hasUnlinkedApproverPasswordTarget) {
-        this.unlinkedApproverPasswordTarget.focus()
-        return
-      }
-    }
+    if (!this.unlinkedAddReady()) return
     this.submitUnlinkedReturn()
   }
 
@@ -584,10 +542,15 @@ export default class extends Controller {
         this.destinationModeInputTarget.value = "new_gift_card"
       } else if (this.settlementValue === "refund" && type?.stored_value_account_type === "store_credit") {
         this.destinationModeInputTarget.value = "customer_store_credit"
+        if (!this.customerAttachedValue) {
+          this.showFeedback("A customer is required. Find and attach a customer to continue.")
+          this.openCustomerOverlay({ context: "customer_store_credit" })
+        }
       } else {
         this.destinationModeInputTarget.value = type?.category === "stored_value" ? "existing_account" : ""
       }
     }
+    if (this.hasTenderOperationInputTarget) this.tenderOperationInputTarget.value = this.uuidV7()
     this.beginFlight()
     this.tenderFormTarget.requestSubmit()
   }
@@ -631,76 +594,378 @@ export default class extends Controller {
       this.submitComplete()
       return
     }
-    this.beginTenderMode()
-    this.applyTenderType(this.typesForCategory("cash")[0] || this.cashierTenderTypes()[this.cashTenderIndex()])
-    this.prefillRemaining()
+    const types = this.cashierTenderTypes()
+    if (types.length === 0) {
+      this.showFeedback(this.settlementValue === "refund" ? "No refund tender types are available." : "No tender types are available.")
+      return
+    }
+    this.openTenderPicker(types, { source: "plus" })
   }
 
   chooseCash() {
-    this.chooseTenderCategory("cash")
+    this.performSemanticAction("tender-cash", { announceUnavailable: true })
   }
 
   chooseCard() {
-    this.chooseTenderCategory("card")
+    this.performSemanticAction("tender-card", { announceUnavailable: true })
   }
 
   chooseCheck() {
-    this.chooseTenderCategory("check")
+    this.performSemanticAction("tender-check", { announceUnavailable: true })
   }
 
   chooseOther() {
-    if (this.inFlight) return
-    if (this.modeValue !== "sale_entry" && this.modeValue !== "tender") return
-    if (!this.ensureTenderable()) return
-    const types = this.otherTypes()
-    if (types.length === 0) {
-      this.showFeedback("No Other tender types are configured.")
-      return
-    }
-    if (types.length === 1) {
-      this.beginTenderMode()
-      this.applyTenderType(types[0])
-      this.prefillRemaining()
-      return
-    }
-    this.openOtherPicker(types)
+    this.performSemanticAction("tender-other", { announceUnavailable: true })
   }
 
   chooseStoredValue() {
-    if (this.inFlight) return
-    if (this.modeValue !== "sale_entry" && this.modeValue !== "tender") return
-    if (!this.ensureTenderable()) return
-    const types = this.typesForCategory("stored_value")
-    if (types.length === 0) {
-      this.showFeedback("Stored-value tender is not available.")
-      return
+    this.performSemanticAction("tender-stored-value", { announceUnavailable: true })
+  }
+
+  /**
+   * Slice 7C semantic action executor. Keyboard and visible controls converge here.
+   */
+  performSemanticAction(action, { announceUnavailable = false } = {}) {
+    if (!action) return false
+    if (!this.invokeSemanticAction(action)) {
+      if (announceUnavailable) {
+        const reason = this.semanticActionUnavailableReason(action)
+        if (reason) this.showFeedback(reason)
+      }
+      return false
     }
+    return true
+  }
+
+  invokeSemanticAction(action) {
+    switch (action) {
+      case "tender-cash":
+        return this.invokeTenderCategory("cash")
+      case "tender-card":
+        return this.invokeTenderCategory("card")
+      case "tender-check":
+        return this.invokeTenderCategory("check")
+      case "tender-other":
+        return this.invokeTenderOther()
+      case "tender-stored-value":
+        return this.invokeTenderStoredValue()
+      case "open-tender-selection":
+        return this.invokeEnterTender()
+      case "open-product-lookup":
+        if (this.inFlight || this.overlayOpen()) return false
+        this.openSearchOverlay()
+        return true
+      case "open-pickup-lookup":
+        if (this.inFlight || this.overlayOpen()) return false
+        if (!this.pickupAllowedValue) return false
+        this.openPickupOverlay()
+        return true
+      case "open-return-chooser":
+        if (this.inFlight || this.overlayOpen()) return false
+        this.openReturnChooser()
+        return true
+      case "open-customer-lookup":
+        if (this.inFlight) return false
+        this.openCustomerOverlay()
+        return true
+      case "open-quick-customer":
+        if (this.inFlight) return false
+        this.openQuickCustomerOverlay()
+        return true
+      case "set-quantity":
+        return this.invokeEnterQuantity()
+      case "edit-price":
+        return this.invokeOpenPriceOverride()
+      case "edit-discount":
+        return this.invokeOpenLineDiscount()
+      case "remove-selected-record":
+        return this.invokeRemoveSelectedLine()
+      case "remove-selected-tender":
+        return this.invokeRemoveSelectedTender()
+      case "open-selected-tender-actions":
+        return this.invokeOpenSelectedTenderActions()
+      case "return-to-sale":
+        if (this.inFlight) return false
+        this.openReturnToSaleOverlay()
+        return true
+      case "cancel-transaction":
+        if (this.inFlight) return false
+        this.openOverlay()
+        return true
+      case "submit-command":
+        if (this.inFlight) return false
+        this.submitMode()
+        return true
+      case "submit-complete":
+        if (this.inFlight) return false
+        this.submitComplete()
+        return true
+      case "escape":
+        if (this.inFlight) return false
+        this.escape()
+        return true
+      case "move-basket-selection-up":
+        if (this.inFlight) return false
+        this.moveSelection(-1)
+        return true
+      case "move-basket-selection-down":
+        if (this.inFlight) return false
+        this.moveSelection(1)
+        return true
+      case "move-tender-selection-up":
+        if (this.inFlight) return false
+        this.moveTenderSelection(-1, { focus: true })
+        return true
+      case "move-tender-selection-down":
+        if (this.inFlight) return false
+        this.moveTenderSelection(1, { focus: true })
+        return true
+      default:
+        return false
+    }
+  }
+
+  semanticActionUnavailableReason(action) {
+    switch (action) {
+      case "set-quantity":
+        if (this.modeValue !== "sale_entry") return "Quantity is only available during sale entry."
+        if (!this.selectedRow()) return "Select a quantity-tracked sale line first."
+        if (this.selectedUnitLine()) return "Quantity is not available on individually tracked units."
+        if (this.selectedQuantityBlocked()) return "Remove the price override or discount before changing quantity."
+        return "Quantity is not available."
+      case "edit-price":
+        if (this.modeValue !== "sale_entry") return "Price is only available during sale entry."
+        if (!this.selectedRow()) return "Select a sale line first."
+        if (this.selectedReturnLine()) return "Price is not available on a return line."
+        if (this.policyFor("price_override") === "prohibited") return "Price change is not available."
+        if (this.selectedRow()?.dataset?.discounted === "true" && this.selectedRow()?.dataset?.pricingMethodSnapshot === "open_price") {
+          return "Remove the line discount before changing the price."
+        }
+        return "Price is not available."
+      case "edit-discount":
+        if (this.modeValue !== "sale_entry") return "Discount is only available during sale entry."
+        if (!this.selectedRow()) return "Select a sale line first."
+        if (this.selectedReturnLine()) return "Discount is not available on a return line."
+        if (this.policyFor("line_discount") === "prohibited") return "Line discount is not available."
+        return "Discount is not available."
+      case "open-pickup-lookup":
+        return "No pickup can be added in the current transaction state."
+      case "remove-selected-record":
+        if (this.modeValue !== "sale_entry") return "Remove is only available during sale entry."
+        if (!this.selectedRow()) return "Select a sale line first."
+        return "Remove is not available."
+      case "open-tender-selection":
+        if (this.modeValue !== "sale_entry" && this.modeValue !== "tender") return "Tender is not available in the current mode."
+        if (!this.hasCommercialContent()) return "Add merchandise before taking a tender."
+        if (this.settlementValue === "none") return null
+        if (this.cashierTenderTypes().length === 0) {
+          return this.settlementValue === "refund" ? "No refund tender types are available." : "No tender types are available."
+        }
+        return "Tender is not available."
+      case "tender-cash":
+      case "tender-card":
+      case "tender-check":
+      case "tender-other":
+      case "tender-stored-value":
+        return this.tenderFamilyUnavailableReason(action)
+      case "remove-selected-tender":
+        if (this.modeValue !== "tender") return "Select a tender in Tender Review first."
+        if (!this.selectedTenderRow()) return "Select a tender before removing."
+        if (this.selectedTenderRow()?.dataset?.removeAvailable === "false") {
+          return this.selectedTenderRow().dataset.removeUnavailableReason || "This tender cannot be removed."
+        }
+        return "Remove is not available for the selected tender."
+      case "open-selected-tender-actions":
+        if (this.modeValue !== "tender") return "Select a tender in Tender Review first."
+        if (!this.selectedTenderRow()) return "Select a tender first."
+        return this.selectedTenderRow()?.dataset?.editUnavailableReason ||
+          this.selectedTenderRow()?.dataset?.removeUnavailableReason ||
+          "No actions are available for the selected tender."
+      default:
+        return null
+    }
+  }
+
+  tenderFamilyUnavailableReason(action) {
+    if (this.modeValue !== "sale_entry" && this.modeValue !== "tender") {
+      return "Tender is not available in the current mode."
+    }
+    if (this.modeValue === "sale_entry" && !this.hasCommercialContent()) {
+      return "Add merchandise before taking a tender."
+    }
+    const category = {
+      "tender-cash": "cash",
+      "tender-card": "card",
+      "tender-check": "check",
+      "tender-other": "other",
+      "tender-stored-value": "stored_value"
+    }[action]
+    const label = this.categoryLabel(category)
+    const types = category === "other" ? this.otherTypes() : this.typesForCategory(category)
+    if (types.length > 0) return null
+    if (category === "other") return "No Other tender types are configured."
+    if (category === "stored_value") return "Stored-value tender is not available."
+    if (this.settlementValue === "refund") return `${label} refunds are not enabled.`
+    return `${label} tender is not available.`
+  }
+
+  invokeEnterQuantity() {
+    if (this.inFlight) return false
+    if (this.modeValue !== "sale_entry" || !this.selectedRow()) return false
+    if (this.selectedUnitLine() || this.selectedQuantityBlocked()) return false
+    this.enterQuantity()
+    return true
+  }
+
+  invokeOpenPriceOverride() {
+    if (this.inFlight) return false
+    if (this.modeValue !== "sale_entry") return false
+    const row = this.selectedRow()
+    if (!row) return false
+    if (this.selectedReturnLine()) return false
+    if (this.policyFor("price_override") === "prohibited") return false
+    if (row.dataset.discounted === "true" && row.dataset.pricingMethodSnapshot === "open_price") return false
+    this.openPriceOverride()
+    return true
+  }
+
+  invokeOpenLineDiscount() {
+    if (this.inFlight) return false
+    if (this.modeValue !== "sale_entry") return false
+    if (!this.selectedRow()) return false
+    if (this.selectedReturnLine()) return false
+    if (this.policyFor("line_discount") === "prohibited") return false
+    this.openLineDiscount()
+    return true
+  }
+
+  invokeRemoveSelectedLine() {
+    if (this.inFlight) return false
+    if (this.modeValue !== "sale_entry" || !this.selectedRow()) return false
+    this.removeSelected()
+    return true
+  }
+
+  invokeEnterTender() {
+    if (this.inFlight) return false
+    if (this.modeValue !== "sale_entry" && this.modeValue !== "tender") return false
+    if (this.modeValue === "sale_entry") {
+      if (!this.hasCommercialContent()) return false
+      if (this.settlementValue === "none") {
+        this.submitComplete()
+        return true
+      }
+      if (this.cashierTenderTypes().length === 0) return false
+    }
+    this.enterTender()
+    return true
+  }
+
+  invokeTenderCategory(category) {
+    if (this.inFlight) return false
+    if (this.modeValue !== "sale_entry" && this.modeValue !== "tender") return false
+    if (this.modeValue === "sale_entry") {
+      if (!this.hasCommercialContent()) return false
+      if (this.settlementValue === "none") {
+        this.submitComplete()
+        return true
+      }
+    }
+    const types = category === "other" ? this.otherTypes() : this.typesForCategory(category)
+    if (types.length === 0) return false
+    this.beginTenderMode()
+    this.applyTenderType(types[0])
+    this.prefillRemaining()
+    return true
+  }
+
+  invokeTenderOther() {
+    if (this.inFlight) return false
+    if (this.modeValue !== "sale_entry" && this.modeValue !== "tender") return false
+    if (this.modeValue === "sale_entry") {
+      if (!this.hasCommercialContent()) return false
+      if (this.settlementValue === "none") {
+        this.submitComplete()
+        return true
+      }
+    }
+    const types = this.otherTypes()
+    if (types.length === 0) return false
     if (types.length === 1) {
       this.beginTenderMode()
       this.applyTenderType(types[0])
       this.prefillRemaining()
-      return
+      return true
     }
-    this.openOtherPicker(types)
+    this.openTenderPicker(types, { source: "other_key" })
+    return true
   }
 
-  chooseTenderCategory(category) {
-    if (this.inFlight) return
-    if (this.modeValue !== "sale_entry" && this.modeValue !== "tender") return
-    if (!this.ensureTenderable()) return
-    const types = this.typesForCategory(category)
-    const label = this.categoryLabel(category)
-    if (types.length === 0) {
-      if (this.settlementValue === "refund") {
-        this.showFeedback(`${label} refunds are not enabled.`)
-      } else {
-        this.showFeedback(`${label} tender is not available.`)
+  invokeTenderStoredValue() {
+    if (this.inFlight) return false
+    if (this.modeValue !== "sale_entry" && this.modeValue !== "tender") return false
+    if (this.modeValue === "sale_entry") {
+      if (!this.hasCommercialContent()) return false
+      if (this.settlementValue === "none") {
+        this.submitComplete()
+        return true
       }
-      return
     }
-    this.beginTenderMode()
-    this.applyTenderType(types[0])
-    this.prefillRemaining()
+    const types = this.typesForCategory("stored_value")
+    if (types.length === 0) return false
+    if (types.length === 1) {
+      this.beginTenderMode()
+      this.applyTenderType(types[0])
+      this.prefillRemaining()
+      return true
+    }
+    this.openTenderPicker(types, { source: "stored_value_key" })
+    return true
+  }
+
+  invokeRemoveSelectedTender() {
+    if (this.inFlight) return false
+    if (this.modeValue !== "tender") return false
+    const selected = this.selectedTenderRow()
+    if (!selected) return false
+    if (selected.dataset.removeAvailable === "false") return false
+    this.openRemoveTenderOverlay()
+    return true
+  }
+
+  invokeOpenSelectedTenderActions() {
+    if (this.modeValue !== "tender") return false
+    const selected = this.selectedTenderRow()
+    if (!selected) return false
+    this.selectTender({ currentTarget: selected })
+    if (selected.dataset.editAvailable === "true") {
+      this.openEditTenderOverlay()
+      return true
+    }
+    return false
+  }
+
+  keyboardFocusZone(target) {
+    return classifyFocusZone({
+      target,
+      commandField: this.hasFieldTarget ? this.fieldTarget : null,
+      workspaceRoot: this.element,
+      activeOverlay: this.activeOverlayElement(),
+      overlayOpen: this.overlayOpen()
+    })
+  }
+
+  keyboardContext(event, key = normalizeKey(event)) {
+    return {
+      mode: classifyMode(this.modeValue),
+      focusZone: this.keyboardFocusZone(event.target),
+      key,
+      overlayOpen: this.overlayOpen(),
+      inFlight: this.inFlight,
+      repeat: Boolean(event.repeat),
+      commandFieldEmpty: this.commandFieldEmpty(),
+      pickupAllowed: Boolean(this.pickupAllowedValue)
+    }
   }
 
   ensureTenderable() {
@@ -779,43 +1044,97 @@ export default class extends Controller {
     return types.find((type) => type.id === id) || types[0]
   }
 
-  openTransactions() {
-    if (this.overlayOpen()) {
-      this.showFeedback("Finish or cancel the current dialog before opening Transactions.")
-      return
-    }
-    if (this.modeValue !== "sale_entry" && this.modeValue !== "tender") return
-    if (!this.transactionsUrlValue) return
-    window.location.assign(this.transactionsUrlValue)
-  }
-
   showFeedback(message) {
     if (!this.hasFeedbackTarget) return
     this.feedbackTarget.textContent = message
     this.feedbackTarget.setAttribute("role", "alert")
   }
 
-  openOtherPicker(types) {
+  openTenderPicker(types, { source }) {
     if (!this.hasOtherOverlayTarget || !this.hasOtherListTarget) return
+    this.tenderPickerInvocation = {
+      source,
+      priorMode: this.modeValue === "tender" ? "tender" : "sale_entry",
+      priorTenderTypeId: this.hasTenderTypeInputTarget ? this.tenderTypeInputTarget.value : null,
+      priorCommandValue: this.hasFieldTarget ? this.fieldTarget.value : "",
+      priorReferenceValue: this.hasReferenceFieldTarget ? this.referenceFieldTarget.value : "",
+      priorGiftCardNumber: this.hasGiftCardNumberFieldTarget ? this.giftCardNumberFieldTarget.value : "",
+      opener: document.activeElement
+    }
+    if (this.hasOtherSettlementLabelTarget) {
+      const remaining = this.formatCents(this.remainingCents())
+      this.otherSettlementLabelTarget.textContent = this.settlementValue === "refund"
+        ? `Refund remaining $${remaining}`
+        : `Balance due $${remaining}`
+    }
+    if (this.hasOtherCancelTarget) {
+      const restoreTender = this.tenderPickerInvocation.priorMode === "tender"
+      this.otherCancelTarget.textContent = restoreTender ? "Back to Tender" : "Back to Sale"
+    }
     this.otherListTarget.replaceChildren()
     types.forEach((type, index) => {
       const item = document.createElement("li")
       item.dataset.tenderTypeId = type.id
-      item.textContent = type.name
+      item.dataset.tenderIndex = String(index + 1)
+      item.textContent = `${index + 1}  ${type.name}`
       this.decoratePickerItem(item, { selected: index === 0 })
+      item.addEventListener("click", () => this.onPickerItemClick(this.otherListTarget, item))
       this.otherListTarget.append(item)
     })
     this.showOverlay(this.otherOverlayTarget, this.otherListTarget.querySelector("li.is-selected"))
   }
 
+  openOtherPicker(types) {
+    this.openTenderPicker(types, { source: "other_key" })
+  }
+
   closeOtherOverlay() {
+    this.tenderPickerInvocation = null
     this.hideOverlay(this.hasOtherOverlayTarget && this.otherOverlayTarget)
+  }
+
+  dismissTenderPicker() {
+    if (!this.otherOverlayOpen()) return
+    const invocation = this.tenderPickerInvocation
+    this.tenderPickerInvocation = null
+    this.hideOverlay(this.otherOverlayTarget)
+    if (!invocation) {
+      this.restoreFocus()
+      return
+    }
+    this.restoreTenderPickerInvocation(invocation)
+  }
+
+  restoreTenderPickerInvocation(invocation) {
+    if (invocation.priorMode === "tender") {
+      this.beginTenderMode()
+      const type = this.cashierTenderTypes().find((item) => item.id === invocation.priorTenderTypeId)
+      if (type) this.applyTenderType(type)
+      if (this.hasFieldTarget) this.fieldTarget.value = invocation.priorCommandValue || ""
+      if (this.hasReferenceFieldTarget) this.referenceFieldTarget.value = invocation.priorReferenceValue || ""
+      if (this.hasGiftCardNumberFieldTarget) this.giftCardNumberFieldTarget.value = invocation.priorGiftCardNumber || ""
+      this.fieldTarget.focus()
+      this.fieldTarget.select()
+      return
+    }
+    if (this.modeValue === "tender") {
+      this.setMode("sale_entry", "SALE ENTRY")
+      this.setFieldLabel("Scan or identifier")
+      this.fieldTarget.inputMode = "text"
+      this.toggleReferenceField("omitted")
+      this.toggleGiftCardNumberField(null)
+      this.enableReadyActions()
+    }
+    if (this.hasFieldTarget) {
+      this.fieldTarget.value = invocation.priorCommandValue || ""
+      this.fieldTarget.focus()
+    }
   }
 
   onOtherOverlayKeydown(event, key) {
     if (key === "Escape") {
       event.preventDefault()
-      this.closeOtherOverlay()
+      this.dismissTenderPicker()
       return
     }
     if (key === "ArrowUp" || key === "ArrowDown") {
@@ -834,7 +1153,8 @@ export default class extends Controller {
     const selected = this.otherListTarget.querySelector("li.is-selected")
     if (!selected) return
     const type = this.cashierTenderTypes().find((item) => item.id === selected.dataset.tenderTypeId)
-    this.closeOtherOverlay()
+    this.tenderPickerInvocation = null
+    this.hideOverlay(this.otherOverlayTarget)
     if (!type) return
     this.beginTenderMode()
     this.applyTenderType(type)
@@ -871,9 +1191,11 @@ export default class extends Controller {
   handleResolution(result) {
     switch (result.outcome) {
       case "addable_variant":
+        this.clearOverlayStack({ restoreCommand: false })
         this.postAddMerchandise({ variantId: result.variant.id })
         return
       case "addable_unit":
+        this.clearOverlayStack({ restoreCommand: false })
         this.postAddMerchandise({ unitId: result.unit.id })
         return
       case "product_choice_required":
@@ -920,7 +1242,7 @@ export default class extends Controller {
   openSearchOverlay() {
     if (this.inFlight || this.modeValue !== "sale_entry") return
     if (!this.hasSearchOverlayTarget) return
-    this.searchResultsReady = false
+    this.invalidateSearchLookup()
     if (this.hasSearchSkuFieldTarget) this.searchSkuFieldTarget.value = ""
     if (this.hasSearchNameFieldTarget) this.searchNameFieldTarget.value = ""
     if (this.hasSearchListTarget) this.searchListTarget.replaceChildren()
@@ -929,7 +1251,22 @@ export default class extends Controller {
   }
 
   closeSearchOverlay() {
+    this.invalidateSearchLookup()
     this.hideOverlay(this.hasSearchOverlayTarget && this.searchOverlayTarget)
+  }
+
+  invalidateSearchLookup() {
+    if (this.searchAbort) this.searchAbort.abort()
+    this.searchAbort = null
+    this.searchRequestToken += 1
+    this.searchResultsReady = false
+  }
+
+  invalidateSearchResultsOnInput() {
+    if (!this.searchResultsReady && !(this.hasSearchListTarget && this.searchListTarget.children.length > 0)) return
+    if (this.hasSearchListTarget) this.searchListTarget.replaceChildren()
+    this.searchResultsReady = false
+    if (this.hasSearchQueryLabelTarget) this.searchQueryLabelTarget.textContent = ""
   }
 
   onSearchOverlayKeydown(event, key) {
@@ -946,11 +1283,8 @@ export default class extends Controller {
     if (key !== "Enter") return
     event.preventDefault()
     const inField = event.target === this.searchSkuFieldTarget || event.target === this.searchNameFieldTarget
-    if (inField && !this.searchResultsReady) {
-      this.runMerchandiseSearch()
-      return
-    }
-    if (inField) {
+    const selected = this.hasSearchListTarget && this.searchListTarget.querySelector("li.is-selected:not(.is-disabled)")
+    if (inField && (!this.searchResultsReady || !selected)) {
       this.runMerchandiseSearch()
       return
     }
@@ -961,27 +1295,55 @@ export default class extends Controller {
     const sku = this.hasSearchSkuFieldTarget ? this.searchSkuFieldTarget.value.trim() : ""
     const name = this.hasSearchNameFieldTarget ? this.searchNameFieldTarget.value.trim() : ""
     if (!sku && !name) return
+    if (this.searchAbort) this.searchAbort.abort()
+    this.searchAbort = new AbortController()
+    const token = ++this.searchRequestToken
+    if (this.hasSearchQueryLabelTarget) this.searchQueryLabelTarget.textContent = "Searching…"
     const url = new URL(this.searchUrlValue, window.location.origin)
     if (sku) url.searchParams.set("sku", sku)
     if (name) url.searchParams.set("name", name)
     try {
-      const response = await fetch(url, { headers: { Accept: "application/json" }, credentials: "same-origin" })
+      const response = await fetch(url, {
+        headers: { Accept: "application/json" },
+        credentials: "same-origin",
+        signal: this.searchAbort.signal
+      })
       const payload = await response.json()
+      if (!this.lookupResponseCurrent("search", token)) return
       this.renderSearchResults(payload.results || [])
-    } catch (_error) {
+    } catch (error) {
+      if (error?.name === "AbortError") return
+      if (!this.lookupResponseCurrent("search", token)) return
       this.renderSearchResults([])
       if (this.hasSearchQueryLabelTarget) this.searchQueryLabelTarget.textContent = "Search failed."
+      this.focusOverlayEntry(this.searchSkuFieldTarget || this.searchNameFieldTarget)
     }
+  }
+
+  lookupResponseCurrent(family, token) {
+    if (!this.element.isConnected) return false
+    if (family === "search") {
+      return token === this.searchRequestToken && this.searchOverlayOpen()
+    }
+    if (family === "pickup") {
+      return token === this.pickupRequestToken && this.pickupOverlayOpen()
+    }
+    if (family === "customer") {
+      return token === this.customerRequestToken && this.customerOverlayOpen()
+    }
+    return false
   }
 
   renderSearchResults(rows) {
     if (!this.hasSearchListTarget) return
     this.searchListTarget.replaceChildren()
     this.searchResultsReady = true
+    const enabledRows = rows.filter((row) => !row.disabled)
     if (this.hasSearchQueryLabelTarget) {
       this.searchQueryLabelTarget.textContent = rows.length === 0 ? "No matching merchandise." : ""
     }
-    rows.forEach((row, index) => {
+    let firstEnabled = null
+    rows.forEach((row) => {
       const item = document.createElement("li")
       item.dataset.variantId = row.id
       item.dataset.disabled = row.disabled ? "true" : "false"
@@ -989,11 +1351,18 @@ export default class extends Controller {
       const availability = row.available == null ? "" : ` · ${row.available}`
       const reason = row.disabled && row.reason ? ` — ${row.reason}` : ""
       item.textContent = [row.sku, row.name, row.condition, row.price_label].filter(Boolean).join(" · ") + availability + reason
-      this.decoratePickerItem(item, { selected: index === 0, disabled: Boolean(row.disabled) })
+      const selected = !row.disabled && firstEnabled == null
+      if (selected) firstEnabled = item
+      this.decoratePickerItem(item, { selected, disabled: Boolean(row.disabled) })
+      item.addEventListener("click", () => this.onPickerItemClick(this.searchListTarget, item))
       this.searchListTarget.append(item)
     })
-    const first = this.searchListTarget.querySelector("li.is-selected")
-    if (first) first.focus()
+    if (firstEnabled) {
+      this.focusOverlayEntry(firstEnabled)
+    } else {
+      const query = this.searchSkuFieldTarget || this.searchNameFieldTarget
+      this.focusOverlayEntry(query)
+    }
   }
 
   selectHighlightedSearch() {
@@ -1004,14 +1373,37 @@ export default class extends Controller {
       return
     }
     const variantId = selected.dataset.variantId
-    this.closeSearchOverlay()
+    // Keep search open so resolve children (variant / unit / open-price) stack on top.
     this.resolveAndHandle({ product_variant_id: variantId })
+  }
+
+  keepSearching() {
+    if (this.hasSearchListTarget) this.searchListTarget.replaceChildren()
+    this.searchResultsReady = false
+    if (this.hasSearchQueryLabelTarget) this.searchQueryLabelTarget.textContent = ""
+    this.focusOverlayEntry(this.searchSkuFieldTarget || this.searchNameFieldTarget)
+  }
+
+  confirmSearchSelection(event) {
+    if (event) event.preventDefault()
+    this.selectHighlightedSearch()
+  }
+
+  onPickerItemClick(list, item) {
+    if (!list || !item || item.classList.contains("is-disabled")) return
+    Array.from(list.querySelectorAll("li")).forEach((row) => {
+      const selected = row === item
+      row.classList.toggle("is-selected", selected)
+      row.setAttribute("aria-selected", selected ? "true" : "false")
+      row.tabIndex = selected ? 0 : -1
+    })
+    this.focusOverlayEntry(item)
   }
 
   openPickupOverlay() {
     if (!this.pickupAllowedValue) return
     if (!this.hasPickupOverlayTarget) return
-    this.pickupResultsReady = false
+    this.invalidatePickupLookup()
     if (this.hasPickupQueryFieldTarget) this.pickupQueryFieldTarget.value = ""
     if (this.hasPickupListTarget) this.pickupListTarget.replaceChildren()
     if (this.hasPickupQueryLabelTarget) this.pickupQueryLabelTarget.textContent = ""
@@ -1019,7 +1411,22 @@ export default class extends Controller {
   }
 
   closePickupOverlay() {
+    this.invalidatePickupLookup()
     this.hideOverlay(this.hasPickupOverlayTarget && this.pickupOverlayTarget)
+  }
+
+  invalidatePickupLookup() {
+    if (this.pickupAbort) this.pickupAbort.abort()
+    this.pickupAbort = null
+    this.pickupRequestToken += 1
+    this.pickupResultsReady = false
+  }
+
+  invalidatePickupResultsOnInput() {
+    if (!this.pickupResultsReady && !(this.hasPickupListTarget && this.pickupListTarget.children.length > 0)) return
+    if (this.hasPickupListTarget) this.pickupListTarget.replaceChildren()
+    this.pickupResultsReady = false
+    if (this.hasPickupQueryLabelTarget) this.pickupQueryLabelTarget.textContent = ""
   }
 
   onPickupOverlayKeydown(event, key) {
@@ -1036,11 +1443,8 @@ export default class extends Controller {
     if (key !== "Enter") return
     event.preventDefault()
     const inField = event.target === this.pickupQueryFieldTarget
-    if (inField && !this.pickupResultsReady) {
-      this.runPickupSearch()
-      return
-    }
-    if (inField && this.pickupListTarget.querySelectorAll("li").length === 0) {
+    const selected = this.hasPickupListTarget && this.pickupListTarget.querySelector("li.is-selected:not(.is-disabled)")
+    if (inField && (!this.pickupResultsReady || !selected)) {
       this.runPickupSearch()
       return
     }
@@ -1052,18 +1456,30 @@ export default class extends Controller {
     if (!query) {
       this.renderPickupResults([])
       if (this.hasPickupQueryLabelTarget) this.pickupQueryLabelTarget.textContent = "Enter a search."
+      this.focusOverlayEntry(this.pickupQueryFieldTarget)
       return
     }
+    if (this.pickupAbort) this.pickupAbort.abort()
+    this.pickupAbort = new AbortController()
+    const token = ++this.pickupRequestToken
+    if (this.hasPickupQueryLabelTarget) this.pickupQueryLabelTarget.textContent = "Searching…"
     const url = new URL(this.pickupSearchUrlValue, window.location.origin)
     url.searchParams.set("q", query)
     try {
-      const response = await fetch(url, { headers: { Accept: "application/json" } })
+      const response = await fetch(url, {
+        headers: { Accept: "application/json" },
+        signal: this.pickupAbort.signal
+      })
       const payload = await response.json()
+      if (!this.lookupResponseCurrent("pickup", token)) return
       if (!response.ok) throw new Error(payload.error || "pickup search failed")
       this.renderPickupResults(payload.results || [])
-    } catch (_error) {
+    } catch (error) {
+      if (error?.name === "AbortError") return
+      if (!this.lookupResponseCurrent("pickup", token)) return
       this.renderPickupResults([])
       if (this.hasPickupQueryLabelTarget) this.pickupQueryLabelTarget.textContent = "Search failed."
+      this.focusOverlayEntry(this.pickupQueryFieldTarget)
     }
   }
 
@@ -1074,32 +1490,48 @@ export default class extends Controller {
     if (this.hasPickupQueryLabelTarget) {
       this.pickupQueryLabelTarget.textContent = rows.length === 0 ? "No available customer requests." : ""
     }
-    rows.forEach((row, index) => {
+    let firstEnabled = null
+    rows.forEach((row) => {
       const item = document.createElement("li")
-      item.setAttribute("role", "option")
-      item.className = index === 0 ? "is-selected" : ""
       item.dataset.requestId = row.customer_request_id
       item.dataset.allocationType = row.allocation_type || ""
       const detail = row.allocation_type === "used_unit"
         ? `Used unit ${row.unit_identifier || ""}`.trim()
         : "Standard reserved copy"
       item.textContent = `${row.label} · ${detail}`
+      const selected = firstEnabled == null
+      if (selected) firstEnabled = item
+      this.decoratePickerItem(item, { selected, disabled: false })
+      item.addEventListener("click", () => this.onPickerItemClick(this.pickupListTarget, item))
       this.pickupListTarget.append(item)
     })
+    if (firstEnabled) this.focusOverlayEntry(firstEnabled)
+    else this.focusOverlayEntry(this.pickupQueryFieldTarget)
   }
 
   selectHighlightedPickup() {
     const selected = this.hasPickupListTarget && this.pickupListTarget.querySelector("li.is-selected")
-    if (!selected) return
-    this.closePickupOverlay()
+    if (!selected || selected.classList.contains("is-disabled")) return
     if (!this.hasPickupFormTarget || !this.hasPickupRequestInputTarget) return
     this.pickupRequestInputTarget.value = selected.dataset.requestId
+    this.closePickupOverlay()
     this.pickupFormTarget.requestSubmit()
   }
 
-  openCustomerOverlay() {
+  confirmPickupSelection(event) {
+    if (event) event.preventDefault()
+    this.selectHighlightedPickup()
+  }
+
+  keepTransactionUnchanged(event) {
+    if (event) event.preventDefault()
+    this.closePickupOverlay()
+  }
+
+  openCustomerOverlay(options = {}) {
     if (!this.hasCustomerOverlayTarget) return
-    this.customerResultsReady = false
+    this.customerLookupContext = options.context || null
+    this.invalidateCustomerLookup()
     if (this.hasCustomerQueryFieldTarget) this.customerQueryFieldTarget.value = ""
     if (this.hasCustomerListTarget) this.customerListTarget.replaceChildren()
     if (this.hasCustomerQueryLabelTarget) this.customerQueryLabelTarget.textContent = ""
@@ -1107,7 +1539,22 @@ export default class extends Controller {
   }
 
   closeCustomerOverlay() {
+    this.invalidateCustomerLookup()
     this.hideOverlay(this.hasCustomerOverlayTarget && this.customerOverlayTarget)
+  }
+
+  invalidateCustomerLookup() {
+    if (this.customerAbort) this.customerAbort.abort()
+    this.customerAbort = null
+    this.customerRequestToken += 1
+    this.customerResultsReady = false
+  }
+
+  invalidateCustomerResultsOnInput() {
+    if (!this.customerResultsReady && !(this.hasCustomerListTarget && this.customerListTarget.children.length > 0)) return
+    if (this.hasCustomerListTarget) this.customerListTarget.replaceChildren()
+    this.customerResultsReady = false
+    if (this.hasCustomerQueryLabelTarget) this.customerQueryLabelTarget.textContent = ""
   }
 
   onCustomerOverlayKeydown(event, key) {
@@ -1124,15 +1571,24 @@ export default class extends Controller {
     if (key !== "Enter") return
     event.preventDefault()
     const inField = event.target === this.customerQueryFieldTarget
-    if (inField && !this.customerResultsReady) {
-      this.runCustomerSearch()
-      return
-    }
-    if (inField && this.customerListTarget.querySelectorAll("li").length === 0) {
+    const selected = this.hasCustomerListTarget && this.customerListTarget.querySelector("li.is-selected:not(.is-disabled)")
+    if (inField && (!this.customerResultsReady || !selected)) {
       this.runCustomerSearch()
       return
     }
     this.selectHighlightedCustomer()
+  }
+
+  onQuickCustomerOverlayKeydown(event, key) {
+    if (key === "Escape") {
+      event.preventDefault()
+      this.closeQuickCustomerOverlay()
+      return
+    }
+    if (key === "Enter" && !event.target.matches("textarea")) {
+      event.preventDefault()
+      this.submitQuickCustomer()
+    }
   }
 
   async runCustomerSearch() {
@@ -1140,18 +1596,30 @@ export default class extends Controller {
     if (!query) {
       this.renderCustomerResults([])
       if (this.hasCustomerQueryLabelTarget) this.customerQueryLabelTarget.textContent = "Enter a search."
+      this.focusOverlayEntry(this.customerQueryFieldTarget)
       return
     }
+    if (this.customerAbort) this.customerAbort.abort()
+    this.customerAbort = new AbortController()
+    const token = ++this.customerRequestToken
+    if (this.hasCustomerQueryLabelTarget) this.customerQueryLabelTarget.textContent = "Searching…"
     const url = new URL(this.customerSearchUrlValue, window.location.origin)
     url.searchParams.set("q", query)
     try {
-      const response = await fetch(url, { headers: { Accept: "application/json" } })
+      const response = await fetch(url, {
+        headers: { Accept: "application/json" },
+        signal: this.customerAbort.signal
+      })
       const payload = await response.json()
+      if (!this.lookupResponseCurrent("customer", token)) return
       if (!response.ok) throw new Error(payload.error || "customer search failed")
       this.renderCustomerResults(payload.results || [])
-    } catch (_error) {
+    } catch (error) {
+      if (error?.name === "AbortError") return
+      if (!this.lookupResponseCurrent("customer", token)) return
       this.renderCustomerResults([])
       if (this.hasCustomerQueryLabelTarget) this.customerQueryLabelTarget.textContent = "Search failed."
+      this.focusOverlayEntry(this.customerQueryFieldTarget)
     }
   }
 
@@ -1162,14 +1630,19 @@ export default class extends Controller {
     if (this.hasCustomerQueryLabelTarget) {
       this.customerQueryLabelTarget.textContent = rows.length === 0 ? "No matching customers." : ""
     }
-    rows.forEach((row, index) => {
+    let firstEnabled = null
+    rows.forEach((row) => {
       const item = document.createElement("li")
-      item.setAttribute("role", "option")
-      item.className = index === 0 ? "is-selected" : ""
       item.dataset.customerId = row.id
       item.textContent = row.label
+      const selected = firstEnabled == null
+      if (selected) firstEnabled = item
+      this.decoratePickerItem(item, { selected, disabled: false })
+      item.addEventListener("click", () => this.onPickerItemClick(this.customerListTarget, item))
       this.customerListTarget.append(item)
     })
+    if (firstEnabled) this.focusOverlayEntry(firstEnabled)
+    else this.focusOverlayEntry(this.customerQueryFieldTarget)
   }
 
   selectHighlightedCustomer() {
@@ -1181,6 +1654,170 @@ export default class extends Controller {
     this.attachCustomerFormTarget.requestSubmit()
   }
 
+  confirmCustomerSelection(event) {
+    if (event) event.preventDefault()
+    this.selectHighlightedCustomer()
+  }
+
+  keepCurrentCustomer(event) {
+    if (event) event.preventDefault()
+    this.closeCustomerOverlay()
+  }
+
+  openQuickCustomerOverlay(event) {
+    if (event) event.preventDefault()
+    if (!this.quickCustomerAllowedValue || !this.hasQuickCustomerOverlayTarget) return
+    this.resetQuickCustomerOverlay()
+    this.syncQuickCustomerContextLabel()
+    this.showOverlay(
+      this.quickCustomerOverlayTarget,
+      {
+        parent: this.hasCustomerOverlayTarget ? this.customerOverlayTarget : null,
+        initialFocus: this.hasQuickCustomerDisplayNameFieldTarget && this.quickCustomerDisplayNameFieldTarget
+      }
+    )
+  }
+
+  closeQuickCustomerOverlay(event) {
+    if (event) event.preventDefault()
+    this.hideOverlay(this.hasQuickCustomerOverlayTarget && this.quickCustomerOverlayTarget)
+  }
+
+  resetQuickCustomerOverlay() {
+    this.quickCustomerIdempotencyKey = this.uuidV7()
+    if (this.hasQuickCustomerDisplayNameFieldTarget) this.quickCustomerDisplayNameFieldTarget.value = ""
+    if (this.hasQuickCustomerEmailFieldTarget) this.quickCustomerEmailFieldTarget.value = ""
+    if (this.hasQuickCustomerPhoneFieldTarget) this.quickCustomerPhoneFieldTarget.value = ""
+    if (this.hasQuickCustomerAcknowledgeFieldTarget) this.quickCustomerAcknowledgeFieldTarget.checked = false
+    this.clearQuickCustomerDuplicates()
+    if (this.hasQuickCustomerOverlayTarget) this.clearOverlayError(this.quickCustomerOverlayTarget)
+  }
+
+  clearQuickCustomerDuplicates() {
+    if (this.hasQuickCustomerDuplicateWrapTarget) this.quickCustomerDuplicateWrapTarget.hidden = true
+    if (this.hasQuickCustomerDuplicateListTarget) this.quickCustomerDuplicateListTarget.replaceChildren()
+  }
+
+  syncQuickCustomerContextLabel() {
+    if (!this.hasQuickCustomerContextLabelTarget) return
+    const context = this.customerLookupContext
+    if (context === "store_credit" || context === "trade_credit") {
+      this.quickCustomerContextLabelTarget.textContent = "Email or phone is required for store-credit and trade-credit flows."
+    } else if (context === "customer_store_credit") {
+      this.quickCustomerContextLabelTarget.textContent = "Email or phone is required for customer store-credit refunds."
+    } else {
+      this.quickCustomerContextLabelTarget.textContent = "Create a customer identity and attach it to this transaction."
+    }
+  }
+
+  quickCustomerRequiresContact() {
+    return this.customerLookupContext === "store_credit" ||
+      this.customerLookupContext === "trade_credit" ||
+      this.customerLookupContext === "customer_store_credit"
+  }
+
+  renderQuickCustomerDuplicates(rows) {
+    if (!this.hasQuickCustomerDuplicateWrapTarget || !this.hasQuickCustomerDuplicateListTarget) return
+    this.quickCustomerDuplicateWrapTarget.hidden = false
+    this.quickCustomerDuplicateListTarget.replaceChildren()
+    rows.forEach((row, index) => {
+      const item = document.createElement("li")
+      item.textContent = row.label || [row.display_name, row.email, row.phone].filter(Boolean).join(" · ")
+      this.decoratePickerItem(item, { selected: index === 0, disabled: true })
+      this.quickCustomerDuplicateListTarget.append(item)
+    })
+  }
+
+  async submitQuickCustomer(event) {
+    if (event) event.preventDefault()
+    if (this.inFlight || !this.hasQuickCustomerOverlayTarget) return
+    const displayName = this.hasQuickCustomerDisplayNameFieldTarget ? this.quickCustomerDisplayNameFieldTarget.value.trim() : ""
+    const email = this.hasQuickCustomerEmailFieldTarget ? this.quickCustomerEmailFieldTarget.value.trim() : ""
+    const phone = this.hasQuickCustomerPhoneFieldTarget ? this.quickCustomerPhoneFieldTarget.value.trim() : ""
+    if (!displayName) {
+      this.setQuickCustomerFeedback("Display name is required.")
+      if (this.hasQuickCustomerDisplayNameFieldTarget) this.focusOverlayEntry(this.quickCustomerDisplayNameFieldTarget)
+      return
+    }
+    if (this.quickCustomerRequiresContact() && !email && !phone) {
+      this.setQuickCustomerFeedback("Email or phone is required for this flow.")
+      const focusTarget = this.hasQuickCustomerEmailFieldTarget ? this.quickCustomerEmailFieldTarget : this.quickCustomerPhoneFieldTarget
+      if (focusTarget) this.focusOverlayEntry(focusTarget)
+      return
+    }
+
+    if (!this.quickCustomerIdempotencyKey) this.quickCustomerIdempotencyKey = this.uuidV7()
+    const acknowledge = this.hasQuickCustomerAcknowledgeFieldTarget && this.quickCustomerAcknowledgeFieldTarget.checked
+
+    this.beginFlight()
+    try {
+      const body = new FormData()
+      body.set("display_name", displayName)
+      if (email) body.set("email", email)
+      if (phone) body.set("phone", phone)
+      body.set("idempotency_key", this.quickCustomerIdempotencyKey)
+      if (this.customerLookupContext) {
+        body.set("customer_context", this.customerLookupContext)
+      }
+      if (acknowledge) body.set("acknowledge_duplicates", "1")
+
+      const response = await fetch(this.quickCustomerUrlValue, {
+        method: "POST",
+        headers: {
+          Accept: "text/vnd.turbo-stream.html, text/html, application/json",
+          "X-CSRF-Token": this.csrfToken()
+        },
+        body,
+        credentials: "same-origin"
+      })
+
+      const contentType = response.headers.get("content-type") || ""
+      if (contentType.includes("application/json")) {
+        const payload = await response.json()
+        if (response.ok) {
+          window.location.assign(this.workspaceUrlValue)
+          return
+        }
+        if (payload.error === "duplicates") {
+          // Acknowledged create is a new deliberate command — rotate the key so the
+          // acknowledge_duplicates change cannot collide with the failed probe payload.
+          this.quickCustomerIdempotencyKey = this.uuidV7()
+          this.setQuickCustomerFeedback(payload.message || "Possible duplicate customers found.")
+          this.renderQuickCustomerDuplicates(payload.suggestions || [])
+          if (this.hasQuickCustomerAcknowledgeFieldTarget) this.focusOverlayEntry(this.quickCustomerAcknowledgeFieldTarget)
+          return
+        }
+        this.setQuickCustomerFeedback(payload.message || "Quick Customer could not be completed.")
+        return
+      }
+
+      const html = await response.text()
+      if (response.ok) {
+        Turbo.renderStreamMessage(html)
+        this.clearOverlayStack({ restoreCommand: false })
+        return
+      }
+
+      Turbo.renderStreamMessage(html)
+    } catch (_error) {
+      this.setQuickCustomerFeedback("Quick Customer could not be completed.")
+    } finally {
+      this.inFlight = false
+      this.enableReadyActions()
+    }
+  }
+
+  setQuickCustomerFeedback(message) {
+    if (!this.hasQuickCustomerOverlayTarget) return
+    const node = this.quickCustomerOverlayTarget.querySelector("[data-overlay-error]")
+    if (node) node.textContent = message || ""
+  }
+
+  csrfToken() {
+    return document.querySelector("meta[name='csrf-token']")?.content || ""
+  }
+
+
   openProductPicker(products) {
     if (!this.hasProductOverlayTarget || !this.hasProductListTarget) return
     this.productListTarget.replaceChildren()
@@ -1191,6 +1828,7 @@ export default class extends Controller {
       const descriptor = [product.name, product.subtitle, product.brand_name].filter(Boolean).join(" — ")
       item.textContent = [descriptor, identity].filter(Boolean).join(" · ")
       this.decoratePickerItem(item, { selected: index === 0 })
+      item.addEventListener("click", () => this.onPickerItemClick(this.productListTarget, item))
       this.productListTarget.append(item)
     })
     this.showOverlay(this.productOverlayTarget, this.productListTarget.querySelector("li.is-selected"))
@@ -1220,19 +1858,31 @@ export default class extends Controller {
 
   selectHighlightedProduct() {
     const selected = this.hasProductListTarget && this.productListTarget.querySelector("li.is-selected")
-    if (!selected || !selected.dataset.productId) return
+    if (!selected || !selected.dataset.productId || selected.classList.contains("is-disabled")) return
     const productId = selected.dataset.productId
-    this.closeProductOverlay()
     if (this.unlinkedPickerActive) {
       this.unlinkedPickerActive = false
+      this.closeProductOverlay()
       this.fetchUnlinkedResolution({ product_id: productId })
       return
     }
     this.resolveAndHandle({ product_id: productId })
   }
 
+  confirmProductSelection(event) {
+    if (event) event.preventDefault()
+    this.selectHighlightedProduct()
+  }
+
+  backFromProductOverlay(event) {
+    if (event) event.preventDefault()
+    this.closeProductOverlay()
+    this.abortUnlinkedPicker()
+  }
+
   openVariantPicker(variants) {
     if (!this.hasVariantOverlayTarget || !this.hasVariantListTarget) return
+    this.syncNestedPickerBackLabels()
     this.variantListTarget.replaceChildren()
     variants.forEach((variant, index) => {
       const item = document.createElement("li")
@@ -1241,6 +1891,7 @@ export default class extends Controller {
       const availability = variant.available == null ? "" : ` · ${variant.available}`
       item.textContent = [variant.sku, variant.name, variant.condition, price].filter(Boolean).join(" · ") + availability
       this.decoratePickerItem(item, { selected: index === 0 })
+      item.addEventListener("click", () => this.onPickerItemClick(this.variantListTarget, item))
       this.variantListTarget.append(item)
     })
     this.showOverlay(this.variantOverlayTarget, this.variantListTarget.querySelector("li.is-selected"))
@@ -1270,19 +1921,41 @@ export default class extends Controller {
 
   selectHighlightedVariant() {
     const selected = this.hasVariantListTarget && this.variantListTarget.querySelector("li.is-selected")
-    if (!selected) return
+    if (!selected || selected.classList.contains("is-disabled")) return
     const variantId = selected.dataset.variantId
-    this.closeVariantOverlay()
     if (this.unlinkedPickerActive) {
       this.unlinkedPickerActive = false
+      this.closeVariantOverlay()
       this.fetchUnlinkedResolution({ product_variant_id: variantId })
       return
     }
     this.resolveAndHandle({ product_variant_id: variantId })
   }
 
+  confirmVariantSelection(event) {
+    if (event) event.preventDefault()
+    this.selectHighlightedVariant()
+  }
+
+  backToProducts(event) {
+    if (event) event.preventDefault()
+    this.closeVariantOverlay()
+    this.abortUnlinkedPicker()
+  }
+
+  syncNestedPickerBackLabels() {
+    const unlinked = Boolean(this.unlinkedPickerActive)
+    if (this.hasVariantBackTarget) {
+      this.variantBackTarget.textContent = unlinked ? "Back to Item Lookup" : "Back to Products"
+    }
+    if (this.hasUnitBackTarget) {
+      this.unitBackTarget.textContent = unlinked ? "Back to Item Lookup" : "Back to Variants"
+    }
+  }
+
   openUnitPicker(units) {
     if (!this.hasUnitOverlayTarget || !this.hasUnitListTarget) return
+    this.syncNestedPickerBackLabels()
     this.unitListTarget.replaceChildren()
     if (units.length === 0) {
       const item = document.createElement("li")
@@ -1295,6 +1968,7 @@ export default class extends Controller {
       item.dataset.unitId = unit.id
       item.textContent = [unit.unit_identifier, unit.condition, this.formatCents(unit.price_cents)].filter(Boolean).join(" · ")
       this.decoratePickerItem(item, { selected: index === 0 })
+      item.addEventListener("click", () => this.onPickerItemClick(this.unitListTarget, item))
       this.unitListTarget.append(item)
     })
     this.showOverlay(this.unitOverlayTarget, this.unitListTarget.querySelector("li.is-selected"))
@@ -1324,25 +1998,37 @@ export default class extends Controller {
 
   selectHighlightedUnit() {
     const selected = this.hasUnitListTarget && this.unitListTarget.querySelector("li.is-selected")
-    if (!selected || !selected.dataset.unitId) return
+    if (!selected || !selected.dataset.unitId || selected.classList.contains("is-disabled")) return
     const unitId = selected.dataset.unitId
-    this.closeUnitOverlay()
     if (this.unlinkedPickerActive) {
       this.unlinkedPickerActive = false
+      this.closeUnitOverlay()
       this.fetchUnlinkedResolution({ inventory_unit_id: unitId })
       return
     }
     this.resolveAndHandle({ inventory_unit_id: unitId })
   }
 
+  confirmUnitSelection(event) {
+    if (event) event.preventDefault()
+    this.selectHighlightedUnit()
+  }
+
+  backToVariants(event) {
+    if (event) event.preventDefault()
+    this.closeUnitOverlay()
+    this.abortUnlinkedPicker()
+  }
+
   movePickerList(list, delta) {
     if (!list) return
-    const items = Array.from(list.querySelectorAll("li")).filter((item) => !item.classList.contains("is-disabled") || item.dataset.variantId)
+    const all = Array.from(list.querySelectorAll("li"))
+    const items = all.filter((item) => !item.classList.contains("is-disabled"))
     if (items.length === 0) return
     const current = items.findIndex((item) => item.classList.contains("is-selected"))
     const nextIndex = Math.min(items.length - 1, Math.max(0, (current < 0 ? 0 : current) + delta))
-    items.forEach((item, index) => {
-      const selected = index === nextIndex
+    all.forEach((item) => {
+      const selected = item === items[nextIndex]
       item.classList.toggle("is-selected", selected)
       item.setAttribute("aria-selected", selected ? "true" : "false")
       item.tabIndex = selected ? 0 : -1
@@ -1355,7 +2041,10 @@ export default class extends Controller {
     this.pendingOpenPrice = { kind, variantId, lineId }
     if (this.hasOpenPricePromptTarget) this.openPricePromptTarget.textContent = prompt || "Enter the selling price."
     if (this.hasOpenPriceFieldTarget) {
-      this.openPriceFieldTarget.value = currentCents ? this.formatCents(currentCents) : ""
+      this.openPriceFieldTarget.value = currentCents != null ? this.formatCents(currentCents) : ""
+    }
+    if (this.hasOpenPriceTitleTarget) {
+      this.openPriceTitleTarget.textContent = kind === "edit" ? "Edit open price" : "Open price"
     }
     this.showOverlay(this.openPriceOverlayTarget, this.hasOpenPriceFieldTarget && this.openPriceFieldTarget)
   }
@@ -1383,14 +2072,17 @@ export default class extends Controller {
     const value = this.hasOpenPriceFieldTarget ? this.openPriceFieldTarget.value.trim() : ""
     if (value === "") return
     const pending = this.pendingOpenPrice
+    this.pendingOpenPrice = null
     this.clearOverlayError(this.openPriceOverlayTarget)
     if (pending.kind === "edit") {
+      this.clearOverlayStack({ restoreCommand: false })
       if (this.hasOpenPriceLineInputTarget) this.openPriceLineInputTarget.value = pending.lineId
       if (this.hasOpenPriceEditInputTarget) this.openPriceEditInputTarget.value = value
       this.beginFlight()
       this.openPriceFormTarget.requestSubmit()
       return
     }
+    this.clearOverlayStack({ restoreCommand: false })
     this.postAddMerchandise({ variantId: pending.variantId, sellingPrice: value })
   }
 
@@ -1405,14 +2097,37 @@ export default class extends Controller {
     if (this.inFlight || this.modeValue !== "sale_entry") return
     if (!this.hasReturnChooserOverlayTarget) return
     const items = Array.from(this.returnChooserListTarget.querySelectorAll("li"))
-    items.forEach((item, index) => {
-      this.decoratePickerItem(item, { selected: index === 0 })
+    const unlinkedProhibited = this.policyFor("unlinked_return") === "prohibited"
+    let firstEnabled = null
+    items.forEach((item) => {
+      const disabled = item.dataset.choice === "unlinked" && unlinkedProhibited
+      const muted = item.querySelector(".muted")
+      if (item.dataset.choice === "unlinked" && muted) {
+        muted.textContent = disabled
+          ? "Not available for your role."
+          : "Requires a reason and may require authorization."
+      }
+      const selected = !disabled && firstEnabled == null
+      if (selected) firstEnabled = item
+      this.decoratePickerItem(item, { selected, disabled })
+      item.onclick = () => {
+        this.onPickerItemClick(this.returnChooserListTarget, item)
+        this.syncReturnChooserContinue()
+      }
     })
-    this.showOverlay(this.returnChooserOverlayTarget, this.returnChooserListTarget.querySelector("li.is-selected"))
+    this.showOverlay(this.returnChooserOverlayTarget, firstEnabled || items[0])
+    this.syncReturnChooserContinue()
   }
 
   closeReturnChooser() {
+    this.invalidateLinkedLookup()
+    this.invalidateUnlinkedLookup()
     this.hideOverlay(this.hasReturnChooserOverlayTarget && this.returnChooserOverlayTarget)
+  }
+
+  keepSaleMode(event) {
+    if (event) event.preventDefault()
+    this.closeReturnChooser()
   }
 
   onReturnChooserKeydown(event, key) {
@@ -1424,24 +2139,33 @@ export default class extends Controller {
     if (key === "ArrowUp" || key === "ArrowDown") {
       event.preventDefault()
       this.movePickerList(this.returnChooserListTarget, key === "ArrowUp" ? -1 : 1)
+      this.syncReturnChooserContinue()
       return
     }
     if (key === "Enter") {
       event.preventDefault()
-      this.selectReturnChooser()
+      this.confirmReturnChooser()
     }
   }
 
+  syncReturnChooserContinue() {
+    if (!this.hasReturnChooserContinueTarget) return
+    const selected = this.hasReturnChooserListTarget && this.returnChooserListTarget.querySelector("li.is-selected:not(.is-disabled)")
+    this.returnChooserContinueTarget.disabled = !selected
+  }
+
+  confirmReturnChooser(event) {
+    if (event) event.preventDefault()
+    this.selectReturnChooser()
+  }
+
   selectReturnChooser() {
-    const selected = this.hasReturnChooserListTarget && this.returnChooserListTarget.querySelector("li.is-selected")
+    const selected = this.hasReturnChooserListTarget && this.returnChooserListTarget.querySelector("li.is-selected:not(.is-disabled)")
     if (!selected) return
     const choice = selected.dataset.choice
-    this.closeReturnChooser()
+    // Keep chooser on the stack as parent of linked/unlinked.
     if (choice === "unlinked") {
-      if (this.policyFor("unlinked_return") === "prohibited") {
-        this.showFeedback("Return without receipt is not available.")
-        return
-      }
+      if (this.policyFor("unlinked_return") === "prohibited") return
       this.openUnlinkedOverlay()
       return
     }
@@ -1451,18 +2175,42 @@ export default class extends Controller {
   openLinkedOverlay() {
     if (this.inFlight || this.modeValue !== "sale_entry") return
     if (!this.hasLinkedOverlayTarget) return
-    this.linkedMode = "lookup"
+    this.invalidateLinkedLookup()
+    this.linkedStage = "lookup"
     if (this.hasLinkedLookupFieldTarget) this.linkedLookupFieldTarget.value = ""
     if (this.hasLinkedFeedbackTarget) this.linkedFeedbackTarget.textContent = ""
+    if (this.hasLinkedQueryLabelTarget) this.linkedQueryLabelTarget.textContent = ""
     if (this.hasLinkedListTarget) this.linkedListTarget.replaceChildren()
     if (this.hasLinkedQuantityFieldTarget) this.linkedQuantityFieldTarget.value = "1"
     this.populateLinkedReasons()
     this.toggleHidden(this.hasLinkedNoteWrapTarget && this.linkedNoteWrapTarget, true)
+    this.syncLinkedStageChrome()
     this.showOverlay(this.linkedOverlayTarget, this.hasLinkedLookupFieldTarget && this.linkedLookupFieldTarget)
   }
 
   closeLinkedOverlay() {
+    this.invalidateLinkedLookup()
     this.hideOverlay(this.hasLinkedOverlayTarget && this.linkedOverlayTarget)
+  }
+
+  invalidateLinkedLookup() {
+    if (this.linkedAbort) this.linkedAbort.abort()
+    this.linkedAbort = null
+    this.linkedInvocation += 1
+  }
+
+  invalidateLinkedResultsOnInput() {
+    this.syncLinkedPrimaryEnabled()
+    const hasResults = this.hasLinkedListTarget && this.linkedListTarget.children.length > 0
+    const searching = this.hasLinkedQueryLabelTarget && this.linkedQueryLabelTarget.textContent
+    if (this.linkedStage === "lookup" && !hasResults && !searching) return
+    this.invalidateLinkedLookup()
+    if (this.hasLinkedListTarget) this.linkedListTarget.replaceChildren()
+    if (this.hasLinkedFeedbackTarget) this.linkedFeedbackTarget.textContent = ""
+    if (this.hasLinkedQueryLabelTarget) this.linkedQueryLabelTarget.textContent = ""
+    this.linkedReceiptCacheHtml = null
+    this.linkedStage = "lookup"
+    this.syncLinkedStageChrome()
   }
 
   populateLinkedReasons() {
@@ -1481,91 +2229,248 @@ export default class extends Controller {
     })
   }
 
+  onLinkedReasonChange() {
+    const reason = this.hasLinkedReasonFieldTarget ? this.linkedReasonFieldTarget.value : ""
+    this.toggleHidden(this.hasLinkedNoteWrapTarget && this.linkedNoteWrapTarget, reason !== "other")
+    this.syncLinkedPrimaryEnabled()
+  }
+
+  syncLinkedStageChrome() {
+    const stage = this.linkedStage || "lookup"
+    if (this.hasLinkedLookupWrapTarget) this.linkedLookupWrapTarget.hidden = stage !== "lookup"
+    if (this.hasLinkedDetailsWrapTarget) this.linkedDetailsWrapTarget.hidden = stage !== "lines"
+    if (this.hasLinkedInstructionTarget) {
+      if (stage === "lookup") this.linkedInstructionTarget.textContent = "Find a receipt, then choose returnable items."
+      else if (stage === "receipts") this.linkedInstructionTarget.textContent = "Select a receipt to view returnable items."
+      else this.linkedInstructionTarget.textContent = "Select a returnable line and enter return details."
+    }
+    if (this.hasLinkedSecondaryTarget) {
+      if (stage === "lookup") this.linkedSecondaryTarget.textContent = "Back to Return Options"
+      else if (stage === "receipts") this.linkedSecondaryTarget.textContent = "Back"
+      else this.linkedSecondaryTarget.textContent = "Back to Receipts"
+    }
+    if (this.hasLinkedPrimaryTarget) {
+      if (stage === "lookup") this.linkedPrimaryTarget.textContent = "Find Receipt"
+      else if (stage === "receipts") this.linkedPrimaryTarget.textContent = "View Returnable Items"
+      else this.linkedPrimaryTarget.textContent = "Add Return"
+    }
+    this.syncLinkedPrimaryEnabled()
+  }
+
+  syncLinkedPrimaryEnabled() {
+    if (this.hasLinkedSecondaryTarget) this.linkedSecondaryTarget.disabled = this.inFlight
+    if (!this.hasLinkedPrimaryTarget) return
+    const stage = this.linkedStage || "lookup"
+    if (stage === "lookup") {
+      const query = this.hasLinkedLookupFieldTarget ? this.linkedLookupFieldTarget.value.trim() : ""
+      this.linkedPrimaryTarget.disabled = !query || this.inFlight
+      return
+    }
+    const selected = this.hasLinkedListTarget && this.linkedListTarget.querySelector("li.is-selected:not(.is-disabled)")
+    if (stage === "receipts") {
+      this.linkedPrimaryTarget.disabled = !selected || this.inFlight
+      return
+    }
+    this.linkedPrimaryTarget.disabled = !this.linkedLineReady(selected) || this.inFlight
+  }
+
+  linkedLineReady(selected) {
+    if (!selected || selected.classList.contains("is-disabled")) return false
+    const reason = this.hasLinkedReasonFieldTarget ? this.linkedReasonFieldTarget.value : ""
+    if (!reason) return false
+    if (reason === "other" && this.hasLinkedNoteFieldTarget && this.linkedNoteFieldTarget.value.trim() === "") return false
+    if (selected.dataset.quantityFixed !== "true") {
+      const qty = this.hasLinkedQuantityFieldTarget ? this.linkedQuantityFieldTarget.value.trim() : ""
+      if (!qty || Number(qty) <= 0) return false
+    }
+    return true
+  }
+
   onLinkedOverlayKeydown(event, key) {
     if (key === "Escape") {
       event.preventDefault()
-      this.closeLinkedOverlay()
+      this.linkedEscapeOrBack()
       return
     }
     if (key === "ArrowUp" || key === "ArrowDown") {
       event.preventDefault()
+      if (this.linkedStage === "lookup") return
       this.movePickerList(this.linkedListTarget, key === "ArrowUp" ? -1 : 1)
+      this.syncLinkedPrimaryEnabled()
       return
     }
     if (key !== "Enter") return
     event.preventDefault()
-    if (event.target === this.linkedLookupFieldTarget) {
+    if (event.target === this.linkedLookupFieldTarget || this.linkedStage === "lookup") {
       this.runLinkedLookup()
+      return
+    }
+    this.linkedPrimaryAction()
+  }
+
+  linkedSecondaryAction(event) {
+    if (event) event.preventDefault()
+    this.linkedEscapeOrBack()
+  }
+
+  linkedPrimaryAction(event) {
+    if (event) event.preventDefault()
+    if (this.inFlight) return
+    const stage = this.linkedStage || "lookup"
+    if (stage === "lookup") {
+      this.runLinkedLookup()
+      return
+    }
+    if (stage === "receipts") {
+      this.selectHighlightedLinked()
       return
     }
     this.selectHighlightedLinked()
   }
 
+  linkedEscapeOrBack() {
+    if (this.inFlight) return
+    const stage = this.linkedStage || "lookup"
+    if (stage === "lines") {
+      // Abandon any in-flight lookup/lines request before reversing stage.
+      this.invalidateLinkedLookup()
+      if (this.hasLinkedQueryLabelTarget) this.linkedQueryLabelTarget.textContent = ""
+      if (this.linkedReceiptCacheHtml) {
+        this.linkedStage = "receipts"
+        if (this.hasLinkedListTarget) this.linkedListTarget.innerHTML = this.linkedReceiptCacheHtml
+        this.linkedListTarget.querySelectorAll("li").forEach((item) => {
+          item.addEventListener("click", () => {
+            this.onPickerItemClick(this.linkedListTarget, item)
+            this.syncLinkedPrimaryEnabled()
+          })
+        })
+        this.syncLinkedStageChrome()
+        const first = this.linkedListTarget.querySelector("li.is-selected:not(.is-disabled)") ||
+          this.linkedListTarget.querySelector("li:not(.is-disabled)")
+        this.focusOverlayEntry(first)
+        return
+      }
+      this.linkedStage = "lookup"
+      if (this.hasLinkedListTarget) this.linkedListTarget.replaceChildren()
+      this.syncLinkedStageChrome()
+      this.focusOverlayEntry(this.hasLinkedLookupFieldTarget && this.linkedLookupFieldTarget)
+      return
+    }
+    if (stage === "receipts") {
+      this.invalidateLinkedLookup()
+      if (this.hasLinkedQueryLabelTarget) this.linkedQueryLabelTarget.textContent = ""
+      this.linkedStage = "lookup"
+      this.linkedReceiptCacheHtml = null
+      if (this.hasLinkedListTarget) this.linkedListTarget.replaceChildren()
+      if (this.hasLinkedFeedbackTarget) this.linkedFeedbackTarget.textContent = ""
+      this.syncLinkedStageChrome()
+      this.focusOverlayEntry(this.hasLinkedLookupFieldTarget && this.linkedLookupFieldTarget)
+      return
+    }
+    this.closeLinkedOverlay()
+  }
+
   async runLinkedLookup(params = {}) {
     const query = this.hasLinkedLookupFieldTarget ? this.linkedLookupFieldTarget.value.trim() : ""
+    if (!params.transaction_id && !query) return
+    if (this.linkedAbort) this.linkedAbort.abort()
+    this.linkedAbort = new AbortController()
+    const token = ++this.linkedInvocation
+    if (this.hasLinkedQueryLabelTarget) this.linkedQueryLabelTarget.textContent = "Searching…"
     const url = new URL(this.linkedLookupUrlValue, window.location.origin)
     if (params.transaction_id) url.searchParams.set("transaction_id", params.transaction_id)
-    else if (query) url.searchParams.set("q", query)
-    else return
+    else url.searchParams.set("q", query)
     try {
-      const response = await fetch(url, { headers: { Accept: "application/json" }, credentials: "same-origin" })
+      const response = await fetch(url, {
+        headers: { Accept: "application/json" },
+        credentials: "same-origin",
+        signal: this.linkedAbort.signal
+      })
       const payload = await response.json()
+      if (!this.linkedResponseCurrent(token)) return
       this.renderLinkedLookup(payload)
-    } catch (_error) {
+    } catch (error) {
+      if (error?.name === "AbortError") return
+      if (!this.linkedResponseCurrent(token)) return
       if (this.hasLinkedFeedbackTarget) this.linkedFeedbackTarget.textContent = "no returnable original found"
+      if (this.hasLinkedQueryLabelTarget) this.linkedQueryLabelTarget.textContent = ""
+      this.focusOverlayEntry(this.hasLinkedLookupFieldTarget && this.linkedLookupFieldTarget)
     }
+  }
+
+  linkedResponseCurrent(token) {
+    if (!this.element.isConnected) return false
+    if (token !== this.linkedInvocation) return false
+    return this.linkedOverlayOpen()
   }
 
   renderLinkedLookup(payload) {
     if (this.hasLinkedFeedbackTarget) this.linkedFeedbackTarget.textContent = payload.message || ""
+    if (this.hasLinkedQueryLabelTarget) this.linkedQueryLabelTarget.textContent = ""
     if (!this.hasLinkedListTarget) return
     this.linkedListTarget.replaceChildren()
     if (payload.outcome === "receipts") {
-      this.linkedMode = "receipts"
+      this.linkedStage = "receipts"
+      this.linkedReceiptCacheHtml = null
       ;(payload.receipts || []).forEach((receipt, index) => {
         const item = document.createElement("li")
         item.dataset.transactionId = receipt.id
         item.textContent = receipt.transaction_reference
-        this.decoratePickerItem(item, { selected: index === 0 })
+        const selected = index === 0
+        this.decoratePickerItem(item, { selected, disabled: false })
+        item.addEventListener("click", () => {
+          this.onPickerItemClick(this.linkedListTarget, item)
+          this.syncLinkedPrimaryEnabled()
+        })
         this.linkedListTarget.append(item)
       })
+      this.linkedReceiptCacheHtml = this.linkedListTarget.innerHTML
     } else if (payload.outcome === "lines") {
-      this.linkedMode = "lines"
-      ;(payload.lines || []).forEach((line, index) => {
+      this.linkedStage = "lines"
+      let firstEnabled = null
+      ;(payload.lines || []).forEach((line) => {
         const item = document.createElement("li")
         item.dataset.lineId = line.id
         item.dataset.remaining = String(line.remaining)
         item.dataset.quantityFixed = line.quantity_fixed ? "true" : "false"
+        const ineligible = line.remaining <= 0 || Boolean(line.ineligible)
         const unit = line.unit_identifier ? ` · ${line.unit_identifier}` : ""
-        item.textContent = `${line.description} · remaining ${line.remaining}${unit}`
-        this.decoratePickerItem(item, { selected: index === 0 })
+        const reason = line.ineligible_reason ? ` — ${line.ineligible_reason}` : ""
+        item.textContent = `${line.description} · remaining ${line.remaining}${unit}${reason}`
+        const selected = !ineligible && firstEnabled == null
+        if (selected) firstEnabled = item
+        this.decoratePickerItem(item, { selected, disabled: ineligible })
+        item.addEventListener("click", () => {
+          this.onPickerItemClick(this.linkedListTarget, item)
+          this.syncLinkedPrimaryEnabled()
+        })
         this.linkedListTarget.append(item)
       })
+    } else if (this.hasLinkedQueryLabelTarget) {
+      this.linkedQueryLabelTarget.textContent = payload.message || "No matching receipts."
+      this.linkedStage = "lookup"
     }
-    const first = this.linkedListTarget.querySelector("li.is-selected")
-    if (first) first.focus()
+    this.syncLinkedStageChrome()
+    const first = this.linkedListTarget.querySelector("li.is-selected:not(.is-disabled)")
+    if (first) this.focusOverlayEntry(first)
+    else this.focusOverlayEntry(this.hasLinkedLookupFieldTarget && this.linkedLookupFieldTarget)
   }
 
   selectHighlightedLinked() {
-    const selected = this.hasLinkedListTarget && this.linkedListTarget.querySelector("li.is-selected")
+    if (this.inFlight) return
+    const selected = this.hasLinkedListTarget && this.linkedListTarget.querySelector("li.is-selected:not(.is-disabled)")
     if (!selected) return
-    if (this.linkedMode === "receipts") {
+    if (this.linkedStage === "receipts") {
+      this.linkedReceiptCacheHtml = this.linkedListTarget.innerHTML
       this.runLinkedLookup({ transaction_id: selected.dataset.transactionId })
       return
     }
-    if (this.linkedMode !== "lines") return
+    if (this.linkedStage !== "lines") return
+    if (!this.linkedLineReady(selected)) {
+      if (this.hasLinkedFeedbackTarget) this.linkedFeedbackTarget.textContent = "Complete quantity, reason, and note."
+      return
+    }
     const reason = this.hasLinkedReasonFieldTarget ? this.linkedReasonFieldTarget.value : ""
-    if (!reason) {
-      if (this.hasLinkedFeedbackTarget) this.linkedFeedbackTarget.textContent = "Select a return reason."
-      if (this.hasLinkedReasonFieldTarget) this.linkedReasonFieldTarget.focus()
-      return
-    }
-    if (reason === "other" && this.hasLinkedNoteFieldTarget && this.linkedNoteFieldTarget.value.trim() === "") {
-      this.toggleHidden(this.hasLinkedNoteWrapTarget && this.linkedNoteWrapTarget, false)
-      if (this.hasLinkedFeedbackTarget) this.linkedFeedbackTarget.textContent = "reason note is required"
-      this.linkedNoteFieldTarget.focus()
-      return
-    }
     const quantity = selected.dataset.quantityFixed === "true"
       ? "1"
       : (this.hasLinkedQuantityFieldTarget ? this.linkedQuantityFieldTarget.value.trim() : "1")
@@ -1577,6 +2482,7 @@ export default class extends Controller {
     }
     this.clearOverlayError(this.linkedOverlayTarget)
     this.beginFlight()
+    this.syncLinkedPrimaryEnabled()
     this.linkedReturnFormTarget.requestSubmit()
   }
 
@@ -1599,7 +2505,7 @@ export default class extends Controller {
     const name = type.name || (cash ? "Cash" : "Tender")
     this.setMode("tender", refund ? "REFUND" : (cash ? "CASH TENDER" : "TENDER"))
     const due = this.element.querySelector(".pos-totals__due")
-    const dueText = due ? due.textContent.trim() : (refund ? "Refund due" : "Amount due")
+    const dueText = due ? due.textContent.trim() : (refund ? "Refund remaining" : "Balance due")
     if (refund) {
       this.setFieldLabel(cash ? `${dueText}. Refund amount` : `${dueText}. ${name} amount`)
     } else {
@@ -1607,6 +2513,21 @@ export default class extends Controller {
     }
     this.toggleReferenceField(type.reference_policy)
     this.toggleGiftCardNumberField(type)
+    this.promptCustomerLookupIfRequired(type)
+  }
+
+  customerRequiredTenderType(type) {
+    if (!type || type.category !== "stored_value") return false
+    const accountType = type.stored_value_account_type
+    if (accountType === "store_credit" || accountType === "trade_credit") return true
+    return false
+  }
+
+  promptCustomerLookupIfRequired(type) {
+    if (!this.customerRequiredTenderType(type)) return
+    if (this.customerAttachedValue) return
+    this.showFeedback("A customer is required. Find and attach a customer to continue.")
+    this.openCustomerOverlay({ context: type.stored_value_account_type })
   }
 
   toggleGiftCardNumberField(type) {
@@ -1624,6 +2545,17 @@ export default class extends Controller {
     const scanned = this.hasFieldTarget ? this.fieldTarget.value.trim() : ""
     if (this.hasIdentifierInputTarget) this.identifierInputTarget.value = ""
     if (this.hasFieldTarget) this.fieldTarget.value = ""
+
+    if (this.issuanceOverlayOpen()) {
+      if (this.hasIssuanceCardNumberTarget) this.issuanceCardNumberTarget.value = scanned
+      this.syncIssuanceCardVisibility({ preserveCard: true })
+      this.clearOverlayError(this.issuanceOverlayTarget)
+      this.enableReadyActions()
+      if (this.hasIssuanceCardNumberTarget && !this.issuanceCardWrapTarget?.hidden) {
+        this.issuanceCardNumberTarget.focus()
+      }
+      return
+    }
 
     if (result.found) {
       if (this.settlementValue === "payment" && this.remainingCents() > 0) {
@@ -1654,14 +2586,300 @@ export default class extends Controller {
       return
     }
 
-    if (result.number_authority === "manual_external" && this.hasIssuanceCardNumberTarget) {
-      this.issuanceCardNumberTarget.value = scanned
+    if (result.number_authority === "manual_external" && this.modeValue === "sale_entry") {
+      this.openIssuanceOverlay({ cardNumber: scanned, preferManual: true })
       this.showFeedback("Gift card not on file. Enter an activation amount.")
-    } else {
-      this.showFeedback(result.message || "gift card not on file")
+      this.enableReadyActions()
+      return
     }
+
+    this.showFeedback(result.message || "gift card not on file")
     this.enableReadyActions()
     this.restoreFocus()
+  }
+
+  openIssuanceOverlay({ cardNumber = "", preferManual = false, editIssuanceId = null } = {}) {
+    if (!this.hasIssuanceOverlayTarget) return
+    const programs = this.hasIssuanceProgramFieldTarget
+      ? Array.from(this.issuanceProgramFieldTarget.options).filter((option) => option.value)
+      : []
+    if (programs.length === 0) {
+      this.showFeedback("No gift-card programs are available.")
+      return
+    }
+    this.editingIssuanceId = editIssuanceId
+    if (this.hasIssuanceTitleTarget) {
+      this.issuanceTitleTarget.textContent = editIssuanceId ? "Edit gift card" : "Add gift card"
+    }
+    if (this.hasIssuanceApplyTarget) {
+      this.issuanceApplyTarget.textContent = editIssuanceId ? "Replace Gift Card" : "Add Gift Card"
+    }
+    if (this.hasIssuanceTypeFieldTarget) this.issuanceTypeFieldTarget.value = "activation"
+    if (this.hasIssuanceAmountFieldTarget) this.issuanceAmountFieldTarget.value = ""
+    if (this.hasIssuanceCardNumberTarget) this.issuanceCardNumberTarget.value = cardNumber || ""
+    if (this.hasIssuanceResultLabelTarget) this.issuanceResultLabelTarget.textContent = ""
+    this.selectIssuanceProgram({ preferManual, cardNumber })
+    this.syncIssuanceCardVisibility({ preserveCard: Boolean(cardNumber) })
+    this.showOverlay(this.issuanceOverlayTarget, this.hasIssuanceAmountFieldTarget && this.issuanceAmountFieldTarget)
+    if (cardNumber && this.issuanceNeedsCard() && this.hasIssuanceCardNumberTarget) {
+      this.issuanceAmountFieldTarget?.focus()
+      this.issuanceAmountFieldTarget?.select()
+    }
+  }
+
+  requestEditIssuance(event) {
+    if (event) event.preventDefault()
+    if (this.inFlight) return
+    const button = event?.currentTarget
+    const issuanceId = button?.dataset?.issuanceId
+    if (!issuanceId) return
+    const row = button.closest(".pos-issuance")
+    this.openIssuanceOverlay({ editIssuanceId: issuanceId })
+    if (row && this.hasIssuanceTypeFieldTarget) this.issuanceTypeFieldTarget.value = row.dataset.issuanceType || "activation"
+    if (row && this.hasIssuanceProgramFieldTarget && row.dataset.issuanceProgramId) {
+      this.issuanceProgramFieldTarget.value = row.dataset.issuanceProgramId
+    }
+    if (row && this.hasIssuanceAmountFieldTarget && row.dataset.issuanceAmountCents) {
+      const cents = Number(row.dataset.issuanceAmountCents)
+      this.issuanceAmountFieldTarget.value = Number.isFinite(cents) ? (cents / 100).toFixed(2) : ""
+    }
+    if (this.hasIssuanceResultLabelTarget && row?.dataset?.issuanceMasked) {
+      this.issuanceResultLabelTarget.textContent = `Current card ${row.dataset.issuanceMasked}. Enter a new amount or card as needed.`
+    }
+    this.syncIssuanceCardVisibility({ preserveCard: true })
+    this.issuanceAmountFieldTarget?.focus()
+    this.issuanceAmountFieldTarget?.select()
+  }
+
+  selectIssuanceProgram({ preferManual = false } = {}) {
+    if (!this.hasIssuanceProgramFieldTarget) return
+    const options = Array.from(this.issuanceProgramFieldTarget.options).filter((option) => option.value)
+    if (options.length === 0) return
+
+    if (preferManual) {
+      const manuals = options.filter((option) => option.dataset.numberAuthority === "manual_external")
+      if (manuals.length === 1) {
+        this.issuanceProgramFieldTarget.value = manuals[0].value
+        return
+      }
+      if (manuals.length > 1) {
+        this.issuanceProgramFieldTarget.value = ""
+        if (this.hasIssuanceResultLabelTarget) {
+          this.issuanceResultLabelTarget.textContent = "Select the program for this card number."
+        }
+        return
+      }
+    }
+
+    this.issuanceProgramFieldTarget.value = options[0].value
+  }
+
+  issuanceNeedsCard() {
+    if (!this.hasIssuanceProgramFieldTarget) return true
+    const option = this.issuanceProgramFieldTarget.selectedOptions[0]
+    const reload = this.hasIssuanceTypeFieldTarget && this.issuanceTypeFieldTarget.value === "reload"
+    return reload || !option || !option.value || option.dataset.numberAuthority !== "system_generated"
+  }
+
+  onIssuanceFieldChange(event) {
+    const fromType = this.hasIssuanceTypeFieldTarget && event?.target === this.issuanceTypeFieldTarget
+    this.syncIssuanceCardVisibility({ focusCardWhenShown: fromType })
+  }
+
+  syncIssuanceCardVisibility({ preserveCard = false, focusCardWhenShown = false } = {}) {
+    if (!this.hasIssuanceProgramFieldTarget || !this.hasIssuanceCardWrapTarget) return
+    const option = this.issuanceProgramFieldTarget.selectedOptions[0]
+    if (this.hasIssuanceTypeFieldTarget && option && option.dataset.reloadAllowed === "false" && this.issuanceTypeFieldTarget.value === "reload") {
+      this.issuanceTypeFieldTarget.value = "activation"
+    }
+    const needsCard = this.issuanceNeedsCard()
+    const wasHidden = this.issuanceCardWrapTarget.hidden
+    this.issuanceCardWrapTarget.hidden = !needsCard
+    if (!needsCard && this.hasIssuanceCardNumberTarget && !preserveCard) {
+      this.issuanceCardNumberTarget.value = ""
+    }
+    if (needsCard && focusCardWhenShown && wasHidden && this.hasIssuanceCardNumberTarget) {
+      this.issuanceCardNumberTarget.focus()
+      this.issuanceCardNumberTarget.select()
+    }
+  }
+
+  onIssuanceOverlayKeydown(event, key) {
+    if (key === "Escape") {
+      event.preventDefault()
+      this.closeIssuanceOverlay()
+      return
+    }
+    if (key === "F9" || key === "F10") {
+      event.preventDefault()
+      return
+    }
+    if (key !== "Enter") return
+    if (this.isActionableControl(event.target)) return
+    const submitField =
+      (this.hasIssuanceAmountFieldTarget && event.target === this.issuanceAmountFieldTarget) ||
+      (this.hasIssuanceCardNumberTarget && event.target === this.issuanceCardNumberTarget)
+    if (!submitField) return
+    event.preventDefault()
+    this.submitIssuance()
+  }
+
+  closeIssuanceOverlay() {
+    if (!this.hasIssuanceOverlayTarget) return
+    this.editingIssuanceId = null
+    if (this.hasIssuanceAmountFieldTarget) this.issuanceAmountFieldTarget.value = ""
+    if (this.hasIssuanceCardNumberTarget) this.issuanceCardNumberTarget.value = ""
+    if (this.hasIssuanceResultLabelTarget) this.issuanceResultLabelTarget.textContent = ""
+    if (this.hasIssuanceTitleTarget) this.issuanceTitleTarget.textContent = "Add gift card"
+    if (this.hasIssuanceApplyTarget) this.issuanceApplyTarget.textContent = "Add Gift Card"
+    this.hideOverlay(this.issuanceOverlayTarget)
+  }
+
+  submitIssuance() {
+    if (this.inFlight) return
+    const amount = this.hasIssuanceAmountFieldTarget ? this.issuanceAmountFieldTarget.value.trim() : ""
+    const programId = this.hasIssuanceProgramFieldTarget ? this.issuanceProgramFieldTarget.value : ""
+    if (!amount) {
+      this.showOverlayLocalError(this.issuanceOverlayTarget, "issuance amount is required")
+      this.issuanceAmountFieldTarget?.focus()
+      return
+    }
+    if (!programId) {
+      this.showOverlayLocalError(this.issuanceOverlayTarget, "Select a gift-card program.")
+      this.issuanceProgramFieldTarget?.focus()
+      return
+    }
+    const needsCard = this.issuanceNeedsCard()
+    const cardNumber = this.hasIssuanceCardNumberTarget ? this.issuanceCardNumberTarget.value.trim() : ""
+    if (needsCard && !cardNumber && !this.editingIssuanceId) {
+      this.showOverlayLocalError(this.issuanceOverlayTarget, "Card number is required for this program.")
+      this.issuanceCardNumberTarget?.focus()
+      return
+    }
+    this.clearOverlayError(this.issuanceOverlayTarget)
+
+    if (this.editingIssuanceId) {
+      if (!this.hasReplaceIssuanceFormTarget) return
+      if (this.hasReplaceIssuanceIdInputTarget) this.replaceIssuanceIdInputTarget.value = this.editingIssuanceId
+      if (this.hasReplaceIssuanceTypeInputTarget) this.replaceIssuanceTypeInputTarget.value = this.issuanceTypeFieldTarget.value
+      if (this.hasReplaceIssuanceProgramInputTarget) this.replaceIssuanceProgramInputTarget.value = programId
+      if (this.hasReplaceIssuanceAmountInputTarget) this.replaceIssuanceAmountInputTarget.value = amount
+      if (this.hasReplaceIssuanceCardInputTarget) this.replaceIssuanceCardInputTarget.value = needsCard ? cardNumber : ""
+      if (this.hasReplaceIssuanceOperationInputTarget) this.replaceIssuanceOperationInputTarget.value = this.uuidV7()
+      if (this.hasReplaceIssuanceConfirmClearInputTarget) this.replaceIssuanceConfirmClearInputTarget.value = ""
+      if (this.tendersApplied()) {
+        this.requestClearTendersConfirmation("replace")
+        return
+      }
+      this.beginFlight()
+      this.replaceIssuanceFormTarget.requestSubmit()
+      return
+    }
+
+    if (!this.hasIssuanceFormTarget) return
+    if (this.hasIssuanceTypeInputTarget) this.issuanceTypeInputTarget.value = this.issuanceTypeFieldTarget.value
+    if (this.hasIssuanceProgramInputTarget) this.issuanceProgramInputTarget.value = programId
+    if (this.hasIssuanceAmountInputTarget) this.issuanceAmountInputTarget.value = amount
+    if (this.hasIssuanceCardInputTarget) this.issuanceCardInputTarget.value = needsCard ? cardNumber : ""
+    if (this.hasIssuanceOperationInputTarget) this.issuanceOperationInputTarget.value = this.uuidV7()
+    if (this.hasIssuanceConfirmClearInputTarget) this.issuanceConfirmClearInputTarget.value = ""
+    if (this.tendersApplied()) {
+      this.requestClearTendersConfirmation("add")
+      return
+    }
+    this.beginFlight()
+    this.issuanceFormTarget.requestSubmit()
+  }
+
+  requestRemoveIssuance(event) {
+    if (event) event.preventDefault()
+    if (this.inFlight || !this.hasRemoveIssuanceFormTarget) return
+    const issuanceId = event?.currentTarget?.dataset?.issuanceId
+    if (!issuanceId) return
+    if (this.hasRemoveIssuanceIdInputTarget) this.removeIssuanceIdInputTarget.value = issuanceId
+    if (this.hasRemoveIssuanceOperationInputTarget) this.removeIssuanceOperationInputTarget.value = this.uuidV7()
+    if (this.hasRemoveIssuanceConfirmClearInputTarget) this.removeIssuanceConfirmClearInputTarget.value = ""
+    if (this.tendersApplied()) {
+      this.requestClearTendersConfirmation("remove")
+      return
+    }
+    this.beginFlight()
+    this.removeIssuanceFormTarget.requestSubmit()
+  }
+
+  tendersApplied() {
+    return Boolean(this.element.querySelector(".pos-tenders__item"))
+  }
+
+  requestClearTendersConfirmation(pendingIssuanceAction) {
+    this.pendingIssuanceAction = pendingIssuanceAction
+    if (!this.hasClearTendersOverlayTarget) return
+    if (this.hasClearTendersConsequenceTarget) {
+      const verb = pendingIssuanceAction === "remove"
+        ? "Removing"
+        : (pendingIssuanceAction === "replace" ? "Replacing" : "Adding")
+      this.clearTendersConsequenceTarget.textContent =
+        `${verb} this gift card changes the amount due, so every applied tender must be cleared and the transaction tendered again.`
+    }
+    const confirm = this.clearTendersOverlayTarget.querySelector("[data-action*='confirmClearTenders']")
+    this.showOverlay(this.clearTendersOverlayTarget, confirm)
+  }
+
+  closeClearTendersOverlay(event) {
+    if (event) event.preventDefault()
+    this.pendingIssuanceAction = null
+    this.hideOverlay(this.hasClearTendersOverlayTarget && this.clearTendersOverlayTarget)
+  }
+
+  confirmClearTenders(event) {
+    if (event) event.preventDefault()
+    if (this.inFlight) return
+    const pending = this.pendingIssuanceAction
+    this.pendingIssuanceAction = null
+    if (pending === "remove" && this.hasRemoveIssuanceFormTarget) {
+      if (this.hasRemoveIssuanceConfirmClearInputTarget) this.removeIssuanceConfirmClearInputTarget.value = "true"
+      this.beginFlight()
+      this.removeIssuanceFormTarget.requestSubmit()
+      return
+    }
+    if (pending === "replace" && this.hasReplaceIssuanceFormTarget) {
+      if (this.hasReplaceIssuanceConfirmClearInputTarget) this.replaceIssuanceConfirmClearInputTarget.value = "true"
+      this.beginFlight()
+      this.replaceIssuanceFormTarget.requestSubmit()
+      return
+    }
+    if (pending === "add" && this.hasIssuanceFormTarget) {
+      if (this.hasIssuanceConfirmClearInputTarget) this.issuanceConfirmClearInputTarget.value = "true"
+      this.beginFlight()
+      this.issuanceFormTarget.requestSubmit()
+    }
+  }
+
+  onClearTendersOverlayKeydown(event, key) {
+    if (key === "Escape") {
+      event.preventDefault()
+      this.closeClearTendersOverlay()
+      return
+    }
+    if (key === "F9" || key === "F10") {
+      event.preventDefault()
+      return
+    }
+    if (key !== "Enter") return
+    if (this.isActionableControl(event.target)) return
+    event.preventDefault()
+    this.confirmClearTenders()
+  }
+
+  showOverlayLocalError(overlay, message) {
+    if (!overlay) return
+    const node = overlay.querySelector("[data-overlay-error]")
+    if (!node) {
+      this.showFeedback(message)
+      return
+    }
+    node.textContent = message
+    node.setAttribute("role", "alert")
   }
 
   cashTenderIndex() {
@@ -1687,12 +2905,210 @@ export default class extends Controller {
     if (!show && this.hasReferenceFieldTarget) this.referenceFieldTarget.value = ""
   }
 
-  removeLastTender() {
-    if (this.inFlight) return
-    if (!this.hasRemoveTenderFormTarget || !this.hasRemoveTenderInputTarget) return
-    if (!this.removeTenderInputTarget.value) return
+  tenderRows() {
+    return Array.from(this.element.querySelectorAll(".pos-tenders__item[data-tender-id]"))
+  }
+
+  selectedTenderRow() {
+    return this.element.querySelector(".pos-tenders__item.is-selected[data-tender-id]")
+  }
+
+  selectTender(event) {
+    const row = event?.currentTarget
+    if (!row?.dataset?.tenderId) return
+    this.tenderRows().forEach((item) => {
+      const selected = item === row
+      item.classList.toggle("is-selected", selected)
+      item.setAttribute("aria-selected", String(selected))
+      item.tabIndex = selected ? 0 : -1
+    })
+    this.syncSelectedTender(row.dataset.tenderId)
+    if (this.hasTenderReviewDetailTarget) this.tenderReviewDetailTarget.textContent = row.dataset.inspectDetail || ""
+    const editAvailable = row.dataset.editAvailable === "true"
+    const removeAvailable = row.dataset.removeAvailable === "true"
+    if (this.hasTenderEditActionTarget) this.tenderEditActionTarget.hidden = !editAvailable
+    if (this.hasTenderRemoveActionTarget) this.tenderRemoveActionTarget.hidden = !removeAvailable
+    if (this.hasTenderUnavailableReasonTarget) {
+      const reason = row.dataset.editUnavailableReason || row.dataset.removeUnavailableReason || ""
+      this.tenderUnavailableReasonTarget.hidden = !reason
+      this.tenderUnavailableReasonTarget.textContent = reason
+    }
+  }
+
+  tenderListKeyTarget(target) {
+    return Boolean(target?.closest?.(".pos-tenders__list, .pos-tenders__item"))
+  }
+
+  moveTenderSelection(delta, { focus = false } = {}) {
+    const rows = this.tenderRows()
+    if (rows.length === 0) return
+    const current = this.selectedTenderRow()
+    const index = Math.max(0, rows.indexOf(current))
+    const next = rows[Math.max(0, Math.min(rows.length - 1, index + delta))]
+    this.selectTender({ currentTarget: next })
+    if (focus) next.focus()
+  }
+
+  syncSelectedTender(id = this.selectedTenderRow()?.dataset?.tenderId) {
+    this.selectedTenderInputTargets.forEach((input) => { input.value = id || "" })
+    if (this.hasRemoveTenderInputTarget) this.removeTenderInputTarget.value = id || this.removeTenderInputTarget.value
+    if (this.hasReplaceTenderInputTarget) this.replaceTenderInputTarget.value = id || ""
+  }
+
+  openRemoveTenderOverlay(event) {
+    if (event) event.preventDefault()
+    const row = this.selectedTenderRow()
+    if (!row || row.dataset.removeAvailable !== "true" || !this.hasRemoveTenderOverlayTarget) return
+    this.syncSelectedTender(row.dataset.tenderId)
+    if (this.hasRemoveTenderDetailTarget) this.removeTenderDetailTarget.textContent = row.dataset.inspectDetail || ""
+    const confirm = this.removeTenderOverlayTarget.querySelector("[data-action*='confirmRemoveTender']")
+    this.showOverlay(this.removeTenderOverlayTarget, confirm)
+  }
+
+  closeRemoveTenderOverlay(event) {
+    if (event) event.preventDefault()
+    this.hideOverlay(this.hasRemoveTenderOverlayTarget && this.removeTenderOverlayTarget)
+  }
+
+  confirmRemoveTender(event) {
+    if (event) event.preventDefault()
+    if (this.inFlight || !this.hasRemoveTenderFormTarget) return
+    if (this.hasRemoveTenderOperationInputTarget) this.removeTenderOperationInputTarget.value = this.uuidV7()
     this.beginFlight()
     this.removeTenderFormTarget.requestSubmit()
+  }
+
+  openEditTenderOverlay(event) {
+    if (event) event.preventDefault()
+    const row = this.selectedTenderRow()
+    if (!row || row.dataset.editAvailable !== "true" || !this.hasEditTenderOverlayTarget) return
+    this.syncSelectedTender(row.dataset.tenderId)
+    if (this.hasEditTenderDetailTarget) this.editTenderDetailTarget.textContent = row.dataset.inspectDetail || ""
+    if (this.hasEditTenderAmountTarget) this.editTenderAmountTarget.value = this.formatCents(row.dataset.amountCents)
+    const storedValue = row.dataset.storedValue === "true"
+    const cashPayment = row.dataset.behavioralCategory === "cash" && row.dataset.direction === "payment"
+    if (this.hasEditTenderPresentedWrapTarget) this.editTenderPresentedWrapTarget.hidden = !cashPayment
+    if (this.hasEditTenderPresentedTarget) {
+      this.editTenderPresentedTarget.value = cashPayment ? this.formatCents(row.dataset.presentedCents || row.dataset.amountCents) : ""
+    }
+    if (this.hasEditTenderStoredValueNoteTarget) this.editTenderStoredValueNoteTarget.hidden = !storedValue
+    const capturesReference = !storedValue && row.dataset.behavioralCategory !== "cash"
+    if (this.hasEditTenderReferenceWrapTarget) this.editTenderReferenceWrapTarget.hidden = !capturesReference
+    if (this.hasEditTenderReferenceTarget) this.editTenderReferenceTarget.value = row.dataset.externalReference || ""
+    this.showOverlay(this.editTenderOverlayTarget, this.editTenderAmountTarget)
+  }
+
+  closeEditTenderOverlay(event) {
+    if (event) event.preventDefault()
+    this.hideOverlay(this.hasEditTenderOverlayTarget && this.editTenderOverlayTarget)
+  }
+
+  confirmReplaceTender(event) {
+    if (event) event.preventDefault()
+    if (this.inFlight || !this.hasReplaceTenderFormTarget) return
+    this.replaceTenderAmountInputTarget.value = this.editTenderAmountTarget.value
+    this.replaceTenderPresentedInputTarget.value = this.hasEditTenderPresentedWrapTarget && !this.editTenderPresentedWrapTarget.hidden
+      ? this.editTenderPresentedTarget.value : ""
+    this.replaceTenderReferenceInputTarget.value = this.hasEditTenderReferenceWrapTarget && !this.editTenderReferenceWrapTarget.hidden
+      ? this.editTenderReferenceTarget.value.trim() : ""
+    this.replaceTenderOperationInputTarget.value = this.uuidV7()
+    this.beginFlight()
+    this.replaceTenderFormTarget.requestSubmit()
+  }
+
+  openReturnToSaleOverlay(event) {
+    if (event) event.preventDefault()
+    if (this.inFlight || !this.hasReturnToSaleOverlayTarget) return
+    const confirm = this.returnToSaleOverlayTarget.querySelector("[data-action*='confirmReturnToSale']:not([disabled])")
+    this.showOverlay(this.returnToSaleOverlayTarget, confirm || this.returnToSaleOverlayTarget.querySelector("button"))
+  }
+
+  closeReturnToSaleOverlay(event) {
+    if (event) event.preventDefault()
+    this.hideOverlay(this.hasReturnToSaleOverlayTarget && this.returnToSaleOverlayTarget)
+  }
+
+  confirmReturnToSale(event) {
+    if (event) event.preventDefault()
+    if (this.inFlight || !this.hasReturnToSaleFormTarget) return
+    this.returnToSaleOperationInputTarget.value = this.uuidV7()
+    this.beginFlight()
+    this.returnToSaleFormTarget.requestSubmit()
+  }
+
+  onEditTenderOverlayKeydown(event, key) {
+    if (key === "Escape") {
+      event.preventDefault()
+      this.closeEditTenderOverlay()
+      return
+    }
+    if (key === "F9" || key === "F10") {
+      event.preventDefault()
+      return
+    }
+    if (key !== "Enter") return
+    if (this.isActionableControl(event.target)) return
+    event.preventDefault()
+    if (this.advanceEditTenderField(event.target)) return
+    this.confirmReplaceTender()
+  }
+
+  advanceEditTenderField(target) {
+    if (!this.hasEditTenderAmountTarget || target !== this.editTenderAmountTarget) return false
+    if (this.hasEditTenderPresentedWrapTarget && !this.editTenderPresentedWrapTarget.hidden && this.hasEditTenderPresentedTarget) {
+      this.editTenderPresentedTarget.focus()
+      return true
+    }
+    if (this.hasEditTenderReferenceWrapTarget && !this.editTenderReferenceWrapTarget.hidden && this.hasEditTenderReferenceTarget) {
+      this.editTenderReferenceTarget.focus()
+      return true
+    }
+    return false
+  }
+
+  onRemoveTenderOverlayKeydown(event, key) {
+    if (key === "Escape") {
+      event.preventDefault()
+      this.closeRemoveTenderOverlay()
+      return
+    }
+    if (key === "F9" || key === "F10") {
+      event.preventDefault()
+      return
+    }
+    if (key !== "Enter") return
+    if (this.isActionableControl(event.target)) return
+    event.preventDefault()
+    this.confirmRemoveTender()
+  }
+
+  onReturnToSaleOverlayKeydown(event, key) {
+    if (key === "Escape") {
+      event.preventDefault()
+      this.closeReturnToSaleOverlay()
+      return
+    }
+    if (key === "F9" || key === "F10") {
+      event.preventDefault()
+      return
+    }
+    if (key !== "Enter") return
+    if (this.isActionableControl(event.target)) return
+    event.preventDefault()
+    this.confirmReturnToSale()
+  }
+
+  uuidV7() {
+    const bytes = crypto.getRandomValues(new Uint8Array(16))
+    let timestamp = Date.now()
+    for (let index = 5; index >= 0; index -= 1) {
+      bytes[index] = timestamp & 0xff
+      timestamp = Math.floor(timestamp / 256)
+    }
+    bytes[6] = (bytes[6] & 0x0f) | 0x70
+    bytes[8] = (bytes[8] & 0x3f) | 0x80
+    const hex = Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("")
+    return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`
   }
 
   escape() {
@@ -1708,7 +3124,10 @@ export default class extends Controller {
       return
     }
     if (this.modeValue === "tender") {
-      if (this.hasRemoveTenderInputTarget && this.removeTenderInputTarget.value) return
+      if (this.tenderRows().length > 0) {
+        this.openReturnToSaleOverlay()
+        return
+      }
       this.setMode("sale_entry", "SALE ENTRY")
       this.setFieldLabel("Scan or identifier")
       this.fieldTarget.inputMode = "text"
@@ -1753,26 +3172,61 @@ export default class extends Controller {
       })
       return
     }
-    this.openControlOverlay("price_override", "Price override")
+    this.openControlOverlay("price_override")
   }
 
   openLineDiscount() {
-    this.openControlOverlay("line_discount", "Line discount")
+    this.openControlOverlay("line_discount")
   }
 
   openTaxClassOverride() {
-    this.openControlOverlay("tax_class_override", "Tax Class override")
+    this.openControlOverlay("tax_class_override")
   }
 
-  openControlOverlay(actionType, title) {
+  controlChromeFor(actionType) {
+    if (actionType === "price_override") {
+      return {
+        title: "Change Selling Price",
+        keepLabel: "Keep Current Price",
+        removeLabel: "Remove Price Override",
+        currentPrefix: "Current price",
+        backLabel: "Back to Price Change",
+        authorizeLabel: "Authorize and Apply",
+        actionLabel: "Price change"
+      }
+    }
+    if (actionType === "line_discount") {
+      return {
+        title: "Apply Line Discount",
+        keepLabel: "Keep Current Discount",
+        removeLabel: "Remove Line Discount",
+        currentPrefix: "Current discount",
+        backLabel: "Back to Discount",
+        authorizeLabel: "Authorize and Apply",
+        actionLabel: "Line discount"
+      }
+    }
+    return {
+      title: "Change Tax Class",
+      keepLabel: "Keep Current Tax Class",
+      removeLabel: "Restore Original Tax Class",
+      currentPrefix: "Current tax class",
+      backLabel: "Back to Tax Class",
+      authorizeLabel: "Authorize and Apply",
+      actionLabel: "Tax class change"
+    }
+  }
+
+  openControlOverlay(actionType) {
     if (this.inFlight) return
     if (this.modeValue !== "sale_entry") return
+    const chrome = this.controlChromeFor(actionType)
     if (this.policyFor(actionType) === "prohibited") {
-      this.showFeedback(`${title} is not available.`)
+      this.showFeedback(`${chrome.title} is not available.`)
       return
     }
     if (this.selectedReturnLine()) {
-      this.showFeedback(`${title} is not available on a return line.`)
+      this.showFeedback(`${chrome.title} is not available on a return line.`)
       return
     }
     const row = this.selectedRow()
@@ -1782,8 +3236,13 @@ export default class extends Controller {
     }
 
     this.currentControlAction = actionType
-    if (this.hasControlTitleTarget) this.controlTitleTarget.textContent = title
+    if (this.hasControlTitleTarget) this.controlTitleTarget.textContent = chrome.title
+    if (this.hasControlCancelTarget) this.controlCancelTarget.textContent = chrome.keepLabel
+    if (this.hasControlRemoveTarget) this.controlRemoveTarget.textContent = chrome.removeLabel
     if (this.hasControlLineLabelTarget) this.controlLineLabelTarget.textContent = row.dataset.description || "Selected line"
+    if (this.hasControlCurrentLabelTarget) {
+      this.controlCurrentLabelTarget.textContent = this.controlCurrentSummary(row, actionType, chrome)
+    }
     this.toggleHidden(this.hasControlPriceWrapTarget && this.controlPriceWrapTarget, actionType !== "price_override")
     this.toggleHidden(this.hasControlDiscountWrapTarget && this.controlDiscountWrapTarget, actionType !== "line_discount")
     this.toggleHidden(this.hasControlTaxWrapTarget && this.controlTaxWrapTarget, actionType !== "tax_class_override")
@@ -1793,7 +3252,7 @@ export default class extends Controller {
       this.controlPriceFieldTarget.value = this.formatCents(row.dataset.sellingCents)
     }
     if (actionType === "line_discount" && this.hasControlDiscountFieldTarget) {
-      this.controlDiscountFieldTarget.value = row.dataset.discountBp ? this.formatCents(row.dataset.discountBp) : ""
+      this.controlDiscountFieldTarget.value = row.dataset.discountBp ? this.formatBasisPoints(row.dataset.discountBp) : ""
     }
     if (actionType === "tax_class_override" && this.hasControlTaxFieldTarget && row.dataset.taxClassId) {
       this.controlTaxFieldTarget.value = row.dataset.taxClassId
@@ -1801,17 +3260,37 @@ export default class extends Controller {
     this.populateReasons(actionType)
     this.toggleHidden(this.hasControlNoteWrapTarget && this.controlNoteWrapTarget, true)
     if (this.hasControlNoteFieldTarget) this.controlNoteFieldTarget.value = ""
-    const needsApprover = this.policyFor(actionType) === "approval_required"
-    this.toggleHidden(this.hasControlApproverWrapTarget && this.controlApproverWrapTarget, !needsApprover)
-    if (this.hasApproverUsernameTarget) this.approverUsernameTarget.value = ""
-    if (this.hasApproverPasswordTarget) this.approverPasswordTarget.value = ""
     const hasExisting = this.lineHasAction(row, actionType)
     if (this.hasControlRemoveTarget) this.controlRemoveTarget.hidden = !hasExisting
 
     this.showOverlay(this.controlOverlayTarget)
   }
 
+  controlCurrentSummary(row, actionType, chrome) {
+    if (actionType === "price_override") {
+      return `${chrome.currentPrefix} $${this.formatCents(row.dataset.sellingCents)}`
+    }
+    if (actionType === "line_discount") {
+      const bp = row.dataset.discountBp
+      return bp ? `${chrome.currentPrefix} ${this.formatBasisPoints(bp)}%` : `${chrome.currentPrefix} none`
+    }
+    const name = this.taxClassOptionLabel(row.dataset.taxClassId) || row.dataset.taxClassName || "—"
+    return `${chrome.currentPrefix} ${name}`
+  }
+
+  taxClassOptionLabel(id) {
+    if (!this.hasControlTaxFieldTarget || !id) return null
+    const option = Array.from(this.controlTaxFieldTarget.options).find((entry) => entry.value === String(id))
+    return option ? option.textContent : null
+  }
+
+  formatBasisPoints(bp) {
+    const value = Number(bp || 0)
+    return (value / 100).toFixed(value % 100 === 0 ? 0 : 2)
+  }
+
   closeControlOverlay() {
+    if (this.approvalOverlayOpen()) this.closeApprovalOverlay({ clearInvocation: true })
     this.hideOverlay(this.hasControlOverlayTarget && this.controlOverlayTarget)
   }
 
@@ -1821,27 +3300,55 @@ export default class extends Controller {
     if (this.policyFor("unlinked_return") === "prohibited") return
     if (!this.hasUnlinkedOverlayTarget) return
 
+    this.invalidateUnlinkedLookup()
     this.resetUnlinkedOverlay()
     this.populateUnlinkedReasons()
-    const needsApprover = this.policyFor("unlinked_return") === "approval_required"
-    this.toggleHidden(this.hasUnlinkedApproverWrapTarget && this.unlinkedApproverWrapTarget, !needsApprover)
+    this.syncUnlinkedPrimaryEnabled()
     this.showOverlay(this.unlinkedOverlayTarget, this.hasUnlinkedIdentifierFieldTarget && this.unlinkedIdentifierFieldTarget)
   }
 
   closeUnlinkedOverlay() {
+    if (this.approvalOverlayOpen()) this.closeApprovalOverlay({ clearInvocation: true })
+    this.invalidateUnlinkedLookup()
+    this.unlinkedPickerActive = false
     this.hideOverlay(this.hasUnlinkedOverlayTarget && this.unlinkedOverlayTarget)
+  }
+
+  backFromUnlinkedOverlay(event) {
+    if (event) event.preventDefault()
+    if (this.inFlight) return
+    this.closeUnlinkedOverlay()
+  }
+
+  invalidateUnlinkedLookup() {
+    if (this.unlinkedAbort) this.unlinkedAbort.abort()
+    this.unlinkedAbort = null
+    this.unlinkedInvocation += 1
+  }
+
+  invalidateUnlinkedResultsOnInput() {
+    this.syncUnlinkedPrimaryEnabled()
+    if (!this.unlinkedPreviewPayload && !(this.hasUnlinkedQueryLabelTarget && this.unlinkedQueryLabelTarget.textContent)) return
+    this.invalidateUnlinkedLookup()
+    this.clearUnlinkedPreviewState()
+    this.unlinkedSelection = null
+    this.unlinkedPickerActive = false
+    if (this.hasUnlinkedFeedbackTarget) this.unlinkedFeedbackTarget.textContent = ""
+    if (this.hasUnlinkedQueryLabelTarget) this.unlinkedQueryLabelTarget.textContent = ""
+    this.syncUnlinkedPrimaryEnabled()
   }
 
   resetUnlinkedOverlay() {
     this.unlinkedPreviewPayload = null
+    this.unlinkedSelection = null
+    this.unlinkedPickerActive = false
     if (this.hasUnlinkedFeedbackTarget) this.unlinkedFeedbackTarget.textContent = ""
+    if (this.hasUnlinkedQueryLabelTarget) this.unlinkedQueryLabelTarget.textContent = ""
     if (this.hasUnlinkedIdentifierFieldTarget) this.unlinkedIdentifierFieldTarget.value = ""
     this.toggleHidden(this.hasUnlinkedPreviewTarget && this.unlinkedPreviewTarget, true)
-    if (this.hasUnlinkedApplyTarget) this.unlinkedApplyTarget.hidden = true
     if (this.hasUnlinkedNoteFieldTarget) this.unlinkedNoteFieldTarget.value = ""
     this.toggleHidden(this.hasUnlinkedNoteWrapTarget && this.unlinkedNoteWrapTarget, true)
-    if (this.hasUnlinkedApproverUsernameTarget) this.unlinkedApproverUsernameTarget.value = ""
-    if (this.hasUnlinkedApproverPasswordTarget) this.unlinkedApproverPasswordTarget.value = ""
+    this.syncUnlinkedPrimaryEnabled()
   }
 
   populateUnlinkedReasons() {
@@ -1858,6 +3365,17 @@ export default class extends Controller {
       option.textContent = entry.name
       this.unlinkedReasonFieldTarget.appendChild(option)
     })
+  }
+
+  onUnlinkedReasonChange() {
+    const reason = this.hasUnlinkedReasonFieldTarget ? this.unlinkedReasonFieldTarget.value : ""
+    this.toggleHidden(this.hasUnlinkedNoteWrapTarget && this.unlinkedNoteWrapTarget, reason !== "other")
+    this.syncUnlinkedPrimaryEnabled()
+  }
+
+  lookUpUnlinkedItem(event) {
+    if (event) event.preventDefault()
+    this.resolveUnlinkedIdentifier()
   }
 
   async resolveUnlinkedIdentifier() {
@@ -1877,6 +3395,10 @@ export default class extends Controller {
     if (params.product_id) body.set("product_id", params.product_id)
     if (params.product_variant_id) body.set("product_variant_id", params.product_variant_id)
     if (params.inventory_unit_id) body.set("inventory_unit_id", params.inventory_unit_id)
+    if (this.unlinkedAbort) this.unlinkedAbort.abort()
+    this.unlinkedAbort = new AbortController()
+    const invocation = ++this.unlinkedInvocation
+    if (this.hasUnlinkedQueryLabelTarget) this.unlinkedQueryLabelTarget.textContent = "Looking up…"
     try {
       const response = await fetch(this.unlinkedLookupUrlValue, {
         method: "POST",
@@ -1885,18 +3407,31 @@ export default class extends Controller {
           "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
           "X-CSRF-Token": token || ""
         },
-        body: body.toString()
+        body: body.toString(),
+        signal: this.unlinkedAbort.signal
       })
       const payload = await response.json()
+      if (!this.unlinkedResponseCurrent(invocation)) return
       this.handleUnlinkedResolution(payload, response.ok)
-    } catch (_error) {
+    } catch (error) {
+      if (error?.name === "AbortError") return
+      if (!this.unlinkedResponseCurrent(invocation)) return
       this.showUnlinkedFeedback("merchandise not found")
       this.clearUnlinkedPreviewState()
       this.unlinkedSelection = null
     }
   }
 
+  unlinkedResponseCurrent(invocation) {
+    if (!this.element.isConnected) return false
+    if (invocation !== this.unlinkedInvocation) return false
+    if (!this.unlinkedOverlayOpen()) return false
+    // Must remain in stack ancestry (chooser may be parent).
+    return this.overlayStack.some((entry) => entry.overlay === this.unlinkedOverlayTarget && !entry.overlay.hidden)
+  }
+
   handleUnlinkedResolution(payload, ok) {
+    if (this.hasUnlinkedQueryLabelTarget) this.unlinkedQueryLabelTarget.textContent = ""
     const outcome = payload.outcome || (ok ? "resolved" : "unavailable")
     switch (outcome) {
       case "resolved":
@@ -1925,11 +3460,12 @@ export default class extends Controller {
   clearUnlinkedPreviewState() {
     this.unlinkedPreviewPayload = null
     this.toggleHidden(this.hasUnlinkedPreviewTarget && this.unlinkedPreviewTarget, true)
-    if (this.hasUnlinkedApplyTarget) this.unlinkedApplyTarget.hidden = true
+    this.syncUnlinkedPrimaryEnabled()
   }
 
   applyUnlinkedPreview(payload) {
     this.unlinkedPreviewPayload = payload
+    this.unlinkedPickerActive = false
     if (this.hasUnlinkedFeedbackTarget) this.unlinkedFeedbackTarget.textContent = ""
     this.toggleHidden(this.hasUnlinkedPreviewTarget && this.unlinkedPreviewTarget, false)
     if (this.hasUnlinkedDescriptionTarget) this.unlinkedDescriptionTarget.textContent = payload.description || ""
@@ -1945,20 +3481,47 @@ export default class extends Controller {
       this.unlinkedQuantityFieldTarget.value = "1"
       this.unlinkedQuantityFieldTarget.disabled = fixed
     }
-    if (this.hasUnlinkedApplyTarget) this.unlinkedApplyTarget.hidden = false
+    this.syncUnlinkedPrimaryEnabled()
 
     const focusTarget = (this.hasUnlinkedQuantityFieldTarget && !fixed)
       ? this.unlinkedQuantityFieldTarget
       : (this.hasUnlinkedReasonFieldTarget && this.unlinkedReasonFieldTarget)
-    this.showOverlay(this.unlinkedOverlayTarget, focusTarget)
+    // Restore unlinked as top if nested pickers closed.
+    if (this.topOverlay() !== this.unlinkedOverlayTarget) {
+      this.showOverlay(this.unlinkedOverlayTarget, focusTarget)
+    } else {
+      this.focusOverlayEntry(focusTarget)
+    }
   }
 
-  // Abandon a stacked merchandise picker opened from Return without receipt.
-  // Closes only the picker; keeps the unlinked overlay open and restores focus.
+  unlinkedAddReady() {
+    if (!this.unlinkedPreviewPayload || this.inFlight) return false
+    const reason = this.hasUnlinkedReasonFieldTarget ? this.unlinkedReasonFieldTarget.value : ""
+    if (!reason) return false
+    if (reason === "other" && this.hasUnlinkedNoteFieldTarget && this.unlinkedNoteFieldTarget.value.trim() === "") return false
+    const price = this.hasUnlinkedPriceFieldTarget ? this.unlinkedPriceFieldTarget.value.trim() : ""
+    if (price === "") return false
+    if (!this.unlinkedPreviewPayload.quantity_fixed) {
+      const qty = this.hasUnlinkedQuantityFieldTarget ? this.unlinkedQuantityFieldTarget.value.trim() : ""
+      if (!qty || Number(qty) <= 0) return false
+    }
+    return true
+  }
+
+  syncUnlinkedPrimaryEnabled() {
+    if (this.hasUnlinkedCancelTarget) this.unlinkedCancelTarget.disabled = this.inFlight
+    if (this.hasUnlinkedLookupTarget) {
+      const query = this.hasUnlinkedIdentifierFieldTarget ? this.unlinkedIdentifierFieldTarget.value.trim() : ""
+      this.unlinkedLookupTarget.disabled = this.inFlight || !query
+    }
+    if (!this.hasUnlinkedApplyTarget) return
+    this.unlinkedApplyTarget.disabled = !this.unlinkedAddReady()
+  }
+
+  // Abandon a stacked merchandise picker opened from unlinked return.
   abortUnlinkedPicker() {
     if (!this.unlinkedPickerActive) return
     this.unlinkedPickerActive = false
-    this.unlinkedSelection = null
     if (this.unlinkedOverlayOpen() && this.hasUnlinkedIdentifierFieldTarget) {
       this.unlinkedIdentifierFieldTarget.focus()
     }
@@ -1968,9 +3531,57 @@ export default class extends Controller {
     if (this.hasUnlinkedFeedbackTarget) this.unlinkedFeedbackTarget.textContent = message
   }
 
-  submitUnlinkedReturn() {
+  submitUnlinkedReturn(event) {
+    if (event) event.preventDefault()
     if (this.inFlight || !this.hasUnlinkedFormTarget) return
-    if (!this.unlinkedPreviewPayload) return
+    if (!this.unlinkedAddReady()) return
+    if (this.policyFor("unlinked_return") === "approval_required") {
+      this.openUnlinkedAuthorization()
+      return
+    }
+    this.commitUnlinkedReturn()
+  }
+
+  openUnlinkedAuthorization() {
+    const reasonCode = this.hasUnlinkedReasonFieldTarget ? this.unlinkedReasonFieldTarget.value : ""
+    const reasonName = this.reasonDisplayName(this.returnReasonsValue, reasonCode)
+    const qty = this.unlinkedPreviewPayload.quantity_fixed
+      ? "1"
+      : (this.hasUnlinkedQuantityFieldTarget ? this.unlinkedQuantityFieldTarget.value.trim() : "1")
+    const price = this.hasUnlinkedPriceFieldTarget ? this.unlinkedPriceFieldTarget.value.trim() : ""
+    this.openAuthorizationOverlay({
+      consumer: "unlinked_return",
+      operation: "apply",
+      parentOverlay: this.unlinkedOverlayTarget,
+      formTarget: "unlinkedForm",
+      context: {
+        actionLabel: "Unlinked return",
+        itemLabel: this.hasUnlinkedDescriptionTarget ? this.unlinkedDescriptionTarget.textContent : "",
+        currentLabel: "",
+        proposedLabel: `$${price}`,
+        qtyLabel: qty,
+        reasonLabel: reasonName,
+        backLabel: "Back to Unlinked Return",
+        authorizeLabel: "Authorize and Add Return",
+        showQty: true,
+        showCurrent: false,
+        proposedHeading: "Return amount"
+      }
+    })
+  }
+
+  commitUnlinkedReturn({ credentials = null } = {}) {
+    if (this.inFlight || !this.hasUnlinkedFormTarget) return
+    this.fillUnlinkedForm(credentials)
+    this.clearOverlayError(this.unlinkedOverlayTarget)
+    if (this.approvalOverlayOpen()) this.clearOverlayError(this.approvalOverlayTarget)
+    this.beginFlight()
+    this.syncUnlinkedPrimaryEnabled()
+    this.unlinkedFormTarget.requestSubmit()
+    this.clearHiddenApproverPasswords()
+  }
+
+  fillUnlinkedForm(credentials = null) {
     if (this.hasUnlinkedIdentifierInputTarget) {
       this.unlinkedIdentifierInputTarget.value = this.hasUnlinkedIdentifierFieldTarget
         ? this.unlinkedIdentifierFieldTarget.value.trim()
@@ -2011,45 +3622,185 @@ export default class extends Controller {
     if (this.hasUnlinkedExpectedTaxInputTarget) {
       this.unlinkedExpectedTaxInputTarget.value = this.unlinkedPreviewPayload.tax_class_id || ""
     }
-    if (this.hasUnlinkedApproverUserInputTarget) {
-      this.unlinkedApproverUserInputTarget.value = this.hasUnlinkedApproverUsernameTarget
-        ? this.unlinkedApproverUsernameTarget.value.trim()
-        : ""
-    }
-    if (this.hasUnlinkedApproverPasswordInputTarget) {
-      this.unlinkedApproverPasswordInputTarget.value = this.hasUnlinkedApproverPasswordTarget
-        ? this.unlinkedApproverPasswordTarget.value
-        : ""
-    }
-    this.clearOverlayError(this.unlinkedOverlayTarget)
-    this.beginFlight()
-    this.unlinkedFormTarget.requestSubmit()
+    const username = credentials?.username || ""
+    const password = credentials?.password || ""
+    if (this.hasUnlinkedApproverUserInputTarget) this.unlinkedApproverUserInputTarget.value = username
+    if (this.hasUnlinkedApproverPasswordInputTarget) this.unlinkedApproverPasswordInputTarget.value = password
   }
 
-  submitControlApply() {
+  submitControlApply(event) {
+    if (event) event.preventDefault()
     if (this.inFlight || !this.hasControlFormTarget) return
-    this.fillControlForm("apply")
+    if (!this.ensureControlReady("apply")) return
+    if (this.policyFor(this.currentControlAction) === "approval_required") {
+      this.openControlAuthorization("apply")
+      return
+    }
+    this.commitControlOperation("apply")
+  }
+
+  submitControlRemove(event) {
+    if (event) event.preventDefault()
+    if (this.inFlight || !this.hasControlFormTarget) return
+    if (!this.ensureControlReady("remove")) return
+    if (this.policyFor(this.currentControlAction) === "approval_required") {
+      this.openControlAuthorization("remove")
+      return
+    }
+    this.commitControlOperation("remove")
+  }
+
+  ensureControlReady(operation) {
+    const action = this.currentControlAction
+    const row = this.selectedRow()
+    if (operation === "remove") {
+      if (!row || !this.lineHasAction(row, action)) {
+        this.showControlFeedback("There is no adjustment to remove.")
+        if (this.hasControlCancelTarget) this.controlCancelTarget.focus()
+        return false
+      }
+      return true
+    }
+
+    if (action === "price_override") {
+      const value = this.hasControlPriceFieldTarget ? this.controlPriceFieldTarget.value.trim() : ""
+      if (!value) {
+        this.showControlFeedback("Enter a selling price.")
+        if (this.hasControlPriceFieldTarget) this.controlPriceFieldTarget.focus()
+        return false
+      }
+    } else if (action === "line_discount") {
+      const value = this.hasControlDiscountFieldTarget ? this.controlDiscountFieldTarget.value.trim() : ""
+      if (!value) {
+        this.showControlFeedback("Enter a discount percent.")
+        if (this.hasControlDiscountFieldTarget) this.controlDiscountFieldTarget.focus()
+        return false
+      }
+    } else if (action === "tax_class_override") {
+      const value = this.hasControlTaxFieldTarget ? this.controlTaxFieldTarget.value : ""
+      if (!value) {
+        this.showControlFeedback("Choose a Tax Class.")
+        if (this.hasControlTaxFieldTarget) this.controlTaxFieldTarget.focus()
+        return false
+      }
+    }
+
+    const reason = this.hasControlReasonFieldTarget ? this.controlReasonFieldTarget.value : ""
+    if (!reason) {
+      this.showControlFeedback("Choose a reason.")
+      if (this.hasControlReasonFieldTarget) this.controlReasonFieldTarget.focus()
+      return false
+    }
+    if (reason === "other") {
+      const note = this.hasControlNoteFieldTarget ? this.controlNoteFieldTarget.value.trim() : ""
+      if (!note) {
+        this.showControlFeedback("Enter a note for Other.")
+        this.toggleHidden(this.hasControlNoteWrapTarget && this.controlNoteWrapTarget, false)
+        if (this.hasControlNoteFieldTarget) this.controlNoteFieldTarget.focus()
+        return false
+      }
+    }
+    return true
+  }
+
+  showControlFeedback(message) {
+    const node = this.controlOverlayTarget?.querySelector("[data-overlay-error]")
+    if (node) node.textContent = message
+  }
+
+  openControlAuthorization(operation) {
+    const action = this.currentControlAction
+    const chrome = this.controlChromeFor(action)
+    const row = this.selectedRow()
+    const reasonCode = this.hasControlReasonFieldTarget ? this.controlReasonFieldTarget.value : ""
+    const reasonName = operation === "remove"
+      ? "Remove existing adjustment"
+      : this.reasonDisplayName(this.reasonsValue?.[action], reasonCode)
+    const proposed = operation === "remove"
+      ? "Restore original"
+      : this.controlProposedLabel(action)
+    this.openAuthorizationOverlay({
+      consumer: action,
+      operation,
+      parentOverlay: this.controlOverlayTarget,
+      formTarget: "controlForm",
+      context: {
+        actionLabel: operation === "remove" ? `${chrome.actionLabel} removal` : chrome.actionLabel,
+        itemLabel: this.hasControlLineLabelTarget ? this.controlLineLabelTarget.textContent : "",
+        currentLabel: this.controlCurrentValueLabel(row, action),
+        proposedLabel: proposed,
+        reasonLabel: reasonName,
+        backLabel: chrome.backLabel,
+        authorizeLabel: chrome.authorizeLabel,
+        showQty: false,
+        showCurrent: true,
+        proposedHeading: "Proposed"
+      }
+    })
+  }
+
+  controlCurrentValueLabel(row, actionType) {
+    if (!row) return ""
+    if (actionType === "price_override") return `$${this.formatCents(row.dataset.sellingCents)}`
+    if (actionType === "line_discount") {
+      const bp = row.dataset.discountBp
+      return bp ? `${this.formatBasisPoints(bp)}%` : "none"
+    }
+    return this.taxClassOptionLabel(row.dataset.taxClassId) || row.dataset.taxClassName || "—"
+  }
+
+  controlProposedLabel(actionType) {
+    if (actionType === "price_override") {
+      const value = this.hasControlPriceFieldTarget ? this.controlPriceFieldTarget.value.trim() : ""
+      return value ? `$${value}` : ""
+    }
+    if (actionType === "line_discount") {
+      const value = this.hasControlDiscountFieldTarget ? this.controlDiscountFieldTarget.value.trim() : ""
+      return value ? `${value}%` : ""
+    }
+    if (!this.hasControlTaxFieldTarget) return ""
+    const option = this.controlTaxFieldTarget.selectedOptions?.[0]
+    return option ? option.textContent : ""
+  }
+
+  reasonDisplayName(entries, code) {
+    if (!code) return ""
+    if (Array.isArray(entries)) {
+      const match = entries.find((entry) => entry.code === code)
+      return match?.name || code
+    }
+    if (entries && typeof entries === "object") {
+      return entries[code] || code
+    }
+    return code
+  }
+
+  commitControlOperation(operation, { credentials = null } = {}) {
+    if (this.inFlight || !this.hasControlFormTarget) return
+    this.fillControlForm(operation, credentials)
     this.clearOverlayError(this.controlOverlayTarget)
+    if (this.approvalOverlayOpen()) this.clearOverlayError(this.approvalOverlayTarget)
     this.beginFlight()
     this.controlFormTarget.requestSubmit()
+    this.clearHiddenApproverPasswords()
   }
 
-  submitControlRemove() {
-    if (this.inFlight || !this.hasControlFormTarget) return
-    this.fillControlForm("remove")
-    this.clearOverlayError(this.controlOverlayTarget)
-    this.beginFlight()
-    this.controlFormTarget.requestSubmit()
-  }
-
-  fillControlForm(operation) {
+  fillControlForm(operation, credentials = null) {
     this.syncSelectedLine()
     const action = this.currentControlAction
     const applying = operation === "apply"
     if (this.hasControlActionInputTarget) this.controlActionInputTarget.value = action || ""
     if (this.hasControlOperationInputTarget) this.controlOperationInputTarget.value = operation
-    if (this.hasControlReasonInputTarget) this.controlReasonInputTarget.value = this.hasControlReasonFieldTarget ? this.controlReasonFieldTarget.value : ""
-    if (this.hasControlNoteInputTarget) this.controlNoteInputTarget.value = this.hasControlNoteFieldTarget ? this.controlNoteFieldTarget.value.trim() : ""
+    if (this.hasControlReasonInputTarget) {
+      this.controlReasonInputTarget.value = applying && this.hasControlReasonFieldTarget
+        ? this.controlReasonFieldTarget.value
+        : ""
+    }
+    if (this.hasControlNoteInputTarget) {
+      this.controlNoteInputTarget.value = applying && this.hasControlNoteFieldTarget
+        ? this.controlNoteFieldTarget.value.trim()
+        : ""
+    }
     if (this.hasControlPriceInputTarget) {
       this.controlPriceInputTarget.value = applying && action === "price_override" && this.hasControlPriceFieldTarget
         ? this.controlPriceFieldTarget.value.trim()
@@ -2065,12 +3816,95 @@ export default class extends Controller {
         ? this.controlTaxFieldTarget.value
         : ""
     }
-    if (this.hasControlApproverUserInputTarget) {
-      this.controlApproverUserInputTarget.value = this.hasApproverUsernameTarget ? this.approverUsernameTarget.value.trim() : ""
+    const username = credentials?.username || ""
+    const password = credentials?.password || ""
+    if (this.hasControlApproverUserInputTarget) this.controlApproverUserInputTarget.value = username
+    if (this.hasControlApproverPasswordInputTarget) this.controlApproverPasswordInputTarget.value = password
+  }
+
+  openAuthorizationOverlay(invocation) {
+    if (!this.hasApprovalOverlayTarget) return
+    // Whitelisted fields only — never store credentials or callbacks.
+    this.confirmationInvocation = {
+      consumer: invocation.consumer,
+      operation: invocation.operation,
+      parentOverlay: invocation.parentOverlay,
+      formTarget: invocation.formTarget,
+      context: { ...(invocation.context || {}) }
     }
-    if (this.hasControlApproverPasswordInputTarget) {
-      this.controlApproverPasswordInputTarget.value = this.hasApproverPasswordTarget ? this.approverPasswordTarget.value : ""
+    const ctx = this.confirmationInvocation.context
+    if (this.hasApprovalActionLabelTarget) this.approvalActionLabelTarget.textContent = ctx.actionLabel || ""
+    if (this.hasApprovalItemLabelTarget) this.approvalItemLabelTarget.textContent = ctx.itemLabel || ""
+    if (this.hasApprovalCurrentLabelTarget) this.approvalCurrentLabelTarget.textContent = ctx.currentLabel || ""
+    if (this.hasApprovalProposedLabelTarget) this.approvalProposedLabelTarget.textContent = ctx.proposedLabel || ""
+    if (this.hasApprovalReasonLabelTarget) this.approvalReasonLabelTarget.textContent = ctx.reasonLabel || ""
+    if (this.hasApprovalQtyLabelTarget) this.approvalQtyLabelTarget.textContent = ctx.qtyLabel || ""
+    if (this.hasApprovalCurrentHeadingTarget) this.approvalCurrentHeadingTarget.textContent = "Current"
+    if (this.hasApprovalProposedHeadingTarget) {
+      this.approvalProposedHeadingTarget.textContent = ctx.proposedHeading || "Proposed"
     }
+    this.toggleHidden(this.hasApprovalCurrentWrapTarget && this.approvalCurrentWrapTarget, ctx.showCurrent === false)
+    this.toggleHidden(this.hasApprovalQtyWrapTarget && this.approvalQtyWrapTarget, !ctx.showQty)
+    if (this.hasApprovalBackTarget) this.approvalBackTarget.textContent = ctx.backLabel || "Back"
+    if (this.hasApprovalAuthorizeTarget) this.approvalAuthorizeTarget.textContent = ctx.authorizeLabel || "Authorize"
+    this.clearApprovalCredentials({ keepUsername: false })
+    this.clearOverlayError(this.approvalOverlayTarget)
+    this.showOverlay(this.approvalOverlayTarget, this.hasApproverUsernameTarget && this.approverUsernameTarget)
+  }
+
+  backFromApprovalOverlay(event) {
+    if (event) event.preventDefault()
+    if (this.inFlight) return
+    this.closeApprovalOverlay({ clearInvocation: true })
+  }
+
+  closeApprovalOverlay({ clearInvocation = true } = {}) {
+    this.clearApprovalCredentials({ keepUsername: false })
+    if (clearInvocation) this.confirmationInvocation = null
+    this.hideOverlay(this.hasApprovalOverlayTarget && this.approvalOverlayTarget)
+  }
+
+  authorizeAndSubmit(event) {
+    if (event) event.preventDefault()
+    if (this.inFlight) return
+    const invocation = this.confirmationInvocation
+    if (!invocation) return
+    const username = this.hasApproverUsernameTarget ? this.approverUsernameTarget.value.trim() : ""
+    const password = this.hasApproverPasswordTarget ? this.approverPasswordTarget.value : ""
+    if (!username || !password) {
+      if (this.hasApproverUsernameTarget && !username) {
+        this.approverUsernameTarget.focus()
+        return
+      }
+      if (this.hasApproverPasswordTarget) this.approverPasswordTarget.focus()
+      return
+    }
+    const credentials = { username, password }
+    if (this.hasApproverPasswordTarget) this.approverPasswordTarget.value = ""
+    if (invocation.formTarget === "controlForm") {
+      this.commitControlOperation(invocation.operation, { credentials })
+      return
+    }
+    if (invocation.formTarget === "unlinkedForm") {
+      this.commitUnlinkedReturn({ credentials })
+    }
+  }
+
+  clearApprovalCredentials({ keepUsername = false } = {}) {
+    if (!keepUsername && this.hasApproverUsernameTarget) this.approverUsernameTarget.value = ""
+    if (this.hasApproverPasswordTarget) this.approverPasswordTarget.value = ""
+    this.clearHiddenApproverPasswords()
+  }
+
+  clearHiddenApproverPasswords() {
+    if (this.hasControlApproverPasswordInputTarget) this.controlApproverPasswordInputTarget.value = ""
+    if (this.hasUnlinkedApproverPasswordInputTarget) this.unlinkedApproverPasswordInputTarget.value = ""
+  }
+
+  clearConfirmationCredentials() {
+    this.clearApprovalCredentials({ keepUsername: false })
+    if (this.hasControlApproverUserInputTarget) this.controlApproverUserInputTarget.value = ""
+    if (this.hasUnlinkedApproverUserInputTarget) this.unlinkedApproverUserInputTarget.value = ""
   }
 
   confirmCancel() {
@@ -2092,49 +3926,261 @@ export default class extends Controller {
     })
     this.syncSelectedLine()
     this.enableReadyActions()
+    this.scheduleScrollSelectedRowIntoView()
+  }
+
+  scheduleScrollSelectedRowIntoView() {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => this.scrollSelectedRowIntoView())
+    })
+  }
+
+  scrollSelectedRowIntoView() {
+    const row = this.selectedRow()
+    if (!row) return
+    const basket = document.getElementById("pos_basket")
+    if (!basket) {
+      if (typeof row.scrollIntoView === "function") {
+        row.scrollIntoView({ block: "nearest", inline: "nearest" })
+      }
+      return
+    }
+
+    const rowTop = row.getBoundingClientRect().top - basket.getBoundingClientRect().top + basket.scrollTop
+    const rowBottom = rowTop + row.offsetHeight
+    const maxScroll = Math.max(0, basket.scrollHeight - basket.clientHeight)
+    let nextScroll = basket.scrollTop
+
+    if (row.offsetHeight >= basket.clientHeight) {
+      nextScroll = rowTop
+    } else if (rowTop < basket.scrollTop) {
+      nextScroll = rowTop
+    } else if (rowBottom > basket.scrollTop + basket.clientHeight) {
+      nextScroll = rowBottom - basket.clientHeight
+    }
+
+    basket.scrollTop = Math.max(0, Math.min(maxScroll, nextScroll))
   }
 
   overlayOpen() {
-    return this.activeOverlayElement() != null
+    return this.topOverlay() != null
   }
 
   activeOverlayElement() {
-    // Topmost child pickers first so Tab/focus traps match visible stacking when
-    // a picker opens above unlinked/search parents.
-    const overlays = [
-      this.hasProductOverlayTarget && this.productOverlayTarget,
-      this.hasVariantOverlayTarget && this.variantOverlayTarget,
-      this.hasUnitOverlayTarget && this.unitOverlayTarget,
-      this.hasOpenPriceOverlayTarget && this.openPriceOverlayTarget,
-      this.hasUnlinkedOverlayTarget && this.unlinkedOverlayTarget,
-      this.hasReturnChooserOverlayTarget && this.returnChooserOverlayTarget,
-      this.hasLinkedOverlayTarget && this.linkedOverlayTarget,
-      this.hasControlOverlayTarget && this.controlOverlayTarget,
-      this.hasOtherOverlayTarget && this.otherOverlayTarget,
-      this.hasSearchOverlayTarget && this.searchOverlayTarget,
-      this.hasPickupOverlayTarget && this.pickupOverlayTarget,
-      this.hasCustomerOverlayTarget && this.customerOverlayTarget,
-      this.hasOverlayTarget && this.overlayTarget
-    ]
-    return overlays.find((el) => el && !el.hidden) || null
+    return this.topOverlay()
   }
 
-  showOverlay(overlay, initial) {
+  dispatchOverlayKeydown(overlay, event, key) {
+    if (this.hasEditTenderOverlayTarget && overlay === this.editTenderOverlayTarget) {
+      this.onEditTenderOverlayKeydown(event, key)
+      return
+    }
+    if (this.hasRemoveTenderOverlayTarget && overlay === this.removeTenderOverlayTarget) {
+      this.onRemoveTenderOverlayKeydown(event, key)
+      return
+    }
+    if (this.hasReturnToSaleOverlayTarget && overlay === this.returnToSaleOverlayTarget) {
+      this.onReturnToSaleOverlayKeydown(event, key)
+      return
+    }
+    if (this.hasClearTendersOverlayTarget && overlay === this.clearTendersOverlayTarget) {
+      this.onClearTendersOverlayKeydown(event, key)
+      return
+    }
+    if (this.hasProductOverlayTarget && overlay === this.productOverlayTarget) {
+      this.onProductOverlayKeydown(event, key)
+      return
+    }
+    if (this.hasVariantOverlayTarget && overlay === this.variantOverlayTarget) {
+      this.onVariantOverlayKeydown(event, key)
+      return
+    }
+    if (this.hasUnitOverlayTarget && overlay === this.unitOverlayTarget) {
+      this.onUnitOverlayKeydown(event, key)
+      return
+    }
+    if (this.hasOpenPriceOverlayTarget && overlay === this.openPriceOverlayTarget) {
+      this.onOpenPriceOverlayKeydown(event, key)
+      return
+    }
+    if (this.hasUnlinkedOverlayTarget && overlay === this.unlinkedOverlayTarget) {
+      this.onUnlinkedOverlayKeydown(event, key)
+      return
+    }
+    if (this.hasReturnChooserOverlayTarget && overlay === this.returnChooserOverlayTarget) {
+      this.onReturnChooserKeydown(event, key)
+      return
+    }
+    if (this.hasLinkedOverlayTarget && overlay === this.linkedOverlayTarget) {
+      this.onLinkedOverlayKeydown(event, key)
+      return
+    }
+    if (this.hasControlOverlayTarget && overlay === this.controlOverlayTarget) {
+      this.onControlOverlayKeydown(event, key)
+      return
+    }
+    if (this.hasApprovalOverlayTarget && overlay === this.approvalOverlayTarget) {
+      this.onApprovalOverlayKeydown(event, key)
+      return
+    }
+    if (this.hasOtherOverlayTarget && overlay === this.otherOverlayTarget) {
+      this.onOtherOverlayKeydown(event, key)
+      return
+    }
+    if (this.hasIssuanceOverlayTarget && overlay === this.issuanceOverlayTarget) {
+      this.onIssuanceOverlayKeydown(event, key)
+      return
+    }
+    if (this.hasSearchOverlayTarget && overlay === this.searchOverlayTarget) {
+      this.onSearchOverlayKeydown(event, key)
+      return
+    }
+    if (this.hasPickupOverlayTarget && overlay === this.pickupOverlayTarget) {
+      this.onPickupOverlayKeydown(event, key)
+      return
+    }
+    if (this.hasCustomerOverlayTarget && overlay === this.customerOverlayTarget) {
+      this.onCustomerOverlayKeydown(event, key)
+      return
+    }
+    if (this.hasQuickCustomerOverlayTarget && overlay === this.quickCustomerOverlayTarget) {
+      this.onQuickCustomerOverlayKeydown(event, key)
+      return
+    }
+    if (this.hasOverlayTarget && overlay === this.overlayTarget) {
+      event.preventDefault()
+      if (key === "Escape") this.closeOverlay()
+      if (key === "F9") this.confirmCancel()
+    }
+  }
+
+  topOverlay() {
+    for (let index = this.overlayStack.length - 1; index >= 0; index -= 1) {
+      const entry = this.overlayStack[index]
+      if (entry?.overlay && !entry.overlay.hidden) return entry.overlay
+    }
+    return null
+  }
+
+  showOverlay(overlay, options = {}) {
     if (!overlay) return
+    const opts = options && options.nodeType ? { initialFocus: options } : (options || {})
     this.clearOverlayError(overlay)
+    const parent = opts.parent || this.topOverlay()
+    const opener = opts.opener || document.activeElement
+    const initialFocus = opts.initialFocus || this.overlayFocusables(overlay)[0]
+    this.overlayStack = this.overlayStack.filter((entry) => entry.overlay !== overlay)
+    this.overlayStack.push({
+      overlay,
+      opener,
+      parent: parent && parent !== overlay ? parent : null,
+      entryFocus: initialFocus
+    })
     overlay.hidden = false
-    if (this.hasChromeTarget) this.chromeTarget.inert = true
-    const target = initial || this.overlayFocusables(overlay)[0]
-    if (target) target.focus()
+    overlay.setAttribute("aria-modal", "true")
+    overlay.style.zIndex = String(1000 + (this.overlayStack.length * 10))
+    if (parent && parent !== overlay) {
+      parent.inert = true
+      parent.setAttribute("aria-modal", "false")
+    }
+    this.syncWorkspaceBackgroundInert()
+    this.focusOverlayEntry(initialFocus)
   }
 
   hideOverlay(overlay) {
     if (!overlay) return
-    overlay.hidden = true
-    if (this.activeOverlayElement() == null) {
-      if (this.hasChromeTarget) this.chromeTarget.inert = false
-      this.restoreFocus()
+    const index = this.overlayStack.findIndex((entry) => entry.overlay === overlay)
+    if (index < 0) {
+      this.hideOverlayNode(overlay)
+      this.syncWorkspaceBackgroundInert()
+      if (this.topOverlay() == null) this.restoreFocus()
+      return
     }
+    const entry = this.overlayStack[index]
+    const descendants = this.overlayStack.slice(index + 1)
+    descendants.reverse().forEach((child) => this.hideOverlayNode(child.overlay))
+    this.hideOverlayNode(overlay)
+    this.overlayStack.splice(index)
+    this.syncWorkspaceBackgroundInert()
+    this.restoreOverlayFocus(entry)
+  }
+
+  hideOverlayNode(overlay) {
+    if (!overlay) return
+    if (this.hasApprovalOverlayTarget && overlay === this.approvalOverlayTarget) {
+      this.clearApprovalCredentials({ keepUsername: false })
+      this.confirmationInvocation = null
+    }
+    if (this.hasOtherOverlayTarget && overlay === this.otherOverlayTarget) {
+      this.tenderPickerInvocation = null
+    }
+    overlay.hidden = true
+    overlay.inert = false
+    overlay.style.zIndex = ""
+    overlay.setAttribute("aria-modal", "true")
+    this.clearOverlayError(overlay)
+  }
+
+  clearOverlayStack({ restoreCommand = true } = {}) {
+    this.abortPendingLookups()
+    this.clearConfirmationCredentials()
+    this.confirmationInvocation = null
+    this.tenderPickerInvocation = null
+    const entries = [ ...this.overlayStack ]
+    this.overlayStack = []
+    entries.reverse().forEach((entry) => this.hideOverlayNode(entry.overlay))
+    this.syncWorkspaceBackgroundInert()
+    if (restoreCommand) this.restoreFocus()
+  }
+
+  syncWorkspaceBackgroundInert() {
+    if (!this.hasBackgroundTarget) return
+    this.backgroundTarget.inert = this.topOverlay() != null
+  }
+
+  restoreOverlayFocus(closedEntry) {
+    if (!closedEntry) {
+      if (this.topOverlay() == null) this.restoreFocus()
+      return
+    }
+    const parent = closedEntry.parent
+    if (parent && !parent.hidden) {
+      parent.inert = false
+      parent.setAttribute("aria-modal", "true")
+      const parentEntry = this.overlayStack.find((entry) => entry.overlay === parent)
+      const focusTarget = parent.querySelector("li.is-selected:not(.is-disabled)") ||
+        parentEntry?.entryFocus ||
+        this.overlayFocusables(parent)[0]
+      this.focusOverlayEntry(focusTarget)
+      return
+    }
+    if (this.topOverlay() == null) this.restoreFocus()
+  }
+
+  focusOverlayEntry(el) {
+    if (!el || typeof el.focus !== "function") return
+    el.focus()
+    if (typeof el.select === "function" && "value" in el && String(el.value || "").length > 0) {
+      el.select()
+    }
+  }
+
+  abortPendingLookups() {
+    if (this.searchAbort) this.searchAbort.abort()
+    if (this.pickupAbort) this.pickupAbort.abort()
+    if (this.customerAbort) this.customerAbort.abort()
+    if (this.linkedAbort) this.linkedAbort.abort()
+    if (this.unlinkedAbort) this.unlinkedAbort.abort()
+    this.searchAbort = null
+    this.pickupAbort = null
+    this.customerAbort = null
+    this.linkedAbort = null
+    this.unlinkedAbort = null
+    this.searchRequestToken += 1
+    this.pickupRequestToken += 1
+    this.customerRequestToken += 1
+    this.linkedInvocation += 1
+    this.unlinkedInvocation += 1
   }
 
   clearOverlayError(overlay) {
@@ -2145,7 +4191,7 @@ export default class extends Controller {
   overlayFocusables(overlay) {
     if (!overlay) return []
     return Array.from(overlay.querySelectorAll("input, select, textarea, button, [tabindex]:not([tabindex='-1'])")).filter((el) => {
-      if (el.disabled || el.hidden) return false
+      if (el.disabled || el.hidden || el.closest("[inert]")) return false
       return !el.closest("[hidden]")
     })
   }
@@ -2170,6 +4216,8 @@ export default class extends Controller {
     item.classList.toggle("is-disabled", disabled)
     item.setAttribute("aria-selected", selected ? "true" : "false")
     item.tabIndex = selected ? 0 : -1
+    if (disabled) item.setAttribute("aria-disabled", "true")
+    else item.removeAttribute("aria-disabled")
   }
 
   recoverDialogRejection() {
@@ -2177,8 +4225,42 @@ export default class extends Controller {
     if (this.hasFieldTarget) this.fieldTarget.disabled = false
     if (this.hasReferenceFieldTarget) this.referenceFieldTarget.disabled = false
     this.enableReadyActions()
-    if (this.hasControlApproverPasswordInputTarget) this.controlApproverPasswordInputTarget.value = ""
-    if (this.hasUnlinkedApproverPasswordInputTarget) this.unlinkedApproverPasswordInputTarget.value = ""
+    this.syncUnlinkedPrimaryEnabled()
+    this.syncLinkedPrimaryEnabled()
+
+    const failure = this.readOverlayFailure()
+    const kind = failure?.kind
+    this.clearHiddenApproverPasswords()
+
+    if (kind === "authorization_failed" || kind === "authorization_prohibited") {
+      if (this.hasApproverPasswordTarget) this.approverPasswordTarget.value = ""
+      const focusField = (kind === "authorization_prohibited" || failure?.field === "approver_username") && this.hasApproverUsernameTarget
+        ? this.approverUsernameTarget
+        : (this.hasApproverPasswordTarget && this.approverPasswordTarget)
+      if (focusField) {
+        focusField.focus()
+        if (typeof focusField.select === "function") focusField.select()
+      }
+      return
+    }
+
+    if (kind === "parent_validation_failed") {
+      if (this.approvalOverlayOpen()) this.closeApprovalOverlay({ clearInvocation: true })
+      const parent = this.activeOverlayElement()
+      if (!parent) return
+      const focusables = this.overlayFocusables(parent)
+      const firstField = focusables.find((el) => el.matches("input, select, textarea"))
+      if (firstField) {
+        firstField.focus()
+        return
+      }
+      if (focusables[0]) focusables[0].focus()
+      return
+    }
+
+    // stale_transaction replaces the workspace via Turbo — no overlay to recover.
+    if (kind === "stale_transaction") return
+
     const overlay = this.activeOverlayElement()
     if (!overlay) return
     overlay.querySelectorAll("input[type='password']").forEach((field) => {
@@ -2194,6 +4276,20 @@ export default class extends Controller {
     if (first) first.focus()
   }
 
+  readOverlayFailure() {
+    const nodes = [
+      ...(this.hasOverlayFailureMetaTarget ? this.overlayFailureMetaTargets : []),
+      ...Array.from(this.element.querySelectorAll("[data-overlay-error-kind]"))
+    ]
+    const node = nodes.find((entry) => entry?.dataset?.overlayErrorKind)
+    if (!node) return null
+    return {
+      kind: node.dataset.overlayErrorKind,
+      field: node.dataset.overlayErrorField || null,
+      message: node.textContent || ""
+    }
+  }
+
   cancelOverlayOpen() {
     return this.hasOverlayTarget && !this.overlayTarget.hidden
   }
@@ -2202,12 +4298,20 @@ export default class extends Controller {
     return this.hasControlOverlayTarget && !this.controlOverlayTarget.hidden
   }
 
+  approvalOverlayOpen() {
+    return this.hasApprovalOverlayTarget && !this.approvalOverlayTarget.hidden
+  }
+
   unlinkedOverlayOpen() {
     return this.hasUnlinkedOverlayTarget && !this.unlinkedOverlayTarget.hidden
   }
 
   otherOverlayOpen() {
     return this.hasOtherOverlayTarget && !this.otherOverlayTarget.hidden
+  }
+
+  issuanceOverlayOpen() {
+    return this.hasIssuanceOverlayTarget && !this.issuanceOverlayTarget.hidden
   }
 
   searchOverlayOpen() {
@@ -2220,6 +4324,10 @@ export default class extends Controller {
 
   customerOverlayOpen() {
     return this.hasCustomerOverlayTarget && !this.customerOverlayTarget.hidden
+  }
+
+  quickCustomerOverlayOpen() {
+    return this.hasQuickCustomerOverlayTarget && !this.quickCustomerOverlayTarget.hidden
   }
 
   productOverlayOpen() {
@@ -2303,6 +4411,7 @@ export default class extends Controller {
       this.setActionEnabled("removeButton", hasSelection)
       this.setActionEnabled("cancelButton", hasLines)
       this.enableTenderIdentityButtons()
+      this.scheduleScrollSelectedRowIntoView()
       return
     }
     if (this.modeValue === "tender") {
@@ -2358,6 +4467,32 @@ export default class extends Controller {
     })
   }
 
+  isCommandSurfaceInput(target) {
+    return isEditableControl(target)
+  }
+
+  redirectPrintableToCommandField(event, normalizedKey = null) {
+    if (event.defaultPrevented) return
+    if (!this.hasFieldTarget || this.fieldTarget.disabled) return
+    if (this.overlayOpen() && this.topOverlay()?.contains(event.target)) return
+    if (isEditableControl(event.target)) return
+    if (event.isComposing) return
+    if (event.metaKey || event.ctrlKey || event.altKey) return
+    const key = (typeof event.key === "string" && event.key.length === 1)
+      ? event.key
+      : (normalizedKey || normalizeKey(event))
+    if (typeof key !== "string" || key.length !== 1 || key === " ") return
+
+    event.preventDefault()
+    const field = this.fieldTarget
+    field.focus()
+    const start = field.selectionStart ?? field.value.length
+    const end = field.selectionEnd ?? field.value.length
+    field.value = `${field.value.slice(0, start)}${key}${field.value.slice(end)}`
+    const caret = start + key.length
+    if (typeof field.setSelectionRange === "function") field.setSelectionRange(caret, caret)
+  }
+
   setMode(mode, heading) {
     this.modeValue = mode
     this.element.dataset.registerWorkspaceModeValue = mode
@@ -2402,11 +4537,8 @@ export default class extends Controller {
     this.functionKeyListenersBound = true
     this.onWindowKeydown = (event) => this.onKeydown(event)
     this.onWindowKeyup = (event) => this.suppressBrowserFunctionKeys(event)
-    this.onWorkspacePointerDown = () => this.requestFunctionKeyLock()
     window.addEventListener("keydown", this.onWindowKeydown, true)
     window.addEventListener("keyup", this.onWindowKeyup, true)
-    this.element.addEventListener("pointerdown", this.onWorkspacePointerDown)
-    this.requestFunctionKeyLock()
   }
 
   unbindFunctionKeyCapture() {
@@ -2414,20 +4546,6 @@ export default class extends Controller {
     this.functionKeyListenersBound = false
     window.removeEventListener("keydown", this.onWindowKeydown, true)
     window.removeEventListener("keyup", this.onWindowKeyup, true)
-    this.element.removeEventListener("pointerdown", this.onWorkspacePointerDown)
-    this.releaseFunctionKeyLock()
-  }
-
-  requestFunctionKeyLock() {
-    const keyboard = navigator.keyboard
-    if (!keyboard || typeof keyboard.lock !== "function") return
-    keyboard.lock(["F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10"]).catch(() => {})
-  }
-
-  releaseFunctionKeyLock() {
-    const keyboard = navigator.keyboard
-    if (!keyboard || typeof keyboard.unlock !== "function") return
-    keyboard.unlock()
   }
 
   functionKey(event) {
@@ -2437,7 +4555,7 @@ export default class extends Controller {
   }
 
   claimedFunctionKey(key) {
-    return key === "F1" || key === "F2" || key === "F3" || key === "F4" || key === "F5" || key === "F6" || key === "F7" || key === "F8" || key === "F9" || key === "F10"
+    return key === "F1" || key === "F2" || key === "F3" || key === "F4" || key === "F5" || key === "F6" || key === "F7" || key === "F8" || key === "F9"
   }
 
   claimFunctionKey(event) {

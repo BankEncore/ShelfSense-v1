@@ -1,0 +1,180 @@
+<% register_scope = { register_id: @register.id } %>
+<% selected_id = @selected_line&.id %>
+<% selected_tender_type = @selected_tender_type %>
+<% selected_tender_id = @selected_tender&.id %>
+<% tenders = @tenders %>
+
+<% if effective_permissions.include?("gift_cards.cash_out") %>
+  <%= form_with url: lookup_pos_cash_outs_path, method: :post, local: true, html: { class: "pos-hidden", data: { register_workspace_target: "cashOutForm" } } do %>
+    <%= hidden_field_tag :card_number, nil, data: { register_workspace_target: "cashOutCardInput" } %>
+  <% end %>
+<% end %>
+
+<%= form_with url: pos_register_merchandise_path(register_scope), method: :post, html: { class: "pos-hidden", data: { register_workspace_target: "merchandiseForm", turbo: true } } do %>
+  <%= hidden_field_tag :register_id, @register.id %>
+  <%= hidden_field_tag :lock_version, @transaction.lock_version %>
+  <%= hidden_field_tag :selected_line_id, selected_id %>
+  <%= hidden_field_tag :selected_tender_id, selected_tender_id, data: { register_workspace_target: "selectedTenderInput" } %>
+  <%= hidden_field_tag :identifier, "", data: { register_workspace_target: "identifierInput" } %>
+  <%= hidden_field_tag :product_variant_id, "", data: { register_workspace_target: "variantInput" } %>
+  <%= hidden_field_tag :inventory_unit_id, "", data: { register_workspace_target: "unitInput" } %>
+  <%= hidden_field_tag :selling_price, "", data: { register_workspace_target: "openPriceInput" } %>
+<% end %>
+
+<%= form_with url: pos_register_pickup_path(register_scope), method: :post, html: { class: "pos-hidden", data: { register_workspace_target: "pickupForm", turbo: true } } do %>
+  <%= hidden_field_tag :register_id, @register.id %>
+  <%= hidden_field_tag :lock_version, @transaction.lock_version %>
+  <%= hidden_field_tag :customer_request_id, "", data: { register_workspace_target: "pickupRequestInput" } %>
+<% end %>
+
+<%= form_with url: pos_register_attach_customer_path(register_scope), method: :post, html: { class: "pos-hidden", data: { register_workspace_target: "attachCustomerForm", turbo: true } } do %>
+  <%= hidden_field_tag :register_id, @register.id %>
+  <%= hidden_field_tag :lock_version, @transaction.lock_version %>
+  <%= hidden_field_tag :customer_id, "", data: { register_workspace_target: "attachCustomerIdInput" } %>
+<% end %>
+
+<%= form_with url: pos_register_quantity_path(register_scope), method: :post, html: { class: "pos-hidden", data: { register_workspace_target: "quantityForm", turbo: true } } do %>
+  <%= hidden_field_tag :register_id, @register.id %>
+  <%= hidden_field_tag :lock_version, @transaction.lock_version %>
+  <%= hidden_field_tag :line_id, selected_id, data: { register_workspace_target: "quantityLineInput" } %>
+  <%= hidden_field_tag :quantity, "", data: { register_workspace_target: "quantityInput" } %>
+<% end %>
+
+<%= form_with url: pos_register_remove_path(register_scope), method: :post, html: { class: "pos-hidden", data: { register_workspace_target: "removeForm", turbo: true } } do %>
+  <%= hidden_field_tag :register_id, @register.id %>
+  <%= hidden_field_tag :lock_version, @transaction.lock_version %>
+  <%= hidden_field_tag :line_id, selected_id, data: { register_workspace_target: "removeLineInput" } %>
+<% end %>
+
+<%= form_with url: pos_register_tender_path(register_scope), method: :post, html: { class: "pos-hidden", data: { register_workspace_target: "tenderForm", turbo: true } } do %>
+  <%= hidden_field_tag :register_id, @register.id %>
+  <%= hidden_field_tag :lock_version, @transaction.lock_version %>
+  <%= hidden_field_tag :selected_tender_id, selected_tender_id, data: { register_workspace_target: "selectedTenderInput" } %>
+  <%= hidden_field_tag :tender_amount, "", data: { register_workspace_target: "presentedInput" } %>
+  <%= hidden_field_tag :tender_type_id, selected_tender_type&.id, data: { register_workspace_target: "tenderTypeInput" } %>
+  <%= hidden_field_tag :external_reference, "", data: { register_workspace_target: "referenceInput" } %>
+  <%= hidden_field_tag :card_number, "", data: { register_workspace_target: "cardNumberInput" } %>
+  <%= hidden_field_tag :destination_mode, "", data: { register_workspace_target: "destinationModeInput" } %>
+  <%= hidden_field_tag :operation_id, "", data: { register_workspace_target: "tenderOperationInput" } %>
+<% end %>
+
+<%= form_with url: pos_register_remove_tender_path(register_scope), method: :post, html: { class: "pos-hidden", data: { register_workspace_target: "removeTenderForm", turbo: true } } do %>
+  <%= hidden_field_tag :register_id, @register.id %>
+  <%= hidden_field_tag :lock_version, @transaction.lock_version %>
+  <%= hidden_field_tag :selected_tender_id, selected_tender_id, data: { register_workspace_target: "selectedTenderInput" } %>
+  <%= hidden_field_tag :tender_id, selected_tender_id || tenders.last&.id, data: { register_workspace_target: "removeTenderInput" } %>
+  <%= hidden_field_tag :operation_id, "", data: { register_workspace_target: "removeTenderOperationInput" } %>
+<% end %>
+
+<%= form_with url: pos_register_replace_tender_path(register_scope), method: :post, html: { class: "pos-hidden", data: { register_workspace_target: "replaceTenderForm", turbo: true } } do %>
+  <%= hidden_field_tag :register_id, @register.id %>
+  <%= hidden_field_tag :lock_version, @transaction.lock_version %>
+  <%= hidden_field_tag :selected_tender_id, selected_tender_id, data: { register_workspace_target: "selectedTenderInput" } %>
+  <%= hidden_field_tag :tender_id, selected_tender_id, data: { register_workspace_target: "replaceTenderInput" } %>
+  <%= hidden_field_tag :operation_id, "", data: { register_workspace_target: "replaceTenderOperationInput" } %>
+  <%= hidden_field_tag :tender_amount, "", data: { register_workspace_target: "replaceTenderAmountInput" } %>
+  <%= hidden_field_tag :amount_presented, "", data: { register_workspace_target: "replaceTenderPresentedInput" } %>
+  <%= hidden_field_tag :external_reference, "", data: { register_workspace_target: "replaceTenderReferenceInput" } %>
+<% end %>
+
+<%= form_with url: pos_register_abandon_tender_path(register_scope), method: :post, html: { class: "pos-hidden", data: { register_workspace_target: "returnToSaleForm", turbo: true } } do %>
+  <%= hidden_field_tag :register_id, @register.id %>
+  <%= hidden_field_tag :lock_version, @transaction.lock_version %>
+  <%= hidden_field_tag :selected_tender_id, selected_tender_id, data: { register_workspace_target: "selectedTenderInput" } %>
+  <%= hidden_field_tag :operation_id, "", data: { register_workspace_target: "returnToSaleOperationInput" } %>
+<% end %>
+
+<%= form_with url: pos_transaction_complete_path(@transaction), method: :post, html: { class: "pos-hidden", data: { register_workspace_target: "completeForm", turbo: true } } do %>
+  <%= hidden_field_tag :lock_version, @transaction.lock_version %>
+  <%= hidden_field_tag :selected_tender_id, selected_tender_id, data: { register_workspace_target: "selectedTenderInput" } %>
+  <%= hidden_field_tag :completion_operation_id, @completion_operation_id %>
+  <%= hidden_field_tag :expected_total_cents, @transaction.total_cents %>
+  <%= hidden_field_tag :expected_signed_net_cents, @transaction.signed_net_cents %>
+<% end %>
+
+<%= form_with url: pos_register_controlled_action_path(register_scope), method: :post, html: { class: "pos-hidden", data: { register_workspace_target: "controlForm", turbo: true } } do %>
+  <%= hidden_field_tag :register_id, @register.id %>
+  <%= hidden_field_tag :lock_version, @transaction.lock_version %>
+  <%= hidden_field_tag :line_id, selected_id, data: { register_workspace_target: "controlLineInput" } %>
+  <%= hidden_field_tag :action_type, "", data: { register_workspace_target: "controlActionInput" } %>
+  <%= hidden_field_tag :operation, "apply", data: { register_workspace_target: "controlOperationInput" } %>
+  <%= hidden_field_tag :reason_code, "", data: { register_workspace_target: "controlReasonInput" } %>
+  <%= hidden_field_tag :reason_note, "", data: { register_workspace_target: "controlNoteInput" } %>
+  <%= hidden_field_tag :selling_price, "", data: { register_workspace_target: "controlPriceInput" } %>
+  <%= hidden_field_tag :discount_percent, "", data: { register_workspace_target: "controlDiscountInput" } %>
+  <%= hidden_field_tag :tax_class_id, "", data: { register_workspace_target: "controlTaxInput" } %>
+  <%= hidden_field_tag :approver_username, "", data: { register_workspace_target: "controlApproverUserInput" } %>
+  <%= hidden_field_tag :approver_password, "", data: { register_workspace_target: "controlApproverPasswordInput" } %>
+<% end %>
+
+<%= form_with url: pos_register_unlinked_return_path(register_scope), method: :post, html: { class: "pos-hidden", data: { register_workspace_target: "unlinkedForm", turbo: true } } do %>
+  <%= hidden_field_tag :register_id, @register.id %>
+  <%= hidden_field_tag :lock_version, @transaction.lock_version %>
+  <%= hidden_field_tag :identifier, "", data: { register_workspace_target: "unlinkedIdentifierInput" } %>
+  <%= hidden_field_tag :product_id, "", data: { register_workspace_target: "unlinkedProductIdInput" } %>
+  <%= hidden_field_tag :product_variant_id, "", data: { register_workspace_target: "unlinkedVariantIdInput" } %>
+  <%= hidden_field_tag :inventory_unit_id, "", data: { register_workspace_target: "unlinkedUnitIdInput" } %>
+  <%= hidden_field_tag :quantity, "", data: { register_workspace_target: "unlinkedQuantityInput" } %>
+  <%= hidden_field_tag :reason_code, "", data: { register_workspace_target: "unlinkedReasonInput" } %>
+  <%= hidden_field_tag :reason_note, "", data: { register_workspace_target: "unlinkedNoteInput" } %>
+  <%= hidden_field_tag :return_price, "", data: { register_workspace_target: "unlinkedPriceInput" } %>
+  <%= hidden_field_tag :expected_product_variant_id, "", data: { register_workspace_target: "unlinkedExpectedVariantInput" } %>
+  <%= hidden_field_tag :expected_inventory_unit_id, "", data: { register_workspace_target: "unlinkedExpectedUnitInput" } %>
+  <%= hidden_field_tag :expected_reference_unit_price_cents, "", data: { register_workspace_target: "unlinkedExpectedReferenceInput" } %>
+  <%= hidden_field_tag :expected_tax_class_id, "", data: { register_workspace_target: "unlinkedExpectedTaxInput" } %>
+  <%= hidden_field_tag :approver_username, "", data: { register_workspace_target: "unlinkedApproverUserInput" } %>
+  <%= hidden_field_tag :approver_password, "", data: { register_workspace_target: "unlinkedApproverPasswordInput" } %>
+<% end %>
+
+<%= form_with url: pos_register_open_price_path(register_scope), method: :post, html: { class: "pos-hidden", data: { register_workspace_target: "openPriceForm", turbo: true } } do %>
+  <%= hidden_field_tag :register_id, @register.id %>
+  <%= hidden_field_tag :lock_version, @transaction.lock_version %>
+  <%= hidden_field_tag :line_id, selected_id, data: { register_workspace_target: "openPriceLineInput" } %>
+  <%= hidden_field_tag :selling_price, "", data: { register_workspace_target: "openPriceEditInput" } %>
+<% end %>
+
+<%= form_with url: pos_register_linked_return_path(register_scope), method: :post, html: { class: "pos-hidden", data: { register_workspace_target: "linkedReturnForm", turbo: true } } do %>
+  <%= hidden_field_tag :register_id, @register.id %>
+  <%= hidden_field_tag :lock_version, @transaction.lock_version %>
+  <%= hidden_field_tag :original_line_id, "", data: { register_workspace_target: "linkedOriginalInput" } %>
+  <%= hidden_field_tag :quantity, "1", data: { register_workspace_target: "linkedQuantityInput" } %>
+  <%= hidden_field_tag :reason_code, "", data: { register_workspace_target: "linkedReasonInput" } %>
+  <%= hidden_field_tag :reason_note, "", data: { register_workspace_target: "linkedNoteInput" } %>
+<% end %>
+
+<%= form_with url: pos_register_cancel_path(register_scope), method: :post, html: { class: "pos-hidden", data: { register_workspace_target: "cancelForm", turbo: true } } do %>
+  <%= hidden_field_tag :register_id, @register.id %>
+  <%= hidden_field_tag :lock_version, @transaction.lock_version %>
+<% end %>
+
+<%= form_with url: pos_register_stored_value_issuance_path(register_scope), method: :post, html: { class: "pos-hidden", data: { register_workspace_target: "issuanceForm", turbo: true } } do %>
+  <%= hidden_field_tag :register_id, @register.id %>
+  <%= hidden_field_tag :lock_version, @transaction.lock_version %>
+  <%= hidden_field_tag :issuance_type, "activation", data: { register_workspace_target: "issuanceTypeInput" } %>
+  <%= hidden_field_tag :gift_card_program_id, "", data: { register_workspace_target: "issuanceProgramInput" } %>
+  <%= hidden_field_tag :issuance_amount, "", data: { register_workspace_target: "issuanceAmountInput" } %>
+  <%= hidden_field_tag :card_number, "", data: { register_workspace_target: "issuanceCardInput" } %>
+  <%= hidden_field_tag :operation_id, "", data: { register_workspace_target: "issuanceOperationInput" } %>
+  <%= hidden_field_tag :confirm_clear_tenders, "", data: { register_workspace_target: "issuanceConfirmClearInput" } %>
+<% end %>
+
+<%= form_with url: pos_register_remove_stored_value_issuance_path(register_scope), method: :post, html: { class: "pos-hidden", data: { register_workspace_target: "removeIssuanceForm", turbo: true } } do %>
+  <%= hidden_field_tag :register_id, @register.id %>
+  <%= hidden_field_tag :lock_version, @transaction.lock_version %>
+  <%= hidden_field_tag :issuance_id, "", data: { register_workspace_target: "removeIssuanceIdInput" } %>
+  <%= hidden_field_tag :operation_id, "", data: { register_workspace_target: "removeIssuanceOperationInput" } %>
+  <%= hidden_field_tag :confirm_clear_tenders, "", data: { register_workspace_target: "removeIssuanceConfirmClearInput" } %>
+<% end %>
+
+<%= form_with url: pos_register_replace_stored_value_issuance_path(register_scope), method: :post, html: { class: "pos-hidden", data: { register_workspace_target: "replaceIssuanceForm", turbo: true } } do %>
+  <%= hidden_field_tag :register_id, @register.id %>
+  <%= hidden_field_tag :lock_version, @transaction.lock_version %>
+  <%= hidden_field_tag :issuance_id, "", data: { register_workspace_target: "replaceIssuanceIdInput" } %>
+  <%= hidden_field_tag :issuance_type, "activation", data: { register_workspace_target: "replaceIssuanceTypeInput" } %>
+  <%= hidden_field_tag :gift_card_program_id, "", data: { register_workspace_target: "replaceIssuanceProgramInput" } %>
+  <%= hidden_field_tag :issuance_amount, "", data: { register_workspace_target: "replaceIssuanceAmountInput" } %>
+  <%= hidden_field_tag :card_number, "", data: { register_workspace_target: "replaceIssuanceCardInput" } %>
+  <%= hidden_field_tag :operation_id, "", data: { register_workspace_target: "replaceIssuanceOperationInput" } %>
+  <%= hidden_field_tag :confirm_clear_tenders, "", data: { register_workspace_target: "replaceIssuanceConfirmClearInput" } %>
+<% end %>
+

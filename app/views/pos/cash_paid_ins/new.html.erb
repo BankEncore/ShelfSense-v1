@@ -1,14 +1,20 @@
 <% content_for :title, "Paid-in" %>
-
-<main class="pos-history">
-  <%= render "pos/shared/report_nav" %>
-  <h1>Paid-in</h1>
-  <p>Non-sale cash into this open Register session. This is not a tender.</p>
-  <%= render "pos/cash_activities/form",
-        url: pos_cash_paid_ins_path,
-        submit: "Record paid-in",
-        reasons: @reasons,
-        amount_value: params[:amount],
-        reason_value: params[:reason_code],
-        notes_value: params[:notes] %>
-</main>
+<%= render layout: "pos/shell/frame" do %>
+  <%= render "pos/shell/feedback" %>
+  <div class="pos-register-shell__body">
+    <main class="pos-history">
+      <div class="pos-history__title-row pos-no-print">
+        <h1>Paid-in</h1>
+        <%= link_to register_inquiry_return_label, register_inquiry_return_path, class: "btn btn--ghost" %>
+      </div>
+      <p>Non-sale cash into this open Register session. This is not a tender.</p>
+      <%= render "pos/cash_activities/form",
+            url: pos_cash_paid_ins_path,
+            submit: "Record paid-in",
+            reasons: @reasons,
+            amount_value: params[:amount],
+            reason_value: params[:reason_code],
+            notes_value: params[:notes] %>
+    </main>
+  </div>
+<% end %>

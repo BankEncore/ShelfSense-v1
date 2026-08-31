@@ -194,7 +194,7 @@ class PosTransactionHistoryTest < ActionDispatch::IntegrationTest
     )
     other_register.update_column(:active, false)
 
-    get pos_transactions_path, params: { register_id: other_register.id }
+    get pos_transactions_path, params: { filter_register_id: other_register.id }
     assert_response :success
     assert_select "a", text: sale.transaction_reference
     assert_select "option[value='#{other_register.id}']"
@@ -215,14 +215,15 @@ class PosTransactionHistoryTest < ActionDispatch::IntegrationTest
     assert_select ".pos-receipt__print", text: /Description unavailable/
   end
 
-  test "history register link resumes the bound session when the cashier has several open" do
+  test "history return control follows shell ownership and never invents a workspace under ambiguity" do
     other_register = Register.create!(store: @store, register_number: 2, name: "Back")
     pos_open_context(store: @store, actor: @actor, register: other_register)
     assert_equal 2, PosSession.open.where(store: @store, cashier_user: @actor).count
 
     get pos_transactions_path
     assert_response :success
-    assert_select "a[href='#{pos_register_enter_path}']", text: "Register"
+    assert_select ".pos-register-shell"
+    assert_select "a[href='#{pos_path}']", text: "Close"
 
     post pos_register_enter_path, params: {
       register_id: other_register.id,
@@ -231,10 +232,10 @@ class PosTransactionHistoryTest < ActionDispatch::IntegrationTest
     }
     assert_equal other_register.id.to_s, session[:pos_register_id].to_s
 
-    get pos_transactions_path
+    get pos_transactions_path, params: { register_id: other_register.id }
     assert_response :success
-    assert_select "a[href='#{pos_register_workspace_path(register_id: other_register.id)}']", text: "Register"
-    assert_select "a[href='#{pos_register_workspace_path(register_id: @register.id)}']", text: "Register", count: 0
+    assert_select "a[href='#{pos_register_workspace_path(register_id: other_register.id)}']", text: "Return to Register"
+    assert_select "a[href='#{pos_register_workspace_path(register_id: @register.id)}']", text: "Return to Register", count: 0
   end
 
   test "transaction history index exposes search landmarks for workflow layer" do
@@ -242,7 +243,8 @@ class PosTransactionHistoryTest < ActionDispatch::IntegrationTest
     get pos_transactions_path
     assert_response :success
     assert_select "main"
-    assert_select "h1", text: /Transactions/i
+    assert_select "h1", text: /Transactions & Receipts/i
+    assert_select ".pos-register-shell"
     assert_select "form[action='#{pos_transactions_path}']"
     assert_select "a", text: transaction.transaction_reference
   end
@@ -254,6 +256,19 @@ class PosTransactionHistoryTest < ActionDispatch::IntegrationTest
     assert_select ".pos-receipt"
     assert_select ".pos-receipt__line-description", text: /Example Book/
     assert_match transaction.transaction_reference, response.body
+  end
+
+  test "receipt reprint chrome is marked no-print so shell header stays off the ticket" do
+    transaction = complete_cash_sale!
+    get pos_transaction_path(transaction)
+    assert_response :success
+    assert_select ".pos-register-shell"
+    assert_select "header.pos-header.pos-no-print"
+    assert_select "[data-register-shell-target=status].pos-no-print"
+    assert_select ".pos-register-menu.pos-no-print"
+    assert_select ".pos-receipt__print .pos-receipt__reprint", text: "*** REPRINT ***"
+    assert_select ".pos-history__title-row.pos-no-print"
+    assert_select ".pos-history__detail.pos-no-print"
   end
 
   private

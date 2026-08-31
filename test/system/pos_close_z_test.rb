@@ -23,8 +23,8 @@ class PosCloseZTest < ApplicationSystemTestCase
 
   test "empty sale entry can close with a blind zero count and finalize z" do
     open_register(opening_float: "100.00")
-    assert_button "Close register"
-    click_on "Close register"
+    assert_button "Close Session"
+    click_on "Close Session"
     assert_text "Closing Cash count"
     assert_no_text "Expected"
     assert_no_text "Opening float"
@@ -36,14 +36,16 @@ class PosCloseZTest < ApplicationSystemTestCase
     fill_in "Over/short note", with: "Blind zero count"
     click_on "Close session"
 
-    assert_text "Session closed"
+    assert_text "Closed Session Report"
     assert_text "Expected closing Cash"
     assert_text "$100.00"
     assert_text "Counted Cash"
+    click_on "Finalize Z…"
+    assert_text "Confirmation"
     click_on "Finalize Z"
-    assert_text "Z report"
-    assert_text "Store 001"
-    assert_text "Register 01"
+    assert_text "Z Report"
+    assert_text "001"
+    assert_text "01"
     assert_text "Opening floats total"
     period = PosReportingPeriod.finalized.find_by!(register: @register)
     assert period.finalized?
@@ -53,8 +55,8 @@ class PosCloseZTest < ApplicationSystemTestCase
   test "completed sale can print and close the register" do
     open_register(opening_float: "100.00")
     add_current_sku
-    assert_no_button "Close register"
-    click_on "Tender (+)"
+    assert_no_button "Close Session"
+    start_cash_tender_via_plus
     field = find("#pos-command-field")
     field.fill_in with: "25.00"
     field.send_keys :enter
@@ -74,7 +76,7 @@ class PosCloseZTest < ApplicationSystemTestCase
     assert_text "Closing Cash count"
     fill_in "Closing Cash count", with: "120.99"
     click_on "Close session"
-    assert_text "Session closed"
+    assert_text "Closed Session Report"
     assert_text "Leave period open"
     click_on "Leave period open"
     assert_button "Finalize Z"
@@ -86,11 +88,11 @@ class PosCloseZTest < ApplicationSystemTestCase
     add_current_sku
     click_on "Quantity (*)"
     assert_text "QUANTITY"
-    assert_no_button "Close register"
+    assert_no_button "Close Session"
     find("#pos-command-field").send_keys :escape
-    click_on "Tender (+)"
+    start_cash_tender_via_plus
     assert_text "CASH TENDER"
-    assert_no_button "Close register"
+    assert_no_button "Close Session"
   end
 
   test "cashier can complete the phase 5 open sell print close and z path" do
@@ -115,7 +117,7 @@ class PosCloseZTest < ApplicationSystemTestCase
     assert_text "SALE ENTRY"
     assert_selector "tr.is-selected[data-quantity='1']"
 
-    click_on "Tender (+)"
+    start_cash_tender_via_plus
     assert_text "CASH TENDER"
     field = find("#pos-command-field")
     field.fill_in with: "25.00"
@@ -139,7 +141,7 @@ class PosCloseZTest < ApplicationSystemTestCase
     fill_in "Closing Cash count", with: format("%<dollars>d.%<cents>02d", dollars: expected / 100, cents: expected % 100)
     click_on "Close session"
 
-    assert_text "Session closed"
+    assert_text "Closed Session Report"
     session_record.reload
     assert session_record.closed?
     assert_equal expected, session_record.closing_expected_cash_cents
@@ -148,13 +150,16 @@ class PosCloseZTest < ApplicationSystemTestCase
     assert_text "Expected closing Cash"
     assert_text "Variance"
 
+    click_on "Finalize Z…"
+    assert_text "Confirmation"
     click_on "Finalize Z"
-    assert_text "Z report"
+    assert_text "Z Report"
     period = PosReportingPeriod.finalized.find_by!(register: @register)
     assert period.finalized?
     assert_equal session_record.closing_expected_cash_cents, period.finalized_closing_expected_cash_cents_sum
     assert_equal session_record.closing_count_cents, period.finalized_closing_count_cents_sum
     assert_equal 0, period.finalized_closing_variance_cents_sum
+    assert_no_link "Finalize Z…"
     assert_no_button "Finalize Z"
   end
 

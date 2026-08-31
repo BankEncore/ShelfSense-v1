@@ -7,6 +7,7 @@ module Pos
     def index
       raise ActiveRecord::RecordNotFound unless can_view_other_sessions?
 
+      prepare_inquiry_shell!(surface: :active_sessions)
       @sessions = PosSession.open
                             .where(store: current_store)
                             .includes(:register, :cashier_user, :reporting_period)

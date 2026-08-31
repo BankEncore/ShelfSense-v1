@@ -1,0 +1,9 @@
+<div class="pos-register-shell" data-controller="register-shell">
+  <div class="pos-register-shell__background" data-register-shell-target="background">
+    <%= render "pos/shell/header" %>
+    <%= render "pos/shell/status" %>
+    <%= yield %>
+  </div>
+  <%= render "pos/shell/menu" %>
+  <p class="pos-register-shell__announce visually-hidden pos-no-print" data-register-shell-target="announce" role="status" aria-live="assertive"></p>
+</div>

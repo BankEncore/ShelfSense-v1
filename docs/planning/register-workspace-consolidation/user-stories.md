@@ -2,11 +2,11 @@
 
 GitHub issues should usually be one focused PR. Slice 1 is this packet (no separate implementation issue required after merge).
 
-Tracker: [milestone Register workspace consolidation](https://github.com/BankEncore/ShelfSense-v1/milestone/7) — [#83](https://github.com/BankEncore/ShelfSense-v1/issues/83) Slice 2, [#84](https://github.com/BankEncore/ShelfSense-v1/issues/84) Slice 3, [#85](https://github.com/BankEncore/ShelfSense-v1/issues/85) Slice 4, [#86](https://github.com/BankEncore/ShelfSense-v1/issues/86) 5A, [#87](https://github.com/BankEncore/ShelfSense-v1/issues/87) 5B, [#88](https://github.com/BankEncore/ShelfSense-v1/issues/88) 5C, [#89](https://github.com/BankEncore/ShelfSense-v1/issues/89) 5D, [#90](https://github.com/BankEncore/ShelfSense-v1/issues/90) 6A, [#91](https://github.com/BankEncore/ShelfSense-v1/issues/91) 6B, [#92](https://github.com/BankEncore/ShelfSense-v1/issues/92) 6C, [#93](https://github.com/BankEncore/ShelfSense-v1/issues/93) 7A (gated), [#94](https://github.com/BankEncore/ShelfSense-v1/issues/94) 7B (gated), [#95](https://github.com/BankEncore/ShelfSense-v1/issues/95) 7C (gated).
+Tracker: [milestone Register workspace consolidation](https://github.com/BankEncore/ShelfSense-v1/milestone/7) — [#83](https://github.com/BankEncore/ShelfSense-v1/issues/83) Slice 2, [#84](https://github.com/BankEncore/ShelfSense-v1/issues/84) Slice 3, [#85](https://github.com/BankEncore/ShelfSense-v1/issues/85) Slice 4, [#86](https://github.com/BankEncore/ShelfSense-v1/issues/86) 5A, [#87](https://github.com/BankEncore/ShelfSense-v1/issues/87) 5B, [#88](https://github.com/BankEncore/ShelfSense-v1/issues/88) 5C, [#89](https://github.com/BankEncore/ShelfSense-v1/issues/89) 5D, [#90](https://github.com/BankEncore/ShelfSense-v1/issues/90) 6A, [#91](https://github.com/BankEncore/ShelfSense-v1/issues/91) 6B, [#92](https://github.com/BankEncore/ShelfSense-v1/issues/92) 6C, [#93](https://github.com/BankEncore/ShelfSense-v1/issues/93) 7A (complete), [#94](https://github.com/BankEncore/ShelfSense-v1/issues/94) 7B (complete), [#95](https://github.com/BankEncore/ShelfSense-v1/issues/95) 7C (gated).
 
 ## Slice 2 — Shell and state routing
 
-**Outcome:** `/pos` is state-aware Register entry. Generic POS Home is gone. Existing workspace is wrapped in the shared shell. Temporary destination cluster preserves eligible destinations.
+**Outcome:** `/pos` is state-aware Register entry. Generic POS Home is gone. Existing workspace is wrapped in the shared shell. Temporary destination cluster preserves eligible destinations. Shell containment keeps state bodies and the scan field reachable at workstation zoom.
 
 **Acceptance:**
 
@@ -19,22 +19,32 @@ Tracker: [milestone Register workspace consolidation](https://github.com/BankEnc
 - [ ] POST enter / occupied denial / leftover period unchanged
 - [ ] Generic `pos/homes/show` removed
 - [ ] Domain tests remain green
+- [ ] Header business-date language is state-aware (no calculated date presented as established)
+- [ ] Selector / enter / Switch Register content scrolls inside the shell at high zoom; last actions remain reachable
+- [ ] Same-tab **Return to ShelfSense** with custody confirmation when a session is owned
+- [ ] Authorized shell-containment interaction: command above basket, selected-row visibility, printable scan redirection, shell-wide Keyboard Lock reacquisition (no key remap)
+- [ ] Automated system coverage for focused controls, dialog text entry, scanner punctuation, completion modes, shell-to-scan recovery, and lock API unavailability
+- [ ] Manual verification evidence for screen-reader/form-control behavior, real browser navigation, high zoom, and workstation Keyboard Lock
 
-**Exclusions:** F10, composition, overlay migration, new inquiry surfaces.
+**Exclusions:** F10, overlay family migration, new inquiry surfaces, key remapping (7C). Shell-containment composition above is in scope; Slice 4 still owns splitting `_surface`.
 
 ## Slice 3 — F10 and navigation
 
 **Outcome:** F10 is Register Menu on every Register state. Destination cluster and duplicate nav are gone.
 
+**Planning:** [slice3-f10-plan.md](slice3-f10-plan.md) (implementation-ready contract).
+
 **Acceptance:**
 
-- [ ] Explicit supersession of 6.7 §6 F10 row and §14 F10 history entry
-- [ ] Transactions remains reachable; working basket preserved
+- [ ] Explicit supersession of 6.7 §6 F10 row and §14 F10 history entry (docs updated in the same PR)
+- [ ] Transactions remains reachable via menu; working basket preserved
 - [ ] F10 suppressed while a blocking overlay is open
-- [ ] Menu filtered by state and permission
+- [ ] Menu filtered by state and permission; wireframe items without routes deferred to 6A–6C
 - [ ] Reverse Cash nav removed; reverse route/service remain
 - [ ] Other 6.7 keys unchanged
-- [ ] System tests retarget “click Transactions” / F10→history
+- [ ] Destination cluster and duplicate Register nav deleted
+- [ ] System tests retarget cluster clicks → menu; F10 opens menu not history
+- [ ] Keyboard Lock: F1–F10 on workspace, F10 only on other Register surfaces
 
 ## Slice 4 — Transaction composition
 
@@ -68,16 +78,39 @@ Till Activity, cash activity detail, Session Details, Active Sessions, reversal 
 
 ## Slice 6C — Reporting-period surfaces
 
-Z status, blockers, X, closed-session, finalized Z, finalization confirmation in shell.
+**Complete** ([#92](https://github.com/BankEncore/ShelfSense-v1/issues/92) / PR [#109](https://github.com/BankEncore/ShelfSense-v1/pull/109)). Z status, blockers, live X, Session Details closed-session report, finalized Z, finalization confirmation, print chrome, and shift-end tape in shell — only inventory-permitted P13 rows.
 
-## Slice 7A — Tender-review framework (gated)
+## Slice 7.0 — Keyboard contract amendment
 
-Packet-stable 2–6 first. Announced TENDER, selection, individual removal, atomic replacement **service**. Keep current keys except what review mode requires.
+**Docs-only** ([#95](https://github.com/BankEncore/ShelfSense-v1/issues/95) / PR [#112](https://github.com/BankEncore/ShelfSense-v1/pull/112)). Accept SALE / TENDER / overlay / Escape / scanner / Lock tables and semantic vocabulary ([slice7-keyboard-contract.md](slice7-keyboard-contract.md)). Does not implement the dispatcher and **does not close [#93](https://github.com/BankEncore/ShelfSense-v1/issues/93)**. Clarifies plan.md decision 13 “first merge.” See [slice7-overview.md](slice7-overview.md).
 
-## Slice 7B — Stored-value and issuance completion
+## Slice 7A — Tender-review framework
 
-Capping, revalidation, exact-once reversal, SV tender and issuance replacement.
+**Complete** on integration ([#93](https://github.com/BankEncore/ShelfSense-v1/issues/93) / PRs [#115](https://github.com/BankEncore/ShelfSense-v1/pull/115)–[#116](https://github.com/BankEncore/ShelfSense-v1/pull/116)): Tender Review selection; ordinary remove/replace with OperationLease; card remove-only (external reauth); Return to Sale ordinary-only (refuse when SV present). No temporary global shortcuts. SV mutate deferred to 7B. Packet: [slice7a-tender-review-plan.md](slice7a-tender-review-plan.md). Evidence: [slice7a-manual-verification.md](slice7a-manual-verification.md).
 
-## Slice 7C — Keyboard supersession
+## Slice 7B — Stored-value, issuance, and Quick Customer
 
-Accepted SALE/TENDER/overlay tables first (packet amendment). Dispatcher, scanner punctuation, delete obsolete handlers, document 6.7 remainder supersession.
+**Complete** on integration ([#94](https://github.com/BankEncore/ShelfSense-v1/issues/94) / PRs [#118](https://github.com/BankEncore/ShelfSense-v1/pull/118)–[#121](https://github.com/BankEncore/ShelfSense-v1/pull/121)): nested customer-required lookup with refuse-on-dependent change/detach; Quick Customer identity-only create with `customers.create`; lease-backed auto-cap; SV remove/replace/Return-to-Sale; issuance tender-clear confirm; Completion Failed recovery without silent shrink. Packet: [slice7b-stored-value-issuance-plan.md](slice7b-stored-value-issuance-plan.md). Evidence: [slice7b-manual-verification.md](slice7b-manual-verification.md).
+
+**Acceptance:**
+
+- [x] Dependent customer change/detach refused; same-customer attach idempotent
+- [x] Quick Customer creates/attaches identity only; does not provision credit or balances; re-resolves eligibility
+- [x] Cap Result + lease replay for SV payment (and refund) add; persist applied only; reject over remaining due
+- [x] SV remove/replace/Return-to-Sale lift 7A gates; working remove does not restore ledger
+- [x] Issuance mutate validates before clear; O17-class confirm when tenders exist; masked card data only
+- [x] Completion revalidation failure → Completion Failed / Tender Review; keep tenders; no auto-clear
+- [x] No temporary global shortcuts; F2 remains Card
+
+## Slice 7C — Keyboard dispatcher
+
+**Complete** ([slice7c-keyboard-dispatcher-plan.md](slice7c-keyboard-dispatcher-plan.md) / [#95](https://github.com/BankEncore/ShelfSense-v1/issues/95)). Evidence: [slice7c-manual-verification.md](slice7c-manual-verification.md).
+
+**Acceptance:**
+
+- [x] One mode-aware dispatcher implements [slice7-keyboard-contract.md](slice7-keyboard-contract.md) SALE/TENDER/overlay tables
+- [x] Focus-based punctuation; empty-field interception deleted; scanner glyphs literal in inputs
+- [x] Tender F8/`-` removes selected tender; `removeLastTender` gone
+- [x] Shell owns F10 + Keyboard Lock; workspace claims F1–F9
+- [x] Obsolete Phase 6.7 handlers deleted; pos-workflow §6 superseded
+- [x] System tests + manual verification for the replacement contract

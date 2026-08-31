@@ -201,8 +201,27 @@ Rails.application.routes.draw do
     get "x_report", to: "x_reports#show", as: :x_report
     get "sessions/:id/x_report", to: "x_reports#show", as: :session_x_report
     get "active_sessions", to: "active_sessions#index", as: :active_sessions
+    get "till_activity", to: "till_activities#index", as: :till_activity
+    get "sessions/:id/details", to: "session_details#show", as: :session_details
+    resources :cash_operations, only: :show do
+      member { post :reversal }
+    end
     get "reports", to: "reports#index", as: :reports
+    get "report_prints/:scope(/:id)", to: "report_prints#show", as: :report_print
+    get "z_status", to: "reporting_period_statuses#show", as: :z_status
+    get "reporting_periods/:id/status", to: "reporting_period_statuses#show", as: :reporting_period_status
+    get "reporting_periods/:id/finalize", to: "reporting_period_finalizations#new", as: :reporting_period_finalize_confirm
+    post "reporting_periods/:id/finalize", to: "reporting_period_finalizations#create", as: :reporting_period_finalize
+    get "reporting_periods/:id/z", to: "reporting_period_zs#show", as: :reporting_period_z
+
     resources :transactions, only: %i[index show]
+    resource :stored_value_inquiry, only: :show, controller: "stored_value_inquiries" do
+      post :exact_number
+      post :store_credit
+      post :admin_prefix_last_four
+    end
+    resource :customer_summary, only: :show, controller: "customer_summaries"
+    get "pickup_queue", to: "pickup_queues#index", as: :pickup_queue
     get "register/enter", to: "enters#show", as: :register_enter
     post "register/enter", to: "enters#create"
     resources :cash_outs, only: %i[new create show] do
@@ -213,7 +232,6 @@ Rails.application.routes.draw do
     resources :cash_paid_outs, only: %i[new create]
     resources :cash_drops, only: %i[new create]
     resources :cash_replenishments, only: %i[new create]
-    resources :cash_reversals, only: %i[new create]
     get "register", to: "workspaces#show", as: :register_workspace
     get "register/merchandise_search", to: "workspaces#search", as: :register_merchandise_search
     get "register/merchandise_resolve", to: "workspaces#resolve", as: :register_merchandise_resolve
@@ -233,10 +251,13 @@ Rails.application.routes.draw do
     post "register/tender", to: "workspaces#tender"
     post "register/stored_value_issuance", to: "workspaces#stored_value_issuance"
     post "register/remove_stored_value_issuance", to: "workspaces#remove_stored_value_issuance"
+    post "register/replace_stored_value_issuance", to: "workspaces#replace_stored_value_issuance"
     post "register/attach_customer", to: "workspaces#attach_customer"
     post "register/detach_customer", to: "workspaces#detach_customer"
+    post "register/quick_customer", to: "workspaces#quick_customer", as: :register_quick_customer
     get "register/customer_search", to: "workspaces#customer_search", as: :register_customer_search
     post "register/remove_tender", to: "workspaces#remove_tender"
+    post "register/replace_tender", to: "workspaces#replace_tender"
     post "register/continue", to: "workspaces#continue"
     get "transactions/:transaction_id/return_items", to: "return_items#show", as: :transaction_return_items
     post "transactions/:transaction_id/return_items", to: "return_items#create"
@@ -249,8 +270,6 @@ Rails.application.routes.draw do
     post "sessions/:id/close", to: "session_closes#create"
     post "sessions/:id/resume_sales", to: "session_closes#resume_sales", as: :session_resume_sales
     get "sessions/:id/closed", to: "closed_sessions#show", as: :session_closed
-    post "reporting_periods/:id/finalize", to: "reporting_period_finalizations#create", as: :reporting_period_finalize
-    get "reporting_periods/:id/z", to: "reporting_period_zs#show", as: :reporting_period_z
   end
 
   root "home#show"

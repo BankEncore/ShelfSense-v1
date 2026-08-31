@@ -11,7 +11,7 @@ module Pos
     before_action :require_pos_transact!
 
     helper_method :pos_resume_register_path, :preferred_register, :can_view_other_sessions?,
-                  :cashier_target_session
+                  :cashier_target_session, :can_view_expected_cash?
 
     private
 
@@ -91,9 +91,63 @@ module Pos
       if resume_session
         pos_register_workspace_path(register_id: resume_session.register_id)
       else
-        pos_register_enter_path
+        pos_path
       end
     end
+
+    def can_view_expected_cash?
+      Authorization::PermissionEvaluator.allowed?(
+        user: current_user,
+        permission_key: "cash.view_expected_before_count",
+        store: current_store
+      )
+    end
+
+    def requested_register
+      return if params[:register_id].blank?
+
+      active_registers.find_by(id: params[:register_id])
+    end
+
+    def resolve_register_state(requested_register: self.requested_register)
+      Pos::RegisterStateResolver.call(
+        store: current_store,
+        actor: current_user,
+        requested_register: requested_register,
+        preferred_register: preferred_register,
+        bound_register_id: session[:pos_register_id],
+        owned_open_sessions: cashier_open_sessions.includes(:register).to_a
+      )
+    end
+
+    def prepare_register_shell!(state = resolve_register_state)
+      @state = state
+      @register = state.register
+      @gate = state.gate
+      @owned_sessions = state.owned_sessions
+      @registers = active_registers
+      if current_store.legal_name.blank?
+        flash.now[:alert] ||= "This Store cannot use POS until its legal name is configured."
+      end
+    end
+
+    def prepare_inquiry_shell!(surface:)
+      prepare_register_shell!
+      @shell_context = Pos::RegisterShellContext.call(
+        store: current_store,
+        actor: current_user,
+        state: @state,
+        surface: surface,
+        can_view_expected_cash: can_view_expected_cash?
+      )
+    end
+
+    def inquiry_register_params
+      return {} if @register.blank?
+
+      { register_id: @register.id }
+    end
+    helper_method :inquiry_register_params
 
     def cashier_open_sessions
       PosSession.open.where(store: current_store, cashier_user: current_user)

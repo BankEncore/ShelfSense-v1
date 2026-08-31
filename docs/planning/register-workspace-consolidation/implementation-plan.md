@@ -1,6 +1,6 @@
 # Register workspace consolidation — Implementation plan
 
-Status: **Slice 1 accepted** on `main`. Slices 2–7 not started.
+Status: **Slice 7C hardening complete** on `register-workspace-consolidation`. **Program closeout evidence signed** ([closeout-manual-verification.md](closeout-manual-verification.md)). Next: merge integration branch to `main`.
 
 Authority: [plan.md](plan.md), [routing-and-authority.md](routing-and-authority.md).
 
@@ -21,19 +21,21 @@ This program uses a long-lived integration branch because an incomplete Register
 | Slice | Status | Issue |
 |---|---|---|
 | 1 Packet / test matrix | **Accepted** on `main` (this change) | — |
-| 2 Shell and state routing | Not started | [#83](https://github.com/BankEncore/ShelfSense-v1/issues/83) |
-| 3 F10 and navigation | Not started | [#84](https://github.com/BankEncore/ShelfSense-v1/issues/84) |
-| 4 Transaction composition | Not started | [#85](https://github.com/BankEncore/ShelfSense-v1/issues/85) |
-| 5A Lookup overlays | Not started | [#86](https://github.com/BankEncore/ShelfSense-v1/issues/86) |
-| 5B Return overlays | Not started | [#87](https://github.com/BankEncore/ShelfSense-v1/issues/87) |
-| 5C Controlled-action overlays | Not started | [#88](https://github.com/BankEncore/ShelfSense-v1/issues/88) |
-| 5D Tender/issuance overlays | Not started | [#89](https://github.com/BankEncore/ShelfSense-v1/issues/89) |
-| 6A Customer-service surfaces | Not started | [#90](https://github.com/BankEncore/ShelfSense-v1/issues/90) |
-| 6B Till and session detail | Not started | [#91](https://github.com/BankEncore/ShelfSense-v1/issues/91) |
-| 6C Reporting-period surfaces | Not started | [#92](https://github.com/BankEncore/ShelfSense-v1/issues/92) |
-| 7A Tender-review framework | Gated on 2–6 | [#93](https://github.com/BankEncore/ShelfSense-v1/issues/93) |
-| 7B Stored-value/issuance completion | Gated on 7A | [#94](https://github.com/BankEncore/ShelfSense-v1/issues/94) |
-| 7C Keyboard supersession | Gated on 7A–7B packet amendment | [#95](https://github.com/BankEncore/ShelfSense-v1/issues/95) |
+| 2 Shell and state routing | Merged to integration ([#83](https://github.com/BankEncore/ShelfSense-v1/issues/83) / PR #96) | [#83](https://github.com/BankEncore/ShelfSense-v1/issues/83) |
+| 3 F10 and navigation | Merged to integration ([#84](https://github.com/BankEncore/ShelfSense-v1/issues/84) / PR #97) | [#84](https://github.com/BankEncore/ShelfSense-v1/issues/84) |
+| 4 Transaction composition | Merged to integration ([#85](https://github.com/BankEncore/ShelfSense-v1/issues/85) / PR #98) | [#85](https://github.com/BankEncore/ShelfSense-v1/issues/85) |
+| 5A Lookup overlays | Merged to integration ([#86](https://github.com/BankEncore/ShelfSense-v1/issues/86) / PR [#99](https://github.com/BankEncore/ShelfSense-v1/pull/99)) | [#86](https://github.com/BankEncore/ShelfSense-v1/issues/86) |
+| 5B Return overlays | Merged to integration ([#87](https://github.com/BankEncore/ShelfSense-v1/issues/87) / PR [#100](https://github.com/BankEncore/ShelfSense-v1/pull/100)) | [#87](https://github.com/BankEncore/ShelfSense-v1/issues/87) |
+| 5C Controlled-action overlays | Merged to integration ([#88](https://github.com/BankEncore/ShelfSense-v1/issues/88) / PR [#101](https://github.com/BankEncore/ShelfSense-v1/pull/101)) | [#88](https://github.com/BankEncore/ShelfSense-v1/issues/88) |
+| 5D Tender/issuance overlays | Complete on integration ([#89](https://github.com/BankEncore/ShelfSense-v1/issues/89) / PR [#102](https://github.com/BankEncore/ShelfSense-v1/pull/102); remediation PR [#103](https://github.com/BankEncore/ShelfSense-v1/pull/103)) | [#89](https://github.com/BankEncore/ShelfSense-v1/issues/89) |
+| 6A Customer-service surfaces | **Complete** on integration ([#90](https://github.com/BankEncore/ShelfSense-v1/issues/90) / PRs [#104](https://github.com/BankEncore/ShelfSense-v1/pull/104)–[#106](https://github.com/BankEncore/ShelfSense-v1/pull/106)) | [#90](https://github.com/BankEncore/ShelfSense-v1/issues/90) |
+| 6B Till and session detail | **Complete** on integration ([#91](https://github.com/BankEncore/ShelfSense-v1/issues/91) / PR [#108](https://github.com/BankEncore/ShelfSense-v1/pull/108)) | [#91](https://github.com/BankEncore/ShelfSense-v1/issues/91) |
+| 6C Reporting-period surfaces | **Complete** on integration ([#92](https://github.com/BankEncore/ShelfSense-v1/issues/92) / PR [#109](https://github.com/BankEncore/ShelfSense-v1/pull/109)) | [#92](https://github.com/BankEncore/ShelfSense-v1/issues/92) |
+| 7.0 Keyboard contract amendment | **Docs** merged PR [#112](https://github.com/BankEncore/ShelfSense-v1/pull/112); **runtime** implemented by 7C | [#95](https://github.com/BankEncore/ShelfSense-v1/issues/95) (contract) |
+| Inventory (7A/7B gate) | **Complete** ([slice7-tender-lifecycle-inventory.md](slice7-tender-lifecycle-inventory.md)) | — |
+| 7A Tender-review framework | **Complete** on integration ([#93](https://github.com/BankEncore/ShelfSense-v1/issues/93) / PRs [#115](https://github.com/BankEncore/ShelfSense-v1/pull/115)–[#116](https://github.com/BankEncore/ShelfSense-v1/pull/116); [slice7a-tender-review-plan.md](slice7a-tender-review-plan.md)) | [#93](https://github.com/BankEncore/ShelfSense-v1/issues/93) |
+| 7B Stored-value / issuance / Quick Customer | **Complete** on integration ([#94](https://github.com/BankEncore/ShelfSense-v1/issues/94) / PRs [#118](https://github.com/BankEncore/ShelfSense-v1/pull/118)–[#121](https://github.com/BankEncore/ShelfSense-v1/pull/121); [slice7b-stored-value-issuance-plan.md](slice7b-stored-value-issuance-plan.md)) | [#94](https://github.com/BankEncore/ShelfSense-v1/issues/94) |
+| 7C Keyboard dispatcher | **Complete** ([slice7c-keyboard-dispatcher-plan.md](slice7c-keyboard-dispatcher-plan.md); implements 7.0 contract) | [#95](https://github.com/BankEncore/ShelfSense-v1/issues/95) |
 
 ## Testing stack
 

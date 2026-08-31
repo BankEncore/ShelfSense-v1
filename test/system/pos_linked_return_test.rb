@@ -24,7 +24,7 @@ class PosLinkedReturnTest < ApplicationSystemTestCase
   test "cashier returns from history, refunds cash, and sees session totals" do
     open_register
     add_current_sku
-    click_on "Tender (+)"
+    start_cash_tender_via_plus
     field = find("#pos-command-field")
     field.fill_in with: "25.00"
     field.send_keys :enter
@@ -42,8 +42,8 @@ class PosLinkedReturnTest < ApplicationSystemTestCase
     click_on "Add to register"
 
     assert_text "RETURN", wait: 10
-    assert_text "Refund due"
-    click_on "Refund (+)"
+    assert_text "Refund remaining"
+    start_cash_refund_via_plus
     assert_text "REFUND"
     send_keys :f2
     assert_selector "[data-register-workspace-target='fieldLabel']", text: /External Card/
@@ -70,12 +70,14 @@ class PosLinkedReturnTest < ApplicationSystemTestCase
     click_on "Close register"
     fill_in "Closing Cash count", with: "0.00"
     click_on "Close session"
-    assert_text "Session closed"
+    assert_text "Closed Session Report"
     assert_text "Returns total"
     assert_text "Cash refunds"
     assert_text "Net"
+    click_on "Finalize Z…"
+    assert_text "Confirmation"
     click_on "Finalize Z"
-    assert_text "Z report"
+    assert_text "Z Report"
     assert_text "Returns total"
     assert_text "Cash refunds"
   end
@@ -83,7 +85,7 @@ class PosLinkedReturnTest < ApplicationSystemTestCase
   test "even exchange stays in sale entry until plus confirms complete" do
     open_register
     add_current_sku
-    click_on "Tender (+)"
+    start_cash_tender_via_plus
     field = find("#pos-command-field")
     field.fill_in with: "25.00"
     field.send_keys :enter
@@ -94,13 +96,13 @@ class PosLinkedReturnTest < ApplicationSystemTestCase
     line = sale.pos_transaction_lines.first
     click_on "New transaction"
     assert_text "SALE ENTRY"
-    click_on "Transactions"
+    choose_register_menu "Transactions & Receipts"
     click_on sale.transaction_reference
     click_on "Return items"
     check "item_#{line.id}_selected"
     select "Changed mind", from: "items_#{line.id}_reason_code"
     click_on "Add to register"
-    assert_text "Refund due", wait: 10
+    assert_text "Refund remaining", wait: 10
     assert_selector "tr[data-direction='return']"
 
     field = find("#pos-command-field")

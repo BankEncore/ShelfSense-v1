@@ -3,12 +3,20 @@
 module Pos
   class HomesController < BaseController
     def show
-      @preferred_register = preferred_register
-      @preferred_gate = if @preferred_register
-        Pos::OpenGate.for(store: current_store, register: @preferred_register, actor: current_user)
-      end
-      @open_session = cashier_target_session
-      @session_totals = Pos::SessionTotals.for(@open_session) if @open_session
+      prepare_register_shell!
+      return unless @state.kind == "own_session"
+      return unless working_transaction_for(@state)
+
+      redirect_to pos_register_workspace_path(register_id: @state.register.id)
+    end
+
+    private
+
+    def working_transaction_for(state)
+      session_record = state.gate&.session
+      return if session_record.blank?
+
+      session_record.pos_transactions.working.first
     end
   end
 end

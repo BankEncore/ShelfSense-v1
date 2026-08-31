@@ -128,33 +128,57 @@ module Pos
       snapshot_or(:finalized_gift_card_cash_out_reversal_cents) { period_cash_outs.reversals.sum(:amount_cents) }
     end
 
+    # Live-only fine metrics. Callers must not use these for finalized periods
+    # (P13 omits; never live-query after finalize).
     def gift_card_cash_out_count
+      raise ArgumentError, "gift_card_cash_out_count is not snapshotted" if @period.finalized?
+
       period_cash_outs.originals.count
     end
 
     def store_credit_payment_cents
-      type_tender_cents("store_credit", "payment")
+      live_only_type_tender_cents("store_credit", "payment")
     end
 
     def trade_credit_payment_cents
-      type_tender_cents("trade_credit", "payment")
+      live_only_type_tender_cents("trade_credit", "payment")
     end
 
     def gift_card_payment_cents
-      type_tender_cents("gift_card", "payment")
+      live_only_type_tender_cents("gift_card", "payment")
     end
 
     def gift_card_existing_refund_cents
-      refund_destination_cents("existing_account", tender_type: "gift_card")
+      live_only_refund_destination_cents("existing_account", tender_type: "gift_card")
     end
 
     def gift_card_new_refund_cents
-      refund_destination_cents("new_gift_card")
+      live_only_refund_destination_cents("new_gift_card")
     end
 
     def store_credit_refund_destination_cents
-      refund_destination_cents("customer_store_credit") +
-        refund_destination_cents("existing_account", tender_type: "store_credit")
+      live_only_refund_destination_cents("customer_store_credit") +
+        live_only_refund_destination_cents("existing_account", tender_type: "store_credit")
+    end
+
+    def paid_in_cents
+      live_only_cash_operation_entry_sum("paid_in")
+    end
+
+    def paid_out_cents
+      live_only_cash_operation_entry_sum("paid_out")
+    end
+
+    def cash_operation_reversal_cents
+      live_only_cash_operation_entry_sum("reverse")
+    end
+
+    def drop_cents
+      live_only_transfer_entry_sum("drop")
+    end
+
+    def replenishment_cents
+      live_only_transfer_entry_sum("replenishment")
     end
 
     def session_count
@@ -221,6 +245,37 @@ module Pos
       return @period.public_send(column) if @period.finalized?
 
       yield
+    end
+
+    def refuse_finalized_live_query!(metric)
+      raise ArgumentError, "#{metric} is not snapshotted" if @period.finalized?
+    end
+
+    def live_only_type_tender_cents(tender_type, direction)
+      refuse_finalized_live_query!(tender_type)
+      type_tender_cents(tender_type, direction)
+    end
+
+    def live_only_refund_destination_cents(destination_mode, tender_type: nil)
+      refuse_finalized_live_query!(destination_mode)
+      refund_destination_cents(destination_mode, tender_type: tender_type)
+    end
+
+    def live_only_cash_operation_entry_sum(operation_type)
+      refuse_finalized_live_query!(operation_type)
+      CashEntry.joins(:cash_operation, :pos_session)
+               .where(pos_sessions: { reporting_period_id: @period.id })
+               .where(cash_operations: { operation_type: operation_type })
+               .sum(:amount_cents)
+    end
+
+    def live_only_transfer_entry_sum(transfer_type)
+      refuse_finalized_live_query!(transfer_type)
+      CashEntry.joins(cash_operation: :cash_transfer)
+               .joins(:pos_session)
+               .where(pos_sessions: { reporting_period_id: @period.id })
+               .where(cash_transfers: { transfer_type: transfer_type })
+               .sum(:amount_cents)
     end
 
     def category_payment_cents(category)

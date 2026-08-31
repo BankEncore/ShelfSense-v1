@@ -12,7 +12,7 @@ class PosCashActivitiesTest < ActionDispatch::IntegrationTest
     sign_in_as("admin")
   end
 
-  test "cashier records a paid-in from POS Home" do
+  test "cashier records a paid-in from Register" do
     get pos_path
     assert_response :success
     assert_includes response.body, new_pos_cash_paid_in_path
@@ -48,7 +48,7 @@ class PosCashActivitiesTest < ActionDispatch::IntegrationTest
     assert_equal "replenishment", CashTransfer.order(:created_at).last.transfer_type
   end
 
-  test "manager reverses a paid-in without fabricating a source row" do
+  test "manager reverses a paid-in from the original operation detail" do
     paid_in = Cash::PaidIn.call(
       session: @context[:session],
       actor: @actor,
@@ -58,14 +58,13 @@ class PosCashActivitiesTest < ActionDispatch::IntegrationTest
       idempotency_key: SecureRandom.uuid_v7
     )
 
-    post pos_cash_reversals_path, params: {
-      cash_operation_id: paid_in.cash_operation_id,
+    post reversal_pos_cash_operation_path(paid_in.cash_operation), params: {
       reason_code: "reverse",
       notes: "Wrong amount",
       source_id: SecureRandom.uuid_v7,
       idempotency_key: SecureRandom.uuid_v7
     }
-    assert_redirected_to pos_path
+    assert_redirected_to pos_cash_operation_path(paid_in.cash_operation, register_id: @context[:register].id)
     reverse = CashOperation.find_by!(reversal_of_id: paid_in.cash_operation_id)
     assert_equal "reverse", reverse.operation_type
     assert_nil reverse.cash_paid_in

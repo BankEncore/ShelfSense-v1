@@ -1,2 +1,4 @@
 <% content_for :title, "Register #{@register.register_number}" %>
-<%= render "pos/workspaces/surface" %>
+<%= render layout: "pos/shell/frame" do %>
+  <%= render "pos/workspaces/surface" %>
+<% end %>

@@ -17,6 +17,8 @@ module Pos
         period = PosReportingPeriod.lock.find(@period.id)
         Pos::Support.authorize!(@actor, period.store)
         Pos::Support.require_active_context!(period.store, period.register)
+        return period if period.finalized?
+
         raise Pos::Error, "reporting period is not open" unless period.open?
         if period.lock_version != @expected_lock_version.to_i
           raise Pos::StaleObject, "stale lock_version"

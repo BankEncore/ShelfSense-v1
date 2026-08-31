@@ -1,0 +1,44 @@
+<% issuances = @issuances %>
+<% gift_card_programs = @gift_card_programs %>
+<% register_scope = { register_id: @register.id } %>
+<% workspace = @workspace %>
+<% can_mutate_issuance = workspace.issuance_remove_available || workspace.issuance_edit_available %>
+<% show_add = %w[sale_entry tender completion_failed].include?(@ui_mode) && gift_card_programs.any? %>
+
+<% if issuances.any? || show_add %>
+  <section class="pos-issuances" aria-label="Gift cards">
+    <h2 class="pos-issuances__title">Gift cards</h2>
+    <% issuances.each do |issuance| %>
+      <div class="pos-issuance"
+           data-issuance-id="<%= issuance.id %>"
+           data-issuance-type="<%= issuance.issuance_type %>"
+           data-issuance-amount-cents="<%= issuance.amount_cents %>"
+           data-issuance-program-id="<%= issuance.gift_card_program_id %>"
+           data-issuance-masked="<%= issuance.masked_card_snapshot.presence || (issuance.pending_card_number_last_four.present? ? "#{issuance.pending_card_number_prefix}••••#{issuance.pending_card_number_last_four}" : "") %>">
+        <%= issuance.activation? ? "Activation" : "Reload" %>
+        · <%= format_money_cents(issuance.amount_cents) %>
+        <% if issuance.masked_card_snapshot.present? || issuance.pending_card_number_last_four.present? %>
+          · <%= issuance.masked_card_snapshot.presence || "#{issuance.pending_card_number_prefix}••••#{issuance.pending_card_number_last_four}" %>
+        <% elsif issuance.gift_card_program %>
+          · <%= issuance.gift_card_program.name %>
+        <% end %>
+        <% if can_mutate_issuance %>
+          <div class="pos-issuance__actions">
+            <% if workspace.issuance_edit_available %>
+              <%= action_button "Edit", style: :outline, intent: :neutral, size: :standard,
+                    data: { action: "register-workspace#requestEditIssuance", issuance_id: issuance.id } %>
+            <% end %>
+            <% if workspace.issuance_remove_available %>
+              <%= action_button "Remove", style: :outline, intent: :warning, size: :standard,
+                    data: { action: "register-workspace#requestRemoveIssuance", issuance_id: issuance.id } %>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+    <% if show_add %>
+      <%= action_button "Add gift card", style: :solid, intent: :brand, size: :standard,
+            data: { action: "register-workspace#openIssuanceOverlay" } %>
+    <% end %>
+  </section>
+<% end %>

@@ -1,0 +1,45 @@
+<% if @register && @gate %>
+  <%= form_with url: pos_register_enter_path, method: :post, local: true, class: "pos-enter__form" do %>
+    <%= hidden_field_tag :register_id, @register.id %>
+    <% if @gate.occupied? %>
+      <p id="occupied-register" role="alert">
+        Register <%= @register.admin_label %> is open for <%= @gate.occupier.display_name %>.
+      </p>
+    <% else %>
+      <% if @gate.opening_new_period? %>
+        <%= hidden_field_tag :confirmed_business_date, @gate.business_date.iso8601 %>
+      <% end %>
+      <% if @gate.leftover_period? %>
+        <p class="pos-banner" role="status">This register is still on business date <%= @gate.business_date.iso8601 %>.</p>
+      <% end %>
+      <p>
+        <span class="<%= "pos-date-emphasis" if @gate.leftover_period? %>">Business date  <%= @gate.business_date.iso8601 %></span>
+        <% if @gate.own_session? %>
+          (this is your open Session)
+        <% end %>
+      </p>
+      <% if @gate.needs_opening_float? %>
+        <div class="form-field">
+          <label for="opening_float">Opening float</label>
+          <%= text_field_tag :opening_float, @opening_float, inputmode: "decimal", autocomplete: "off", autofocus: true %>
+        </div>
+      <% end %>
+    <% end %>
+
+    <div class="pos-enter__actions">
+      <%= submit_tag register_enter_submit_label, disabled: @gate.occupied?, class: "btn",
+            data: { register_shell_proxy: register_enter_proxy_name } %>
+      <%= action_link_to "Select Another Register", pos_path, style: :outline, intent: :neutral %>
+    </div>
+  <% end %>
+  <% if @register && @gate&.can_finalize_period? %>
+    <%= form_with url: pos_reporting_period_finalize_path(@gate.period), method: :post, class: "pos-enter__form" do %>
+      <%= hidden_field_tag :expected_lock_version, @gate.period.lock_version %>
+      <%= hidden_field_tag :return_to, "enter" %>
+      <%= hidden_field_tag :register_id, @register.id %>
+      <%= submit_tag "Finalize Z", class: "btn btn--secondary", data: { register_shell_proxy: "finalize-z" } %>
+    <% end %>
+  <% end %>
+<% elsif @registers.blank? %>
+  <p>No active register is available in this store.</p>
+<% end %>

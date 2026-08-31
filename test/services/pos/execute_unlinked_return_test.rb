@@ -294,7 +294,7 @@ class PosExecuteUnlinkedReturnTest < ActiveSupport::TestCase
 
   test "denied approver produces no line and audits the working transaction" do
     transaction = start_transaction(@associate)
-    error = assert_raises(Pos::Error) do
+    error = assert_raises(Pos::OverlayFailure) do
       add_unlinked!(
         transaction,
         @associate,
@@ -302,7 +302,8 @@ class PosExecuteUnlinkedReturnTest < ActiveSupport::TestCase
         approver_password: "wrong-password"
       )
     end
-    assert_match(/approver credentials are invalid/, error.message)
+    assert_equal :authorization_failed, error.kind
+    assert_match(/Manager credentials were not accepted/, error.message)
     assert_equal 0, transaction.reload.pos_transaction_lines.count
     assert_equal 0, PosControlledAction.where(pos_transaction_id: transaction.id).count
 

@@ -33,7 +33,7 @@ class PosWorkingCommandsTest < ActiveSupport::TestCase
     assert_equal 1999, line.extended_selling_amount_cents
     assert_equal 100, line.line_tax_cents
     assert_equal 2099, transaction.total_cents
-    assert_equal 0, PosLineTaxComponent.where(pos_transaction_line: line).count
+    assert_operator PosLineTaxComponent.where(pos_transaction_line: line).count, :>, 0
 
     assert_raises(Pos::StaleObject) do
       Pos::AddMerchandise.call(
@@ -227,7 +227,7 @@ class PosWorkingCommandsTest < ActiveSupport::TestCase
     assert_match(/register is not active/, error.message)
   end
 
-  test "change quantity and remove working line recompute totals without tax components" do
+  test "change quantity and remove working line recompute totals with provisional tax components" do
     transaction = Pos::StartTransaction.call(session: @context[:session], actor: @actor)
     line = Pos::AddMerchandise.call(
       transaction: transaction,
@@ -247,7 +247,7 @@ class PosWorkingCommandsTest < ActiveSupport::TestCase
     transaction.reload
     assert_equal 3998, transaction.subtotal_cents
     assert_equal 200, transaction.tax_cents
-    assert_equal 0, PosLineTaxComponent.where(pos_transaction_line: line).count
+    assert_equal 200, PosLineTaxComponent.where(pos_transaction_line: line, applies: true).sum(:tax_cents)
 
     Pos::RemoveWorkingLine.call(
       transaction: transaction,

@@ -116,7 +116,7 @@ module PosHelper
   def pos_history_query_params(search)
     {
       transaction_reference: search.transaction_reference,
-      register_id: search.register_id,
+      filter_register_id: search.register_id,
       receipt_sequence: search.receipt_sequence,
       business_date: search.business_date
     }.compact_blank

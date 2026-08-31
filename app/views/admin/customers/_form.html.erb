@@ -1,5 +1,6 @@
 <%= form_with model: [:admin, customer], class: "form" do |form| %>
   <%= hidden_field_tag :return_to, @return_to if @return_to.present? %>
+  <%= hidden_field_tag :idempotency_key, @idempotency_key if @idempotency_key.present? %>
   <%= render "shared/form_errors", record: customer %>
   <%= form.hidden_field :lock_version %>
 

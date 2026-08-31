@@ -76,7 +76,7 @@ class PosControlledActionsTest < ActiveSupport::TestCase
   test "self-approval is rejected" do
     transaction, line = start_sale(@associate)
 
-    error = assert_raises(Pos::Error) do
+    error = assert_raises(Pos::OverlayFailure) do
       apply_action(
         transaction, line, @associate,
         action_type: "price_override",
@@ -87,7 +87,8 @@ class PosControlledActionsTest < ActiveSupport::TestCase
         approver_password: "correct-horse-battery"
       )
     end
-    assert_match(/performer/, error.message)
+    assert_equal :authorization_prohibited, error.kind
+    assert_match(/You cannot approve your own action/, error.message)
     assert_equal 1999, line.reload.selling_unit_price_cents
     assert AuditEvent.exists?(action: "pos.controlled_action.denied")
   end
@@ -97,7 +98,7 @@ class PosControlledActionsTest < ActiveSupport::TestCase
     other = pos_store_manager(store: east, assigned_by: @admin, username: "eastmgr")
     transaction, line = start_sale(@associate)
 
-    error = assert_raises(Pos::Error) do
+    error = assert_raises(Pos::OverlayFailure) do
       apply_action(
         transaction, line, @associate,
         action_type: "price_override",
@@ -108,7 +109,8 @@ class PosControlledActionsTest < ActiveSupport::TestCase
         approver_password: "correct-horse-battery"
       )
     end
-    assert_match(/not authorized at this store/, error.message)
+    assert_equal :authorization_prohibited, error.kind
+    assert_match(/This manager cannot authorize/, error.message)
     assert_equal other.username, "eastmgr"
     assert_equal 0, line.reload.pos_controlled_actions.count
   end

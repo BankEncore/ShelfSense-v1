@@ -1,0 +1,91 @@
+<% workspace = @workspace %>
+<% tenders = @tenders %>
+<% register_scope = { register_id: @register.id } %>
+<% completion_recovery = workspace.completion_recovery %>
+<% refund_mode = workspace.refund_mode %>
+<% even_exchange = @transaction.even_exchange? %>
+<% selected_tender_row = workspace.tender_rows.find { |row| row.id == @selected_tender&.id } %>
+
+<div id="pos_actions" class="pos-actions">
+  <% if completion_recovery %>
+    <div class="pos-actions__group" role="group" aria-label="Completion recovery">
+      <%= action_button "Retry complete", style: :solid, intent: :brand, size: :large,
+            data: { action: "register-workspace#submitComplete", register_workspace_target: "retry" },
+            autofocus: true %>
+      <%= action_button "Return to sale", style: :outline, intent: :neutral, size: :large,
+            data: { action: "register-workspace#openReturnToSaleOverlay", register_workspace_target: "abandonButton" } %>
+    </div>
+  <% else %>
+    <div class="pos-actions__group" role="group" aria-label="Returns and pickup">
+      <%= action_button "Return (-)", style: :outline, intent: :neutral, size: :large,
+            data: { action: "register-workspace#openReturnChooser", register_workspace_target: "returnButton" } %>
+      <% if workspace.pickup_available %>
+        <%= action_button "Pickup", style: :outline, intent: :neutral, size: :large,
+              data: { action: "register-workspace#openPickupOverlay", register_workspace_target: "pickupButton" } %>
+      <% end %>
+    </div>
+    <div class="pos-actions__group" role="group" aria-label="Line controls">
+      <%= action_button "Quantity (*)", style: :outline, intent: :neutral, size: :large, disabled: true,
+            data: { action: "register-workspace#enterQuantity", register_workspace_target: "quantityButton" } %>
+      <%= action_button "Price (F6)", style: :outline, intent: :neutral, size: :large, disabled: true,
+            data: { action: "register-workspace#openPriceOverride", register_workspace_target: "overrideButton" } %>
+      <%= action_button "Discount (F7)", style: :outline, intent: :neutral, size: :large, disabled: true,
+            data: { action: "register-workspace#openLineDiscount", register_workspace_target: "discountButton" } %>
+      <%= action_button "Tax Class", style: :outline, intent: :neutral, size: :large, disabled: true,
+            data: { action: "register-workspace#openTaxClassOverride", register_workspace_target: "taxClassButton" } %>
+    </div>
+    <div class="pos-actions__group" role="group" aria-label="Tender">
+      <%= action_button "Cash (F1)", style: :outline, intent: :neutral, size: :large, disabled: true,
+            data: { action: "register-workspace#chooseCash", register_workspace_target: "cashButton" } %>
+      <%= action_button "Card (F2)", style: :outline, intent: :neutral, size: :large, disabled: true,
+            data: { action: "register-workspace#chooseCard", register_workspace_target: "cardButton" } %>
+      <%= action_button "Check (F3)", style: :outline, intent: :neutral, size: :large, disabled: true,
+            data: { action: "register-workspace#chooseCheck", register_workspace_target: "checkButton" } %>
+      <%= action_button "Other (F4)", style: :outline, intent: :neutral, size: :large, disabled: true,
+            data: { action: "register-workspace#chooseOther", register_workspace_target: "otherButton" } %>
+      <%= action_button "Stored value (F5)", style: :outline, intent: :neutral, size: :large, disabled: true,
+            data: { action: "register-workspace#chooseStoredValue", register_workspace_target: "storedValueButton" } %>
+      <%= action_button (even_exchange ? "Complete (+)" : (refund_mode ? "Refund (+)" : "Tender (+)")),
+            style: :outline, intent: :neutral, size: :large, disabled: true,
+            data: { action: "register-workspace#enterTender", register_workspace_target: "tenderButton" } %>
+    </div>
+    <div class="pos-actions__group" role="group" aria-label="Remove line">
+      <%= action_button "Remove (F8)", style: :outline, intent: :neutral, size: :large, disabled: true,
+            data: { action: "register-workspace#removeSelected", register_workspace_target: "removeButton" } %>
+      <% if @ui_mode == "tender" && tenders.any? %>
+        <%= action_button "Return to sale", style: :outline, intent: :neutral, size: :large,
+              data: { action: "register-workspace#openReturnToSaleOverlay", register_workspace_target: "abandonButton" } %>
+      <% end %>
+    </div>
+    <% if @ui_mode == "tender" && selected_tender_row %>
+      <div class="pos-actions__group pos-tender-review" role="group" aria-label="Selected tender actions">
+        <p class="pos-tender-review__detail" data-register-workspace-target="tenderReviewDetail"><%= selected_tender_row.inspect_detail %></p>
+        <div data-register-workspace-target="tenderEditAction" <%= "hidden" unless selected_tender_row.edit_available %>>
+          <%= action_button "Edit Tender", style: :outline, intent: :neutral, size: :large,
+                data: { action: "register-workspace#openEditTenderOverlay" } %>
+        </div>
+        <div data-register-workspace-target="tenderRemoveAction" <%= "hidden" unless selected_tender_row.remove_available %>>
+          <%= action_button "Remove Tender", style: :outline, intent: :warning, size: :large,
+                data: { action: "register-workspace#openRemoveTenderOverlay" } %>
+        </div>
+        <p class="muted" data-register-workspace-target="tenderUnavailableReason"
+           <%= "hidden" unless selected_tender_row.edit_unavailable_reason.present? %>><%= selected_tender_row.edit_unavailable_reason || selected_tender_row.remove_unavailable_reason %></p>
+      </div>
+    <% end %>
+  <% end %>
+  <div data-register-workspace-target="clientRecovery" hidden>
+    <%= action_button "Retry complete", style: :solid, intent: :brand, size: :large,
+          data: { action: "register-workspace#submitComplete" } %>
+  </div>
+  <div class="pos-actions__group pos-actions__group--escape" role="group" aria-label="Cancel transaction">
+    <%= action_button "Cancel (F9)", style: :outline, intent: :danger, size: :large, disabled: true,
+          data: { action: "register-workspace#openOverlay", register_workspace_target: "cancelButton" } %>
+  </div>
+  <% if workspace.close_session_available %>
+    <div class="pos-actions__group" role="group" aria-label="Session">
+      <%= action_button_to "Close Session", pos_register_close_path, style: :outline, intent: :neutral, size: :standard, method: :post,
+            params: { session_id: @session_record.id, register_id: @register.id },
+            data: { register_shell_proxy: "close-session" } %>
+    </div>
+  <% end %>
+</div>

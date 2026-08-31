@@ -237,7 +237,8 @@ class PosTenderBreadthTest < ActiveSupport::TestCase
       transaction: transaction,
       actor: @actor,
       expected_lock_version: transaction.lock_version,
-      tender: first
+      tender: first,
+      operation_id: SecureRandom.uuid_v7
     )
     transaction.reload
     remaining = transaction.pos_tenders.ordered.to_a

@@ -37,7 +37,7 @@ class PosMvpCloseoutTest < ActionDispatch::IntegrationTest
   test "mvp closeout path through 6.7 modes print freeze returns post-void x and z" do
     get pos_path
     assert_response :success
-    assert_select "h1", text: "POS Home"
+    assert_select "h1", text: "Select a Register"
 
     post pos_register_enter_path, params: enter_params(opening_float: "50.00")
     follow_redirect!
@@ -211,7 +211,7 @@ class PosMvpCloseoutTest < ActionDispatch::IntegrationTest
       closing_count: "0.00",
       expected_lock_version: session_record.lock_version
     )
-    assert_redirected_to pos_session_closed_path(session_record)
+    assert_redirected_to pos_session_details_path(session_record)
     follow_redirect!
     assert_response :success
     session_record.reload

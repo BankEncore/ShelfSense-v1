@@ -170,6 +170,25 @@ module Pos
       )
       line.line_tax_cents = result.tax_cents
       line.line_total_cents = line.net_merchandise_amount_cents + line.line_tax_cents
+      line.save!
+      replace_line_tax_components!(line, result)
+      result
+    end
+
+    def replace_line_tax_components!(line, result)
+      line.pos_line_tax_components.delete_all
+      result.determinations.each do |determination|
+        line.pos_line_tax_components.create!(
+          store_tax_id: determination.store_tax_id,
+          store_tax_code_snapshot: determination.store_tax_code,
+          store_tax_name_snapshot: determination.store_tax_name,
+          rate_percent: determination.rate_percent,
+          applies: determination.applies,
+          taxable_basis_cents: determination.taxable_basis_cents,
+          tax_cents: determination.tax_cents,
+          calculation_order: determination.calculation_order
+        )
+      end
     end
 
     def commercial_content?(transaction)

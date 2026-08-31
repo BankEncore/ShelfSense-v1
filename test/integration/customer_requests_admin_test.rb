@@ -91,6 +91,7 @@ class CustomerRequestsAdminTest < ActionDispatch::IntegrationTest
 
     post admin_customers_path, params: {
       return_to: return_to,
+      idempotency_key: SecureRandom.uuid_v7,
       customer: { display_name: "Inline Customer", phone: "555-0101" }
     }
 

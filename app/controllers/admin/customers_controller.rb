@@ -46,44 +46,46 @@ module Admin
     def new
       @customer = Customer.new
       @return_to = valid_customer_request_return_path
+      @idempotency_key = SecureRandom.uuid_v7
       load_duplicate_suggestions
     end
 
     def create
       @customer = Customer.new(customer_params.except(:lock_version))
       @acknowledge_duplicates = params[:acknowledge_duplicates].present?
+      @return_to = valid_customer_request_return_path
 
-      if duplicate_block_needed?
-        load_duplicate_suggestions
-        flash.now[:alert] = "Possible duplicate customers found. Choose an existing customer, or confirm create anyway."
-        @return_to = valid_customer_request_return_path
-        render :new, status: :unprocessable_entity
-        return
-      end
-
-      if create_and_audit!(
-        @customer,
-        action: "customers.create",
-        after_values: {
-          display_name: @customer.display_name,
-          email: @customer.email,
-          phone: @customer.phone,
-          preferred_contact_method: @customer.preferred_contact_method
-        }
+      result = Customers::Create.call(
+        display_name: customer_params[:display_name],
+        given_name: customer_params[:given_name],
+        family_name: customer_params[:family_name],
+        email: customer_params[:email],
+        phone: customer_params[:phone],
+        preferred_contact_method: customer_params[:preferred_contact_method],
+        actor: current_user,
+        store: current_store,
+        idempotency_key: params.require(:idempotency_key),
+        source_id: admin_customer_create_source_id,
+        acknowledge_duplicates: @acknowledge_duplicates
       )
-        if (return_path = valid_customer_request_return_path)
-          uri = URI.parse(return_path)
-          query = Rack::Utils.parse_nested_query(uri.query.to_s)
-          query["customer_id"] = @customer.id
-          redirect_to "#{uri.path}?#{query.to_query}", notice: "Customer created. Continue the customer request."
-        else
-          redirect_to admin_customer_path(@customer), notice: "Customer created."
-        end
+      @customer = result.customer
+
+      if (return_path = valid_customer_request_return_path)
+        uri = URI.parse(return_path)
+        query = Rack::Utils.parse_nested_query(uri.query.to_s)
+        query["customer_id"] = @customer.id
+        redirect_to "#{uri.path}?#{query.to_query}", notice: "Customer created. Continue the customer request."
       else
-        load_duplicate_suggestions
-        @return_to = valid_customer_request_return_path
-        render :new, status: :unprocessable_entity
+        redirect_to admin_customer_path(@customer), notice: "Customer created."
       end
+    rescue Customers::DuplicateFoundError => e
+      load_duplicate_suggestions
+      @duplicate_suggestions = e.suggestions
+      flash.now[:alert] = "Possible duplicate customers found. Choose an existing customer, or confirm create anyway."
+      render :new, status: :unprocessable_entity
+    rescue Customers::Error
+      load_duplicate_suggestions
+      render :new, status: :unprocessable_entity
     end
 
     def edit
@@ -292,15 +294,8 @@ module Admin
       }
     end
 
-    def duplicate_block_needed?
-      return false if @acknowledge_duplicates
-
-      suggestions = Customers::SuggestDuplicates.call(
-        attributes: suggestion_attributes_for(@customer),
-        exclude_id: @customer.id
-      )
-      @duplicate_suggestions = suggestions
-      suggestions.any?
+    def admin_customer_create_source_id
+      current_user.id
     end
   end
 end

@@ -1,8 +1,8 @@
 # Phase 6 Slice 6.7 — POS operator workflow
 
-**Status:** Implemented. Implementation authority for cashier interaction: POS Home, preferred Register, X Report, keyboard contract, merchandise pickers, `/` search, open-price Standard, return entry, and tender selection **until the Register workspace consolidation owning slice merges**.
+**Status:** Partially superseded by Register workspace consolidation. Keyboard §6 live authority is Slice 7 ([slice7-keyboard-contract.md](../../register-workspace-consolidation/slice7-keyboard-contract.md) / 7C dispatcher). Remaining sections apply until their owning consolidation slice replaces them.
 
-Staged supersession is locked in [routing-and-authority.md](../../register-workspace-consolidation/routing-and-authority.md): Slice 2 replaces §4 (POS Home); Slice 3 replaces the §6 F10 binding and §14 F10 history entry (not history behavior); Slice 7C may replace the remainder of §6 after an accepted keyboard contract. Until those slices merge, this document remains lock.
+Staged supersession is locked in [routing-and-authority.md](../../register-workspace-consolidation/routing-and-authority.md): Slice 2 replaces §4 (POS Home); Slice 3 replaces the §6 F10 binding and §14 F10 history entry (not history behavior); Slice 5D replaces the §6 / §12 `+` **destination** (O11); Slice **7.0** accepted the replacement keyboard contract as documentation; Slice **7C** implements that contract and supersedes the remainder of §6 (including empty-field punctuation interception).
 
 **Authority:** How the cashier operates MVP capabilities that 6.1–6.6 already made commercially true. Completion, inventory posting, settlement math, controlled-action *policy*, linked/unlinked return *engines*, and post-void *facts* remain those contracts. Receipt *print layout* is 6.8 ([receipt-presentation.md](receipt-presentation.md) / [mvp-closeout.md](mvp-closeout.md)).
 
@@ -106,6 +106,10 @@ Selling stays on the dedicated POS layout. GET still does not mutate.
 
 ## 4. POS Home and Register chrome
 
+**Superseded by Register workspace consolidation Slice 2.** `GET /pos` is state-aware Register entry (selector / closed / between sessions / occupied; own session uses the existing workspace). Generic POS Home markup is gone. Preferred Register remains a signed cookie and never confers a session. X Report remains live open-session totals and is not offered without an open session. Switch Register remains an explicit POST preference change.
+
+Historical 6.7 §4 text below is not implementation authority after Slice 2.
+
 ### 4.1 `GET /pos` — `POS_HOME`
 
 POS layout, no selling scan field. Independent of Session.
@@ -188,33 +192,29 @@ The cookie confers neither authorization nor Session ownership.
 
 ## 6. Keyboard map
 
-6.7 is the lock. Phase 5 “wireframe-validatable” bindings are superseded.
+**Live authority (Slice 7C):** [slice7-keyboard-contract.md](../../register-workspace-consolidation/slice7-keyboard-contract.md), implemented via [slice7c-keyboard-dispatcher-plan.md](../../register-workspace-consolidation/slice7c-keyboard-dispatcher-plan.md).
 
-| Key | Action |
+Phase 6.7 empty-field interception of `/`, `*`, `-`, and `+` is **superseded**. Punctuation shortcuts apply only from non-input workspace focus (selected basket/tender row or workspace background). While the command field (or any editable control) owns focus — including Slice 2 printable redirection into the command field — those characters are literal input / scanner characters.
+
+| Key | Action (summary) |
 |---|---|
-| Enter | per §7 |
-| Esc | cancel current dialog / mode; restore scanner focus |
-| `/` | `MERCHANDISE_SEARCH` (empty scan field only) |
-| `*` | `QUANTITY` on selected quantity-tracked sale line |
-| `-` | `RETURN` chooser (empty scan field only) |
-| `+` | Cash settlement with remaining prefilled (§12); even-exchange complete (§12.4) |
-| F1 | Cash |
-| F2 | Card |
-| F3 | Check |
-| F4 | Other |
-| F5 | stored-value tenders |
-| F6 | **Price** on selected sale line (§9.3) |
-| F7 | line discount on selected sale line |
-| F8 | remove selected line or selected tender |
-| F9 | cancel confirmation; second F9 confirms cancel |
-| F10 | Transactions (§14) |
-| ↑ / ↓ | move highlight in lists / selected line in `SALE_ENTRY` |
+| Enter | per §7 / Slice 7 Escape/Enter overlay rules |
+| Esc | innermost reversible layer only; never cancels the transaction (F9 path) |
+| `/` `.` `-` `+` `*` | SALE shortcuts from non-input focus only (Search / Pickup / Return / Tender O11 / Quantity) |
+| F1–F5 | Cash / Card / Check / Other / Stored value (**F2 remains Card**) |
+| F6 / F7 | Price / line discount on selected sale line |
+| F8 | SALE: remove selected record; TENDER: remove **selected** tender |
+| F9 | cancel confirmation |
+| F10 | Register Menu (shell-owned) |
+| ↑ / ↓ | move basket or tender selection by mode |
 
-Intercept `/`, `*`, `-`, `+` only when the primary field is **empty** (same pattern as today’s `*` / `+`). A hyphen or slash inside a typed/scanned identifier is not Return or Search.
+`+1`–`+9` sequences are omitted. Customer Lookup / Quick Customer / Tax Class remain visible controls without new shortcuts.
 
-Extend Keyboard Lock to F1–F10. Phase 10.4 binds F5 to stored-value tenders (6.7 left it unbound). Postpone Ctrl/Cmd/Alt.
+Historical 6.7 table (superseded at 7C runtime): empty-field `/` `*` `-` `+`; F8 last-tender remove in some UI paths. See Slice 7.0 supersession map.
 
-Every shortcut has a visible, focusable control. Unavailable keys explain why (§12.2) — no silent no-op for F1–F5 / F6 / F7 / F8 / `*` / `+` when the cashier has reason to think they should work.
+Extend Keyboard Lock to F1–F10 **on the selling workspace**. Other Register shell surfaces lock F10 only (Slice 3). Postpone Ctrl/Cmd/Alt.
+
+Every shortcut has a visible, focusable control. Unavailable keys explain why (§12.2) — no silent no-op when the cashier has reason to think they should work.
 
 F6/F7 remain disabled on **return** lines ([returns.md](returns.md)). Tax Class stays a **visible control** only (no F-key).
 
@@ -516,6 +516,8 @@ No silent no-op.
 
 ### 12.3 `+` (payment)
 
+**Historical 6.7 (superseded for destination by Slice 5D):**
+
 ```text
 Due $26.72
 +
@@ -523,15 +525,15 @@ Due $26.72
   Amount: [26.72]
 ```
 
-Exact Cash: `+` then Enter. Customer gives $40: `+` then `40` then Enter.
+**Slice 5D:** empty-field `+` with payment or refund remaining opens O11 (eligible tender types). Choosing Cash (or F1) still reaches command-field amount entry with remaining prefilled. Exact Cash: choose Cash then Enter. Customer gives $40: choose Cash, `40`, Enter.
 
-Refund-direction: `+` is **Cash refund** with remaining refund prefilled.
+Refund-direction: eligible refund types in O11; F1 remains Cash refund with remaining refund prefilled.
 
 ### 12.4 Even exchange
 
-Mixed sale+return `signed_net = 0`: `+` confirms complete with no tender ([returns.md](returns.md)). Do not open a $0.00 Cash tender.
+Mixed sale+return `signed_net = 0`: `+` confirms complete with no tender ([returns.md](returns.md)). Do not open a $0.00 Cash tender. **Slice 5D keeps this precondition** — do not open an empty O11.
 
-`+` with no merchandise: explain why (not a silent no-op).
+`+` with no merchandise: explain why (not a silent no-op). **Slice 5D keeps this precondition.**
 
 ---
 
@@ -549,9 +551,9 @@ Errors: transient above scan (next input replaces); blocking inside the current 
 
 Recoverable field/action errors (invalid price, missing reason/note, approver credentials, policy denial until approval is supplied) keep the current dialog open: same non-secret values, error inside the overlay, password fields cleared and never echoed. Stale lock, completed transaction, or other invalidated commercial basis close the dialog and refresh the workspace.
 
-Disable F10 while a blocking modal is open:
+Disable F10 while a blocking modal is open (does not open the Register Menu):
 
-> Finish or cancel the current dialog before opening Transactions.
+> Finish or cancel the current dialog before opening the Register Menu.
 
 ---
 
@@ -559,7 +561,9 @@ Disable F10 while a blocking modal is open:
 
 **Post-void remains history-only in 6.7.** No selling-workspace hotkey and no POS Home shortcut to initiate post-void.
 
-**F10** (and visible Transactions): completed transaction history; current working basket remains untouched. Does not cancel, suspend, clear, or complete. Returning to the Register resumes the same persisted working transaction.
+**Superseded by Register workspace consolidation Slice 3.** F10 opens the Register Menu. **Transactions & Receipts** is a menu destination. History search, linked-return, and working-basket preservation are unchanged. F10 never cancels, suspends, clears, or completes the working transaction. While a blocking overlay is open, F10 does not open the menu.
+
+Historical 6.7 F10→Transactions entry below is not implementation authority after Slice 3.
 
 ---
 
@@ -607,7 +611,7 @@ Merge gate each letter: Phase 5 all-Cash Standard path still green; GET still do
 14. Receipt barcode lookup is exact `transaction_reference`; lines are chosen, not auto-returned.
 15. F1–F4 select tenders; unavailable keys explain why; `+` is Cash (or Cash refund) with remaining prefilled.
 16. Cancel confirmation ignores Enter.
-17. F10 leaves the working basket intact; F10 is disabled while a blocking modal is open.
+17. F10 opens the Register Menu and leaves the working basket intact; F10 is disabled while a blocking modal is open.
 18. Post-void is not offered from Home or the selling keymap.
 19. Phase 5 all-Cash Standard path remains green.
 

@@ -24,8 +24,8 @@ class PosMixedReturnTest < ApplicationSystemTestCase
     open_register
     add_sku(@thirty.sku)
     add_unlinked_return(@twenty.sku, price: "20.00")
-    assert_text "Amount due"
-    click_on "Tender (+)"
+    assert_text "Balance due"
+    start_cash_tender_via_plus
     field = find("#pos-command-field")
     field.fill_in with: "10.00"
     field.send_keys :enter
@@ -46,8 +46,8 @@ class PosMixedReturnTest < ApplicationSystemTestCase
     open_register
     add_sku(@twenty.sku)
     add_unlinked_return(@thirty.sku, price: "30.00")
-    assert_text "Refund due"
-    click_on "Refund (+)"
+    assert_text "Refund remaining"
+    start_cash_refund_via_plus
     assert_text "REFUND"
     send_keys :f2
     assert_selector "[data-register-workspace-target='fieldLabel']", text: /External Card/
@@ -88,7 +88,7 @@ class PosMixedReturnTest < ApplicationSystemTestCase
     click_on "Return (-)"
     send_keys :arrow_down
     send_keys :enter
-    assert_text "Return without receipt"
+    assert_text "Unlinked return"
     identifier = find("#pos-unlinked-identifier")
     identifier.fill_in with: @twenty.sku
     identifier.send_keys :enter
@@ -96,6 +96,9 @@ class PosMixedReturnTest < ApplicationSystemTestCase
     assert_equal 0, PosTransaction.working.find_by!(register: @register).pos_transaction_lines.count
     send_keys :escape
     assert_no_selector "#pos_unlinked_overlay", visible: true
+    assert_selector "#pos_return_chooser", visible: true
+    send_keys :escape
+    assert_no_selector "#pos_return_chooser", visible: true
     assert_equal "pos-command-field", page.evaluate_script("document.activeElement && document.activeElement.id")
 
     add_sku(@thirty.sku)
@@ -168,7 +171,7 @@ class PosMixedReturnTest < ApplicationSystemTestCase
     assert_text "Priced", wait: 5
     fill_in "Return unit price", with: price
     select "Changed mind", from: "Return reason"
-    click_on "Add return"
+    click_on "Add Unlinked Return"
     assert_text "Unlinked return", wait: 10
   end
 

@@ -9,12 +9,17 @@ Status: **Accepted** with Slice 1.
 | Slice | Supersedes |
 |---|---|
 | 2 | Phase 6.7 **§4** POS Home and Register-entry chrome |
-| 3 | Phase 6.7 **§6 F10 binding** and **§14 F10 transaction-history entry** |
-| 7C | The remainder of Phase 6.7 **§6** and any affected Enter/Escape/modal sections, after acceptance of the replacement keyboard contract |
+| 3 | Phase 6.7 **§6 F10 binding** and **§14 F10 transaction-history entry** (done in this slice) |
+| 5D | Phase 6.7 **§6 `+` destination only**: empty-field `+` / Tender opens O11 tender selection after existing tenderability checks ([slice5d-tender-issuance-plan.md](slice5d-tender-issuance-plan.md)). F1–F5 unchanged. |
+| 7.0 | **Documentation only:** accepts the replacement SALE / TENDER / overlay / Escape / scanner / Lock contract ([slice7-keyboard-contract.md](slice7-keyboard-contract.md)), including the focus-based printable-punctuation rule. Does **not** change live key behavior. Clarifies [plan.md](plan.md) decision 13 “first merge.” Associated with [#95](https://github.com/BankEncore/ShelfSense-v1/issues/95); does not implement [#93](https://github.com/BankEncore/ShelfSense-v1/issues/93). |
+| 7B | **Presentation / services:** nested Customer Lookup, Quick Customer (`customers.create`), lease-backed SV add/cap, SV remove/replace/Return-to-Sale, issuance tender-clear confirm, Completion Failed recovery ([slice7b-stored-value-issuance-plan.md](slice7b-stored-value-issuance-plan.md)). Does **not** remap keys or implement the dispatcher. |
+| 7C | **Runtime complete:** implements [slice7-keyboard-contract.md](slice7-keyboard-contract.md) via one dispatcher ([slice7c-keyboard-dispatcher-plan.md](slice7c-keyboard-dispatcher-plan.md)); Phase 6.7 §6 superseded |
 
-Slice 3 supersedes **F10 as the direct entry to Transactions**. It does **not** supersede transaction-history behavior, search, linked-return workflow, or working-basket preservation.
+Slice 3 supersedes **F10 as the direct entry to Transactions**. It does **not** supersede transaction-history behavior, search, linked-return workflow, or working-basket preservation. F10 opens the Register Menu; Transactions & Receipts remains a menu destination.
 
-Until Slice 7C, all other 6.7 keys (`F1`–`F9`, `/`, `-`, `.`, `*`, `+`, Enter, Escape) remain lock.
+Slice 5D supersedes **only** the Phase 6.7 `+` destination (Cash-with-remaining / even-exchange entry via `+`). It does **not** remap F1–F5 or complete the SALE/TENDER keyboard redesign. Slice 7.0 **retains** the 5D `+` → O11 **destination** in the accepted contract and **supersedes empty-field punctuation interception** for 7C implementation (runtime stays 5D/6.7 empty-field until 7C).
+
+Until Slice **7C** shipped the dispatcher, remaining 6.7 keys were runtime lock. **7C is live:** focus-based punctuation, selected-tender F8, and obsolete empty-field / last-tender handlers are removed. `+` destination remains O11 (`open-tender-selection`).
 
 ## GET versus POST
 
@@ -73,36 +78,42 @@ Helpers/presenters own user-facing language (including **Your session — Resume
 | Register from another store | ignore/reject |
 | Missing `pos.transact` | existing POS authorization denial |
 
-## Temporary destination cluster (Slice 2 only)
+## Register Menu (Slice 3)
 
-One partial, one eligibility policy, **deleted in Slice 3**. Not a literal copy of POS Home buttons on every state.
+One shell overlay, one eligibility policy (`Pos::RegisterMenu`). Capability keys by `kind`, `surface` (`:state_landing`, `:workspace`, `:switch_register`), and permission. Helper owns labels and routes. In-page Open/Close/Finalize are live proxies to existing forms.
+
+Keyboard Lock is owned by the Register shell: F1–F10 when `#pos_workspace` is present, otherwise F10 only.
 
 Preserve every **currently eligible** destination:
 
 | Destination | Closed | Between sessions | Own session | Occupied |
 |---|---|---|---|---|
 | Transactions | Yes | Yes | Yes | Yes |
-| Session/Z Reports | Yes | Yes | Yes | Permission-controlled |
-| X Report | No current X | Historical/report entry | Own X | Permission-controlled |
+| Session/Z Reports | Yes | Yes | Yes | `pos.sessions.view` |
+| X Report | No | No | Own X | `pos.sessions.view` |
 | Till operations | No | No | Yes | No |
 | Active Sessions | Permission-controlled | Permission-controlled | Permission-controlled | Permission-controlled |
 | Switch Register | Yes | Yes | Yes | Yes |
 
-Reverse Cash is **not** in the cluster (overexposure). Keep the reverse **route and service** until Slice 6B.
+**X Report exists only for an open session.** Between sessions has no current X. Historical totals stay under Session/Z Reports, never labeled X.
+
+Reverse Cash is **not** in the menu (overexposure). Keep the reverse **route and service** until Slice 6B.
 
 ## Expected cash
 
-Hide expected till/session cash totals unless `Authorization::PermissionEvaluator.allowed?(user:, permission_key: "cash.view_expected_before_count", store:)`.
+Hide **before-count** expected till/session totals unless `Authorization::PermissionEvaluator.allowed?(user:, permission_key: "cash.view_expected_before_count", store:)`.
 
-Introduce `can_view_expected_cash?` (helper wrapping that check) and use it on the shell, Till Activity, X/session details, cash forms, and close. Known operation effects (drop −$300 / safe +$300) may still show. Availability errors may say the amount exceeds available session cash without revealing expected totals.
+`can_view_expected_cash?` is a POS controller `helper_method`. Open-session X omits Expected Cash without that permission. Closed-session and finalized Z reconciliation snapshots stay visible after count. Known operation effects (drop −$300 / safe +$300) may still show. Availability errors may say the amount exceeds available session cash without revealing expected totals.
 
 ## Stored-value inquiry (Slice 6A)
 
-Three labeled find paths — not one field that might accept a complete number or prefix + last four.
+Locked in [slice6a-customer-service-plan.md](slice6a-customer-service-plan.md). Three labeled find paths — not one field that might accept a complete number or prefix + last four.
 
 1. **Exact number** — `GiftCards::Lookup` / digest possession. May lead to eligible reload, tender, cash-out.
 2. **Customer store credit** — customer identity → account relationship. Not a card possession test.
 3. **Prefix + last four** — `GiftCards::AdminInquiry` (or equivalent), `gift_cards.view`, masked candidates. Must not call the possession path, feed scan routing, or start redeem/reload/cash-out/completion ([ADR-026](../../adr/ADR-026-gift-card-number-protection.md), [ADR-027](../../adr/ADR-027-admin-gift-card-prefix-last-four-inquiry.md)).
+
+Packaging: one `Pos::StoredValueInquiriesController` with **separate POST actions** per path. No full numbers in GET. Continuations invoke existing workspace/cash-out flows; inquiry never mutates solely because a card was found.
 
 ## Current route disposition
 
@@ -113,12 +124,12 @@ Three labeled find paths — not one field that might accept a complete number o
 | `pos_path` | Slice 2: state resolver. Stop treating as POS Home. |
 | `pos_register_enter_path` GET/POST | Keep; POST remains mutating entry. GET may be absorbed into closed/between bodies. |
 | `pos_register_workspace_path` | Keep; wrap in shell (Slice 2); recompose `_surface` (Slice 4). |
-| `pos_transactions_path` / show | Keep; F10 destination (Slice 3); compose as Transactions & Receipts (Slice 6A). |
-| `pos_x_report_path`, session X | Keep; cluster then F10; shell integration Slice 6C. |
-| `pos_reports_path`, closed session, Z | Keep; cluster then F10; Slice 6C. |
+| `pos_transactions_path` / show | Keep; F10 menu destination; compose as Transactions & Receipts (Slice 6A). |
+| `pos_x_report_path`, session X | Keep; F10; shell integration Slice 6C. |
+| `pos_reports_path`, closed session, Z | Keep; F10; Slice 6C. |
 | `pos_active_sessions_path` | Keep; permission-filtered; Slice 6B enhancements. |
 | `pos_switch_register_path` | Keep; selector. |
-| Cash paid-in/out, drop, replenish, cash-out | Keep services; cluster (own session) then F10 Till; frames later. |
+| Cash paid-in/out, drop, replenish, cash-out | Keep services; F10 Till (own session); frames later. |
 | `pos_cash_reversals_path` | Remove **nav** Slice 3; remove generic launcher Slice 6B if no other caller. Keep service. |
 | Workspace merchandise/tender/return posts | Keep endpoints; migrate overlay markup in 5A–5D. |
 | Session close, period finalize | Keep full surfaces; F10 launches them. |

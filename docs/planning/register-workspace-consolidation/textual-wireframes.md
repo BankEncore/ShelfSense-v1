@@ -33,8 +33,8 @@ Used by all four Register states and most Register-supporting surfaces.
 
 ```text
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│ ShelfSense  <Store name>  ·  Register <number>               [F10 Menu]    │
-│ <Business-date status>  ·  <Session/cashier status>       [ShelfSense ↗]   │
+│ <Store> · Register <number>                          [Return to ShelfSense] │
+│ <Business-date status> · Opened… (if any)                      {cashier}   │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │ {STATUS / PRIOR-DATE / BLOCKER STRIP}                                      │
 ├─────────────────────────────────────────────────────────────────────────────┤
@@ -54,7 +54,7 @@ Behavior:
 
 - F10 opens the Register Menu and returns focus to its launcher when closed.
 - While a blocking overlay or approval dialog is open, F10 does not open another layer. The user must complete or leave the current layer first.
-- **ShelfSense** leaves the Register workspace; it does not close a session.
+- **Return to ShelfSense** leaves the Register workspace in the **same tab**; it does not close a session.
 - If leaving while the user owns an open session, the confirmation explicitly states that custody remains open.
 - The shell never substitutes the calculated current date for an established reporting-period business date.
 
@@ -62,39 +62,48 @@ Behavior:
 
 One partial with state-dependent facts—not separate headers per page.
 
+### Selector
+
+```text
+001 Main Street Books                                      [Return to ShelfSense]
+Business date not selected  ·  {cashier}
+```
+
 ### Closed
 
 ```text
-ShelfSense  Main Street Books  ·  Register 02                  [F10 Menu]
-Business date not open  ·  No active session                [ShelfSense ↗]
+001 Main Street Books  |  02 Front                         [Return to ShelfSense]
+Business date not open  ·  Proposed date: Thu 27 Aug 26  ·  {cashier}
 ```
 
 ### Between sessions
 
 ```text
-ShelfSense  Main Street Books  ·  Register 02                  [F10 Menu]
-Business date Aug 27, 2026  ·  Between sessions             [ShelfSense ↗]
+001 Main Street Books  |  02 Front                         [Return to ShelfSense]
+Business Date Thu 27 Aug 26  |  Opened: … (omitted)  ·  {cashier}
 ```
 
 ### Own session
 
 ```text
-ShelfSense  Main Street Books  ·  Register 02                  [F10 Menu]
-Aug 27, 2026  ·  Jane Smith  ·  Opened 9:04 AM              [ShelfSense ↗]
+001 Main Street Books  |  02 Front                         [Return to ShelfSense]
+Business Date Thu 27 Aug 26  |  Opened: 27 Aug 26 09:04 am  ·  Jane Smith
 ```
 
 ### Occupied
 
 ```text
-ShelfSense  Main Street Books  ·  Register 02                  [F10 Menu]
-Aug 27, 2026  ·  In use by Morgan Lee  ·  Opened 8:51 AM    [ShelfSense ↗]
+001 Main Street Books  |  02 Front                         [Return to ShelfSense]
+Business Date Thu 27 Aug 26  |  Opened: 27 Aug 26 08:51 am  ·  {viewer}
 ```
+
+Occupier identity stays in the status strip (**IN USE**), not as a substitute for the viewer cashier label.
 
 ### Supporting historical surface
 
 ```text
-ShelfSense  Main Street Books  ·  Register 02                  [F10 Menu]
-Viewing: Session closed Aug 27, 2026 6:12 PM                 [ShelfSense ↗]
+001 Main Street Books  |  02 Front                         [Return to ShelfSense]
+Viewing: Session closed Aug 27, 2026 6:12 PM
 ```
 
 ## P3. State/status strip
@@ -354,7 +363,7 @@ F10 Register Menu
 
 ### Future mode-scoped concept (not implementation authority)
 
-Do not implement, display as the live legend, or treat as 6.7 replacement until Slice 6 formally supersedes the keyboard contract. `/` is not Discount. `-` is not Remove. `F5` is not Price. `F7` is not Tax. `F8` is not Return.
+Do not implement, display as the live legend, or treat as 6.7 replacement until Slice **7C** implements the accepted contract. Speculative remaps that assign `/` to Discount or `-` to Remove on SALE are **rejected**; see [slice7-keyboard-contract.md](slice7-keyboard-contract.md) and [slice7-overview.md](slice7-overview.md).
 
 ```text
 TARGET CONCEPT — NOT IMPLEMENTATION AUTHORITY
@@ -429,7 +438,7 @@ Used when no preferred/selected Register can be resolved or when Switch Register
 
 ```text
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│ ShelfSense  Main Street Books                              [ShelfSense ↗]   │
+│ 001 Main Street Books                                  [Return to ShelfSense] │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │ SELECT A REGISTER                                                           │
 ├─────────────────────────────────────────────────────────────────────────────┤
@@ -938,6 +947,8 @@ Selected: Register 03 · Morgan Lee
 
 ## S20. X Report
 
+Live open-session X only. Closed-session reporting belongs on **Session Details** (Slice 6B route), not a redefined S20 and not a second closed-session destination.
+
 ```text
 X REPORT · INTERIM — SESSION REMAINS OPEN
 
@@ -1025,7 +1036,7 @@ Status             Posted
 [Back to Till Activity]                       {Eligible: [Reverse]}
 ```
 
-Selecting Reverse opens O10 with the original operation already identified; there is no generic reference-entry reversal launcher.
+Selecting Reverse opens **O19** (`#pos_cash_reversal_overlay` / cash-reversal-confirmation) with the original operation already identified; there is no generic reference-entry reversal launcher. (O10 remains gift-card issuance.)
 
 ## S24. Manager-assisted close
 
@@ -1436,7 +1447,7 @@ The current tender remains applied until the replacement succeeds.
 [Keep Current Tender]                       [Replace Tender]
 ```
 
-On failure, the original remains unchanged. Stored-value replacement safely reverses/reapplies value inside one domain operation.
+On failure, the original remains unchanged. **Slice 7A:** O15 was ordinary-tender replacement only. **Slice 7B:** O15 extends to stored-value working tenders via audited destroy + add under OperationLease; working SV rows have not posted ledger value — replacement is not a ledger reversal. See [slice7b-stored-value-issuance-plan.md](slice7b-stored-value-issuance-plan.md).
 
 ## O16. Remove tender confirmation
 
@@ -1444,11 +1455,13 @@ On failure, the original remains unchanged. Stored-value replacement safely reve
 REMOVE GIFT CARD TENDER?
 
 Gift Card •••• 1234 · $18.00 applied
-Removing it will restore $18.00 to the card and increase the transaction
-balance due to $30.00.
+Removing this working tender does not restore ledger value (nothing has
+posted yet). Balance due returns to $30.00.
 
 [Keep Tender]                                  [Remove Tender]
 ```
+
+**Slice 7A:** O16 removed ordinary working tenders only and must not claim a stored-value ledger restore. **Slice 7B:** O16 may remove working stored-value tenders; consequence copy must state that working remove does **not** restore ledger value. Authority: [slice7b-stored-value-issuance-plan.md](slice7b-stored-value-issuance-plan.md).
 
 Removal is idempotent and preserves reversal/audit relationships.
 
@@ -1466,7 +1479,7 @@ transaction to be tendered again.
 [Keep Tendering]                   [Remove Tenders and Return to Sale]
 ```
 
-If the eventual domain contract permits retaining some tenders, the consequence text and service must reflect that exact behavior.
+If the eventual domain contract permits retaining some tenders, the consequence text and service must reflect that exact behavior. **Slice 7A:** Return to Sale refused while any stored-value tender remained. **Slice 7B:** O17 clears all supported working tenders including stored-value, atomically, or changes nothing ([slice7b-stored-value-issuance-plan.md](slice7b-stored-value-issuance-plan.md)).
 
 ## O18. Controlled-action approval
 

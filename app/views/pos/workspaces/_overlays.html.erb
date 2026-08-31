@@ -1,0 +1,596 @@
+  <div class="pos-overlay" data-register-blocking-overlay id="pos_edit_tender_overlay" hidden
+       data-register-workspace-target="editTenderOverlay" role="dialog" aria-modal="true"
+       aria-labelledby="pos-edit-tender-title">
+    <div class="pos-overlay__panel pos-overlay__panel--control">
+      <h2 id="pos-edit-tender-title">Edit tender</h2>
+      <p data-register-workspace-target="editTenderDetail"></p>
+      <p id="pos-edit-tender-feedback" class="pos-overlay__error" data-overlay-error role="alert"></p>
+      <p data-register-workspace-target="editTenderStoredValueNote" hidden>Stored value applies up to the available balance. If the balance is lower, the applied amount is reduced and the remainder stays due. Nothing is posted until the transaction completes.</p>
+      <label for="pos-edit-tender-amount">Applied amount</label>
+      <input id="pos-edit-tender-amount" class="pos-command__field" inputmode="decimal"
+             data-register-workspace-target="editTenderAmount">
+      <div data-register-workspace-target="editTenderPresentedWrap" hidden>
+        <label for="pos-edit-tender-presented">Cash presented</label>
+        <input id="pos-edit-tender-presented" class="pos-command__field" inputmode="decimal"
+               data-register-workspace-target="editTenderPresented">
+      </div>
+      <div data-register-workspace-target="editTenderReferenceWrap">
+        <label for="pos-edit-tender-reference">Reference</label>
+        <input id="pos-edit-tender-reference" class="pos-command__field"
+               data-register-workspace-target="editTenderReference">
+      </div>
+      <div class="pos-overlay__actions">
+        <%= action_button "Keep Current", style: :outline, intent: :neutral, size: :standard,
+              data: { action: "register-workspace#closeEditTenderOverlay" } %>
+        <%= action_button "Replace Tender", style: :solid, intent: :brand, size: :standard,
+              data: { action: "register-workspace#confirmReplaceTender" } %>
+      </div>
+    </div>
+  </div>
+
+  <div class="pos-overlay" data-register-blocking-overlay id="pos_remove_tender_overlay" hidden
+       data-register-workspace-target="removeTenderOverlay" role="dialog" aria-modal="true"
+       aria-labelledby="pos-remove-tender-title">
+    <div class="pos-overlay__panel">
+      <h2 id="pos-remove-tender-title">Remove this tender?</h2>
+      <p data-register-workspace-target="removeTenderDetail"></p>
+      <p id="pos-remove-tender-feedback" class="pos-overlay__error" data-overlay-error role="alert"></p>
+      <p>The working tender will be removed. Nothing has been posted yet, so removing a stored-value tender does not restore ledger value to the account or card.</p>
+      <div class="pos-overlay__actions">
+        <%= action_button "Keep Tender", style: :outline, intent: :neutral, size: :standard,
+              data: { action: "register-workspace#closeRemoveTenderOverlay" } %>
+        <%= action_button "Remove Tender", style: :solid, intent: :danger, size: :standard,
+              data: { action: "register-workspace#confirmRemoveTender" } %>
+      </div>
+    </div>
+  </div>
+
+  <div class="pos-overlay" data-register-blocking-overlay id="pos_return_to_sale_overlay" hidden
+       data-register-workspace-target="returnToSaleOverlay" role="dialog" aria-modal="true"
+       aria-labelledby="pos-return-to-sale-title">
+    <div class="pos-overlay__panel">
+      <h2 id="pos-return-to-sale-title">Return to Sale?</h2>
+      <p id="pos-return-to-sale-feedback" class="pos-overlay__error" data-overlay-error role="alert"></p>
+      <p>All applied tenders will be cleared. Merchandise can then be changed, and the transaction must be tendered again.</p>
+      <% if @tenders&.any?(&:stored_value?) %>
+        <p>Nothing has been posted yet, so clearing a stored-value tender does not restore ledger value to the account or card.</p>
+      <% end %>
+      <div class="pos-overlay__actions">
+        <%= action_button "Keep Tenders", style: :outline, intent: :neutral, size: :standard,
+              data: { action: "register-workspace#closeReturnToSaleOverlay" } %>
+        <%= action_button "Return to Sale", style: :solid, intent: :warning, size: :standard,
+              data: { action: "register-workspace#confirmReturnToSale" } %>
+      </div>
+    </div>
+  </div>
+
+  <div class="pos-overlay" data-register-blocking-overlay
+       id="pos_overlay"
+       hidden
+       data-register-workspace-target="overlay"
+       role="dialog"
+       aria-modal="true"
+       aria-labelledby="pos-cancel-title">
+    <div class="pos-overlay__panel">
+      <h2 id="pos-cancel-title">Cancel this transaction?</h2>
+      <p data-register-workspace-target="cancelConsequence"><%= @workspace&.cancel_consequence.presence || "All working content will be discarded." %></p>
+      <p>No receipt, inventory movement, or stored-value issuance will be completed.</p>
+      <div class="pos-overlay__actions">
+        <%= action_button "Keep Transaction", style: :outline, intent: :neutral, size: :standard,
+              data: { action: "register-workspace#closeOverlay", register_workspace_target: "dontCancel" } %>
+        <%= action_button "Cancel Transaction (F9)", style: :solid, intent: :danger, size: :standard,
+              data: { action: "register-workspace#confirmCancel", register_workspace_target: "confirmCancel" } %>
+      </div>
+    </div>
+  </div>
+
+  <div class="pos-overlay" data-register-blocking-overlay
+       id="pos_approval_overlay"
+       hidden
+       data-register-workspace-target="approvalOverlay"
+       role="dialog"
+       aria-modal="true"
+       aria-labelledby="pos-approval-title">
+    <div class="pos-overlay__panel pos-overlay__panel--control">
+      <h2 id="pos-approval-title">Manager authorization</h2>
+      <dl class="pos-overlay__context">
+        <div><dt>Action</dt><dd data-register-workspace-target="approvalActionLabel"></dd></div>
+        <div><dt>Item</dt><dd data-register-workspace-target="approvalItemLabel"></dd></div>
+        <div data-register-workspace-target="approvalCurrentWrap"><dt data-register-workspace-target="approvalCurrentHeading">Current</dt><dd data-register-workspace-target="approvalCurrentLabel"></dd></div>
+        <div data-register-workspace-target="approvalProposedWrap"><dt data-register-workspace-target="approvalProposedHeading">Proposed</dt><dd data-register-workspace-target="approvalProposedLabel"></dd></div>
+        <div data-register-workspace-target="approvalQtyWrap" hidden><dt>Qty</dt><dd data-register-workspace-target="approvalQtyLabel"></dd></div>
+        <div><dt>Reason</dt><dd data-register-workspace-target="approvalReasonLabel"></dd></div>
+      </dl>
+      <p id="pos-approval-feedback" class="pos-overlay__error" data-overlay-error role="alert"></p>
+      <label for="pos-approver-username">Approver username</label>
+      <input id="pos-approver-username" class="pos-command__field" data-register-workspace-target="approverUsername" autocomplete="off">
+      <label for="pos-approver-password">Approver password</label>
+      <input id="pos-approver-password" class="pos-command__field" type="password" data-register-workspace-target="approverPassword" autocomplete="off">
+      <div class="pos-overlay__actions">
+        <%= action_button "Back", style: :outline, intent: :neutral, size: :standard,
+              data: { action: "register-workspace#backFromApprovalOverlay", register_workspace_target: "approvalBack" } %>
+        <%= action_button "Authorize", style: :solid, intent: :brand, size: :standard,
+              data: { action: "register-workspace#authorizeAndSubmit", register_workspace_target: "approvalAuthorize" } %>
+      </div>
+    </div>
+  </div>
+
+  <div class="pos-overlay" data-register-blocking-overlay
+       id="pos_control_overlay"
+       hidden
+       data-register-workspace-target="controlOverlay"
+       role="dialog"
+       aria-modal="true"
+       aria-labelledby="pos-control-title">
+    <div class="pos-overlay__panel pos-overlay__panel--control">
+      <h2 id="pos-control-title" data-register-workspace-target="controlTitle">Controlled action</h2>
+      <p data-register-workspace-target="controlLineLabel"></p>
+      <p class="muted" data-register-workspace-target="controlCurrentLabel"></p>
+      <p id="pos-control-feedback" class="pos-overlay__error" data-overlay-error role="alert"></p>
+
+      <div data-register-workspace-target="controlPriceWrap">
+        <label for="pos-control-price">New selling price</label>
+        <input id="pos-control-price" class="pos-command__field" data-register-workspace-target="controlPriceField" inputmode="decimal" autocomplete="off">
+      </div>
+
+      <div data-register-workspace-target="controlDiscountWrap" hidden>
+        <label for="pos-control-discount">Discount percent</label>
+        <input id="pos-control-discount" class="pos-command__field" data-register-workspace-target="controlDiscountField" inputmode="decimal" autocomplete="off">
+      </div>
+
+      <div data-register-workspace-target="controlTaxWrap" hidden>
+        <label for="pos-control-tax-class">Tax Class</label>
+        <select id="pos-control-tax-class" class="pos-command__field" data-register-workspace-target="controlTaxField">
+          <% (@tax_classes || TaxClass.none).each do |tax_class| %>
+            <option value="<%= tax_class.id %>"><%= tax_class.admin_label %></option>
+          <% end %>
+        </select>
+      </div>
+
+      <label for="pos-control-reason">Reason</label>
+      <select id="pos-control-reason" class="pos-command__field" data-register-workspace-target="controlReasonField"></select>
+
+      <div data-register-workspace-target="controlNoteWrap" hidden>
+        <label for="pos-control-note">Note</label>
+        <input id="pos-control-note" class="pos-command__field" data-register-workspace-target="controlNoteField" maxlength="200" autocomplete="off">
+      </div>
+
+      <div class="pos-overlay__actions">
+        <%= action_button "Keep Current", style: :outline, intent: :neutral, size: :standard,
+              data: { action: "register-workspace#closeControlOverlay", register_workspace_target: "controlCancel" } %>
+        <%= action_button "Apply", style: :solid, intent: :brand, size: :standard,
+              data: { action: "register-workspace#submitControlApply", register_workspace_target: "controlApply" } %>
+        <%= action_button "Remove", style: :outline, intent: :warning, size: :standard, hidden: true,
+              data: { action: "register-workspace#submitControlRemove", register_workspace_target: "controlRemove" } %>
+      </div>
+    </div>
+  </div>
+
+  <div class="pos-overlay" data-register-blocking-overlay
+       id="pos_unlinked_overlay"
+       hidden
+       data-register-workspace-target="unlinkedOverlay"
+       role="dialog"
+       aria-modal="true"
+       aria-labelledby="pos-unlinked-title">
+    <div class="pos-overlay__panel pos-overlay__panel--control">
+      <h2 id="pos-unlinked-title">Unlinked return</h2>
+      <p>Scan or look up merchandise to return without a receipt.</p>
+      <p id="pos-unlinked-feedback" class="pos-overlay__error" data-register-workspace-target="unlinkedFeedback" data-overlay-error role="alert"></p>
+      <p class="muted" data-register-workspace-target="unlinkedQueryLabel" role="status" aria-live="polite"></p>
+
+      <label for="pos-unlinked-identifier">Scan or enter item</label>
+      <input id="pos-unlinked-identifier" class="pos-command__field"
+             data-register-workspace-target="unlinkedIdentifierField"
+             data-action="input->register-workspace#invalidateUnlinkedResultsOnInput"
+             autocomplete="off">
+
+      <div id="pos_unlinked_preview" data-register-workspace-target="unlinkedPreview" hidden>
+        <p data-register-workspace-target="unlinkedDescription"></p>
+        <p>Current price <span data-register-workspace-target="unlinkedReferenceLabel"></span></p>
+
+        <div data-register-workspace-target="unlinkedQuantityWrap">
+          <label for="pos-unlinked-quantity">Quantity</label>
+          <input id="pos-unlinked-quantity" class="pos-command__field" data-register-workspace-target="unlinkedQuantityField"
+                 data-action="input->register-workspace#syncUnlinkedPrimaryEnabled change->register-workspace#syncUnlinkedPrimaryEnabled"
+                 inputmode="numeric" autocomplete="off" value="1">
+        </div>
+
+        <label for="pos-unlinked-reason">Return reason</label>
+        <select id="pos-unlinked-reason" class="pos-command__field" data-register-workspace-target="unlinkedReasonField"
+                data-action="change->register-workspace#onUnlinkedReasonChange"></select>
+
+        <div data-register-workspace-target="unlinkedNoteWrap" hidden>
+          <label for="pos-unlinked-note">Note</label>
+          <input id="pos-unlinked-note" class="pos-command__field" data-register-workspace-target="unlinkedNoteField"
+                 data-action="input->register-workspace#syncUnlinkedPrimaryEnabled"
+                 maxlength="200" autocomplete="off">
+        </div>
+
+        <label for="pos-unlinked-price">Return unit price</label>
+        <input id="pos-unlinked-price" class="pos-command__field" data-register-workspace-target="unlinkedPriceField"
+               data-action="input->register-workspace#syncUnlinkedPrimaryEnabled"
+               inputmode="decimal" autocomplete="off">
+      </div>
+
+      <div class="pos-overlay__actions">
+        <%= action_button "Back to Return Options", style: :outline, intent: :neutral, size: :standard,
+              data: { action: "register-workspace#backFromUnlinkedOverlay", register_workspace_target: "unlinkedCancel" } %>
+        <%= action_button "Look Up Item", style: :outline, intent: :neutral, size: :standard,
+              data: { action: "register-workspace#lookUpUnlinkedItem", register_workspace_target: "unlinkedLookup" } %>
+        <%= action_button "Add Unlinked Return", style: :solid, intent: :brand, size: :standard, disabled: true,
+              data: { action: "register-workspace#submitUnlinkedReturn", register_workspace_target: "unlinkedApply" } %>
+      </div>
+    </div>
+  </div>
+
+  <div class="pos-overlay" data-register-blocking-overlay
+       id="pos_other_overlay"
+       hidden
+       data-register-workspace-target="otherOverlay"
+       role="dialog"
+       aria-modal="true"
+       aria-labelledby="pos-other-title">
+    <div class="pos-overlay__panel">
+      <h2 id="pos-other-title" data-register-workspace-target="otherTitle">Add tender</h2>
+      <p class="muted" data-register-workspace-target="otherSettlementLabel"></p>
+      <ul class="pos-picker" role="listbox" aria-labelledby="pos-other-title" data-register-workspace-target="otherList"></ul>
+      <p class="muted">Numbered rows identify types. Enter or Choose Tender selects the highlighted type. Esc goes back.</p>
+      <div class="pos-overlay__actions">
+        <%= action_button "Back", style: :outline, intent: :neutral, size: :standard,
+              data: { action: "register-workspace#dismissTenderPicker", register_workspace_target: "otherCancel" } %>
+        <%= action_button "Choose Tender", style: :solid, intent: :brand, size: :standard,
+              data: { action: "register-workspace#selectHighlightedOther", register_workspace_target: "otherChoose" } %>
+      </div>
+    </div>
+  </div>
+
+  <div class="pos-overlay" data-register-blocking-overlay
+       id="pos_issuance_overlay"
+       hidden
+       data-register-workspace-target="issuanceOverlay"
+       role="dialog"
+       aria-modal="true"
+       aria-labelledby="pos-issuance-title">
+    <div class="pos-overlay__panel pos-overlay__panel--control">
+      <h2 id="pos-issuance-title" data-register-workspace-target="issuanceTitle">Add gift card</h2>
+      <p id="pos-issuance-feedback" class="pos-overlay__error" data-overlay-error role="alert"></p>
+      <label for="pos-issuance-amount">Amount</label>
+      <input id="pos-issuance-amount" class="pos-command__field" data-register-workspace-target="issuanceAmountField"
+             inputmode="decimal" autocomplete="off">
+      <label for="pos-issuance-program">Program</label>
+      <select id="pos-issuance-program" class="pos-command__field" data-register-workspace-target="issuanceProgramField"
+              data-action="change->register-workspace#onIssuanceFieldChange">
+        <option value="">Select program</option>
+        <% (@gift_card_programs || []).each do |program| %>
+          <option value="<%= program.id %>"
+                  data-number-authority="<%= program.number_authority %>"
+                  data-reload-allowed="<%= program.reload_allowed? %>"><%= program.name %></option>
+        <% end %>
+      </select>
+      <label for="pos-issuance-type">Type</label>
+      <select id="pos-issuance-type" class="pos-command__field" data-register-workspace-target="issuanceTypeField"
+              data-action="change->register-workspace#onIssuanceFieldChange">
+        <option value="activation">Activation</option>
+        <option value="reload">Reload</option>
+      </select>
+      <div data-register-workspace-target="issuanceCardWrap">
+        <label for="pos-issuance-card">Scan or enter card</label>
+        <input id="pos-issuance-card" class="pos-command__field" data-register-workspace-target="issuanceCardNumber"
+               autocomplete="off" inputmode="numeric">
+      </div>
+      <p class="muted" data-register-workspace-target="issuanceResultLabel"></p>
+      <div class="pos-overlay__actions">
+        <%= action_button "Keep Transaction Unchanged", style: :outline, intent: :neutral, size: :standard,
+              data: { action: "register-workspace#closeIssuanceOverlay", register_workspace_target: "issuanceCancel" } %>
+        <%= action_button "Add Gift Card", style: :solid, intent: :brand, size: :standard,
+              data: { action: "register-workspace#submitIssuance", register_workspace_target: "issuanceApply" } %>
+      </div>
+    </div>
+  </div>
+
+  <div class="pos-overlay" data-register-blocking-overlay
+       id="pos_clear_tenders_overlay"
+       hidden
+       data-register-workspace-target="clearTendersOverlay"
+       role="dialog"
+       aria-modal="true"
+       aria-labelledby="pos-clear-tenders-title">
+    <div class="pos-overlay__panel">
+      <h2 id="pos-clear-tenders-title">Clear applied tenders?</h2>
+      <p data-register-workspace-target="clearTendersConsequence">Changing gift cards changes the amount due, so every applied tender must be cleared and the transaction tendered again.</p>
+      <p>Nothing has been posted yet, so clearing a stored-value tender does not restore ledger value to the account or card.</p>
+      <div class="pos-overlay__actions">
+        <%= action_button "Keep Tenders", style: :outline, intent: :neutral, size: :standard,
+              data: { action: "register-workspace#closeClearTendersOverlay" } %>
+        <%= action_button "Clear Tenders and Continue", style: :solid, intent: :warning, size: :standard,
+              data: { action: "register-workspace#confirmClearTenders" } %>
+      </div>
+    </div>
+  </div>
+
+  <div class="pos-overlay" data-register-blocking-overlay
+       id="pos_search_overlay"
+       hidden
+       data-register-workspace-target="searchOverlay"
+       role="dialog"
+       aria-modal="true"
+       aria-labelledby="pos-search-title">
+    <div class="pos-overlay__panel">
+      <h2 id="pos-search-title">Find product</h2>
+      <p>Search by SKU or product name, then choose a result.</p>
+      <label class="field">
+        <span>SKU</span>
+        <input type="text" autocomplete="off" data-register-workspace-target="searchSkuField"
+               data-action="input->register-workspace#invalidateSearchResultsOnInput">
+      </label>
+      <label class="field">
+        <span>Product name</span>
+        <input type="text" autocomplete="off" data-register-workspace-target="searchNameField"
+               data-action="input->register-workspace#invalidateSearchResultsOnInput">
+      </label>
+      <p class="muted" data-register-workspace-target="searchQueryLabel" role="status" aria-live="polite"></p>
+      <ul class="pos-picker" role="listbox" aria-labelledby="pos-search-title" data-register-workspace-target="searchList"></ul>
+      <div class="pos-overlay__actions">
+        <%= action_button "Keep Searching", style: :outline, intent: :neutral, size: :standard,
+              data: { action: "register-workspace#keepSearching" } %>
+        <%= action_button "Cancel (Esc)", style: :outline, intent: :neutral, size: :standard,
+              data: { action: "register-workspace#closeSearchOverlay" } %>
+        <%= action_button "Choose Product", style: :solid, intent: :brand, size: :standard,
+              data: { action: "register-workspace#confirmSearchSelection" } %>
+      </div>
+    </div>
+  </div>
+
+  <div class="pos-overlay" data-register-blocking-overlay
+       id="pos_pickup_overlay"
+       hidden
+       data-register-workspace-target="pickupOverlay"
+       role="dialog"
+       aria-modal="true"
+       aria-labelledby="pos-pickup-title">
+    <div class="pos-overlay__panel">
+      <h2 id="pos-pickup-title">Find pickup</h2>
+      <p>Search available customer requests to add reserved merchandise.</p>
+      <label class="field">
+        <span>Name, phone, request #, or merchandise</span>
+        <input type="text" autocomplete="off" data-register-workspace-target="pickupQueryField"
+               data-action="input->register-workspace#invalidatePickupResultsOnInput">
+      </label>
+      <p class="muted" data-register-workspace-target="pickupQueryLabel" role="status" aria-live="polite"></p>
+      <ul class="pos-picker" role="listbox" aria-labelledby="pos-pickup-title" data-register-workspace-target="pickupList"></ul>
+      <div class="pos-overlay__actions">
+        <%= action_button "Keep Transaction Unchanged", style: :outline, intent: :neutral, size: :standard,
+              data: { action: "register-workspace#keepTransactionUnchanged" } %>
+        <%= action_button "Add Pickup Items", style: :solid, intent: :brand, size: :standard,
+              data: { action: "register-workspace#confirmPickupSelection" } %>
+      </div>
+    </div>
+  </div>
+
+  <div class="pos-overlay" data-register-blocking-overlay
+       id="pos_customer_overlay"
+       hidden
+       data-register-workspace-target="customerOverlay"
+       role="dialog"
+       aria-modal="true"
+       aria-labelledby="pos-customer-title">
+    <div class="pos-overlay__panel">
+      <h2 id="pos-customer-title">Find customer</h2>
+      <p>Search by name, email, or phone to attach a customer. Required for store credit, trade credit, and customer store-credit refunds.</p>
+      <label class="field">
+        <span>Name, email, or phone</span>
+        <input type="text" autocomplete="off" data-register-workspace-target="customerQueryField"
+               data-action="input->register-workspace#invalidateCustomerResultsOnInput">
+      </label>
+      <p class="muted" data-register-workspace-target="customerQueryLabel" role="status" aria-live="polite"></p>
+      <ul class="pos-picker" role="listbox" aria-labelledby="pos-customer-title" data-register-workspace-target="customerList"></ul>
+      <div class="pos-overlay__actions">
+        <%= action_button "Keep Current Customer", style: :outline, intent: :neutral, size: :standard,
+              data: { action: "register-workspace#keepCurrentCustomer" } %>
+        <% if effective_permissions.include?("customers.create") %>
+          <%= action_button "Quick Customer", style: :outline, intent: :neutral, size: :standard,
+                data: { action: "register-workspace#openQuickCustomerOverlay", register_workspace_target: "quickCustomerButton" } %>
+        <% end %>
+        <%= action_button "Attach Customer", style: :solid, intent: :brand, size: :standard,
+              data: { action: "register-workspace#confirmCustomerSelection" } %>
+      </div>
+    </div>
+  </div>
+
+  <div class="pos-overlay" data-register-blocking-overlay
+       id="pos_quick_customer_overlay"
+       hidden
+       data-register-workspace-target="quickCustomerOverlay"
+       role="dialog"
+       aria-modal="true"
+       aria-labelledby="pos-quick-customer-title">
+    <div class="pos-overlay__panel pos-overlay__panel--control">
+      <h2 id="pos-quick-customer-title">Quick Customer</h2>
+      <p class="muted" data-register-workspace-target="quickCustomerContextLabel"></p>
+      <p id="pos-quick-customer-feedback" class="pos-overlay__error" data-overlay-error role="alert"></p>
+      <label for="pos-quick-customer-display-name">Display name</label>
+      <input id="pos-quick-customer-display-name" class="pos-command__field" autocomplete="off"
+             data-register-workspace-target="quickCustomerDisplayNameField">
+      <label for="pos-quick-customer-email">Email</label>
+      <input id="pos-quick-customer-email" class="pos-command__field" autocomplete="off"
+             data-register-workspace-target="quickCustomerEmailField">
+      <label for="pos-quick-customer-phone">Phone</label>
+      <input id="pos-quick-customer-phone" class="pos-command__field" autocomplete="off"
+             data-register-workspace-target="quickCustomerPhoneField">
+      <div data-register-workspace-target="quickCustomerDuplicateWrap" hidden>
+        <h3>Possible duplicates</h3>
+        <p>Review these matches before creating. Attach an existing customer from Find customer, or confirm create anyway.</p>
+        <ul class="pos-picker" role="listbox" aria-label="Possible duplicate customers"
+            data-register-workspace-target="quickCustomerDuplicateList"></ul>
+        <label>
+          <input type="checkbox" data-register-workspace-target="quickCustomerAcknowledgeField">
+          Create anyway despite possible duplicates
+        </label>
+      </div>
+      <div class="pos-overlay__actions">
+        <%= action_button "Back to Find Customer", style: :outline, intent: :neutral, size: :standard,
+              data: { action: "register-workspace#closeQuickCustomerOverlay", register_workspace_target: "quickCustomerBack" } %>
+        <%= action_button "Create and Attach", style: :solid, intent: :brand, size: :standard,
+              data: { action: "register-workspace#submitQuickCustomer", register_workspace_target: "quickCustomerSubmit" } %>
+      </div>
+    </div>
+  </div>
+
+  <div class="pos-overlay" data-register-blocking-overlay
+       id="pos_product_overlay"
+       hidden
+       data-register-workspace-target="productOverlay"
+       role="dialog"
+       aria-modal="true"
+       aria-labelledby="pos-product-title">
+    <div class="pos-overlay__panel">
+      <h2 id="pos-product-title">Choose product</h2>
+      <p>Several products share that lookup. Choose one to continue.</p>
+      <ul class="pos-picker" role="listbox" aria-labelledby="pos-product-title" data-register-workspace-target="productList"></ul>
+      <div class="pos-overlay__actions">
+        <%= action_button "Cancel (Esc)", style: :outline, intent: :neutral, size: :standard,
+              data: { action: "register-workspace#backFromProductOverlay" } %>
+        <%= action_button "Choose Product", style: :solid, intent: :brand, size: :standard,
+              data: { action: "register-workspace#confirmProductSelection" } %>
+      </div>
+    </div>
+  </div>
+
+  <div class="pos-overlay" data-register-blocking-overlay
+       id="pos_variant_overlay"
+       hidden
+       data-register-workspace-target="variantOverlay"
+       role="dialog"
+       aria-modal="true"
+       aria-labelledby="pos-variant-title">
+    <div class="pos-overlay__panel">
+      <h2 id="pos-variant-title">Choose variant</h2>
+      <p>Select the sellable variant to continue.</p>
+      <ul class="pos-picker" role="listbox" aria-labelledby="pos-variant-title" data-register-workspace-target="variantList"></ul>
+      <div class="pos-overlay__actions">
+        <%= action_button "Back to Products", style: :outline, intent: :neutral, size: :standard,
+              data: { action: "register-workspace#backToProducts", register_workspace_target: "variantBack" } %>
+        <%= action_button "Choose Variant", style: :solid, intent: :brand, size: :standard,
+              data: { action: "register-workspace#confirmVariantSelection" } %>
+      </div>
+    </div>
+  </div>
+
+  <div class="pos-overlay" data-register-blocking-overlay
+       id="pos_unit_overlay"
+       hidden
+       data-register-workspace-target="unitOverlay"
+       role="dialog"
+       aria-modal="true"
+       aria-labelledby="pos-unit-title">
+    <div class="pos-overlay__panel">
+      <h2 id="pos-unit-title">Choose used copy</h2>
+      <p>Select the individual unit to add.</p>
+      <ul class="pos-picker" role="listbox" aria-labelledby="pos-unit-title" data-register-workspace-target="unitList"></ul>
+      <div class="pos-overlay__actions">
+        <%= action_button "Back to Variants", style: :outline, intent: :neutral, size: :standard,
+              data: { action: "register-workspace#backToVariants", register_workspace_target: "unitBack" } %>
+        <%= action_button "Add to Sale", style: :solid, intent: :brand, size: :standard,
+              data: { action: "register-workspace#confirmUnitSelection" } %>
+      </div>
+    </div>
+  </div>
+
+  <div class="pos-overlay" data-register-blocking-overlay
+       id="pos_open_price_overlay"
+       hidden
+       data-register-workspace-target="openPriceOverlay"
+       role="dialog"
+       aria-modal="true"
+       aria-labelledby="pos-open-price-title">
+    <div class="pos-overlay__panel">
+      <h2 id="pos-open-price-title" data-register-workspace-target="openPriceTitle">Open price</h2>
+      <p data-register-workspace-target="openPricePrompt"></p>
+      <p id="pos-open-price-feedback" class="pos-overlay__error" data-overlay-error role="alert"></p>
+      <label class="field">
+        <span>Price</span>
+        <input type="text" inputmode="decimal" autocomplete="off" data-register-workspace-target="openPriceField">
+      </label>
+      <div class="pos-overlay__actions">
+        <%= action_button "Cancel (Esc)", style: :outline, intent: :neutral, size: :standard,
+              data: { action: "register-workspace#closeOpenPriceOverlay" } %>
+        <%= action_button "Apply", style: :solid, intent: :brand, size: :standard,
+              data: { action: "register-workspace#submitOpenPricePrompt" } %>
+      </div>
+    </div>
+  </div>
+
+  <div class="pos-overlay" data-register-blocking-overlay
+       id="pos_return_chooser"
+       hidden
+       data-register-workspace-target="returnChooserOverlay"
+       role="dialog"
+       aria-modal="true"
+       aria-labelledby="pos-return-chooser-title">
+    <div class="pos-overlay__panel">
+      <h2 id="pos-return-chooser-title">Start return</h2>
+      <p>Choose how to find the original purchase.</p>
+      <ul class="pos-picker" role="listbox" aria-labelledby="pos-return-chooser-title" data-register-workspace-target="returnChooserList">
+        <li data-choice="linked" class="is-selected" role="option" tabindex="0" aria-selected="true">
+          Find Original Receipt
+          <span class="muted">Best when the customer's purchase can be identified.</span>
+        </li>
+        <li data-choice="unlinked" role="option" tabindex="-1" aria-selected="false">
+          Unlinked Return
+          <span class="muted">Requires a reason and may require authorization.</span>
+        </li>
+      </ul>
+      <div class="pos-overlay__actions">
+        <%= action_button "Keep Sale Mode", style: :outline, intent: :neutral, size: :standard,
+              data: { action: "register-workspace#keepSaleMode", register_workspace_target: "returnChooserCancel" } %>
+        <%= action_button "Continue", style: :solid, intent: :brand, size: :standard,
+              data: { action: "register-workspace#confirmReturnChooser", register_workspace_target: "returnChooserContinue" } %>
+      </div>
+    </div>
+  </div>
+
+  <div class="pos-overlay" data-register-blocking-overlay
+       id="pos_linked_overlay"
+       hidden
+       data-register-workspace-target="linkedOverlay"
+       role="dialog"
+       aria-modal="true"
+       aria-labelledby="pos-linked-title">
+    <div class="pos-overlay__panel">
+      <h2 id="pos-linked-title">Return from original receipt</h2>
+      <p data-register-workspace-target="linkedInstruction">Find a receipt, then choose returnable items.</p>
+      <label class="field" data-register-workspace-target="linkedLookupWrap">
+        <span>Receipt, merchandise, or unit</span>
+        <input type="text" autocomplete="off" data-register-workspace-target="linkedLookupField"
+               data-action="input->register-workspace#invalidateLinkedResultsOnInput">
+      </label>
+      <p id="pos-linked-feedback" class="pos-overlay__error" data-register-workspace-target="linkedFeedback" data-overlay-error role="alert"></p>
+      <p class="muted" data-register-workspace-target="linkedQueryLabel" role="status" aria-live="polite"></p>
+      <ul class="pos-picker" role="listbox" aria-labelledby="pos-linked-title" data-register-workspace-target="linkedList"></ul>
+      <div data-register-workspace-target="linkedDetailsWrap" hidden>
+        <label class="field">
+          <span>Qty</span>
+          <input type="text" inputmode="numeric" autocomplete="off" value="1"
+                 data-register-workspace-target="linkedQuantityField"
+                 data-action="input->register-workspace#syncLinkedPrimaryEnabled">
+        </label>
+        <label class="field">
+          <span>Reason</span>
+          <select data-register-workspace-target="linkedReasonField"
+                  data-action="change->register-workspace#onLinkedReasonChange"></select>
+        </label>
+        <label class="field" hidden data-register-workspace-target="linkedNoteWrap">
+          <span>Note</span>
+          <input type="text" maxlength="200" autocomplete="off" data-register-workspace-target="linkedNoteField"
+                 data-action="input->register-workspace#syncLinkedPrimaryEnabled">
+        </label>
+      </div>
+      <div class="pos-overlay__actions">
+        <%= action_button "Back to Return Options", style: :outline, intent: :neutral, size: :standard,
+              data: { action: "register-workspace#linkedSecondaryAction", register_workspace_target: "linkedSecondary" } %>
+        <%= action_button "Find Receipt", style: :solid, intent: :brand, size: :standard,
+              data: { action: "register-workspace#linkedPrimaryAction", register_workspace_target: "linkedPrimary" } %>
+      </div>
+    </div>
+  </div>

@@ -24,6 +24,8 @@ class PosRegisterTest < ActionDispatch::IntegrationTest
 
   test "get enter does not create a session or transaction" do
     get pos_register_enter_path, params: { register_id: @register.id }
+    assert_redirected_to pos_path(register_id: @register.id)
+    follow_redirect!
     assert_response :success
     assert_equal 0, PosSession.count
     assert_equal 0, PosTransaction.count
@@ -41,6 +43,11 @@ class PosRegisterTest < ActionDispatch::IntegrationTest
     transaction = PosTransaction.working.find_by!(pos_session: PosSession.open.find_by!(register: @register))
     assert_match "SALE ENTRY", response.body
     assert_match "Scan or identifier", response.body
+    assert_select ".pos-summary-rail #pos_totals"
+    assert_select ".pos-summary-rail #pos_tenders"
+    assert_select "#pos_totals ~ #pos_tenders"
+    assert_select "#pos_totals", text: /Net/
+    refute_match(/\bSales\b/, css_select("#pos_totals").text)
 
     get pos_register_workspace_path
     assert_response :success
@@ -50,12 +57,23 @@ class PosRegisterTest < ActionDispatch::IntegrationTest
     assert_response :success
     transaction.reload
     assert_equal 1, transaction.pos_transaction_lines.count
+    assert_select "#pos_totals", text: /Merchandise/
+    assert_select "tr[data-direction='sale'][data-quantity='1']", text: /\b1\b/
+    refute_match(/>\s*-1\b/, css_select("tr[data-direction='sale']").text)
+    assert_select "#pos_totals", text: /Illinois State/
+    assert_select "#pos_totals .pos-money-row--net", text: /Net/
+    assert_select "#pos_totals .pos-money-row__amount", minimum: 1
+    refute_match(/\+\$/, css_select("#pos_totals").text)
+    assert_select "#pos_tenders ~ .pos-settlement"
+    assert_match "Balance due", css_select(".pos-settlement").text
+    refute_match(/\bSales\b/, css_select("#pos_totals").text)
 
     post pos_register_tender_path, params: { tender_amount: "25.00", lock_version: transaction.lock_version }
     assert_response :success
     transaction.reload
     assert_equal 1, transaction.pos_tenders.count
-    assert_match "CHANGE", response.body
+    assert_match "Completing", response.body
+    refute_match "Settled", response.body
     assert_select "input[name='completion_operation_id']"
 
     operation_id = css_select("input[name='completion_operation_id']").first["value"]
@@ -144,7 +162,7 @@ class PosRegisterTest < ActionDispatch::IntegrationTest
     }
     assert_response :success
     assert_match "External Card", response.body
-    assert_match "Amount due", response.body
+    assert_match "Balance due", response.body
     transaction.reload
     cash = TenderType.find_by!(code: "cash")
     post pos_register_tender_path, params: {
@@ -153,7 +171,8 @@ class PosRegisterTest < ActionDispatch::IntegrationTest
       lock_version: transaction.lock_version
     }
     assert_response :success
-    assert_match "CHANGE", response.body
+    assert_match "Completing", response.body
+    refute_match "Settled", response.body
     transaction.reload
     operation_id = css_select("input[name='completion_operation_id']").first["value"]
     post pos_transaction_complete_path(transaction), params: {
@@ -177,12 +196,15 @@ class PosRegisterTest < ActionDispatch::IntegrationTest
     sign_in_as("clerk_pos")
 
     get pos_register_enter_path, params: { register_id: @register.id }
+    follow_redirect!
     assert_response :success
     assert_match "is open for", response.body
-    assert_select "input[type='submit'][value='Open register'][disabled]"
+    assert_select "h1", text: "Register in use"
 
     post pos_register_enter_path, params: enter_params
     assert_response :unprocessable_content
+    assert_select "h1", text: "Register in use"
+    assert_match "is open for #{@actor.display_name}", response.body
     assert_equal 1, PosSession.open.where(register: @register).count
     assert_equal @actor.id, PosSession.open.find_by!(register: @register).cashier_user_id
   end
@@ -244,7 +266,10 @@ class PosRegisterTest < ActionDispatch::IntegrationTest
     transaction.reload
     post pos_register_tender_path, params: { tender_amount: "25.00", lock_version: transaction.lock_version }
     transaction.reload
-    post pos_register_abandon_tender_path, params: { lock_version: transaction.lock_version }
+    post pos_register_abandon_tender_path, params: {
+      lock_version: transaction.lock_version,
+      operation_id: SecureRandom.uuid_v7
+    }
     transaction.reload
     assert_equal 0, transaction.pos_tenders.count
     assert transaction.working?
@@ -255,6 +280,95 @@ class PosRegisterTest < ActionDispatch::IntegrationTest
     assert_redirected_to pos_register_workspace_path
     assert transaction.reload.cancelled?
     assert_equal 0, transaction.pos_tenders.count
+  end
+
+  test "tender review renders semantic selection and removes selected ordinary tender idempotently" do
+    post pos_register_enter_path, params: enter_params
+    transaction = PosTransaction.working.find_by!(register: @register)
+    post pos_register_merchandise_path, params: { identifier: @variant.sku, lock_version: transaction.lock_version }
+    transaction.reload
+    card = TenderType.find_by!(code: "card")
+    post pos_register_tender_path, params: {
+      tender_amount: "5.00",
+      tender_type_id: card.id,
+      external_reference: "AUTH-SELECT",
+      lock_version: transaction.lock_version
+    }
+    assert_response :success
+    transaction.reload
+    tender = transaction.pos_tenders.sole
+
+    assert_select ".pos-tenders__item[data-tender-id='#{tender.id}'][role='option'][aria-selected='true'].is-selected"
+    assert_select ".pos-tenders__item[data-ordinary='true'][data-remove-available='true'][data-edit-available='false']"
+    assert_select "input[name='selected_tender_id'][value='#{tender.id}']", minimum: 4
+    assert_select "[data-register-workspace-target='tenderEditAction'][hidden]"
+    assert_select "[data-register-workspace-target='tenderRemoveAction']:not([hidden]) button", text: "Remove Tender"
+    assert_match(/re-authorized externally/, response.body)
+
+    forged = SecureRandom.uuid_v7
+    post pos_register_replace_tender_path, params: {
+      tender_id: tender.id,
+      selected_tender_id: tender.id,
+      operation_id: forged,
+      lock_version: transaction.lock_version,
+      tender_amount: "4.00",
+      external_reference: "AUTH-FORGED"
+    }
+    assert_match(/re-authorized externally/, response.body)
+    tender.reload
+    assert_equal 500, tender.amount_cents
+    assert_equal "AUTH-SELECT", tender.external_reference
+    assert_equal 1, transaction.reload.pos_tenders.count
+    assert_nil PosOperation.find_by(id: forged)
+
+    operation_id = SecureRandom.uuid_v7
+    post pos_register_remove_tender_path, params: {
+      tender_id: tender.id,
+      selected_tender_id: tender.id,
+      operation_id: operation_id,
+      lock_version: transaction.lock_version
+    }
+    assert_response :success
+    assert_empty transaction.reload.pos_tenders
+    assert_equal "completed", PosOperation.find(operation_id).status
+  end
+
+  test "tender review keeps the previously selected tender after adding another tender" do
+    post pos_register_enter_path, params: enter_params
+    transaction = PosTransaction.working.find_by!(register: @register)
+    post pos_register_merchandise_path, params: { identifier: @variant.sku, lock_version: transaction.lock_version }
+    transaction.reload
+    card = TenderType.find_by!(code: "card")
+    post pos_register_tender_path, params: {
+      tender_amount: "5.00",
+      tender_type_id: card.id,
+      external_reference: "AUTH-1",
+      lock_version: transaction.lock_version
+    }
+    transaction.reload
+    first = transaction.pos_tenders.ordered.first
+    post pos_register_tender_path, params: {
+      tender_amount: "3.00",
+      tender_type_id: card.id,
+      external_reference: "AUTH-2",
+      lock_version: transaction.lock_version,
+      selected_tender_id: first.id
+    }
+    assert_response :success
+    transaction.reload
+    second = transaction.pos_tenders.ordered.second
+    assert_select ".pos-tenders__item[data-tender-id='#{first.id}'][aria-selected='true']"
+    refute_equal first.id, second.id
+
+    post pos_register_tender_path, params: {
+      tender_amount: "1.00",
+      tender_type_id: card.id,
+      external_reference: "AUTH-3",
+      lock_version: transaction.reload.lock_version,
+      selected_tender_id: second.id
+    }
+    assert_response :success
+    assert_select ".pos-tenders__item[data-tender-id='#{second.id}'][aria-selected='true']"
   end
 
   test "completed receipt is not found while working" do
@@ -402,6 +516,7 @@ class PosRegisterTest < ActionDispatch::IntegrationTest
     now = Time.current
     confirmed = BusinessDate.for_store(@store, at: now)
     get pos_register_enter_path, params: { register_id: @register.id }
+    follow_redirect!
     assert_response :success
     assert_select "input[name='confirmed_business_date'][value='#{confirmed.iso8601}']"
 
@@ -541,7 +656,7 @@ class PosRegisterTest < ActionDispatch::IntegrationTest
     }
     assert_response :success
     assert_equal 1999, line.reload.selling_unit_price_cents
-    assert_match(/approver credentials/, response.body)
+    assert_match(/Manager credentials were not accepted/, response.body)
     assert_equal associate.id, User.find_by!(username: "clerk_ui").id
 
     post pos_register_controlled_action_path, params: {
@@ -585,13 +700,16 @@ class PosRegisterTest < ActionDispatch::IntegrationTest
 
     assert_response :unprocessable_entity
     assert_equal 1999, line.reload.selling_unit_price_cents
-    assert_match(/approver credentials/, response.body)
-    assert_includes response.body, 'target="pos-control-feedback"'
+    assert_match(/Manager credentials were not accepted/, response.body)
+    assert_includes response.body, 'target="pos-approval-feedback"'
+    assert_includes response.body, 'data-overlay-error-kind="authorization_failed"'
     refute_includes response.body, 'target="pos_workspace"'
     refute_includes response.body, "wrong-password-secret"
   end
 
-  test "stale overlay submission still replaces the workspace" do
+  test "stale overlay submission replaces the workspace per amended packet" do
+    # Packet: proposed values against a changed lock_version are unsafe — clear overlays
+    # and require the cashier to reopen the action on the refreshed workspace.
     post pos_register_enter_path, params: enter_params
     follow_redirect!
     transaction = PosTransaction.working.find_by!(register: @register)
@@ -610,6 +728,8 @@ class PosRegisterTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_includes response.body, 'target="pos_workspace"'
     assert_match(/This sale was changed/, response.body)
+    refute_includes response.body, 'target="pos-control-feedback"'
+    refute_includes response.body, 'target="pos-approval-feedback"'
   end
 
   test "discount apply ignores a leftover malformed selling_price" do

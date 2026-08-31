@@ -27,7 +27,7 @@ class PosUnlinkedReturnTest < ApplicationSystemTestCase
     open_register_as("clerk_sys65c")
     assert_no_button "Return without receipt"
     open_unlinked_overlay
-    assert_text "Return without receipt"
+    assert_text "Unlinked return"
 
     identifier = find("#pos-unlinked-identifier")
     identifier.fill_in with: @variant.sku
@@ -38,18 +38,20 @@ class PosUnlinkedReturnTest < ApplicationSystemTestCase
 
     fill_in "Return unit price", with: "18.00"
     select "Defective", from: "Return reason"
-    find("#pos-unlinked-approver-username", visible: true).fill_in with: "mgr_sys65c"
-    password = find("#pos-unlinked-approver-password", visible: :all)
+    click_on "Add Unlinked Return"
+    assert_selector "#pos_approval_overlay", visible: true
+    fill_in "Approver username", with: "mgr_sys65c"
+    password = find("#pos-approver-password", visible: :all)
     scroll_to password
     password.fill_in with: "correct-horse-battery"
-    click_on "Add return"
+    click_on "Authorize and Add Return"
 
     assert_text "RETURN", wait: 10
     assert_text "Unlinked return"
-    assert_text "Refund due"
+    assert_text "Refund remaining"
     refute_text "Override"
 
-    click_on "Refund (+)"
+    start_cash_refund_via_plus
     assert_text "REFUND"
     field = find("#pos-command-field")
     field.send_keys :enter
@@ -67,7 +69,7 @@ class PosUnlinkedReturnTest < ApplicationSystemTestCase
     field.fill_in with: unit.unit_identifier
     field.send_keys :enter
     assert_text used_variant.product.name
-    click_on "Tender (+)"
+    start_cash_tender_via_plus
     field = find("#pos-command-field")
     field.fill_in with: "20.00"
     field.send_keys :enter
@@ -84,10 +86,10 @@ class PosUnlinkedReturnTest < ApplicationSystemTestCase
     assert_text used_variant.product.name, wait: 5
     assert_no_selector "#pos-unlinked-quantity", visible: true
     select "Changed mind", from: "Return reason"
-    click_on "Add return"
+    click_on "Add Unlinked Return"
     assert_text "Unlinked return", wait: 10
 
-    click_on "Refund (+)"
+    start_cash_refund_via_plus
     field = find("#pos-command-field")
     field.send_keys :enter
     send_keys :enter
@@ -122,7 +124,7 @@ class PosUnlinkedReturnTest < ApplicationSystemTestCase
     assert_equal 0, PosTransaction.working.find_by!(register: @register).pos_transaction_lines.count
 
     select "Defective", from: "Return reason"
-    click_on "Add return"
+    click_on "Add Unlinked Return"
 
     assert_text "RETURN", wait: 10
     assert_text "Unlinked return"
@@ -149,6 +151,82 @@ class PosUnlinkedReturnTest < ApplicationSystemTestCase
     assert_selector "#pos_unlinked_overlay", visible: true
     assert_field "pos-unlinked-identifier"
     assert_equal 0, PosTransaction.working.find_by!(register: @register).pos_transaction_lines.count
+  end
+
+  test "rejected unlinked approver credentials keep nested overlays and clear password" do
+    open_register_as("clerk_sys65c")
+    open_unlinked_overlay
+    assert_selector "#pos_return_chooser", visible: :all
+    assert page.evaluate_script("document.querySelector('#pos_return_chooser').inert === true")
+
+    identifier = find("#pos-unlinked-identifier")
+    identifier.fill_in with: @variant.sku
+    identifier.send_keys :enter
+    assert_text "Example Book", wait: 5
+    fill_in "Return unit price", with: "18.00"
+    select "Defective", from: "Return reason"
+    click_on "Add Unlinked Return"
+    assert_selector "#pos_approval_overlay", visible: true
+    fill_in "Approver username", with: "mgr_sys65c"
+    password = find("#pos-approver-password", visible: :all)
+    scroll_to password
+    password.fill_in with: "wrong-password"
+    click_on "Authorize and Add Return"
+
+    assert_selector "#pos-approval-feedback", text: /Manager credentials were not accepted/, wait: 10
+    assert_selector "#pos_approval_overlay", visible: true
+    assert_selector "#pos_unlinked_overlay", visible: true
+    assert_selector "#pos_return_chooser", visible: :all
+    assert page.evaluate_script("document.querySelector('#pos_return_chooser').inert === true")
+    assert page.evaluate_script("document.querySelector('#pos_unlinked_overlay').inert === true")
+    assert_equal "18.00", find("#pos-unlinked-price").value
+    assert_equal "defective", find("#pos-unlinked-reason").value
+    assert_equal "mgr_sys65c", find("#pos-approver-username").value
+    assert_equal "", find("#pos-approver-password", visible: :all).value
+  end
+
+  test "pointer Back on nested product picker restores unlinked overlay" do
+    other = pos_sellable_variant(actor: @actor, tax_class: @tax, name: "Delta Shared Return")
+    open_quantity_stock(store: @store, variant: other, actor: @actor, quantity: 2)
+    @variant.product.update!(lookup_code: "UNL-BACK")
+    other.product.update!(lookup_code: "UNL-BACK")
+
+    open_register_as("admin")
+    open_unlinked_overlay
+    identifier = find("#pos-unlinked-identifier")
+    identifier.fill_in with: "unl-back"
+    identifier.send_keys :enter
+    assert_selector "#pos_product_overlay", visible: true, wait: 5
+    click_on "Cancel (Esc)"
+    assert_no_selector "#pos_product_overlay", visible: true
+    assert_selector "#pos_unlinked_overlay", visible: true
+    assert_field "pos-unlinked-identifier"
+  end
+
+  test "unlinked variant picker Back label returns to item lookup" do
+    ProductVariants::Create.call(
+      product: @variant.product,
+      attributes: {
+        variant_type: "standard",
+        status: "active",
+        merchandise_class_id: @variant.merchandise_class_id,
+        regular_price_cents: 1500
+      },
+      actor: @actor
+    )
+    open_quantity_stock(store: @store, variant: @variant.product.product_variants.order(:created_at).last, actor: @actor, quantity: 2)
+
+    open_register_as("admin")
+    open_unlinked_overlay
+    identifier = find("#pos-unlinked-identifier")
+    identifier.fill_in with: @variant.product.primary_identifier
+    identifier.send_keys :enter
+    assert_selector "#pos_variant_overlay", visible: true, wait: 5
+    assert_button "Back to Item Lookup"
+    click_on "Back to Item Lookup"
+    assert_no_selector "#pos_variant_overlay", visible: true
+    assert_selector "#pos_unlinked_overlay", visible: true
+    assert_field "pos-unlinked-identifier"
   end
 
   private

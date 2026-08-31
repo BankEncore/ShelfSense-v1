@@ -1,6 +1,6 @@
 # Register workspace consolidation — Closeout
 
-Status: **Required before** integration branch → `main`. Slices 2–7 may be complete on `register-workspace-consolidation` while this gate is open.
+Status: **Complete** — evidence in [closeout-manual-verification.md](closeout-manual-verification.md). Required before integration branch → `main`.
 
 Complements automated tests. Register zoom, print, and keyboard-only checks need a browser.
 

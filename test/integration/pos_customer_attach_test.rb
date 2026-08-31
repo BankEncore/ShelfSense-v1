@@ -115,7 +115,8 @@ class PosCustomerAttachTest < ActionDispatch::IntegrationTest
     post pos_register_tender_path, params: {
       tender_amount: "5.00",
       lock_version: transaction.reload.lock_version,
-      tender_type_id: store_credit.id
+      tender_type_id: store_credit.id,
+      operation_id: SecureRandom.uuid_v7
     }
     assert_match(/customer is required/, response.body)
   end

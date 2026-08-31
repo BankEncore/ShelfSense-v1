@@ -6,8 +6,14 @@ module Pos
       "controlled_action" => "pos-control-feedback",
       "unlinked_return" => "pos-unlinked-feedback",
       "open_price" => "pos-open-price-feedback",
-      "linked_return" => "pos-linked-feedback"
+      "linked_return" => "pos-linked-feedback",
+      "stored_value_issuance" => "pos-issuance-feedback",
+      "replace_tender" => "pos-edit-tender-feedback",
+      "remove_tender" => "pos-remove-tender-feedback",
+      "abandon_tender" => "pos-return-to-sale-feedback",
+      "quick_customer" => "pos-quick-customer-feedback"
     }.freeze
+    APPROVAL_FEEDBACK_ID = "pos-approval-feedback"
 
     before_action :require_register!, except: :complete
     before_action :prepare_workspace!, except: %i[show continue complete]
@@ -262,10 +268,11 @@ module Pos
 
     def abandon_tender
       rescue_workspace(error_mode: "derive") do
-        Pos::AbandonTender.call(
+        Pos::ReturnToSaleClearTenders.call(
           transaction: @transaction,
           actor: current_user,
-          expected_lock_version: expected_lock_version
+          expected_lock_version: expected_lock_version,
+          operation_id: params.require(:operation_id)
         )
         @transaction.reload
         @ui_mode = "sale_entry"
@@ -302,6 +309,7 @@ module Pos
               tender_type: type,
               amount_cents: amount,
               destination_mode: stored_value_destination_mode(type),
+              operation_id: params.require(:operation_id),
               card_number: params[:card_number],
               gift_card_program: find_optional_gift_card_program
             )
@@ -324,14 +332,16 @@ module Pos
               amount_presented_cents: amount
             )
           elsif type.stored_value?
-            Pos::AddStoredValueTender.call(
+            result = Pos::AddStoredValueTender.call(
               transaction: @transaction,
               actor: current_user,
               expected_lock_version: expected_lock_version,
               tender_type: type,
               amount_cents: amount,
+              operation_id: params.require(:operation_id),
               card_number: params[:card_number]
             )
+            @feedback = stored_value_cap_feedback(result) if result.capped
           else
             Pos::AddTender.call(
               transaction: @transaction,
@@ -352,7 +362,7 @@ module Pos
     end
 
     def stored_value_issuance
-      rescue_workspace(error_mode: "sale_entry") do
+      rescue_workspace(error_mode: issuance_error_mode) do
         amount = Money::ParseCents.call(params[:issuance_amount])
         raise Pos::Error, "issuance amount is required" if amount.nil?
 
@@ -362,26 +372,54 @@ module Pos
           expected_lock_version: expected_lock_version,
           issuance_type: params.require(:issuance_type),
           amount_cents: amount,
+          operation_id: params.require(:operation_id),
           gift_card_program: find_optional_gift_card_program,
-          card_number: params[:card_number]
+          card_number: params[:card_number],
+          confirm_clear_tenders: confirm_clear_tenders?
         )
         @transaction.reload
-        @ui_mode = "sale_entry"
+        @ui_mode = @transaction.pos_tenders.any? ? "tender" : "sale_entry"
         respond_workspace
       end
     end
 
     def remove_stored_value_issuance
-      rescue_workspace(error_mode: "sale_entry") do
+      rescue_workspace(error_mode: issuance_error_mode) do
         issuance = @transaction.pos_stored_value_issuances.find(params.require(:issuance_id))
         Pos::RemoveStoredValueIssuance.call(
           transaction: @transaction,
           actor: current_user,
           expected_lock_version: expected_lock_version,
-          issuance: issuance
+          issuance: issuance,
+          operation_id: params.require(:operation_id),
+          confirm_clear_tenders: confirm_clear_tenders?
         )
         @transaction.reload
-        @ui_mode = "sale_entry"
+        @ui_mode = @transaction.pos_tenders.any? ? "tender" : "sale_entry"
+        respond_workspace
+      end
+    end
+
+    def replace_stored_value_issuance
+      rescue_workspace(error_mode: issuance_error_mode) do
+        amount = Money::ParseCents.call(params[:issuance_amount])
+        raise Pos::Error, "issuance amount is required" if amount.nil?
+
+        issuance = @transaction.pos_stored_value_issuances.find(params.require(:issuance_id))
+        Pos::ReplaceStoredValueIssuance.call(
+          transaction: @transaction,
+          actor: current_user,
+          expected_lock_version: expected_lock_version,
+          issuance: issuance,
+          issuance_type: params.require(:issuance_type),
+          amount_cents: amount,
+          operation_id: params.require(:operation_id),
+          gift_card_program: find_optional_gift_card_program,
+          card_number: params[:card_number],
+          confirm_clear_tenders: confirm_clear_tenders?
+        )
+        @transaction.reload
+        @ui_mode = @transaction.pos_tenders.any? ? "tender" : "sale_entry"
         respond_workspace
       end
     end
@@ -414,6 +452,52 @@ module Pos
       end
     end
 
+    def quick_customer
+      unless Authorization::PermissionEvaluator.allowed?(
+        user: current_user,
+        permission_key: "customers.create",
+        store: current_store
+      )
+        respond_to_quick_customer_forbidden
+        return
+      end
+
+      begin
+        customer_context = resolve_quick_customer_context!
+        require_contact = quick_customer_requires_contact?(customer_context)
+        credit_account_type = credit_account_type_for_context(customer_context)
+
+        create_result = Customers::Create.call(
+          display_name: params[:display_name],
+          email: params[:email],
+          phone: params[:phone],
+          actor: current_user,
+          store: current_store,
+          idempotency_key: params.require(:idempotency_key),
+          source_id: register_customer_create_source_id,
+          acknowledge_duplicates: params[:acknowledge_duplicates].present?,
+          require_contact: require_contact
+        )
+
+        rescue_workspace(error_mode: "sale_entry") do
+          Pos::AttachCustomer.call(
+            transaction: @transaction,
+            actor: current_user,
+            expected_lock_version: expected_lock_version,
+            customer: create_result.customer
+          )
+          @transaction.reload
+          @ui_mode = "sale_entry"
+          @feedback = quick_customer_attach_feedback(credit_account_type: credit_account_type)
+          respond_workspace
+        end
+      rescue Customers::DuplicateFoundError => e
+        respond_to_quick_customer_duplicates(e)
+      rescue Customers::Error => e
+        respond_to_quick_customer_validation(e.message)
+      end
+    end
+
     def customer_search
       rows = Customers::Search.call(query: params[:q], mode: :operational, limit: 20)
       render json: {
@@ -430,14 +514,43 @@ module Pos
     def remove_tender
       rescue_workspace(error_mode: "tender") do
         tender = @transaction.pos_tenders.find(params.require(:tender_id))
+        tender_index = @transaction.pos_tenders.ordered.to_a.index(tender)
         Pos::RemoveWorkingTender.call(
           transaction: @transaction,
           actor: current_user,
           expected_lock_version: expected_lock_version,
-          tender: tender
+          tender: tender,
+          operation_id: params.require(:operation_id)
         )
         @transaction.reload
+        remaining = @transaction.pos_tenders.ordered.to_a
+        @selected_tender = remaining[tender_index] || remaining[tender_index.to_i - 1]
         @ui_mode = @transaction.pos_tenders.any? ? "tender" : "sale_entry"
+        respond_workspace
+      end
+    end
+
+    def replace_tender
+      rescue_workspace(error_mode: "tender") do
+        tender = @transaction.pos_tenders.find(params.require(:tender_id))
+        amount = Money::ParseCents.call(params[:tender_amount])
+        raise Pos::Error, "tender amount is required" if amount.nil?
+        presented = Money::ParseCents.call(params[:amount_presented]) if params[:amount_presented].present?
+
+        result = Pos::ReplaceTender.call(
+          transaction: @transaction,
+          tender: tender,
+          actor: current_user,
+          operation_id: params.require(:operation_id),
+          expected_lock_version: expected_lock_version,
+          amount_cents: amount,
+          amount_presented_cents: presented,
+          external_reference: params[:external_reference]
+        )
+        @transaction.reload
+        @selected_tender = @transaction.pos_tenders.find_by(id: result.tender&.id)
+        @feedback = replacement_cap_feedback(result) if result.capped
+        @ui_mode = "tender"
         respond_workspace
       end
     end
@@ -461,6 +574,11 @@ module Pos
           expected_signed_net_cents: expected_signed_net
         )
         redirect_to pos_completed_transaction_path(result.transaction)
+      rescue Pos::StoredValueCompletionFailure => e
+        # Completion Failed / Tender Review keeps every working tender. Select the
+        # refused tender so the cashier can remove, edit, or correct the customer.
+        @selected_tender = @transaction.pos_tenders.find_by(id: e.tender_id) if e.tender_id.present?
+        raise
       end
     end
 
@@ -479,6 +597,10 @@ module Pos
       return if @register
 
       reject_workspace_context!(register_id: nil)
+    end
+
+    def prepare_workspace_shell!
+      prepare_register_shell!(resolve_register_state(requested_register: @register))
     end
 
     def actor_session
@@ -532,15 +654,17 @@ module Pos
     end
 
     def prepare_view_state
+      prepare_workspace_shell!
       @period = @session_record.reporting_period
       @lines = @transaction.pos_transaction_lines.includes(
         :inventory_unit,
         :pos_controlled_actions,
+        :pos_line_tax_components,
         product_variant: [ :product, :merchandise_condition ],
         original_transaction_line: :pos_transaction
-      )
+      ).to_a
       @tenders = @transaction.pos_tenders.ordered.to_a
-      @issuances = @transaction.pos_stored_value_issuances.ordered.to_a
+      @issuances = @transaction.pos_stored_value_issuances.ordered.includes(:gift_card_program).to_a
       @gift_card_programs = GiftCardProgram.active.admin_ordered.to_a
       @tender = @tenders.find { |tender| pos_workspace_cash_payment?(tender) }
       @settlement_direction = Pos::Support.settlement_direction(@transaction)
@@ -554,6 +678,7 @@ module Pos
         end
       @selected_tender_type = resolve_selected_tender_type
       @selected_line ||= default_selected_line
+      @selected_tender ||= default_selected_tender
       @tax_classes = TaxClass.active.order(:code)
       @control_policies = {
         "price_override" => Pos::ControlledActionPolicy.result(user: current_user, store: current_store, action_type: "price_override").to_s,
@@ -566,7 +691,7 @@ module Pos
         permission_key: "customer_requests.pickup",
         store: current_store
       )
-      @feedback ||= nil
+      @feedback ||= flash[:alert].presence || flash.now[:alert].presence
       @command_value ||= nil
       if Pos::Support.exact_settlement?(@transaction)
         mint_or_restore_completion!
@@ -583,6 +708,40 @@ module Pos
         @ui_mode ||= "sale_entry"
         @auto_complete = false
       end
+      @workspace = build_workspace_presenter
+    end
+
+    def build_workspace_presenter
+      Pos::WorkspacePresenter.call(
+        transaction: @transaction,
+        lines: @lines,
+        tenders: @tenders,
+        issuances: @issuances,
+        selected_line: @selected_line,
+        selected_tender_type: @selected_tender_type,
+        selected_tender: @selected_tender,
+        ui_mode: @ui_mode,
+        settlement_direction: @settlement_direction,
+        remaining_payment_cents: @remaining_payment_cents,
+        remaining_refund_cents: @remaining_refund_cents,
+        command_value: @command_value,
+        feedback: @feedback,
+        action_capabilities: {
+          pickup_available: @pickup_allowed,
+          gift_card_programs_available: @gift_card_programs.any?,
+          close_session_available: @ui_mode == "sale_entry" && @lines.empty? && @tenders.empty? && @issuances.empty?,
+          issuance_remove_available: issuance_mutate_available?,
+          issuance_edit_available: issuance_mutate_available?
+        }
+      )
+    end
+
+    def issuance_mutate_available?
+      %w[sale_entry tender completion_failed].include?(@ui_mode)
+    end
+
+    def issuance_error_mode
+      @transaction.pos_tenders.any? ? "tender" : "sale_entry"
     end
 
     def apply_completion_view_state
@@ -636,18 +795,26 @@ module Pos
 
     def rescue_workspace(error_mode: "sale_entry")
       yield
+    rescue Pos::ApproverAuthenticationFailed, Pos::ApproverNotAuthorized, Pos::SelfApprovalProhibited => e
+      # Safety net if a service raises typed approver errors without converting first.
+      recover_from_overlay_failure(Pos::OverlayFailure.from_approver_error(e), error_mode)
     rescue Pos::Denied
       redirect_to root_path, alert: "You are not authorized to perform that action."
+    rescue Pos::OverlayFailure => e
+      recover_from_overlay_failure(e, error_mode)
     rescue Pos::StaleObject
-      recover_from_workspace_error("This sale was changed. Reload and try again.", error_mode, persist_overlay: false)
+      # Stale working state replaces the workspace (packet: proposed values against a
+      # changed line are unsafe). Cashier reopens the action on the refreshed line.
+      recover_from_overlay_failure(Pos::OverlayFailure.stale, error_mode, persist_overlay: false)
     rescue Pos::InvalidatedDialogBasis => e
-      recover_from_workspace_error(e.message, error_mode, persist_overlay: false)
+      recover_from_overlay_failure(Pos::OverlayFailure.parent_validation(e.message), error_mode, persist_overlay: false)
     rescue Money::ParseCents::Error, Pos::Error => e
-      recover_from_workspace_error(e.message, error_mode)
+      recover_from_overlay_failure(Pos::OverlayFailure.parent_validation(e.message), error_mode)
     end
 
-    def recover_from_workspace_error(message, error_mode, persist_overlay: persist_overlay_error?)
-      @feedback = message
+    def recover_from_overlay_failure(failure, error_mode, persist_overlay: nil)
+      @overlay_failure = failure
+      @feedback = failure.message
       @transaction.reload
       @command_value = params[:identifier] || params[:quantity] || params[:tender_amount]
       if @transaction.completed?
@@ -655,7 +822,8 @@ module Pos
         return
       end
 
-      if persist_overlay
+      persist = persist_overlay.nil? ? overlay_error_dom_id.present? : persist_overlay
+      if persist
         respond_overlay_error(error_mode)
         return
       end
@@ -664,11 +832,20 @@ module Pos
       respond_workspace
     end
 
+    def recover_from_workspace_error(message, error_mode, persist_overlay: persist_overlay_error?)
+      recover_from_overlay_failure(Pos::OverlayFailure.parent_validation(message), error_mode, persist_overlay: persist_overlay)
+    end
+
     def persist_overlay_error?
       overlay_error_dom_id.present?
     end
 
     def overlay_error_dom_id
+      failure = @overlay_failure
+      if failure&.authorization?
+        return APPROVAL_FEEDBACK_ID
+      end
+
       return OVERLAY_ERROR_TARGETS[action_name] if OVERLAY_ERROR_TARGETS.key?(action_name)
       return "pos-open-price-feedback" if action_name == "merchandise" && params[:selling_price].present?
 
@@ -677,6 +854,7 @@ module Pos
 
     def respond_overlay_error(error_mode)
       @overlay_error_dom_id = overlay_error_dom_id
+      @overlay_failure ||= Pos::OverlayFailure.parent_validation(@feedback)
       respond_to do |format|
         format.turbo_stream { render "pos/workspaces/dialog_error", status: :unprocessable_entity }
         format.html do
@@ -734,6 +912,25 @@ module Pos
       params.require(:lock_version)
     end
 
+    def confirm_clear_tenders?
+      ActiveModel::Type::Boolean.new.cast(params[:confirm_clear_tenders]).present?
+    end
+
+    def stored_value_cap_feedback(result)
+      due = result.remaining_due_cents.to_i
+      message = "Applied #{helpers.format_money_cents(result.applied_cents)} of the " \
+                "#{helpers.format_money_cents(result.requested_cents)} requested. Available balance was " \
+                "#{helpers.format_money_cents(result.available_cents)}."
+      return message unless due.positive?
+
+      "#{message} #{helpers.format_money_cents(due)} is still due."
+    end
+
+    def replacement_cap_feedback(result)
+      "Applied #{helpers.format_money_cents(result.applied_cents)} of the " \
+        "#{helpers.format_money_cents(result.requested_cents)} requested. The stored-value balance was lower."
+    end
+
     def find_line!
       @transaction.pos_transaction_lines.find(params.require(:line_id))
     end
@@ -741,6 +938,11 @@ module Pos
     def default_selected_line
       id = params[:selected_line_id].presence
       (id && @transaction.pos_transaction_lines.find_by(id: id)) || @transaction.pos_transaction_lines.last
+    end
+
+    def default_selected_tender
+      id = params[:selected_tender_id].presence
+      (id && @tenders.find { |tender| tender.id == id }) || @tenders.first
     end
 
     def previous_line(line)
@@ -948,6 +1150,119 @@ module Pos
         reason: row.reason,
         tracking: row.tracking,
         open_price: row.open_price
+      }
+    end
+
+    def register_customer_create_source_id
+      @register.id
+    end
+
+    QUICK_CUSTOMER_CONTEXTS = %w[sale store_credit trade_credit customer_store_credit].freeze
+    QUICK_CUSTOMER_CONTACT_REQUIRED_CONTEXTS = %w[store_credit trade_credit customer_store_credit].freeze
+
+    # Prefer semantic customer_context. Legacy credit_account_type is accepted only when
+    # it maps to an allowlisted context; require_contact is never trusted from the client.
+    def resolve_quick_customer_context!
+      raw = params[:customer_context].presence || legacy_credit_account_context
+      context = raw.to_s.strip.presence || "sale"
+      unless QUICK_CUSTOMER_CONTEXTS.include?(context)
+        raise Customers::Error, "customer context is invalid"
+      end
+
+      context
+    end
+
+    def legacy_credit_account_context
+      value = params[:credit_account_type].to_s.strip.presence
+      return if value.blank?
+      return value if QUICK_CUSTOMER_CONTEXTS.include?(value)
+
+      nil
+    end
+
+    def quick_customer_requires_contact?(customer_context)
+      QUICK_CUSTOMER_CONTACT_REQUIRED_CONTEXTS.include?(customer_context)
+    end
+
+    def credit_account_type_for_context(customer_context)
+      case customer_context
+      when "store_credit", "trade_credit" then customer_context
+      when "customer_store_credit" then "store_credit"
+      end
+    end
+
+    def quick_customer_attach_feedback(credit_account_type: nil)
+      customer = @transaction.customer
+      return "Customer attached." if customer.blank?
+
+      account_type = credit_account_type.presence_in(%w[store_credit trade_credit])
+      if account_type.present? && !eligible_customer_credit_account?(customer, account_type)
+        label = account_type == "trade_credit" ? "trade-credit" : "store-credit"
+        return "Customer attached. No eligible #{label} account is available yet."
+      end
+
+      "Customer attached."
+    end
+
+    def eligible_customer_credit_account?(customer, account_type)
+      StoredValueAccount.where(customer_id: customer.id, account_type: account_type)
+                        .where(status: "active")
+                        .exists?
+    end
+
+    def respond_to_quick_customer_forbidden
+      Audit::Recorder.record!(
+        action: "authorization.denied",
+        outcome: "denied",
+        actor_user: current_user,
+        actor_label: current_user.display_name,
+        store: current_store,
+        reason_code: "customers.create",
+        metadata: { path: request.fullpath }
+      )
+      respond_to do |format|
+        format.json { render json: { error: "forbidden", message: "not authorized" }, status: :forbidden }
+        format.all { redirect_to root_path, alert: "You are not authorized to perform that action." }
+      end
+    end
+
+    def respond_to_quick_customer_duplicates(error)
+      respond_to do |format|
+        format.json do
+          render json: {
+            error: "duplicates",
+            message: error.message,
+            suggestions: error.suggestions.map { |suggestion| serialize_customer_duplicate(suggestion) }
+          }, status: :unprocessable_entity
+        end
+        format.any do
+          @overlay_failure = Pos::OverlayFailure.parent_validation(error.message)
+          @feedback = error.message
+          @quick_customer_duplicates = error.suggestions
+          respond_overlay_error("sale_entry")
+        end
+      end
+    end
+
+    def respond_to_quick_customer_validation(message)
+      respond_to do |format|
+        format.json { render json: { error: "validation", message: message }, status: :unprocessable_entity }
+        format.any do
+          recover_from_workspace_error(message, "sale_entry", persist_overlay: true)
+        end
+      end
+    end
+
+    def serialize_customer_duplicate(suggestion)
+      customer = suggestion.customer
+      {
+        id: customer.id,
+        display_name: customer.display_name,
+        email: customer.email,
+        phone: customer.phone,
+        match_strength: suggestion.match_strength.to_s,
+        matched_on: suggestion.matched_on,
+        label: [ customer.display_name, customer.email, customer.phone ].compact.join(" · ")
       }
     end
   end

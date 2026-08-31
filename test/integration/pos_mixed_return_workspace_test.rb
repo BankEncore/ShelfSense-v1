@@ -34,7 +34,7 @@ class PosMixedReturnWorkspaceTest < ActionDispatch::IntegrationTest
     post_unlinked!(working.reload, @twenty, "20.00")
     working.reload
     assert working.signed_net_cents.positive?
-    assert_match "Amount due", response.body
+    assert_match "Balance due", response.body
     post pos_register_tender_path, params: {
       tender_amount: dollars(working.signed_net_cents),
       lock_version: working.lock_version
@@ -53,7 +53,7 @@ class PosMixedReturnWorkspaceTest < ActionDispatch::IntegrationTest
     post_unlinked!(working.reload, @thirty, "30.00")
     working.reload
     assert working.signed_net_cents.negative?
-    assert_match "Refund due", response.body
+    assert_match "Refund remaining", response.body
     post pos_register_tender_path, params: {
       tender_amount: dollars(-working.signed_net_cents),
       lock_version: working.lock_version

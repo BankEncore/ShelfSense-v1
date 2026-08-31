@@ -1,0 +1,29 @@
+<header class="pos-header pos-header--register pos-no-print" data-register-shell-target="header">
+  <div class="pos-header__row">
+    <div class="pos-header__facts">
+      <span><%= pos_padded_store_number(current_store) %> <%= current_store.name %></span>
+      <% if @register %>
+        <span class="pos-header__sep" aria-hidden="true">|</span>
+        <span><%= pos_padded_register_number(@register) %> <%= @register.name %></span>
+      <% end %>
+    </div>
+    <div class="pos-header__actions">
+      <%= action_button "F10 Menu", style: :outline, intent: :neutral, size: :small,
+            aria: { haspopup: "dialog", controls: "register-menu", expanded: false },
+            data: { action: "register-shell#toggleMenu", register_shell_target: "launcher" } %>
+      <%= link_to "Return to ShelfSense", root_path,
+            class: "pos-header__link",
+            **register_leave_confirm_options %>
+    </div>
+  </div>
+  <div class="pos-header__row">
+    <div class="pos-header__facts">
+      <span><%= register_header_business_date_text %></span>
+      <% if (opened = register_header_opened_at_label) %>
+        <span class="pos-header__sep" aria-hidden="true">|</span>
+        <span>Opened: <%= opened %></span>
+      <% end %>
+    </div>
+    <span class="pos-header__cashier"><%= current_user.display_name %></span>
+  </div>
+</header>

@@ -151,15 +151,27 @@ module Pos
     end
 
     def cash_movement_cents
-      movements = CashEntry.joins(:cash_operation)
-                           .where(pos_session_id: @session.id)
-                           .where(cash_operations: { operation_type: %w[paid_in paid_out reverse] })
-                           .sum(:amount_cents)
-      transfers = CashEntry.joins(cash_operation: :cash_transfer)
-                           .where(pos_session_id: @session.id)
-                           .where(cash_transfers: { transfer_type: %w[drop replenishment] })
-                           .sum(:amount_cents)
-      movements + transfers
+      paid_in_cents + paid_out_cents + cash_operation_reversal_cents + drop_cents + replenishment_cents
+    end
+
+    def paid_in_cents
+      cash_operation_entry_sum("paid_in")
+    end
+
+    def paid_out_cents
+      cash_operation_entry_sum("paid_out")
+    end
+
+    def cash_operation_reversal_cents
+      cash_operation_entry_sum("reverse")
+    end
+
+    def drop_cents
+      transfer_entry_sum("drop")
+    end
+
+    def replenishment_cents
+      transfer_entry_sum("replenishment")
     end
 
     def gift_card_cash_out_count
@@ -200,6 +212,20 @@ module Pos
     end
 
     private
+
+    def cash_operation_entry_sum(operation_type)
+      CashEntry.joins(:cash_operation)
+               .where(pos_session_id: @session.id)
+               .where(cash_operations: { operation_type: operation_type })
+               .sum(:amount_cents)
+    end
+
+    def transfer_entry_sum(transfer_type)
+      CashEntry.joins(cash_operation: :cash_transfer)
+               .where(pos_session_id: @session.id)
+               .where(cash_transfers: { transfer_type: transfer_type })
+               .sum(:amount_cents)
+    end
 
     def category_payment_cents(category)
       category_tender_cents(category, "payment")

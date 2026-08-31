@@ -105,6 +105,7 @@ module Authorization
       { key: "suppliers.view", group_key: "suppliers", name: "View suppliers and sources", scope_type: "either" },
       { key: "suppliers.manage", group_key: "suppliers", name: "Manage suppliers and sources", scope_type: "either" },
       { key: "customers.view", group_key: "customers", name: "View customers and requests", scope_type: "either" },
+      { key: "customers.create", group_key: "customers", name: "Create customer identity", scope_type: "either" },
       { key: "customers.manage", group_key: "customers", name: "Manage customer identity", scope_type: "either" },
       { key: "customer_requests.manage", group_key: "customer_requests", name: "Create, edit, and cancel customer requests", scope_type: "either" },
       { key: "customer_requests.locate", group_key: "customer_requests", name: "Locate and resolve pending customer requests", scope_type: "either" },
@@ -240,6 +241,7 @@ module Authorization
       suppliers.view
       suppliers.manage
       customers.view
+      customers.create
       customers.manage
       customer_requests.manage
       customer_requests.locate
@@ -292,6 +294,7 @@ module Authorization
           inventory.view
           suppliers.view
           customers.view
+          customers.create
           customers.manage
           customer_requests.manage
           customer_requests.locate
