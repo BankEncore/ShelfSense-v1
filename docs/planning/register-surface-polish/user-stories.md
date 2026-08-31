@@ -19,14 +19,14 @@ GitHub issues should usually be one focused PR per slice.
 
 **Acceptance:**
 
-- [ ] Latin subset `.woff2` files + OFL (or equivalent) license texts committed
-- [ ] `@font-face` rules in `application.css` for weights actually used
-- [ ] `_thermal_fonts.html.erb` no longer loads `fonts.googleapis.com` / `fonts.gstatic.com`
-- [ ] `pos_receipt_controller.js` preloads local face names
-- [ ] Integration assertions prefer local faces / refute Google Fonts CDN
-- [ ] D1/D2 print still waits for `document.fonts.ready` when supported
-- [ ] Admin/ops remain on Source Sans 3 / Source Serif 4
-- [ ] Report/tape remain Inconsolata
+- [x] Latin subset `.woff2` files + OFL (or equivalent) license texts committed
+- [x] `@font-face` rules in `application.css` for weights actually used
+- [x] `_thermal_fonts.html.erb` no longer loads `fonts.googleapis.com` / `fonts.gstatic.com`
+- [x] `pos_receipt_controller.js` preloads local face names
+- [x] Integration assertions prefer local faces / refute Google Fonts CDN
+- [x] D1/D2 print still waits for `document.fonts.ready` when supported
+- [x] Admin/ops remain on Source Sans 3 / Source Serif 4
+- [x] Report/tape remain Inconsolata
 
 ## Slice S3 — Active workspace visual polish
 
@@ -34,11 +34,11 @@ GitHub issues should usually be one focused PR per slice.
 
 **Acceptance:**
 
-- [ ] Carded regions / spacing / selection accent aligned to visual system
-- [ ] Balance-due / settlement emphasis clearer without new totals math
-- [ ] Shortcut groups remain visually grouped; button labels and Stimulus targets unchanged
-- [ ] Optional Register adoption of Plus Jakarta Sans / Noto Sans Mono documented in PR
-- [ ] Frozen ids/targets preserved
+- [x] Carded regions / spacing / selection accent aligned to visual system
+- [x] Balance-due / settlement emphasis clearer without new totals math
+- [x] Shortcut groups remain visually grouped; button labels and Stimulus targets unchanged
+- [x] Optional Register adoption of Plus Jakarta Sans / Noto Sans Mono documented in PR
+- [x] Frozen ids/targets preserved
 - [ ] System suites listed in test-matrix green
 - [ ] Manual 1280×720 and 200% zoom: no unreachable Open/Sale/Tender controls
 
@@ -48,8 +48,8 @@ GitHub issues should usually be one focused PR per slice.
 
 **Acceptance:**
 
-- [ ] `#register-menu` panel restyled; proxy items, leave-confirm, shell targets preserved
-- [ ] Overlay panels elevated; **no** workspace blur / pointer-events disable
-- [ ] Optional: `.pos-history` filters/table skin without query or link changes
-- [ ] README / implementation-plan status updated
+- [x] `#register-menu` panel restyled; proxy items, leave-confirm, shell targets preserved
+- [x] Overlay panels elevated; **no** workspace blur / pointer-events disable
+- [x] Optional: `.pos-history` filters/table skin without query or link changes
+- [x] README / implementation-plan status updated
 - [ ] Frozen suites green; manual F10 + overlay smoke recorded
