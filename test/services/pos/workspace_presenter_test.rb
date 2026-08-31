@@ -34,6 +34,17 @@ class PosWorkspacePresenterTest < ActiveSupport::TestCase
     assert result.close_session_available
     refute result.completion_recovery
     assert_equal "All working content will be discarded.", result.cancel_consequence
+    assert_equal 0, result.basket_item_count
+    assert_nil result.selected_line_number
+  end
+
+  test "basket item count and selected line number come from presenter lines" do
+    transaction = start_sale
+    lines = transaction.pos_transaction_lines.ordered.to_a
+    result = present(transaction, ui_mode: "sale_entry", selected_line: lines.last)
+
+    assert_equal lines.size, result.basket_item_count
+    assert_equal lines.last.line_number, result.selected_line_number
   end
 
   test "cancel consequence lists sale quantities" do

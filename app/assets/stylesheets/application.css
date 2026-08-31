@@ -1804,6 +1804,32 @@ input[type="submit"]:disabled,
   min-width: 0;
   flex: 1 1 auto;
   min-height: 6rem;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.pos-basket__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-3);
+  padding: 0 var(--space-1);
+}
+
+.pos-basket__title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+
+.pos-basket__selection {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-brand-default);
 }
 
 .pos-issuances {
@@ -2177,11 +2203,36 @@ input[type="submit"]:disabled,
 }
 
 .pos-line-flags {
-  display: block;
-  margin-top: 0.15rem;
-  font-size: 0.8rem;
-  font-weight: 600;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.25rem;
+}
+
+.pos-line-flag {
+  display: inline-block;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  padding: 0.15rem 0.4rem;
+  border-radius: var(--radius-sm);
+}
+
+.pos-line-flag--override,
+.pos-line-flag--discount {
+  background: color-mix(in srgb, var(--color-warning-fill) 80%, white);
   color: var(--color-warning-fg);
+}
+
+.pos-line-flag--tax {
+  background: color-mix(in srgb, var(--color-info-fill, #e8f0fe) 90%, white);
+  color: var(--color-info-fg, #1a73e8);
+}
+
+.pos-line-flag--return {
+  background: color-mix(in srgb, var(--color-danger-fill, #fce8e6) 85%, white);
+  color: var(--color-danger-fg, #c5221f);
 }
 
 .pos-lines tr.is-controlled td {
