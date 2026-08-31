@@ -1,4 +1,12 @@
 import { Controller } from "@hotwired/stimulus"
+import {
+  normalizeKey,
+  classifyFocusZone,
+  classifyMode,
+  resolveBinding,
+  isEditableControl,
+  REPEAT_IGNORED_ACTIONS
+} from "register_keyboard_dispatcher"
 
 export default class extends Controller {
   static targets = [
@@ -691,18 +699,99 @@ export default class extends Controller {
   }
 
   chooseCash() {
-    this.chooseTenderCategory("cash")
+    this.performSemanticAction("tender-cash")
   }
 
   chooseCard() {
-    this.chooseTenderCategory("card")
+    this.performSemanticAction("tender-card")
   }
 
   chooseCheck() {
-    this.chooseTenderCategory("check")
+    this.performSemanticAction("tender-check")
   }
 
   chooseOther() {
+    this.performSemanticAction("tender-other")
+  }
+
+  chooseStoredValue() {
+    this.performSemanticAction("tender-stored-value")
+  }
+
+  /**
+   * Slice 7C semantic action executor. Keyboard and visible controls converge here.
+   * Eligibility remains in the underlying methods / live control state.
+   */
+  performSemanticAction(action, { announceUnavailable = false } = {}) {
+    if (!action) return false
+
+    const run = (fn) => {
+      fn.call(this)
+      return true
+    }
+
+    switch (action) {
+      case "tender-cash":
+        return run(() => this.chooseTenderCategory("cash"))
+      case "tender-card":
+        return run(() => this.chooseTenderCategory("card"))
+      case "tender-check":
+        return run(() => this.chooseTenderCategory("check"))
+      case "tender-other":
+        return run(() => this.executeTenderOther())
+      case "tender-stored-value":
+        return run(() => this.executeTenderStoredValue())
+      case "open-tender-selection":
+        return run(() => this.enterTender())
+      case "open-product-lookup":
+        return run(() => this.openSearchOverlay())
+      case "open-pickup-lookup":
+        return run(() => this.openPickupOverlay())
+      case "open-return-chooser":
+        return run(() => this.openReturnChooser())
+      case "open-customer-lookup":
+        return run(() => this.openCustomerOverlay())
+      case "open-quick-customer":
+        return run(() => this.openQuickCustomerOverlay())
+      case "set-quantity":
+        return run(() => this.enterQuantity())
+      case "edit-price":
+        return run(() => this.openPriceOverride())
+      case "edit-discount":
+        return run(() => this.openLineDiscount())
+      case "remove-selected-record":
+        return run(() => this.removeSelected())
+      case "remove-selected-tender":
+        return run(() => this.executeRemoveSelectedTender())
+      case "open-selected-tender-actions":
+        return run(() => this.executeOpenSelectedTenderActions())
+      case "return-to-sale":
+        return run(() => this.openReturnToSaleOverlay())
+      case "cancel-transaction":
+        return run(() => this.openOverlay())
+      case "submit-command":
+        return run(() => this.submitMode())
+      case "submit-complete":
+        return run(() => this.submitComplete())
+      case "escape":
+        return run(() => this.escape())
+      case "move-basket-selection-up":
+        return run(() => this.moveSelection(-1))
+      case "move-basket-selection-down":
+        return run(() => this.moveSelection(1))
+      case "move-tender-selection-up":
+        return run(() => this.moveTenderSelection(-1, { focus: true }))
+      case "move-tender-selection-down":
+        return run(() => this.moveTenderSelection(1, { focus: true }))
+      default:
+        if (announceUnavailable) {
+          this.showFeedback(`Action "${action}" is not available.`)
+        }
+        return false
+    }
+  }
+
+  executeTenderOther() {
     if (this.inFlight) return
     if (this.modeValue !== "sale_entry" && this.modeValue !== "tender") return
     if (!this.ensureTenderable()) return
@@ -720,7 +809,7 @@ export default class extends Controller {
     this.openTenderPicker(types, { source: "other_key" })
   }
 
-  chooseStoredValue() {
+  executeTenderStoredValue() {
     if (this.inFlight) return
     if (this.modeValue !== "sale_entry" && this.modeValue !== "tender") return
     if (!this.ensureTenderable()) return
@@ -736,6 +825,64 @@ export default class extends Controller {
       return
     }
     this.openTenderPicker(types, { source: "stored_value_key" })
+  }
+
+  executeRemoveSelectedTender() {
+    if (this.inFlight) return
+    if (this.modeValue !== "tender") return
+    const selected = this.selectedTenderRow()
+    if (!selected) {
+      this.showFeedback("Select a tender before removing.")
+      return
+    }
+    if (selected.dataset.removeAvailable === "false") {
+      this.showFeedback(selected.dataset.removeUnavailableReason || "This tender cannot be removed.")
+      return
+    }
+    this.openRemoveTenderOverlay()
+  }
+
+  executeOpenSelectedTenderActions() {
+    if (this.modeValue !== "tender") return
+    const selected = this.selectedTenderRow()
+    if (!selected) {
+      this.showFeedback("Select a tender first.")
+      return
+    }
+    this.selectTender({ currentTarget: selected })
+    if (selected.dataset.editAvailable === "true") {
+      this.openEditTenderOverlay()
+      return
+    }
+    if (this.hasTenderReviewDetailTarget) {
+      // Detail region already visible for selection; surface unavailability when present.
+    }
+    if (selected.dataset.editUnavailableReason) {
+      this.showFeedback(selected.dataset.editUnavailableReason)
+    } else if (selected.dataset.removeUnavailableReason) {
+      this.showFeedback(selected.dataset.removeUnavailableReason)
+    }
+  }
+
+  keyboardFocusZone(target) {
+    return classifyFocusZone({
+      target,
+      commandField: this.hasFieldTarget ? this.fieldTarget : null,
+      workspaceRoot: this.element,
+      activeOverlay: this.activeOverlayElement(),
+      overlayOpen: this.overlayOpen()
+    })
+  }
+
+  keyboardContext(event, key = normalizeKey(event)) {
+    return {
+      mode: classifyMode(this.modeValue),
+      focusZone: this.keyboardFocusZone(event.target),
+      key,
+      overlayOpen: this.overlayOpen(),
+      inFlight: this.inFlight,
+      repeat: Boolean(event.repeat)
+    }
   }
 
   chooseTenderCategory(category) {
