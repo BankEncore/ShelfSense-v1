@@ -1,6 +1,6 @@
 # Register surface polish
 
-Status: **Proposed packet** — awaiting acceptance before implementation.
+Status: **Accepted packet** — implementation slices S1–S4 on branch `register-surface-polish`.
 
 **Program type:** Register follow-on / UDS-adjacent visual program (not a numbered domain phase). Runs after [Register workspace consolidation](../register-workspace-consolidation/README.md) and alongside or after [Receipts and reports revamp](../receipts-and-reports-revamp/README.md). Does not reopen transaction, tender, stored-value, cash, session, keyboard, or reporting-period domain semantics.
 

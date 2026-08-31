@@ -8,10 +8,10 @@ GitHub issues should usually be one focused PR per slice.
 
 **Acceptance:**
 
-- [ ] `docs/planning/register-surface-polish/` README and companions exist
-- [ ] Roadmap cross-phase section references this program as Proposed/Accepted
-- [ ] Deferred surfaces (transaction review, blur overlays, aux-bar ownership) documented
-- [ ] ADR-022 already authorizes local packaging + optional Register adoption (no further ADR required unless scope expands)
+- [x] `docs/planning/register-surface-polish/` README and companions exist
+- [x] Roadmap cross-phase section references this program as Proposed/Accepted
+- [x] Deferred surfaces (transaction review, blur overlays, aux-bar ownership) documented
+- [x] ADR-022 already authorizes local packaging + optional Register adoption (no further ADR required unless scope expands)
 
 ## Slice S2 — Local font packaging
 

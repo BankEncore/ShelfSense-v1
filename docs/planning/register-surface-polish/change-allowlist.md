@@ -1,6 +1,6 @@
 # Register surface polish — Change allowlist
 
-Status: **Proposed**
+Status: **Accepted**
 
 Expanding this allowlist requires a documentation change in the same PR (or a preceding docs PR) and an explicit callout in review. “Shared CSS cleanup” is not implicit scope.
 

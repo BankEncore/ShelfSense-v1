@@ -1,6 +1,6 @@
 # Register surface polish — Test matrix
 
-Status: **Proposed** for slices S2–S4.
+Status: **Accepted** for slices S2–S4.
 
 ## Frozen automated suites (do not relax)
 
