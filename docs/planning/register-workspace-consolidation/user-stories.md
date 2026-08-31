@@ -104,4 +104,13 @@ Till Activity, cash activity detail, Session Details, Active Sessions, reversal 
 
 ## Slice 7C — Keyboard dispatcher
 
-Gated on 7A–7B. Implement [slice7-keyboard-contract.md](slice7-keyboard-contract.md): one dispatcher, scanner/overlay hardening, delete obsolete handlers, update pos-workflow.md §6 supersession.
+**Packet accepted** ([slice7c-keyboard-dispatcher-plan.md](slice7c-keyboard-dispatcher-plan.md)). Implementation under [#95](https://github.com/BankEncore/ShelfSense-v1/issues/95): 7C.1 semantic foundation (no remap) → 7C.2 atomic cutover. Evidence: [slice7c-manual-verification.md](slice7c-manual-verification.md).
+
+**Acceptance:**
+
+- [ ] One mode-aware dispatcher implements [slice7-keyboard-contract.md](slice7-keyboard-contract.md) SALE/TENDER/overlay tables
+- [ ] Focus-based punctuation; empty-field interception deleted; scanner glyphs literal in inputs
+- [ ] Tender F8/`-` removes selected tender; `removeLastTender` gone
+- [ ] Shell owns F10 + Keyboard Lock; workspace claims F1–F9
+- [ ] Obsolete Phase 6.7 handlers deleted; pos-workflow §6 superseded
+- [ ] System tests + manual verification for the replacement contract
