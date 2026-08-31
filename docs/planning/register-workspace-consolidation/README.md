@@ -1,6 +1,6 @@
 # Register workspace consolidation
 
-Status: **Accepted packet** on `main` (Slice 1). Implementation slices 2–7 land on integration branch `register-workspace-consolidation` and merge to `main` only after closeout.
+Status: **Closeout complete** on `register-workspace-consolidation`; ready to merge to `main`. Slice 1 on `main`; slices 2–7C on integration branch ([closeout-manual-verification.md](closeout-manual-verification.md)).
 
 GitHub: [milestone](https://github.com/BankEncore/ShelfSense-v1/milestone/7); slice issues in [user-stories.md](user-stories.md).
 
@@ -16,6 +16,7 @@ This program **replaces** the current POS presentation. It does not run a parall
 | [test-matrix.md](test-matrix.md) | Classification of existing POS tests; gap tests |
 | [user-stories.md](user-stories.md) | GitHub-issue-ready slice stories |
 | [closeout-plan.md](closeout-plan.md) | End-to-end and manual evidence before `main` merge |
+| [closeout-manual-verification.md](closeout-manual-verification.md) | Program closeout evidence (signed off) |
 | [textual-wireframes.md](textual-wireframes.md) | Companion composition contracts (not 6.7 authority) |
 | [slice4-composition-plan.md](slice4-composition-plan.md) | Locked Slice 4 presenter / summary / DOM contracts |
 | [slice4-manual-verification.md](slice4-manual-verification.md) | Slice 4 workstation evidence |
