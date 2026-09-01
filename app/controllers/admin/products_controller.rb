@@ -32,8 +32,17 @@ module Admin
       @recent_audit_events = recent_product_audit_events
       @show_inventory = inventory_display_enabled?
       if @show_inventory
-        @balances_by_variant_id = load_variant_balances(@product_variants.map(&:id))
-        @product_on_hand_total = @balances_by_variant_id.values.sum { |balance| balance.on_hand_quantity.to_i }
+        variant_ids = @product_variants.map(&:id)
+        @balances_by_variant_id = load_variant_balances(variant_ids)
+        @on_order_by_variant_id = load_variant_on_order_quantities(variant_ids)
+        @on_hand_by_type = Hash.new(0)
+        @on_order_by_type = { "standard" => 0, "used" => 0 }
+        @product_variants.each do |variant|
+          @on_hand_by_type[variant.variant_type] += @balances_by_variant_id[variant.id]&.on_hand_quantity.to_i
+          next unless variant.standard?
+
+          @on_order_by_type["standard"] += @on_order_by_variant_id[variant.id].to_i
+        end
       end
       load_product_purchasing_actions
     end
@@ -539,6 +548,21 @@ module Admin
       return {} if variant_ids.empty?
 
       InventoryBalance.where(store_id: current_store.id, product_variant_id: variant_ids).index_by(&:product_variant_id)
+    end
+
+    def load_variant_on_order_quantities(variant_ids)
+      return {} if variant_ids.empty? || current_store.blank?
+
+      lines = PurchaseOrderLine
+        .with_positive_open_quantity
+        .joins(:purchase_order)
+        .where(
+          product_variant_id: variant_ids,
+          purchase_orders: { store_id: current_store.id, status: "sent" }
+        )
+        .includes(:cancellations, purchase_receipt_lines: [ :purchase_receipt, :corrections ])
+
+      lines.group_by(&:product_variant_id).transform_values { |group| group.sum(&:open_quantity) }
     end
 
     def load_product_purchasing_actions

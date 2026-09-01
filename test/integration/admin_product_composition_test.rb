@@ -38,32 +38,41 @@ class AdminProductCompositionTest < ActionDispatch::IntegrationTest
     assert_select "th.cell-identifier", count: 0
     assert_select "th.cell-secondary", count: 0
     assert_select ".product-summary", count: 0
+    assert_select ".admin-page", count: 0
+    assert_select "main[class='app-content']"
   end
 
-  test "show uses identity header metric strip and separate panels" do
+  test "show uses the page frame bibliographic grid rail and variants table" do
     sign_in_as("admin")
     get admin_product_path(@product)
     assert_response :success
 
-    assert_select ".product-identity .page-header__eyebrow", text: "Product"
-    assert_select ".product-identity .page-header__title", text: "Example Book"
-    assert_select ".product-identity .page-header__metadata", text: /#{Regexp.escape(@product.primary_identifier)}/
-    assert_select ".product-identity .page-header__status", text: /Draft/
-    assert_select ".metric-strip[aria-label='Product summary']"
-    assert_select ".metric-strip__label", text: "List price"
-    assert_select ".metric-strip__value", text: "$19.99"
-    assert_select ".metric-strip__label", text: "Cover"
-    assert_select ".metric-strip__value", text: "Missing"
+    assert_select ".admin-page", count: 1
+    assert_select "main.app-content.app-content--wide"
+    assert_select ".page-header__eyebrow", text: "Product"
+    assert_select ".page-header__title", text: "Example Book"
+    assert_select ".page-header__metadata", text: /#{Regexp.escape(@product.primary_identifier)}/
+    assert_select ".page-header__status", text: /Draft/
+    assert_select ".metric-strip", count: 0
+    assert_select ".product-panels", count: 0
     assert_select "img.product-cover", count: 0
-    assert_select ".product-panels h2", text: "Identity"
-    assert_select "h2", text: "Publication", count: 0
-    assert_select ".product-summary", count: 0
+    assert_select ".product-biblio h2", text: "Bibliographic definition"
+    assert_select ".product-biblio dt", text: "List price"
+    assert_select ".product-biblio dd", text: "$19.99"
+    assert_select ".product-biblio dt", text: "Merchandise category"
     assert_select ".product-variants"
+    assert_select ".product-variants th", text: "Type"
+    assert_select ".product-variants th", text: "SKU"
+    assert_select ".product-variants th", text: "Name"
+    assert_select ".product-variants th", text: "Class"
+    assert_select ".product-variants th", text: "Price"
+    assert_select ".product-variants th", text: "Status"
     assert_select ".product-variants td.cell-primary", text: @variant.name
     assert_select ".product-variants td.cell-identifier", text: @variant.sku
     assert_select ".product-variants td.cell-operational", minimum: 1
     assert_select ".product-variants th.cell-operational", count: 0
     assert_select ".product-variants th.cell-primary", count: 0
+    assert_select ".product-summary", count: 0
   end
 
   test "application css packages serif and keeps receipt mono distinct" do

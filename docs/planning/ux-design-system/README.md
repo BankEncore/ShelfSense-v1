@@ -38,7 +38,7 @@ Do not fold POS into a shared ops shell. Do not replace admin show pages with dr
 | [uds-5-user-stories.md](uds-5-user-stories.md) | Stories for UDS-5.0–5.5 mapped to GitHub issues #44–#50 | Implemented (acceptance checked) |
 | [uds-5.0-gate-evidence.md](uds-5.0-gate-evidence.md) | Compact-nav prototype gate checklist and Product/header baselines | **Passed** |
 | [uds-5.5-closeout-evidence.md](uds-5.5-closeout-evidence.md) | Serif adopt, print non-regression, feature-led adoption | **Complete** on `main` |
-| [Admin Page Frame Program](../admin-page-frame/README.md) | Shared Admin page-frame contract (width, region order); not a UDS number | **Accepted.** Slice 1 + Customer core **Implemented on `main`** |
+| [Admin Page Frame Program](../admin-page-frame/README.md) | Shared Admin page-frame contract (width, region order); not a UDS number | **Accepted.** Slice 1 + Customer core **Implemented on `main`**; [Product show](../admin-page-frame/product-show.md) Accepted |
 | [uds-3-user-stories.md](uds-3-user-stories.md) | Issue-ready backlog stories for UDS-3a–3c | Implemented |
 | [accessibility-ergonomic-test-matrix.md](accessibility-ergonomic-test-matrix.md) | Manual a11y/ergonomic gate + timed cashier scenarios for UDS-2/UDS-3 | Proposed acceptance gate |
 | [warm-parchment.md](warm-parchment.md) | Tokens, typography, density, contrast (AA baseline) | Implemented (UDS-1) |
@@ -72,4 +72,4 @@ Phase 2.2 established Propshaft tokens, shared partials/helpers, money UX, acces
 
 ## Out of scope for this packet alone
 
-Implementing CSS, migrating all screens, global search, master-detail drawers, or changing Register keyboard bindings. See [program-plan.md](program-plan.md) and [deferred-patterns.md](deferred-patterns.md). UDS-5 composition work is specified in [uds-5-plan.md](uds-5-plan.md) and does not pull UDS-7 sidebar/search into scope. The [Admin Page Frame Program](../admin-page-frame/README.md) (Accepted; Slice 1 + Customer core **Implemented on `main`**; not UDS-6/7/8) established a shared Admin page-frame API and migrated Adjustment Reasons and Customer core. It does not authorize a restyle sweep.
+Implementing CSS, migrating all screens, global search, master-detail drawers, or changing Register keyboard bindings. See [program-plan.md](program-plan.md) and [deferred-patterns.md](deferred-patterns.md). UDS-5 composition work is specified in [uds-5-plan.md](uds-5-plan.md) and does not pull UDS-7 sidebar/search into scope. The [Admin Page Frame Program](../admin-page-frame/README.md) (Accepted; Slice 1 + Customer core **Implemented on `main`**; [Product show](../admin-page-frame/product-show.md) Accepted; not UDS-6/7/8) established a shared Admin page-frame API and migrated Adjustment Reasons, Customer core, and Product show/new/edit. It does not authorize a restyle sweep.

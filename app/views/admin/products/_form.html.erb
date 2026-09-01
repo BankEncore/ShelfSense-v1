@@ -13,7 +13,7 @@
     </div>
   <% end %>
 
-  <%= render layout: "shared/form_section", locals: { title: "Identity", help: "Name and descriptive fields for this catalog product.", grid: true } do %>
+  <%= render layout: "shared/form_section", locals: { title: "Identity", help: "Name, subtitle, description, and publisher for this catalog product.", grid: true } do %>
     <div class="form-field form-field--span-2">
       <%= form.label :name %>
       <%= form.text_field :name, id: "product_name", required: true, "aria-describedby": product.errors[:name].any? ? "product_name_error" : nil %>
@@ -75,7 +75,7 @@
     </div>
   <% end %>
 
-  <%= render layout: "shared/form_section", locals: { title: "Publication", help: "Optional bookstore metadata. Leave blank for sidelines and other non-book merchandise.", grid: true } do %>
+  <%= render layout: "shared/form_section", locals: { title: "Publication", help: "Contributors, subjects, form, and bookstore metadata. Leave blank for sidelines and other non-book merchandise.", grid: true } do %>
     <div class="form-field">
       <%= form.label :product_form_id, "Product form" %>
       <%= form.select :product_form_id, @product_forms || [], include_blank: "None" %>

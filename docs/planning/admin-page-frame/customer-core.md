@@ -10,7 +10,7 @@ Status progression complete: Proposed → Accepted → Implemented on `apf-devel
 
 Companions: [README.md](README.md), [plan.md](plan.md), [choices.md](choices.md) (APF-001–APF-008), [slice-1.md](slice-1.md), [change-allowlist.md](change-allowlist.md), [adoption-outlook.md](adoption-outlook.md).
 
-This packet is the bounded **reference family** after Slice 1. It does not authorize the Index or Record family sweeps in [adoption-outlook.md](adoption-outlook.md). It does not authorize Product consuming the frame.
+This packet is the bounded **reference family** after Slice 1. It does not authorize the Index or Record family sweeps in [adoption-outlook.md](adoption-outlook.md). Product consuming the frame is a later packet: [product-show.md](product-show.md).
 
 ## Why this family
 

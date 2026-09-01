@@ -83,11 +83,17 @@ module ApplicationHelper
   end
 
   def product_contributor_credits(product)
-    product.product_contributions.filter_map { |row|
+    product.product_contributions.sort_by { |row| [ row.position.to_i, row.id.to_s ] }.filter_map { |row|
       name = row.display_name.to_s.strip
       next if name.blank?
 
       row.role == "author" ? name : "#{name} (#{row.role.humanize})"
     }
+  end
+
+  def truncated_product_contributor_credits(credits, limit: 3)
+    return credits if credits.size <= limit
+
+    credits.first(limit) + [ "and #{credits.size - limit} more" ]
   end
 end
