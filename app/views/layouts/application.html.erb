@@ -25,7 +25,7 @@
         </header>
       <% end %>
 
-      <main class="app-content">
+      <main class="<%= class_names("app-content", content_for(:admin_page_width)) %>">
         <%= yield %>
       </main>
     </div>

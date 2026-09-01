@@ -2,7 +2,7 @@
 
 **Program name:** Admin Page Frame Program (not UDS-6, UDS-7, or UDS-8)
 
-**Status:** **Accepted.** Slice 0 complete. Slice 1 authorized only within [change-allowlist.md](change-allowlist.md).
+**Status:** **Accepted.** Slice 0 complete. Slice 1 **Implemented**. Further family adoption is not authorized by this packet.
 
 These choices close the remaining Slice 0 contract questions. They do not authorize a general restyle. Evidence: [slice-0-evidence.md](slice-0-evidence.md). Authority: [plan.md](plan.md).
 
@@ -15,6 +15,8 @@ Migrated Admin pages use `admin/shared/page` as the sole public page-frame compo
 A narrowly scoped helper (`app/helpers/admin_page_helper.rb`) validates the semantic width value and communicates the corresponding `.app-content` modifier to the application layout through `content_for`. `content_for` is internal width plumbing, not a second page composition API. Views must not set the width capture directly.
 
 The helper is invoked from the page partial at the start of the nested render so the capture exists before `application.html.erb` reads it (same order as `content_for :title`). Do not call the helper from the layout after `yield`.
+
+**Slice 1 implementation:** `capture_admin_page_width!` maps modes through `ADMIN_PAGE_WIDTH_CLASSES` and rejects a second declaration (`content_for?` guard plus `flush: true`). Views must not concatenate width classes. `application.html.erb` applies the capture with `class_names("app-content", content_for(:admin_page_width))`.
 
 The helper accepts all four semantic modes (`narrow`, `standard`, `wide`, `workspace`). Slice 1 production call sites use only `standard` and `narrow` (APF-002).
 

@@ -1,20 +1,21 @@
 <% content_for :title, "Adjustment reasons" %>
 
-<%= render "shared/breadcrumbs", crumbs: [
-  { name: "Home", path: root_path },
-  { name: "Adjustment reasons" }
-] %>
-
-<%= render "shared/page_header",
-      title: "Adjustment reasons",
-      actions: action_link_to("New reason", new_admin_adjustment_reason_path, style: :solid, intent: :brand) %>
-
-<% rows = @adjustment_reasons.map { |reason|
-     [
-       link_to(reason.code, admin_adjustment_reason_path(reason)),
-       reason.name,
-       reason.direction.humanize,
-       configuration_status_badge(reason.active?)
-     ]
-   } %>
-<%= render "shared/data_table", headers: ["Code", "Name", "Direction", "Status"], rows: rows %>
+<%= render layout: "admin/shared/page", locals: {
+  width: :standard,
+  title: "Adjustment reasons",
+  crumbs: [
+    { name: "Home", path: root_path },
+    { name: "Adjustment reasons" }
+  ],
+  actions: action_link_to("New reason", new_admin_adjustment_reason_path, style: :solid, intent: :brand)
+} do %>
+  <% rows = @adjustment_reasons.map { |reason|
+       [
+         link_to(reason.code, admin_adjustment_reason_path(reason)),
+         reason.name,
+         reason.direction.humanize,
+         configuration_status_badge(reason.active?)
+       ]
+     } %>
+  <%= render "shared/data_table", headers: ["Code", "Name", "Direction", "Status"], rows: rows %>
+<% end %>

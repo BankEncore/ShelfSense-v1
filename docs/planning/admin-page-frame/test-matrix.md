@@ -2,7 +2,7 @@
 
 **Program name:** Admin Page Frame Program (not UDS-6, UDS-7, or UDS-8)
 
-**Status:** **Accepted.** Slice 0 complete. Slice 1 authorized only within [change-allowlist.md](change-allowlist.md).
+**Status:** **Accepted.** Slice 0 complete. Slice 1 **Implemented**.
 
 Authority: [plan.md](plan.md), [change-allowlist.md](change-allowlist.md), [choices.md](choices.md). A UDS change may add visual or accessibility assertions but must not delete, relax, rename, or rewrite existing workflow assertions to make the slice pass.
 
@@ -10,19 +10,25 @@ Authority: [plan.md](plan.md), [change-allowlist.md](change-allowlist.md), [choi
 
 Complete. Documentation only. Evidence: [slice-0-evidence.md](slice-0-evidence.md). Choices: [choices.md](choices.md).
 
-## Slice 1 — tests to add
+## Slice 1 tests (new)
 
-There is no dedicated Adjustment Reasons admin integration suite today. Slice 1 must add composition coverage rather than overloading unrelated authz tests. No fixture tests.
+```text
+test/helpers/admin_page_helper_test.rb
+test/views/admin_page_partial_test.rb
+test/integration/admin_page_frame_test.rb
+test/system/admin_adjustment_reasons_composition_test.rb
+```
 
-| Layer | Suggested location | Asserts |
+| Layer | Location | Asserts |
 |---|---|---|
-| View / request | New `test/integration/admin_page_frame_test.rb` (name may vary) | `admin/shared/page` region order; breadcrumbs and page header come from shared partials; empty tools omitted; `standard` / `narrow` modifier on Adjustment Reasons; unmigrated page has no `.app-content--*` modifier and stays at `72rem` |
-| Request | Same or `test/integration/admin_adjustment_reasons_composition_test.rb` | Index/show/new/edit render through the frame; index/show `standard`; new/edit `narrow`; validation redisplay; cancel targets unchanged |
-| System | New system test if keyboard/zoom cannot be proven at request layer | 320px / 200% zoom: title visible, actions reachable, no two-dimensional page scroll except table overflow |
+| Helper | `test/helpers/admin_page_helper_test.rb` | Symbol/string mapping for all four modes; invalid value stores no capture; second call raises; no class injection |
+| View | `test/views/admin_page_partial_test.rb` | Region order; omitted empty context/tools; tools HTML unescaped; missing width/title; partial does not set `content_for :title` |
+| Request | `test/integration/admin_page_frame_test.rb` | One `.admin-page`; exact `main` class; index/show `standard`; new/edit `narrow`; frozen `_form` contract; 422 redisplay; unmigrated Users has no modifier; scoped CSS block |
+| System | `test/system/admin_adjustment_reasons_composition_test.rb` | 320px / 200% zoom: titles, New/Cancel, and `assert_layout_usable` (no page overflow; actions unclipped; table scroll on index). At 1920, unmigrated Users used width matches Adjustment Reasons index (`standard`) within 1px |
 
-## Slice 1 — frozen non-regression
+## Existing frozen regression tests
 
-Must stay green. Do not rewrite these files to pass frame work.
+Must stay green. Do not rewrite these files to pass frame work. Always run for this slice (layout CSS and `application.html.erb` changed):
 
 ```sh
 ./dev/rails-docker bin/rails test \
@@ -34,13 +40,7 @@ Must stay green. Do not rewrite these files to pass frame work.
   test/integration/stores_admin_test.rb \
   test/views/page_header_partial_test.rb \
   test/views/form_section_partial_test.rb \
-  test/views/data_table_partial_test.rb
-```
-
-Also run the corresponding Product composition **system** tests if Slice 1 CSS could affect layout:
-
-```sh
-./dev/rails-docker bin/rails test \
+  test/views/data_table_partial_test.rb \
   test/system/admin_product_composition_test.rb \
   test/system/admin_grouped_navigation_test.rb
 ```
@@ -65,6 +65,8 @@ At each gate:
 - Page actions and final form actions remain reachable
 - No two-dimensional page scroll except intentional table overflow
 - Unmigrated Users, Customers, Products, and Store pages match pre-Slice-1 width except documented shared-CSS impact
+
+Automated coverage: 320 and 1280@200% zoom use `assert_layout_usable` on index (with `.table-scroll`) and new (Cancel). 1920 used-width comparison in the same system test. Remaining viewports: CSS geometry plus optional headed Chromium (same fallback as APF-008). Evidence: [slice-1.md](slice-1.md).
 
 ## Accessibility and keyboard (Slice 1)
 

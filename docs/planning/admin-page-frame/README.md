@@ -2,7 +2,7 @@
 
 **Program name:** Admin Page Frame Program (not UDS-6, UDS-7, or UDS-8)
 
-**Status:** **Accepted.** Slice 0 complete. Slice 1 authorized only within [change-allowlist.md](change-allowlist.md).
+**Status:** **Accepted.** Slice 0 complete. Slice 1 **Implemented** (frame + Adjustment Reasons) on integration branch `apf-development` until a later merge to `main`. Further family adoption is not authorized by this packet.
 
 This is a UDS-adjacent administrative composition program, not a numbered domain phase and not a numbered UDS slice. UDS-6 (staff history) and UDS-7 (sidebar / Cmd+K) remain parked.
 
@@ -21,9 +21,10 @@ Slice 0 choices: [choices.md](choices.md) (APF-001–APF-008).
 | [choices.md](choices.md) | Slice 0 accepted choices APF-001–APF-008 |
 | [slice-0.md](slice-0.md) | Inventory, evidence set vs implementation set, completion bar |
 | [slice-0-evidence.md](slice-0-evidence.md) | Route reconciliation, composition, CSS viewport geometry |
-| [change-allowlist.md](change-allowlist.md) | Slice 1 **locked** file and selector list |
-| [user-stories.md](user-stories.md) | Issue-ready stories for Slice 0 (complete) and Slice 1 |
-| [test-matrix.md](test-matrix.md) | Frozen suites, viewport gates, non-regression surfaces |
+| [change-allowlist.md](change-allowlist.md) | Slice 1 file and selector list (tightened; `_form` frozen) |
+| [user-stories.md](user-stories.md) | Issue-ready stories for Slice 0 (complete) and Slice 1 (complete) |
+| [test-matrix.md](test-matrix.md) | Slice 1 tests, frozen suites, viewport gates |
+| [slice-1.md](slice-1.md) | Slice 1 completion and viewport/CSS sign-off |
 | [adoption-outlook.md](adoption-outlook.md) | Former family-migration slices — **not authorized** |
 
 ## Authorized program
@@ -31,14 +32,14 @@ Slice 0 choices: [choices.md](choices.md) (APF-001–APF-008).
 | Slice | Authority | Production code |
 |---|---|---|
 | **Slice 0** — Inventory, evidence, and contract | **Complete** | None |
-| **Slice 1** — Frame + Adjustment Reasons | Authorized within the locked allowlist | Bounded allowlist |
-| **Closeout gate** | Required before any further adoption | None in this packet |
+| **Slice 1** — Frame + Adjustment Reasons | **Implemented** | Frame API + Adjustment Reasons only |
+| **Closeout gate** | **Complete** | Product consuming the frame is a separately approved later slice |
 
 [adoption-outlook.md](adoption-outlook.md) is not a delivery plan.
 
 ## Next action
 
-Implement Slice 1 within [change-allowlist.md](change-allowlist.md): `admin/shared/page`, width helper + `content_for` on `main.app-content`, Adjustment Reasons index/show `standard` and new/edit `narrow`. Do not migrate other families.
+Do not start family restyles from leftover Slice 1 energy. Remaining Admin surfaces adopt `admin/shared/page` through a separately approved family or feature slice on `apf-development`. Product consuming the frame is **not** implied. [adoption-outlook.md](adoption-outlook.md) remains non-authoritative.
 
 ## Does not reopen
 

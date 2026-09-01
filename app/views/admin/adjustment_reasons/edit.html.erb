@@ -1,9 +1,14 @@
 <% content_for :title, "Edit adjustment reason" %>
-<%= render "shared/breadcrumbs", crumbs: [
-  { name: "Home", path: root_path },
-  { name: "Adjustment reasons", path: admin_adjustment_reasons_path },
-  { name: @adjustment_reason.code, path: admin_adjustment_reason_path(@adjustment_reason) },
-  { name: "Edit" }
-] %>
-<%= render "shared/page_header", title: "Edit adjustment reason" %>
-<%= render "form", adjustment_reason: @adjustment_reason %>
+
+<%= render layout: "admin/shared/page", locals: {
+  width: :narrow,
+  title: "Edit adjustment reason",
+  crumbs: [
+    { name: "Home", path: root_path },
+    { name: "Adjustment reasons", path: admin_adjustment_reasons_path },
+    { name: @adjustment_reason.code, path: admin_adjustment_reason_path(@adjustment_reason) },
+    { name: "Edit" }
+  ]
+} do %>
+  <%= render "form", adjustment_reason: @adjustment_reason %>
+<% end %>

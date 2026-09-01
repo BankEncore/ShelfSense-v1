@@ -1,21 +1,23 @@
 # Administrative UX conventions
 
-Status: Implemented (Phase 2.2 architecture; **Warm Parchment palette via UDS-1**). Administrative composition grammar for the Product family and compact grouped nav is recorded in [uds-5-plan.md](planning/ux-design-system/uds-5-plan.md) (**complete** on `main`). Do not copy inspirational sidebar or Cmd/Ctrl+K chrome.
+Status: Implemented (Phase 2.2 architecture; **Warm Parchment palette via UDS-1**). Administrative composition grammar for the Product family and compact grouped nav is recorded in [uds-5-plan.md](planning/ux-design-system/uds-5-plan.md) (**complete** on `main`). The [Admin Page Frame Program](planning/admin-page-frame/README.md) (Slice 1 **Implemented**) is the shared page-frame API for migrated Admin pages. Do not copy inspirational sidebar or Cmd/Ctrl+K chrome.
 
 Concise conventions for ShelfSense server-rendered admin screens. Prefer these patterns over inventing parallel markup or CSS.
 
 ## Page anatomy
 
 1. **Application shell** — brand, optional current-store label (only when authoritative `current_store` exists), compact grouped permission-gated nav (current-area row plus native `<details>` for other groups), flash.
-2. **Breadcrumbs** — caller-supplied crumb arrays via `shared/breadcrumbs`. Do not infer crumbs from controller or route names.
-3. **Page header** — optional eyebrow, title, optional subtitle, metadata, and status, with separately aligned actions via `shared/page_header`.
-4. **Content** — one primary task or record view inside `.app-content`. Panels use `.surface` (padded by default; `.surface--flush` for edge-to-edge contents such as tables).
-5. **Technical details** — UUIDs, lock versions, and similar via `shared/technical_details` (`<details>`), never as the first thing users see.
+2. **Page frame (migrated Admin pages)** — `render layout: "admin/shared/page"` with a semantic `width:` (`narrow` / `standard` / `wide` / `workspace`). The partial captures width through `AdminPageHelper` (views must not set that `content_for` themselves). Optional `tools` is already-rendered HTML, typically from `capture`. Unmigrated pages omit the frame and keep inherited `.app-content` at `--content-max: 72rem`.
+3. **Breadcrumbs** — caller-supplied crumb arrays via `shared/breadcrumbs`. Do not infer crumbs from controller or route names.
+4. **Page header** — optional eyebrow, title, optional subtitle, metadata, and status, with separately aligned actions via `shared/page_header`. The frame’s `title:` is visible page identity; `content_for :title` remains the document title in the feature view.
+5. **Content** — one primary task or record view inside `.app-content`. Panels use `.surface` (padded by default; `.surface--flush` for edge-to-edge contents such as tables).
+6. **Technical details** — UUIDs, lock versions, and similar via `shared/technical_details` (`<details>`), never as the first thing users see.
 
 ## Shared partials
 
 | Partial | Use when |
 |---|---|
+| `admin/shared/page` | Migrated Admin pages only. Width, region order, breadcrumbs, and page header. Do not set width `content_for` from the feature view |
 | `shared/flash` | Layout flash notices/alerts |
 | `shared/page_header` | Optional eyebrow, title, optional subtitle/metadata/status, separately aligned actions |
 | `shared/breadcrumbs` | Explicit navigation trail |
@@ -116,7 +118,7 @@ Phase 2.2 **architecture** (shells, shared partials, money UX, Hotwire boundarie
 Authority:
 
 - [UX design system](planning/ux-design-system/README.md) — Warm Parchment, adoption program (UDS-0–UDS-5), migration matrix
-- [Admin Page Frame Program](planning/admin-page-frame/README.md) — Accepted shared Admin page-frame contract (Slice 0 complete; Slice 1 allowlisted)
+- [Admin Page Frame Program](planning/admin-page-frame/README.md) — Accepted shared Admin page-frame contract (Slice 1 **Implemented**; further family adoption not authorized)
 - [Warm Parchment](planning/ux-design-system/warm-parchment.md) — tokens, typography, density (WCAG AA baseline)
 - [Button and action semantics](planning/ux-design-system/button-action-semantics.md) — wording, intent, style, size, review dialogs
 - [UDS-1 implementation plan](planning/ux-design-system/uds-1-plan.md) — foundation delivery (complete through UDS-1d)
