@@ -2,7 +2,7 @@
 
 **Program name:** Admin Page Frame Program (not UDS-6, UDS-7, or UDS-8)
 
-**Status:** **Implemented on `apf-development`.** Not a numbered APF-2–6 slice and not UDS-6, UDS-7, or UDS-8. Not on `main` until the sprint closeout merge of `apf-development`.
+**Status:** **Implemented on `apf-development`** (PR [#136](https://github.com/BankEncore/ShelfSense-v1/pull/136)). Not a numbered APF-2–6 slice and not UDS-6, UDS-7, or UDS-8. Not on `main` until the sprint closeout merge of `apf-development`.
 
 **Integration:** After acceptance, implement on a dedicated feature branch and open a PR into `apf-development`, the temporary integration branch for this bounded APF sprint.
 

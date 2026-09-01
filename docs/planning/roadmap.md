@@ -96,7 +96,7 @@ Persistent sidebar and global search remain parked ([#56](https://github.com/Ban
 
 ### Admin Page Frame Program
 
-**Status:** **Accepted.** Slice 0 complete. Slice 1 **Implemented on `apf-development`** (PR [#133](https://github.com/BankEncore/ShelfSense-v1/pull/133)). [Customer core](admin-page-frame/customer-core.md) **Implemented on `apf-development`**. Not on `main` until this sprint’s closeout merge. Not a numbered domain phase and not UDS-6, UDS-7, or UDS-8.
+**Status:** **Accepted.** Slice 0 complete. Slice 1 **Implemented on `apf-development`** (PR [#133](https://github.com/BankEncore/ShelfSense-v1/pull/133)). [Customer core](admin-page-frame/customer-core.md) **Implemented on `apf-development`** (PR [#136](https://github.com/BankEncore/ShelfSense-v1/pull/136)). Not on `main` until this sprint’s closeout merge. Not a numbered domain phase and not UDS-6, UDS-7, or UDS-8.
 
 Authoritative packet: [admin-page-frame/](admin-page-frame/README.md). Temporary sprint branch: `apf-development` (not `main` until closeout). Follow-on after UDS-5: a shared administrative page-frame contract (width modes, region order, orchestration of existing shared partials). Unmigrated pages keep today’s `72rem` `.app-content` behavior. Slice 1 is the frame plus Adjustment Reasons. [Customer core](admin-page-frame/customer-core.md) is **Implemented on `apf-development`** and is the last family on this sprint branch; merge `apf-development` to `main` and retire the branch. Do not add another family to `apf-development`. UDS-6 and UDS-7 stay parked.
 

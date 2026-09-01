@@ -2,7 +2,7 @@
 
 **Program name:** Admin Page Frame Program (not UDS-6, UDS-7, or UDS-8)
 
-**Status:** **Accepted.** Slice 0 complete. Slice 1 **Implemented on `apf-development`** (PR [#133](https://github.com/BankEncore/ShelfSense-v1/pull/133)). [Customer core](customer-core.md) **Implemented on `apf-development`**. Not on `main` until this sprint’s closeout merge. [adoption-outlook.md](adoption-outlook.md) is not authorized.
+**Status:** **Accepted.** Slice 0 complete. Slice 1 **Implemented on `apf-development`** (PR [#133](https://github.com/BankEncore/ShelfSense-v1/pull/133)). [Customer core](customer-core.md) **Implemented on `apf-development`** (PR [#136](https://github.com/BankEncore/ShelfSense-v1/pull/136)). Not on `main` until this sprint’s closeout merge. [adoption-outlook.md](adoption-outlook.md) is not authorized.
 
 This is a UDS-adjacent administrative composition program, not a numbered domain phase and not a numbered UDS slice. UDS-6 (staff history) and UDS-7 (sidebar / Cmd+K) remain parked.
 
