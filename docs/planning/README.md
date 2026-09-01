@@ -43,8 +43,9 @@ Phases 12–14 and the Terminal program are sequenced in [roadmap.md](roadmap.md
 | [UX design system](ux-design-system/README.md) | UDS-1–3 operationally complete; UDS-4.0–4.2 on `main`; UDS-5 complete on `main` (PR #57) |
 | [UDS-4 plan](ux-design-system/uds-4-plan.md) | Grouped navigation and non-purchasing adoption |
 | [UDS-5 plan](ux-design-system/uds-5-plan.md) | Administrative composition; 5.0–5.5 complete on `main`; 5.0 gate **Passed**; serif adopted |
+| [Admin Page Frame Program](admin-page-frame/README.md) | **Proposed.** Slice 0 evidence incomplete. **No implementation authority.** Shared Admin page-frame contract only; not a restyle sweep |
 
-Further screen migration belongs to the feature phase that materially changes the screen.
+Further screen migration belongs to the feature phase that materially changes the screen, except the bounded frame infrastructure and Adjustment Reasons reference explicitly authorized by the [Admin Page Frame Program](admin-page-frame/README.md) after Slice 0 completes. That program does not authorize a general restyle.
 
 ## Related
 
