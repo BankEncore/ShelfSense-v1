@@ -1,0 +1,41 @@
+<%#
+  locals:
+    width: (required) :narrow / :standard / :wide / :workspace
+    title: (required) visible page identity; does not set content_for :title
+    crumbs: optional breadcrumb array for shared/breadcrumbs
+    eyebrow, subtitle, metadata, status, actions: optional page_header slots
+    tools: optional already-rendered HTML (typically from capture)
+%>
+<% raise ArgumentError, "Admin page width is required" unless local_assigns.key?(:width) %>
+<% capture_admin_page_width!(width) %>
+<% raise ArgumentError, "Admin page title is required" if local_assigns[:title].blank? %>
+
+<div class="admin-page">
+  <% if local_assigns[:crumbs].present? %>
+    <div class="admin-page__context">
+      <%= render "shared/breadcrumbs", crumbs: crumbs %>
+    </div>
+  <% end %>
+
+  <div class="admin-page__header">
+    <%= render "shared/page_header",
+          **{
+            title: title,
+            eyebrow: local_assigns[:eyebrow],
+            subtitle: local_assigns[:subtitle],
+            metadata: local_assigns[:metadata],
+            status: local_assigns[:status],
+            actions: local_assigns[:actions]
+          }.compact %>
+  </div>
+
+  <% if local_assigns[:tools].present? %>
+    <div class="admin-page__tools">
+      <%= tools %>
+    </div>
+  <% end %>
+
+  <div class="admin-page__body">
+    <%= yield %>
+  </div>
+</div>

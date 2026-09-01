@@ -2,7 +2,7 @@
 
 **Program name:** Admin Page Frame Program (not UDS-6, UDS-7, or UDS-8)
 
-**Status:** **Accepted.** Slice 0 complete. Slice 1 authorized only within [change-allowlist.md](change-allowlist.md).
+**Status:** **Accepted.** Slice 0 complete. Slice 1 **Implemented**. Further family adoption is not authorized by this packet.
 
 Companions: [choices.md](choices.md), [slice-0.md](slice-0.md), [change-allowlist.md](change-allowlist.md), [test-matrix.md](test-matrix.md), [UDS-5](../ux-design-system/uds-5-plan.md), [ux-conventions.md](../../ux-conventions.md).
 
@@ -152,7 +152,7 @@ Admin page
     └── Subordinate technical details
 ```
 
-Optional empty regions are omitted rather than rendered as empty wrappers (APF-005). Proposed structural class names (provisional until Slice 1): `.admin-page`, `.admin-page__context`, `.admin-page__header`, `.admin-page__tools`, `.admin-page__body`. Optional composition primitives: `.section-stack`, `.cluster`, `.content-grid` and modifiers. These are layout primitives, not domain components.
+Optional empty regions are omitted rather than rendered as empty wrappers (APF-005). Structural class names (Slice 1): `.admin-page`, `.admin-page__context`, `.admin-page__header`, `.admin-page__tools`, `.admin-page__body`. Optional composition primitives (`.section-stack`, `.cluster`, `.content-grid`) were not introduced in Slice 1.
 
 ## Canvas and surface rules
 
@@ -179,20 +179,20 @@ Adjacent surfaces must express distinct semantic regions. A surface may not be a
 
 ### Slice 1 — Foundation and reference gate
 
-**Authorized** within [change-allowlist.md](change-allowlist.md):
+**Implemented.** See [slice-1.md](slice-1.md) and [change-allowlist.md](change-allowlist.md).
 
-- `application.html.erb` applies the width `content_for` onto `main.app-content`
+- `application.html.erb` applies the width capture with `class_names` onto `main.app-content`
 - `admin/shared/page` orchestrates existing shared partials
-- `AdminPageHelper` validates all four modes; production call sites use `standard` / `narrow`
-- narrowly scoped Admin composition CSS (no Ops, POS, or print selector changes; do not change `:root --content-max`)
+- `AdminPageHelper` validates all four modes with a single-use capture; production call sites use `standard` / `narrow`
+- narrowly scoped Admin composition CSS (no Ops, POS, or print selector changes; `--content-max` unchanged; `--standard` uses `var(--content-max)`)
 - tests for the frame, including an unmigrated page with no modifier
-- Adjustment Reasons index/show (`standard`) and new/edit (`narrow`)
+- Adjustment Reasons index/show (`standard`) and new/edit (`narrow`); `_form` is frozen
 
 No disposable fixture. Non-regression: Users, Customers, Products, and Store without migrating them.
 
 ### Closeout gate (after Slice 1)
 
-Decide whether the frame is accepted; whether Product should consume it in a separately approved compatibility slice; whether width and region semantics need correction; whether the next adoption is feature-led or an explicitly bounded family slice. Do not begin [adoption-outlook.md](adoption-outlook.md) work from this packet.
+**Complete.** The frame is accepted for Adjustment Reasons. Product consuming the frame is a **separately approved** later slice, not leftover Slice 1 work. Width rem values for `wide` / `workspace` remain provisional (APF-003). Next adoption is feature-led or an explicitly bounded family packet. Do not begin [adoption-outlook.md](adoption-outlook.md) work from this packet.
 
 ## Principles
 

@@ -1,11 +1,5 @@
 <% content_for :title, @adjustment_reason.name %>
 
-<%= render "shared/breadcrumbs", crumbs: [
-  { name: "Home", path: root_path },
-  { name: "Adjustment reasons", path: admin_adjustment_reasons_path },
-  { name: @adjustment_reason.code }
-] %>
-
 <% actions = [configuration_status_badge(@adjustment_reason.active?)] %>
 <% unless @adjustment_reason.system_protected? %>
   <% actions << action_link_to("Edit", edit_admin_adjustment_reason_path(@adjustment_reason), style: :outline, intent: :neutral) %>
@@ -29,14 +23,24 @@
   <% end %>
 <% end %>
 
-<%= render "shared/page_header", title: @adjustment_reason.name, subtitle: @adjustment_reason.code, actions: safe_join(actions, " ") %>
-
-<section class="section surface">
-  <%= render "shared/definition_list", rows: [
-        ["Direction", @adjustment_reason.direction.humanize],
-        ["Cost required for increase", @adjustment_reason.cost_required_for_increase? ? "Yes" : "No"],
-        ["Notes required", @adjustment_reason.notes_required? ? "Yes" : "No"],
-        ["System protected", @adjustment_reason.system_protected? ? "Yes" : "No"],
-        ["Description", @adjustment_reason.description]
-      ] %>
-</section>
+<%= render layout: "admin/shared/page", locals: {
+  width: :standard,
+  title: @adjustment_reason.name,
+  subtitle: @adjustment_reason.code,
+  crumbs: [
+    { name: "Home", path: root_path },
+    { name: "Adjustment reasons", path: admin_adjustment_reasons_path },
+    { name: @adjustment_reason.code }
+  ],
+  actions: safe_join(actions, " ")
+} do %>
+  <section class="section surface">
+    <%= render "shared/definition_list", rows: [
+          ["Direction", @adjustment_reason.direction.humanize],
+          ["Cost required for increase", @adjustment_reason.cost_required_for_increase? ? "Yes" : "No"],
+          ["Notes required", @adjustment_reason.notes_required? ? "Yes" : "No"],
+          ["System protected", @adjustment_reason.system_protected? ? "Yes" : "No"],
+          ["Description", @adjustment_reason.description]
+        ] %>
+  </section>
+<% end %>
