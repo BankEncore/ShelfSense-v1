@@ -2,7 +2,7 @@
 
 **Program name:** Admin Page Frame Program (not UDS-6, UDS-7, or UDS-8)
 
-**Status:** **Implemented.** Closeout gate complete. Further family adoption is not authorized by this packet.
+**Status:** **Implemented on `apf-development`** (PR [#133](https://github.com/BankEncore/ShelfSense-v1/pull/133)). Closeout gate complete. Not on `main` until a later merge of `apf-development`. Further family adoption is not authorized by this packet.
 
 Authority: [plan.md](plan.md), [choices.md](choices.md), [change-allowlist.md](change-allowlist.md). This note does not rewrite [slice-0-evidence.md](slice-0-evidence.md).
 
@@ -67,6 +67,9 @@ Optional headed Chromium at 1440, 768, and remaining gates was not required to c
 ## Closeout
 
 - Frame accepted for Adjustment Reasons.
+- Merged to `apf-development` as PR [#133](https://github.com/BankEncore/ShelfSense-v1/pull/133) (merge commit `8a4542c`). GitHub CI on that PR: lint, scan_js, scan_ruby, test (~13m), test_system (~5m), uds_accessibility — all success. The workflow runs on pull requests and on push to `main` only, so the merge commit itself has no second check suite.
+- No GitHub issue existed for Slice 1 (nothing to close).
 - Product consuming the frame is a separately approved later slice.
-- Next adoption is feature-led or an explicitly bounded family packet.
+- Next adoption is feature-led or an explicitly bounded family packet on `apf-development`. A Proposed Customer core packet is [customer-core.md](customer-core.md); it has no implementation authority until Accepted.
 - [adoption-outlook.md](adoption-outlook.md) remains **not authorized**.
+- Do not rename this program to UDS-6/7/8. Do not merge `apf-development` to `main` as part of this closeout.

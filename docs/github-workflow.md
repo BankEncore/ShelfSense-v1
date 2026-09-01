@@ -69,7 +69,10 @@ Small maintenance (dependency bumps, tiny fixes) may use an issue + PR without a
 
 Branch naming: `<issue-number>-<short-description>` (lowercase, hyphenated). Merge to the primary development branch (`main`). No long-lived phase branches unless a release strategy requires them.
 
-Active exception: [Register workspace consolidation](planning/register-workspace-consolidation/implementation-plan.md) uses integration branch `register-workspace-consolidation` until [closeout](planning/register-workspace-consolidation/closeout-plan.md). An incomplete Register replacement on `main` would leave cashiers without POS Home and without F10. Slice PRs for that program target the integration branch; merge `main` into it regularly. Phase 11 used the same pattern and has merged.
+Active exceptions:
+
+- [Register workspace consolidation](planning/register-workspace-consolidation/implementation-plan.md) uses integration branch `register-workspace-consolidation` until [closeout](planning/register-workspace-consolidation/closeout-plan.md). An incomplete Register replacement on `main` would leave cashiers without POS Home and without F10. Slice PRs for that program target the integration branch; merge `main` into it regularly. Phase 11 used the same pattern and has merged.
+- [Admin Page Frame Program](planning/admin-page-frame/README.md) uses integration branch `apf-development` until a later closeout merge to `main`. Slice 1 is on that branch (PR [#133](https://github.com/BankEncore/ShelfSense-v1/pull/133)), not on `main`. Later authorized APF packets target `apf-development`. This is not a restyle sweep and does not authorize [adoption-outlook.md](planning/admin-page-frame/adoption-outlook.md).
 
 PR structure:
 

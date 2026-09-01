@@ -12,6 +12,8 @@ Authority for what may ship now: [plan.md](plan.md), [change-allowlist.md](chang
 
 After Slice 1 closeout, choose **feature-led adoption** (UDS-5.5, remaining the default for domain chrome) or write a **new bounded family packet**. Do not start the work below from leftover energy in this program.
 
+A Proposed Customer core packet lives at [customer-core.md](customer-core.md). Until that packet is **Accepted**, it has no implementation authority and does not authorize the Index or Record family rows below.
+
 ## Possible later family packets
 
 These describe grammar work that would need its own allowlist, evidence, and frozen tests.
