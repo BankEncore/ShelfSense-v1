@@ -1,0 +1,16 @@
+  <div class="pos-overlay" data-register-blocking-overlay id="pos_remove_tender_overlay" hidden
+       data-register-workspace-target="removeTenderOverlay" role="dialog" aria-modal="true"
+       aria-labelledby="pos-remove-tender-title">
+    <div class="pos-overlay__panel">
+      <h2 id="pos-remove-tender-title">Remove this tender?</h2>
+      <p data-register-workspace-target="removeTenderDetail"></p>
+      <p id="pos-remove-tender-feedback" class="pos-overlay__error" data-overlay-error role="alert"></p>
+      <p>The working tender will be removed. Nothing has been posted yet, so removing a stored-value tender does not restore ledger value to the account or card.</p>
+      <div class="pos-overlay__actions">
+        <%= action_button "Keep Tender", style: :outline, intent: :neutral, size: :standard,
+              data: { action: "register-workspace#closeRemoveTenderOverlay" } %>
+        <%= action_button "Remove Tender", style: :solid, intent: :danger, size: :standard,
+              data: { action: "register-workspace#confirmRemoveTender" } %>
+      </div>
+    </div>
+  </div>

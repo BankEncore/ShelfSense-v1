@@ -36,6 +36,18 @@ class PosTillSessionSurfacesTest < ActionDispatch::IntegrationTest
     assert_match "Session Details", response.body
     assert_match @actor.display_name, response.body
     assert_match(/Expected cash/, response.body)
+    assert_select "form[action='#{pos_register_close_path}'] button, form[action='#{pos_register_close_path}'] input[type=submit]",
+                  text: "Close Session"
+  end
+
+  test "session details Close Session is only for the owning cashier" do
+    pos_store_manager(store: @store, assigned_by: @actor, username: "till_viewer")
+    delete session_path
+    sign_in_as("till_viewer")
+
+    get pos_session_details_path(@context[:session], register_id: @register.id)
+    assert_response :success
+    assert_select "form[action='#{pos_register_close_path}']", count: 0
   end
 
   test "associate without expected-cash permission sees op effects but not expected cash" do

@@ -1,0 +1,19 @@
+  <div class="pos-overlay" data-register-blocking-overlay
+       id="pos_overlay"
+       hidden
+       data-register-workspace-target="overlay"
+       role="dialog"
+       aria-modal="true"
+       aria-labelledby="pos-cancel-title">
+    <div class="pos-overlay__panel">
+      <h2 id="pos-cancel-title">Cancel this transaction?</h2>
+      <p data-register-workspace-target="cancelConsequence"><%= @workspace&.cancel_consequence.presence || "All working content will be discarded." %></p>
+      <p>No receipt, inventory movement, or stored-value issuance will be completed.</p>
+      <div class="pos-overlay__actions">
+        <%= action_button "Keep Transaction", style: :outline, intent: :neutral, size: :standard,
+              data: { action: "register-workspace#closeOverlay", register_workspace_target: "dontCancel" } %>
+        <%= action_button "Cancel Transaction (F9)", style: :solid, intent: :danger, size: :standard,
+              data: { action: "register-workspace#confirmCancel", register_workspace_target: "confirmCancel" } %>
+      </div>
+    </div>
+  </div>

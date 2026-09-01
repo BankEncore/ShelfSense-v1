@@ -23,8 +23,7 @@ class PosCloseZTest < ApplicationSystemTestCase
 
   test "empty sale entry can close with a blind zero count and finalize z" do
     open_register(opening_float: "100.00")
-    assert_button "Close Session"
-    click_on "Close Session"
+    choose_register_menu "Close Session"
     assert_text "Closing Cash count"
     assert_no_text "Expected"
     assert_no_text "Opening float"

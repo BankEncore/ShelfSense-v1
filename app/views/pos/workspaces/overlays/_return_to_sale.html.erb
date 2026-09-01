@@ -1,0 +1,18 @@
+  <div class="pos-overlay" data-register-blocking-overlay id="pos_return_to_sale_overlay" hidden
+       data-register-workspace-target="returnToSaleOverlay" role="dialog" aria-modal="true"
+       aria-labelledby="pos-return-to-sale-title">
+    <div class="pos-overlay__panel">
+      <h2 id="pos-return-to-sale-title">Return to Sale?</h2>
+      <p id="pos-return-to-sale-feedback" class="pos-overlay__error" data-overlay-error role="alert"></p>
+      <p>All applied tenders will be cleared. Merchandise can then be changed, and the transaction must be tendered again.</p>
+      <% if @tenders&.any?(&:stored_value?) %>
+        <p>Nothing has been posted yet, so clearing a stored-value tender does not restore ledger value to the account or card.</p>
+      <% end %>
+      <div class="pos-overlay__actions">
+        <%= action_button "Keep Tenders", style: :outline, intent: :neutral, size: :standard,
+              data: { action: "register-workspace#closeReturnToSaleOverlay" } %>
+        <%= action_button "Return to Sale", style: :solid, intent: :warning, size: :standard,
+              data: { action: "register-workspace#confirmReturnToSale" } %>
+      </div>
+    </div>
+  </div>

@@ -422,7 +422,10 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
   test "empty basket disables cancel" do
     open_register
     assert_button "Cancel (F9)", disabled: true
+    assert_selector "[data-register-shell-proxy='close-session']", visible: :hidden
+    open_register_menu
     assert_button "Close Session"
+    send_keys :escape
   end
 
   test "command field stays clickable above the basket" do
@@ -619,14 +622,22 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     assert_text "Resume Register"
   end
 
-  test "unknown identifier feedback does not move the command field" do
+  test "unknown identifier feedback does not cover the command field" do
     open_register
     field = find("#pos-command-field")
-    before = command_field_top
     field.fill_in with: "0000000000000"
     field.send_keys :enter
-    assert_css "#pos_feedback"
-    assert_equal before, command_field_top
+    assert_selector "#pos_feedback", visible: true
+    assert_match(/unknown|not found|no match|identifier/i, find("#pos_feedback").text)
+    hit = page.evaluate_script(<<~JS.squish)
+      (function() {
+        var el = document.getElementById("pos-command-field");
+        var box = el.getBoundingClientRect();
+        var top = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
+        return Boolean(top && (top === el || el.contains(top)));
+      })()
+    JS
+    assert hit, "command field must remain clickable after feedback"
   end
 
   test "in-flight mutation ignores tender remove and cancel" do
@@ -908,12 +919,12 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
 
   test "nonempty basket hides close session in the register menu" do
     open_register
-    assert_button "Close Session"
+    assert_selector "[data-register-shell-proxy='close-session']", visible: :hidden
     open_register_menu
     assert_button "Close Session"
     send_keys :escape
     add_current_sku
-    assert_no_button "Close Session"
+    assert_no_selector "[data-register-shell-proxy='close-session']", visible: :all
     open_register_menu
     assert_no_button "Close Session"
   end
@@ -1513,7 +1524,6 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     field.send_keys "+"
     assert_equal "abc+", field.value
     assert_no_selector "#pos_other_overlay", visible: true
-    assert_text "When this field is empty"
   end
 
   test "empty command field punctuation opens workspace actions" do

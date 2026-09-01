@@ -50,7 +50,9 @@ module Pos
       :pickup_available,
       :gift_card_programs_available,
       :cancel_consequence,
-      :feedback
+      :feedback,
+      :basket_item_count,
+      :selected_line_number
     )
 
     def self.call(...)
@@ -113,7 +115,9 @@ module Pos
         pickup_available: capability?(:pickup_available),
         gift_card_programs_available: capability?(:gift_card_programs_available),
         cancel_consequence: cancel_consequence,
-        feedback: @feedback
+        feedback: @feedback,
+        basket_item_count: @lines.size,
+        selected_line_number: @selected_line&.line_number
       )
     end
 

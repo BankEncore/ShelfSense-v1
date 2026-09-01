@@ -41,6 +41,11 @@
       <div class="pos-history__nav pos-no-print actions">
         <% if @session_record.open? %>
           <%= link_to "X Report", pos_session_x_report_path(@session_record), class: "btn btn--outline" %>
+          <% if @session_record.cashier_user_id == current_user.id %>
+            <%= action_button_to "Close Session", pos_register_close_path,
+                  style: :outline, intent: :neutral, size: :standard, method: :post,
+                  params: { session_id: @session_record.id, register_id: @register.id } %>
+          <% end %>
         <% else %>
           <button type="button" class="btn" data-action="pos-receipt#print">Print</button>
           <button type="button" class="btn btn--outline" data-action="pos-receipt#printTape">Print tape</button>

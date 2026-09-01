@@ -119,7 +119,15 @@ class PosHelperTest < ActionView::TestCase
     )
 
     assert pos_line_controlled?(line)
-    assert_equal "Override · Discount · Tax Class", pos_line_control_flags(line)
+    assert_equal(
+      [
+        { text: "Override", kind: "override" },
+        { text: "Discount", kind: "discount" },
+        { text: "Tax Override", kind: "tax" }
+      ],
+      pos_line_flag_tags(line)
+    )
+    assert_equal "Override · Discount · Tax Override", pos_line_control_flags(line)
   end
 
   test "controlled-action provenance names the action type and note" do
@@ -162,6 +170,7 @@ class PosHelperTest < ActionView::TestCase
 
     assert pos_unlinked_return_price_adjusted?(line)
     refute pos_line_controlled?(line)
-    assert_equal "", pos_line_control_flags(line)
+    assert_equal [ { text: "Unlinked return", kind: "return" } ], pos_line_flag_tags(line)
+    assert_equal "Unlinked return", pos_line_control_flags(line)
   end
 end

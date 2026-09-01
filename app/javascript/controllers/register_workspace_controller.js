@@ -1046,8 +1046,16 @@ export default class extends Controller {
 
   showFeedback(message) {
     if (!this.hasFeedbackTarget) return
+    this.feedbackTarget.hidden = false
     this.feedbackTarget.textContent = message
     this.feedbackTarget.setAttribute("role", "alert")
+  }
+
+  clearFeedback() {
+    if (!this.hasFeedbackTarget) return
+    this.feedbackTarget.textContent = ""
+    this.feedbackTarget.setAttribute("role", "status")
+    this.feedbackTarget.hidden = true
   }
 
   openTenderPicker(types, { source }) {
@@ -4437,10 +4445,7 @@ export default class extends Controller {
 
   recoverCompleteTransport() {
     this.inFlight = false
-    if (this.hasFeedbackTarget) {
-      this.feedbackTarget.textContent = "Connection lost. Retry complete does not take Cash again."
-      this.feedbackTarget.setAttribute("role", "alert")
-    }
+    this.showFeedback("Connection lost. Retry complete does not take Cash again.")
     if (this.hasRetryTarget) {
       this.retryTarget.disabled = false
       this.retryTarget.focus()

@@ -1,0 +1,29 @@
+  <div class="pos-overlay" data-register-blocking-overlay
+       id="pos_customer_overlay"
+       hidden
+       data-register-workspace-target="customerOverlay"
+       role="dialog"
+       aria-modal="true"
+       aria-labelledby="pos-customer-title">
+    <div class="pos-overlay__panel">
+      <h2 id="pos-customer-title">Find customer</h2>
+      <p>Search by name, email, or phone to attach a customer. Required for store credit, trade credit, and customer store-credit refunds.</p>
+      <label class="field">
+        <span>Name, email, or phone</span>
+        <input type="text" autocomplete="off" data-register-workspace-target="customerQueryField"
+               data-action="input->register-workspace#invalidateCustomerResultsOnInput">
+      </label>
+      <p class="muted" data-register-workspace-target="customerQueryLabel" role="status" aria-live="polite"></p>
+      <ul class="pos-picker" role="listbox" aria-labelledby="pos-customer-title" data-register-workspace-target="customerList"></ul>
+      <div class="pos-overlay__actions">
+        <%= action_button "Keep Current Customer", style: :outline, intent: :neutral, size: :standard,
+              data: { action: "register-workspace#keepCurrentCustomer" } %>
+        <% if effective_permissions.include?("customers.create") %>
+          <%= action_button "Quick Customer", style: :outline, intent: :neutral, size: :standard,
+                data: { action: "register-workspace#openQuickCustomerOverlay", register_workspace_target: "quickCustomerButton" } %>
+        <% end %>
+        <%= action_button "Attach Customer", style: :solid, intent: :brand, size: :standard,
+              data: { action: "register-workspace#confirmCustomerSelection" } %>
+      </div>
+    </div>
+  </div>

@@ -1,0 +1,25 @@
+  <div class="pos-overlay" data-register-blocking-overlay
+       id="pos_pickup_overlay"
+       hidden
+       data-register-workspace-target="pickupOverlay"
+       role="dialog"
+       aria-modal="true"
+       aria-labelledby="pos-pickup-title">
+    <div class="pos-overlay__panel">
+      <h2 id="pos-pickup-title">Find pickup</h2>
+      <p>Search available customer requests to add reserved merchandise.</p>
+      <label class="field">
+        <span>Name, phone, request #, or merchandise</span>
+        <input type="text" autocomplete="off" data-register-workspace-target="pickupQueryField"
+               data-action="input->register-workspace#invalidatePickupResultsOnInput">
+      </label>
+      <p class="muted" data-register-workspace-target="pickupQueryLabel" role="status" aria-live="polite"></p>
+      <ul class="pos-picker" role="listbox" aria-labelledby="pos-pickup-title" data-register-workspace-target="pickupList"></ul>
+      <div class="pos-overlay__actions">
+        <%= action_button "Keep Transaction Unchanged", style: :outline, intent: :neutral, size: :standard,
+              data: { action: "register-workspace#keepTransactionUnchanged" } %>
+        <%= action_button "Add Pickup Items", style: :solid, intent: :brand, size: :standard,
+              data: { action: "register-workspace#confirmPickupSelection" } %>
+      </div>
+    </div>
+  </div>

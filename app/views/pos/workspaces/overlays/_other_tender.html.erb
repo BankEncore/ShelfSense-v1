@@ -1,0 +1,20 @@
+  <div class="pos-overlay" data-register-blocking-overlay
+       id="pos_other_overlay"
+       hidden
+       data-register-workspace-target="otherOverlay"
+       role="dialog"
+       aria-modal="true"
+       aria-labelledby="pos-other-title">
+    <div class="pos-overlay__panel">
+      <h2 id="pos-other-title" data-register-workspace-target="otherTitle">Add tender</h2>
+      <p class="muted" data-register-workspace-target="otherSettlementLabel"></p>
+      <ul class="pos-picker" role="listbox" aria-labelledby="pos-other-title" data-register-workspace-target="otherList"></ul>
+      <p class="muted">Numbered rows identify types. Enter or Choose Tender selects the highlighted type. Esc goes back.</p>
+      <div class="pos-overlay__actions">
+        <%= action_button "Back", style: :outline, intent: :neutral, size: :standard,
+              data: { action: "register-workspace#dismissTenderPicker", register_workspace_target: "otherCancel" } %>
+        <%= action_button "Choose Tender", style: :solid, intent: :brand, size: :standard,
+              data: { action: "register-workspace#selectHighlightedOther", register_workspace_target: "otherChoose" } %>
+      </div>
+    </div>
+  </div>

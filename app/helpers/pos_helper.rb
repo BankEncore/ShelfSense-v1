@@ -213,12 +213,18 @@ module PosHelper
     line.price_overridden? || line.manually_discounted? || line.tax_class_overridden?
   end
 
+  def pos_line_flag_tags(line)
+    tags = []
+    tags << { text: "Override", kind: "override" } if line.price_overridden?
+    tags << { text: "Discount", kind: "discount" } if line.manually_discounted?
+    tags << { text: "Tax Override", kind: "tax" } if line.tax_class_overridden?
+    tags << { text: "Linked return", kind: "return" } if line.linked_return?
+    tags << { text: "Unlinked return", kind: "return" } if line.unlinked_return?
+    tags
+  end
+
   def pos_line_control_flags(line)
-    flags = []
-    flags << "Override" if line.price_overridden?
-    flags << "Discount" if line.manually_discounted?
-    flags << "Tax Class" if line.tax_class_overridden?
-    flags.join(" · ")
+    pos_line_flag_tags(line).map { |tag| tag[:text] }.join(" · ")
   end
 
   def pos_controlled_action_label(action)

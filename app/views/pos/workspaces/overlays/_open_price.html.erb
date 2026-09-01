@@ -1,0 +1,23 @@
+  <div class="pos-overlay" data-register-blocking-overlay
+       id="pos_open_price_overlay"
+       hidden
+       data-register-workspace-target="openPriceOverlay"
+       role="dialog"
+       aria-modal="true"
+       aria-labelledby="pos-open-price-title">
+    <div class="pos-overlay__panel">
+      <h2 id="pos-open-price-title" data-register-workspace-target="openPriceTitle">Open price</h2>
+      <p data-register-workspace-target="openPricePrompt"></p>
+      <p id="pos-open-price-feedback" class="pos-overlay__error" data-overlay-error role="alert"></p>
+      <label class="field">
+        <span>Price</span>
+        <input type="text" inputmode="decimal" autocomplete="off" data-register-workspace-target="openPriceField">
+      </label>
+      <div class="pos-overlay__actions">
+        <%= action_button "Cancel (Esc)", style: :outline, intent: :neutral, size: :standard,
+              data: { action: "register-workspace#closeOpenPriceOverlay" } %>
+        <%= action_button "Apply", style: :solid, intent: :brand, size: :standard,
+              data: { action: "register-workspace#submitOpenPricePrompt" } %>
+      </div>
+    </div>
+  </div>

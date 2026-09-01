@@ -35,7 +35,7 @@
             data: { action: "register-workspace#openTaxClassOverride", register_workspace_target: "taxClassButton" } %>
     </div>
     <div class="pos-actions__group" role="group" aria-label="Tender">
-      <%= action_button "Cash (F1)", style: :outline, intent: :neutral, size: :large, disabled: true,
+      <%= action_button "Cash (F1)", style: :solid, intent: :brand, size: :large, disabled: true,
             data: { action: "register-workspace#chooseCash", register_workspace_target: "cashButton" } %>
       <%= action_button "Card (F2)", style: :outline, intent: :neutral, size: :large, disabled: true,
             data: { action: "register-workspace#chooseCard", register_workspace_target: "cardButton" } %>
@@ -50,7 +50,7 @@
             data: { action: "register-workspace#enterTender", register_workspace_target: "tenderButton" } %>
     </div>
     <div class="pos-actions__group" role="group" aria-label="Remove line">
-      <%= action_button "Remove (F8)", style: :outline, intent: :neutral, size: :large, disabled: true,
+      <%= action_button "Remove (F8)", style: :outline, intent: :warning, size: :large, disabled: true,
             data: { action: "register-workspace#removeSelected", register_workspace_target: "removeButton" } %>
       <% if @ui_mode == "tender" && tenders.any? %>
         <%= action_button "Return to sale", style: :outline, intent: :neutral, size: :large,
@@ -82,7 +82,7 @@
           data: { action: "register-workspace#openOverlay", register_workspace_target: "cancelButton" } %>
   </div>
   <% if workspace.close_session_available %>
-    <div class="pos-actions__group" role="group" aria-label="Session">
+    <div class="pos-hidden" aria-hidden="true">
       <%= action_button_to "Close Session", pos_register_close_path, style: :outline, intent: :neutral, size: :standard, method: :post,
             params: { session_id: @session_record.id, register_id: @register.id },
             data: { register_shell_proxy: "close-session" } %>

@@ -1,0 +1,16 @@
+<% register_scope = { register_id: @register.id } %>
+<% selected_id = @selected_line&.id %>
+<% selected_tender_type = @selected_tender_type %>
+<% selected_tender_id = @selected_tender&.id %>
+<% tenders = @tenders %>
+<%= form_with url: pos_register_tender_path(register_scope), method: :post, html: { class: "pos-hidden", data: { register_workspace_target: "tenderForm", turbo: true } } do %>
+  <%= hidden_field_tag :register_id, @register.id %>
+  <%= hidden_field_tag :lock_version, @transaction.lock_version %>
+  <%= hidden_field_tag :selected_tender_id, selected_tender_id, data: { register_workspace_target: "selectedTenderInput" } %>
+  <%= hidden_field_tag :tender_amount, "", data: { register_workspace_target: "presentedInput" } %>
+  <%= hidden_field_tag :tender_type_id, selected_tender_type&.id, data: { register_workspace_target: "tenderTypeInput" } %>
+  <%= hidden_field_tag :external_reference, "", data: { register_workspace_target: "referenceInput" } %>
+  <%= hidden_field_tag :card_number, "", data: { register_workspace_target: "cardNumberInput" } %>
+  <%= hidden_field_tag :destination_mode, "", data: { register_workspace_target: "destinationModeInput" } %>
+  <%= hidden_field_tag :operation_id, "", data: { register_workspace_target: "tenderOperationInput" } %>
+<% end %>

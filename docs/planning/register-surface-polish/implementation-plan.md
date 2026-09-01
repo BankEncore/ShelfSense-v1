@@ -1,14 +1,14 @@
 # Register surface polish — Implementation plan
 
-Status: **Accepted** — in progress on `register-surface-polish`.
+Status: **Accepted / implemented** (S1–S4 on `main`). Hierarchy follow-on in progress on `register-workspace-hierarchy`.
 
 Authority: [plan.md](plan.md), [visual-system.md](visual-system.md), [change-allowlist.md](change-allowlist.md).
 
 ## Merge policy
 
-- Development branch `register-surface-polish` from `main`; sequential commits S1→S4; one PR to `main`.
-- Do not combine S3 workspace polish with completed-transaction redesign.
-- Font packaging (S2) lands before thermal CDN loaders are removed.
+- S1–S4 landed via `register-surface-polish` → `main` (PR #131).
+- Hierarchy follow-on: branch `register-workspace-hierarchy`; one PR to `main`; **do not merge until manual review is complete**.
+- Do not combine hierarchy polish with completed-transaction redesign or Turbo boundary refactors.
 
 ## Slice status
 
@@ -18,6 +18,7 @@ Authority: [plan.md](plan.md), [visual-system.md](visual-system.md), [change-all
 | S2 Local fonts | **Complete** | Package faces; remove CDN; thermal font-ready |
 | S3 Workspace polish | **Complete** | Header/command/basket/summary/actions |
 | S4 Menu/overlay (+ optional history) | **Complete** | Panel chrome; history skin; closeout |
+| Hierarchy follow-on | **Ready for review** | Basket header, feedback collapse, card rhythm, Cash/Remove emphasis, F10 Close Session, hint removal; Turbo deferred; hold merge for manual sign-off |
 
 ## Testing stack
 
@@ -53,7 +54,7 @@ Full CI before handoff: `./dev/rails-docker bin/ci`
 | Thermal font loader | `app/views/pos/receipts/_thermal_fonts.html.erb` |
 | Print JS | `app/javascript/controllers/pos_receipt_controller.js` |
 | Shell | `app/views/pos/shell/_header.html.erb`, `_menu.html.erb`, frame/feedback as needed |
-| Workspace | `app/views/pos/workspaces/_surface.html.erb`, `_command.html.erb`, `_basket.html.erb`, `_totals.html.erb`, `_tenders.html.erb`, `_actions.html.erb`, `_customer.html.erb`, `_issuances.html.erb`, `_overlays.html.erb` |
+| Workspace | `app/views/pos/workspaces/_surface.html.erb`, `_command.html.erb`, `_basket.html.erb`, `_totals.html.erb`, `_tenders.html.erb`, `_actions.html.erb`, `_basket_aux.html.erb`, `_customer.html.erb`, `_issuances.html.erb`, `_overlays.html.erb` → `overlays/*`, `_forms.html.erb` → `forms/*` |
 | Optional history | `app/views/pos/transactions/index.html.erb` |
 
 ## Manual verification (cashier)
@@ -68,4 +69,4 @@ At Chromium 1280×720 and 200% zoom:
 
 ## Exit
 
-Packet complete when S1–S4 merged (S4 history skin may be skipped with an explicit deferral note), CDN fonts gone, frozen suites green, and README status updated to **Accepted / implemented**.
+Packet S1–S4 complete on `main`. Hierarchy follow-on complete when suites green, manual review signed off, and PR merged.
