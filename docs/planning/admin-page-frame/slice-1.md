@@ -49,9 +49,11 @@ Handoff `./dev/rails-docker bin/ci`: RuboCop, bundler-audit, importmap audit, Br
 
 Automated:
 
-- 320×568: Adjustment Reasons index title and New reason reachable; new form Cancel reachable.
-- 1280×720 at 200% zoom: index title and New reason reachable.
+- 320×568: index title, New reason, and `assert_layout_usable` (table scroll allowed); new form Cancel and `assert_layout_usable`.
+- 1280×720 at 200% zoom: same gates on index and new (Cancel).
 - 1920×1080: used width of unmigrated Users `.app-content` matches Adjustment Reasons index (`standard`) within 1px, and is not greater than `72 * root font-size + 1px`.
+
+The layout gate showed `.form-field input { width: 100% }` stretching checkboxes past the content box at 320px. Slice 1 restores `width: auto` for checkbox/radio inside `.admin-page` only.
 
 CSS geometry (no headed Chromium; same fallback as APF-008):
 

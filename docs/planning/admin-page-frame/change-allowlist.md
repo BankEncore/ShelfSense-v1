@@ -68,7 +68,16 @@ docs/planning/admin-page-frame/user-stories.md
 docs/planning/admin-page-frame/slice-1.md
 docs/ux-conventions.md
 docs/planning/ux-design-system/migration-matrix.md
+docs/README.md
+docs/drafts/administrative-ux-revamp/shelvesense-admin-page-frame-slice-0.md
+docs/planning/README.md
+docs/planning/roadmap.md
+docs/planning/ux-design-system/README.md
+docs/planning/ux-design-system/program-plan.md
+docs/planning/ux-design-system/ux-adoption-template.md
 ```
+
+The last seven files are one-line status/pointer updates so indexes match Slice 1 Implemented. They do not expand production scope.
 
 ### Forbidden
 

@@ -24,7 +24,7 @@ test/system/admin_adjustment_reasons_composition_test.rb
 | Helper | `test/helpers/admin_page_helper_test.rb` | Symbol/string mapping for all four modes; invalid value stores no capture; second call raises; no class injection |
 | View | `test/views/admin_page_partial_test.rb` | Region order; omitted empty context/tools; tools HTML unescaped; missing width/title; partial does not set `content_for :title` |
 | Request | `test/integration/admin_page_frame_test.rb` | One `.admin-page`; exact `main` class; index/show `standard`; new/edit `narrow`; frozen `_form` contract; 422 redisplay; unmigrated Users has no modifier; scoped CSS block |
-| System | `test/system/admin_adjustment_reasons_composition_test.rb` | 320px / 200% zoom title and actions; at 1920, unmigrated Users used width matches Adjustment Reasons index (`standard`) within 1px |
+| System | `test/system/admin_adjustment_reasons_composition_test.rb` | 320px / 200% zoom: titles, New/Cancel, and `assert_layout_usable` (no page overflow; actions unclipped; table scroll on index). At 1920, unmigrated Users used width matches Adjustment Reasons index (`standard`) within 1px |
 
 ## Existing frozen regression tests
 
@@ -66,7 +66,7 @@ At each gate:
 - No two-dimensional page scroll except intentional table overflow
 - Unmigrated Users, Customers, Products, and Store pages match pre-Slice-1 width except documented shared-CSS impact
 
-Automated coverage: 320, 1280@200% zoom, and 1920 used-width comparison in the system test. Remaining viewports: CSS geometry plus optional headed Chromium (same fallback as APF-008). Evidence: [slice-1.md](slice-1.md).
+Automated coverage: 320 and 1280@200% zoom use `assert_layout_usable` on index (with `.table-scroll`) and new (Cancel). 1920 used-width comparison in the same system test. Remaining viewports: CSS geometry plus optional headed Chromium (same fallback as APF-008). Evidence: [slice-1.md](slice-1.md).
 
 ## Accessibility and keyboard (Slice 1)
 

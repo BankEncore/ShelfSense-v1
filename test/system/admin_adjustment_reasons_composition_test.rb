@@ -25,16 +25,34 @@ class AdminAdjustmentReasonsCompositionSystemTest < ApplicationSystemTestCase
       visit admin_adjustment_reasons_path
       assert_selector ".page-header__title", text: "Adjustment reasons"
       assert_link "New reason"
+      assert_layout_usable(
+        surface: "adjustment-reasons-index-320",
+        scroll_selector: ".table-scroll"
+      )
 
       visit new_admin_adjustment_reason_path
       assert_selector ".page-header__title", text: "New adjustment reason"
       assert_link "Cancel"
+      assert_layout_usable(
+        surface: "adjustment-reasons-new-320"
+      )
     end
 
     with_viewport(width: 1280, height: 720, zoom: 2) do
       visit admin_adjustment_reasons_path
       assert_selector ".page-header__title", text: "Adjustment reasons"
       assert_link "New reason"
+      assert_layout_usable(
+        surface: "adjustment-reasons-index-200-percent",
+        scroll_selector: ".table-scroll"
+      )
+
+      visit new_admin_adjustment_reason_path
+      assert_selector ".page-header__title", text: "New adjustment reason"
+      assert_link "Cancel"
+      assert_layout_usable(
+        surface: "adjustment-reasons-new-200-percent"
+      )
     end
   end
 
