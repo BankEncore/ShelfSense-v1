@@ -1,12 +1,14 @@
 <% content_for :title, "Edit customer" %>
 
-<%= render "shared/breadcrumbs", crumbs: [
-  { name: "Home", path: root_path },
-  { name: "Customers", path: admin_customers_path },
-  { name: @customer.admin_label, path: admin_customer_path(@customer) },
-  { name: "Edit" }
-] %>
-
-<%= render "shared/page_header", title: "Edit customer" %>
-
-<%= render "form", customer: @customer %>
+<%= render layout: "admin/shared/page", locals: {
+  width: :standard,
+  title: "Edit customer",
+  crumbs: [
+    { name: "Home", path: root_path },
+    { name: "Customers", path: admin_customers_path },
+    { name: @customer.admin_label, path: admin_customer_path(@customer) },
+    { name: "Edit" }
+  ]
+} do %>
+  <%= render "form", customer: @customer %>
+<% end %>
