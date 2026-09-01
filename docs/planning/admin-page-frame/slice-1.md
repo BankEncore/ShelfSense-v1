@@ -43,7 +43,7 @@ Frozen composition (always required for this slice):
   test/system/admin_grouped_navigation_test.rb
 ```
 
-Handoff `./dev/rails-docker bin/ci`: RuboCop, bundler-audit, importmap audit, Brakeman, `bin/rails test` (1377 runs, 0 failures), and seeds passed. The first `bin/rails test:system` hit one unrelated stale-element error in `PosRegisterShellTest` (POS opening-float at 200% zoom). A full `test:system` retry completed 161 runs, 1647 assertions, 0 failures, 0 errors.
+Handoff `./dev/rails-docker bin/ci` on `b429331` (viewport-gate remediation): RuboCop, bundler-audit, importmap audit, Brakeman, `bin/rails test` (0 failures), seeds, and `bin/rails test:system` (**161 runs, 1659 assertions**, 0 failures, 0 errors) passed in 15m8s. Slice 1 integrates on `apf-development` until a later closeout merge to `main`.
 
 ## Viewport and geometry
 

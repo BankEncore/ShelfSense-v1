@@ -2,7 +2,7 @@
 
 **Program name:** Admin Page Frame Program (not UDS-6, UDS-7, or UDS-8)
 
-**Status:** **Accepted.** Slice 0 complete. Slice 1 **Implemented** (frame + Adjustment Reasons). Further family adoption is not authorized by this packet.
+**Status:** **Accepted.** Slice 0 complete. Slice 1 **Implemented** (frame + Adjustment Reasons) on integration branch `apf-development` until a later merge to `main`. Further family adoption is not authorized by this packet.
 
 This is a UDS-adjacent administrative composition program, not a numbered domain phase and not a numbered UDS slice. UDS-6 (staff history) and UDS-7 (sidebar / Cmd+K) remain parked.
 
@@ -39,7 +39,7 @@ Slice 0 choices: [choices.md](choices.md) (APF-001–APF-008).
 
 ## Next action
 
-Do not start family restyles from leftover Slice 1 energy. Remaining Admin surfaces adopt `admin/shared/page` through a separately approved family or feature slice. Product consuming the frame is **not** implied. [adoption-outlook.md](adoption-outlook.md) remains non-authoritative.
+Do not start family restyles from leftover Slice 1 energy. Remaining Admin surfaces adopt `admin/shared/page` through a separately approved family or feature slice on `apf-development`. Product consuming the frame is **not** implied. [adoption-outlook.md](adoption-outlook.md) remains non-authoritative.
 
 ## Does not reopen
 
