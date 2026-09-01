@@ -216,7 +216,7 @@ Validate with the [accessibility and ergonomic test matrix](accessibility-ergono
 - New interaction patterns in [deferred-patterns.md](deferred-patterns.md) require their own specifications.
 - **UDS-4** defers purchasing screens to Phase 7.1 per [phase7.1-uds-coordination.md](../phase7.1-purchasing-polish/phase7.1-uds-coordination.md); see [uds-4-plan.md](uds-4-plan.md).
 - **UDS-5** is complete on `main` (PR #57; [uds-5-plan.md](uds-5-plan.md)). Do not pull UDS-6 history or UDS-7 sidebar/search into leftover UDS-5 work.
-- The [Admin Page Frame Program](../admin-page-frame/README.md) is **Accepted** (Slice 0 complete; Slice 1 authorized only within its locked allowlist). It is not leftover UDS-5 work and is not UDS-6, UDS-7, or UDS-8. It supersedes feature-led-only adoption only for the shared page-frame API, width modes, and explicitly authorized reference migrations in that packet.
+- The [Admin Page Frame Program](../admin-page-frame/README.md) is **Accepted** (Slice 1 + Customer core **Implemented on `main`**). Further family adoption is not authorized. It is not leftover UDS-5 work and is not UDS-6, UDS-7, or UDS-8. It supersedes feature-led-only adoption only for the shared page-frame API, width modes, and explicitly authorized reference migrations in that packet.
 
 ## Explicitly deferred
 

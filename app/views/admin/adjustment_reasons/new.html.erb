@@ -1,8 +1,13 @@
 <% content_for :title, "New adjustment reason" %>
-<%= render "shared/breadcrumbs", crumbs: [
-  { name: "Home", path: root_path },
-  { name: "Adjustment reasons", path: admin_adjustment_reasons_path },
-  { name: "New" }
-] %>
-<%= render "shared/page_header", title: "New adjustment reason" %>
-<%= render "form", adjustment_reason: @adjustment_reason %>
+
+<%= render layout: "admin/shared/page", locals: {
+  width: :narrow,
+  title: "New adjustment reason",
+  crumbs: [
+    { name: "Home", path: root_path },
+    { name: "Adjustment reasons", path: admin_adjustment_reasons_path },
+    { name: "New" }
+  ]
+} do %>
+  <%= render "form", adjustment_reason: @adjustment_reason %>
+<% end %>

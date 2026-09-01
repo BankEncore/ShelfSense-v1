@@ -216,6 +216,8 @@
   --radius: 0.375rem;
   --content-max: 72rem;
   --form-max: 40rem;
+  --admin-content-narrow: 44rem;
+  --admin-content-wide: 90rem; /* provisional APF-003 */
   --font-sans: "Source Sans 3", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --font-serif: "Source Serif 4", Georgia, "Times New Roman", serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
@@ -448,6 +450,62 @@ summary.app-nav-group__heading {
   width: min(100% - 2rem, var(--content-max));
   margin: var(--space-5) auto;
   flex: 1;
+}
+
+.app-content--narrow {
+  width: min(100% - 2rem, var(--admin-content-narrow));
+  min-width: 0;
+}
+
+.app-content--standard {
+  width: min(100% - 2rem, var(--content-max));
+  min-width: 0;
+}
+
+.app-content--wide {
+  width: min(100% - 2rem, var(--admin-content-wide));
+  min-width: 0;
+}
+
+.app-content--workspace {
+  width: calc(100% - 2rem);
+  min-width: 0;
+}
+
+.admin-page {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.admin-page__context,
+.admin-page__header,
+.admin-page__tools,
+.admin-page__body {
+  min-width: 0;
+}
+
+.admin-page__tools {
+  margin-bottom: var(--space-5);
+}
+
+.admin-page .form-field input[type="checkbox"],
+.admin-page .form-field input[type="radio"] {
+  width: auto;
+  max-width: none;
+}
+
+.admin-page__tools > .customer-filters {
+  margin-bottom: 0;
+}
+
+.admin-page .definition-list {
+  grid-template-columns: minmax(0, 12rem) minmax(0, 1fr);
+}
+
+.admin-page .definition-list dd {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .ops-header,

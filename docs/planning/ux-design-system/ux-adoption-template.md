@@ -12,7 +12,7 @@ Copy this section into feature-phase plans that create or materially change scre
 
 ### Rules
 
-- **Feature-led adoption:** new screens use the current accepted UDS primitives. Existing screens adopt those primitives when the feature that owns them is next in scope. Do not sweep unrelated templates in the same PR. **Accepted exception:** the [Admin Page Frame Program](../admin-page-frame/README.md) may establish a shared page-frame API and migrate only the reference surfaces in its locked allowlist. It does not authorize a general restyle. Slice 0 is complete.
+- **Feature-led adoption:** new screens use the current accepted UDS primitives. Existing screens adopt those primitives when the feature that owns them is next in scope. Do not sweep unrelated templates in the same PR. **Accepted exception:** the [Admin Page Frame Program](../admin-page-frame/README.md) established a shared page-frame API and migrated Adjustment Reasons and Customer core. It does not authorize a general restyle. Slice 1 and Customer core are **Implemented on `main`**.
 - New screens begin with accepted UDS primitives (tokens, ActionButtonHelper, shared partials, type roles, composition utilities, compact grouped admin nav as applicable).
 - A materially changed legacy screen becomes that phase's migration responsibility.
 - Unrelated neighboring screens do not enter scope automatically.
