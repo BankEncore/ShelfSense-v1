@@ -72,7 +72,7 @@ Branch naming: `<issue-number>-<short-description>` (lowercase, hyphenated). Mer
 Active exceptions:
 
 - [Register workspace consolidation](planning/register-workspace-consolidation/implementation-plan.md) uses integration branch `register-workspace-consolidation` until [closeout](planning/register-workspace-consolidation/closeout-plan.md). An incomplete Register replacement on `main` would leave cashiers without POS Home and without F10. Slice PRs for that program target the integration branch; merge `main` into it regularly. Phase 11 used the same pattern and has merged.
-- [Admin Page Frame Program](planning/admin-page-frame/README.md) uses temporary sprint branch `apf-development` until Customer core is validated and the branch merges to `main`. Slice 1 is on that branch (PR [#133](https://github.com/BankEncore/ShelfSense-v1/pull/133)). [Customer core](planning/admin-page-frame/customer-core.md) is **Accepted**; implement it into `apf-development`, then merge to `main` and retire the branch. Do not add another Admin family to `apf-development`. This is not a restyle sweep and does not authorize [adoption-outlook.md](planning/admin-page-frame/adoption-outlook.md).
+- [Admin Page Frame Program](planning/admin-page-frame/README.md) uses temporary sprint branch `apf-development` until Customer core is validated and the branch merges to `main`. Slice 1 (PR [#133](https://github.com/BankEncore/ShelfSense-v1/pull/133)) and Customer core are on that branch. Merge to `main` and retire the branch; do not add another Admin family to `apf-development`. This is not a restyle sweep and does not authorize [adoption-outlook.md](planning/admin-page-frame/adoption-outlook.md).
 
 PR structure:
 

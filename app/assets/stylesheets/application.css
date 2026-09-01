@@ -495,6 +495,19 @@ summary.app-nav-group__heading {
   max-width: none;
 }
 
+.admin-page__tools > .customer-filters {
+  margin-bottom: 0;
+}
+
+.admin-page .definition-list {
+  grid-template-columns: minmax(0, 12rem) minmax(0, 1fr);
+}
+
+.admin-page .definition-list dd {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .ops-header,
 .ops-content {
   width: min(100% - 2rem, var(--content-max));

@@ -2,7 +2,7 @@
 
 **Program name:** Admin Page Frame Program (not UDS-6, UDS-7, or UDS-8)
 
-**Status:** **Accepted.** Not a numbered APF-2–6 slice and not UDS-6, UDS-7, or UDS-8. Implementation follows this packet on `apf-development`. Not on `main` until the sprint closeout merge.
+**Status:** **Implemented on `apf-development`.** Not a numbered APF-2–6 slice and not UDS-6, UDS-7, or UDS-8. Not on `main` until the sprint closeout merge of `apf-development`.
 
 **Integration:** After acceptance, implement on a dedicated feature branch and open a PR into `apf-development`, the temporary integration branch for this bounded APF sprint.
 
@@ -162,11 +162,25 @@ app/views/admin/customers/edit.html.erb
 app/assets/stylesheets/application.css
 ```
 
-`application.css` may change only to add the Customer-scoped `.admin-page__tools > .customer-filters` spacing rule. Do not change global `.filters`, `.surface`, `.admin-page__tools`, width tokens, or other frame selectors.
+`application.css` may change only to add:
+
+1. the Customer-scoped `.admin-page__tools > .customer-filters` spacing rule
+2. the `.admin-page .definition-list` overflow fix required by the Customer show 320px viewport gate (same pattern as the Slice 1 checkbox fix)
+
+Do not change global `.filters`, `.surface`, `.admin-page__tools`, width tokens, or other frame selectors.
 
 ```css
 .admin-page__tools > .customer-filters {
   margin-bottom: 0;
+}
+
+.admin-page .definition-list {
+  grid-template-columns: minmax(0, 12rem) minmax(0, 1fr);
+}
+
+.admin-page .definition-list dd {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 ```
 
@@ -213,14 +227,16 @@ Status after the implementation PR: **Implemented on `apf-development`**. Status
 
 ## Implementation bar
 
-- [ ] Four listed templates consume `admin/shared/page` at `standard`
-- [ ] Index tools capture preserves `q`, `lifecycle`, empty-vs-filtered copy, and table contents
-- [ ] Filter form is `filters surface customer-filters` with no extra wrapper; `_form` and `merge_review` untouched
-- [ ] Show has no Product content-grid/panels; sections stay in current source order
-- [ ] New tests green; frozen `customers_admin_test`, Product, nav, Adjustment Reasons, and shared frame suites green
-- [ ] `assert_layout_usable` on index, show, new, and edit; 1920 standard-vs-Users comparison
-- [ ] Roadmap/packet status: Implemented on `apf-development` (cite the implementation PR)
+- [x] Four listed templates consume `admin/shared/page` at `standard`
+- [x] Index tools capture preserves `q`, `lifecycle`, empty-vs-filtered copy, and table contents
+- [x] Filter form is `filters surface customer-filters` with no extra wrapper; `_form` and `merge_review` untouched
+- [x] Show has no Product content-grid/panels; sections stay in current source order
+- [x] New tests green; frozen `customers_admin_test`, Product, nav, Adjustment Reasons, and shared frame suites green
+- [x] `assert_layout_usable` on index, show, new, and edit; 1920 standard-vs-Users comparison
+- [x] Roadmap/packet status: Implemented on `apf-development` (cite the implementation PR)
 - [ ] After validation: merge `apf-development` to `main` and retire the branch
+
+Handoff `./dev/rails-docker bin/ci`: RuboCop, bundler-audit, importmap audit, Brakeman, `bin/rails test` (0 failures), seeds, and `bin/rails test:system` (**163 runs, 1732 assertions**, 0 failures) passed in 16m34s.
 
 ## Does not reopen
 
