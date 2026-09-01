@@ -2,7 +2,7 @@
 
 **Program name:** Admin Page Frame Program (not UDS-6, UDS-7, or UDS-8)
 
-**Status:** **Accepted.** Slice 0 complete. Slice 1 **Implemented**.
+**Status:** **Accepted.** Slice 0 complete. Slice 1 **Implemented on `apf-development`**.
 
 Thin stories for later GitHub issues. Authority: [plan.md](plan.md), [choices.md](choices.md).
 

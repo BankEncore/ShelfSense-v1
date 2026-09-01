@@ -2,7 +2,7 @@
 
 **Program name:** Admin Page Frame Program (not UDS-6, UDS-7, or UDS-8)
 
-**Status:** **Accepted.** Slice 0 complete. Slice 1 **Implemented**. Further family adoption is not authorized by this packet.
+**Status:** **Accepted.** Slice 0 complete. Slice 1 **Implemented on `apf-development`**. Further family adoption is not authorized by this packet.
 
 These choices close the remaining Slice 0 contract questions. They do not authorize a general restyle. Evidence: [slice-0-evidence.md](slice-0-evidence.md). Authority: [plan.md](plan.md).
 

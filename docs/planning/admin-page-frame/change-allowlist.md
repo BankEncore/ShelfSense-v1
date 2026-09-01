@@ -2,7 +2,7 @@
 
 **Program name:** Admin Page Frame Program (not UDS-6, UDS-7, or UDS-8)
 
-**Status:** **Accepted.** Slice 0 complete. Slice 1 **Implemented**. Expanding this allowlist requires a documentation change in the same PR (or a preceding docs PR) and an explicit callout in review. “Shared CSS cleanup” is not implicit scope.
+**Status:** **Accepted.** Slice 0 complete. Slice 1 **Implemented on `apf-development`**. Expanding this allowlist requires a documentation change in the same PR (or a preceding docs PR) and an explicit callout in review. “Shared CSS cleanup” is not implicit scope.
 
 Choices: [choices.md](choices.md) (APF-001–APF-008). Completion: [slice-1.md](slice-1.md).
 
@@ -75,9 +75,10 @@ docs/planning/roadmap.md
 docs/planning/ux-design-system/README.md
 docs/planning/ux-design-system/program-plan.md
 docs/planning/ux-design-system/ux-adoption-template.md
+docs/github-workflow.md
 ```
 
-The last seven files are one-line status/pointer updates so indexes match Slice 1 Implemented. They do not expand production scope.
+Status/pointer files so indexes match Slice 1 **Implemented on `apf-development`**. They do not expand production scope.
 
 ### Forbidden
 

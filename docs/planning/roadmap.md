@@ -96,9 +96,9 @@ Persistent sidebar and global search remain parked ([#56](https://github.com/Ban
 
 ### Admin Page Frame Program
 
-**Status:** **Accepted.** Slice 0 complete. Slice 1 **Implemented**. Further family adoption is not authorized. Not a numbered domain phase and not UDS-6, UDS-7, or UDS-8.
+**Status:** **Accepted.** Slice 0 complete. Slice 1 **Implemented on `apf-development`** (PR [#133](https://github.com/BankEncore/ShelfSense-v1/pull/133)). Not on `main` until a later closeout merge. Further family adoption is not authorized. Not a numbered domain phase and not UDS-6, UDS-7, or UDS-8.
 
-Authoritative packet: [admin-page-frame/](admin-page-frame/README.md). Follow-on after UDS-5: a shared administrative page-frame contract (width modes, region order, orchestration of existing shared partials). Unmigrated pages keep today’s `72rem` `.app-content` behavior. Slice 1 is the frame plus Adjustment Reasons only. Remaining surfaces stay feature-led or require a later bounded family packet. UDS-6 and UDS-7 stay parked.
+Authoritative packet: [admin-page-frame/](admin-page-frame/README.md). Integration branch: `apf-development` (not `main`). Follow-on after UDS-5: a shared administrative page-frame contract (width modes, region order, orchestration of existing shared partials). Unmigrated pages keep today’s `72rem` `.app-content` behavior. Slice 1 is the frame plus Adjustment Reasons only. Remaining surfaces stay feature-led or require a later bounded family packet targeting `apf-development`. [Customer core](admin-page-frame/customer-core.md) is **Proposed** and not authorized. UDS-6 and UDS-7 stay parked.
 
 **Deliverable:**
 
@@ -417,7 +417,7 @@ The following remain out of scope until a planning packet and ADR review justify
 | Phase 7.1 — Purchasing workflow closeout | **Complete** on `main` ([packet](phase7.1-purchasing-polish/README.md)) |
 | UDS-4 — Navigation and information architecture | **UDS-4.0–4.2 on `main`** ([uds-4-plan.md](ux-design-system/uds-4-plan.md)) |
 | UDS-5 — Administrative composition | **Complete** on `main` (PR #57; [uds-5-plan.md](ux-design-system/uds-5-plan.md)) |
-| Admin Page Frame Program | **Accepted** — Slice 1 **Implemented** (frame + Adjustment Reasons) — [packet](admin-page-frame/README.md) |
+| Admin Page Frame Program | **Accepted** — Slice 1 **Implemented on `apf-development`** (PR [#133](https://github.com/BankEncore/ShelfSense-v1/pull/133)) — [packet](admin-page-frame/README.md) |
 | Phase 8 — Customer foundation (MVP) | **Complete** on `main` (PR #42) |
 | Phase 9 — Catalog and bibliographic enrichment | **Implemented** |
 | Phase 10 — Stored value | **Implemented** on `main`; [manual test plan](phase10-stored-value/phase10-manual-test-plan.md) executed |
