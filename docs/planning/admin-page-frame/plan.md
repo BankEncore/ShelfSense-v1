@@ -2,7 +2,7 @@
 
 **Program name:** Admin Page Frame Program (not UDS-6, UDS-7, or UDS-8)
 
-**Status:** **Accepted.** Slice 0 complete. Slice 1 **Implemented on `apf-development`** (PR [#133](https://github.com/BankEncore/ShelfSense-v1/pull/133)). Not on `main` until a later closeout merge. Further family adoption is not authorized by this packet.
+**Status:** **Accepted.** Slice 0 complete. Slice 1 **Implemented on `apf-development`** (PR [#133](https://github.com/BankEncore/ShelfSense-v1/pull/133)). [Customer core](customer-core.md) **Accepted** (not yet implemented). Not on `main` until this sprint’s closeout merge. Further family adoption beyond Customer core is not authorized.
 
 Companions: [choices.md](choices.md), [slice-0.md](slice-0.md), [change-allowlist.md](change-allowlist.md), [test-matrix.md](test-matrix.md), [UDS-5](../ux-design-system/uds-5-plan.md), [ux-conventions.md](../../ux-conventions.md).
 
@@ -192,7 +192,7 @@ No disposable fixture. Non-regression: Users, Customers, Products, and Store wit
 
 ### Closeout gate (after Slice 1)
 
-**Complete.** The frame is accepted for Adjustment Reasons on `apf-development` (PR [#133](https://github.com/BankEncore/ShelfSense-v1/pull/133)), not on `main`. Product consuming the frame is a **separately approved** later slice, not leftover Slice 1 work. Width rem values for `wide` / `workspace` remain provisional (APF-003). Next adoption is feature-led or an explicitly bounded family packet. [customer-core.md](customer-core.md) is **Proposed** and has no implementation authority until Accepted. Do not begin [adoption-outlook.md](adoption-outlook.md) work from this packet.
+**Complete.** The frame is accepted for Adjustment Reasons on `apf-development` (PR [#133](https://github.com/BankEncore/ShelfSense-v1/pull/133)), not on `main`. Product consuming the frame is a **separately approved** later slice, not leftover Slice 1 work. Width rem values for `wide` / `workspace` remain provisional (APF-003). [customer-core.md](customer-core.md) is **Accepted**; implement it on `apf-development`, then merge that branch to `main` and retire it. Do not add another family to `apf-development`. Do not begin [adoption-outlook.md](adoption-outlook.md) work from this packet.
 
 ## Principles
 
