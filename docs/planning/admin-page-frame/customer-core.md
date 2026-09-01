@@ -2,17 +2,15 @@
 
 **Program name:** Admin Page Frame Program (not UDS-6, UDS-7, or UDS-8)
 
-**Status:** **Implemented on `apf-development`** (PR [#136](https://github.com/BankEncore/ShelfSense-v1/pull/136)). Not a numbered APF-2–6 slice and not UDS-6, UDS-7, or UDS-8. Not on `main` until the sprint closeout merge of `apf-development`.
+**Status:** **Implemented on `main`** (implementation PR [#136](https://github.com/BankEncore/ShelfSense-v1/pull/136); sprint closeout merges Slice 1 + Customer core). Not a numbered APF-2–6 slice and not UDS-6, UDS-7, or UDS-8.
 
-**Integration:** After acceptance, implement on a dedicated feature branch and open a PR into `apf-development`, the temporary integration branch for this bounded APF sprint.
+**Integration:** Implementation used temporary sprint branch `apf-development` (feature branch → PR into `apf-development`, then merge to `main`). That branch is retired after closeout. Do not reopen it for another Admin family.
 
-After Customer core is accepted and validated, merge `apf-development` to `main` before beginning or authorizing another Admin family. Do not add another family to `apf-development`. Retire the integration branch after it merges to `main`.
-
-Status progression: Proposed → Accepted → Implemented on `apf-development` → Implemented on `main` → integration branch retired.
+Status progression complete: Proposed → Accepted → Implemented on `apf-development` → **Implemented on `main`** → integration branch retired.
 
 Companions: [README.md](README.md), [plan.md](plan.md), [choices.md](choices.md) (APF-001–APF-008), [slice-1.md](slice-1.md), [change-allowlist.md](change-allowlist.md), [adoption-outlook.md](adoption-outlook.md).
 
-This packet is the next bounded **reference family** after Slice 1. It does not authorize the Index or Record family sweeps in [adoption-outlook.md](adoption-outlook.md). It does not authorize Product consuming the frame.
+This packet is the bounded **reference family** after Slice 1. It does not authorize the Index or Record family sweeps in [adoption-outlook.md](adoption-outlook.md). It does not authorize Product consuming the frame.
 
 ## Why this family
 
@@ -211,8 +209,6 @@ docs/planning/ux-design-system/migration-matrix.md
 docs/github-workflow.md
 ```
 
-Status after the implementation PR: **Implemented on `apf-development`**. Status after the sprint closeout merge: **Implemented on `main`**; retire `apf-development`.
-
 ## Forbidden
 
 - `merge_review.html.erb`; `admin/customer_requests/**`; stored-value workflow templates and commands
@@ -223,7 +219,6 @@ Status after the implementation PR: **Implemented on `apf-development`**. Status
 - Using `wide` to exercise the provisional token
 - Expanding into Users, Products, Stores, or any other family
 - Treating this packet as APF-2 or as [adoption-outlook.md](adoption-outlook.md) authority
-- Adding another family to `apf-development`
 
 ## Implementation bar
 
@@ -234,9 +229,9 @@ Status after the implementation PR: **Implemented on `apf-development`**. Status
 - [x] New tests green; frozen `customers_admin_test`, Product, nav, Adjustment Reasons, and shared frame suites green
 - [x] `assert_layout_usable` on index, show, new, and edit; 1920 standard-vs-Users comparison
 - [x] Roadmap/packet status: Implemented on `apf-development` (cite the implementation PR)
-- [ ] After validation: merge `apf-development` to `main` and retire the branch
+- [x] After validation: merge `apf-development` to `main` and retire the branch
 
-Handoff `./dev/rails-docker bin/ci`: RuboCop, bundler-audit, importmap audit, Brakeman, `bin/rails test` (0 failures), seeds, and `bin/rails test:system` (**163 runs, 1732 assertions**, 0 failures) passed in 16m34s.
+Handoff `./dev/rails-docker bin/ci` on the implementation branch: RuboCop, bundler-audit, importmap audit, Brakeman, `bin/rails test` (0 failures), seeds, and `bin/rails test:system` (**163 runs, 1732 assertions**, 0 failures) passed in 16m34s.
 
 ## Does not reopen
 

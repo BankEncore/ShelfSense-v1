@@ -2,7 +2,7 @@
 
 **Program name:** Admin Page Frame Program (not UDS-6, UDS-7, or UDS-8)
 
-**Status:** **Implemented on `apf-development`** (PR [#133](https://github.com/BankEncore/ShelfSense-v1/pull/133)). Closeout gate complete. Not on `main` until a later merge of `apf-development`. Further family adoption is not authorized by this packet.
+**Status:** **Implemented on `main`** (PR [#133](https://github.com/BankEncore/ShelfSense-v1/pull/133); landed via the `apf-development` sprint closeout). Closeout gate complete. Further family adoption is not authorized by this packet.
 
 Authority: [plan.md](plan.md), [choices.md](choices.md), [change-allowlist.md](change-allowlist.md). This note does not rewrite [slice-0-evidence.md](slice-0-evidence.md).
 
@@ -43,7 +43,7 @@ Frozen composition (always required for this slice):
   test/system/admin_grouped_navigation_test.rb
 ```
 
-Handoff `./dev/rails-docker bin/ci` on `b429331` (viewport-gate remediation): RuboCop, bundler-audit, importmap audit, Brakeman, `bin/rails test` (0 failures), seeds, and `bin/rails test:system` (**161 runs, 1659 assertions**, 0 failures, 0 errors) passed in 15m8s. Slice 1 integrates on `apf-development` until a later closeout merge to `main`.
+Handoff `./dev/rails-docker bin/ci` on `b429331` (viewport-gate remediation): RuboCop, bundler-audit, importmap audit, Brakeman, `bin/rails test` (0 failures), seeds, and `bin/rails test:system` (**161 runs, 1659 assertions**, 0 failures, 0 errors) passed in 15m8s.
 
 ## Viewport and geometry
 
@@ -67,9 +67,9 @@ Optional headed Chromium at 1440, 768, and remaining gates was not required to c
 ## Closeout
 
 - Frame accepted for Adjustment Reasons.
-- Merged to `apf-development` as PR [#133](https://github.com/BankEncore/ShelfSense-v1/pull/133) (merge commit `8a4542c`). GitHub CI on that PR: lint, scan_js, scan_ruby, test (~13m), test_system (~5m), uds_accessibility — all success. The workflow runs on pull requests and on push to `main` only, so the merge commit itself has no second check suite.
+- Merged to `apf-development` as PR [#133](https://github.com/BankEncore/ShelfSense-v1/pull/133) (merge commit `8a4542c`), then to `main` with the sprint closeout. GitHub CI on that PR: lint, scan_js, scan_ruby, test (~13m), test_system (~5m), uds_accessibility — all success.
 - No GitHub issue existed for Slice 1 (nothing to close).
 - Product consuming the frame is a separately approved later slice.
-- Next adoption is the Accepted [customer-core.md](customer-core.md) packet on `apf-development`, then merge that branch to `main` and retire it.
+- Customer core followed on the same sprint branch ([customer-core.md](customer-core.md)).
 - [adoption-outlook.md](adoption-outlook.md) remains **not authorized**.
-- Do not rename this program to UDS-6/7/8. Do not merge `apf-development` to `main` as part of this closeout.
+- Do not rename this program to UDS-6/7/8.

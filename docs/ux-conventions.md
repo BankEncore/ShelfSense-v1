@@ -1,6 +1,6 @@
 # Administrative UX conventions
 
-Status: Implemented (Phase 2.2 architecture; **Warm Parchment palette via UDS-1**). Administrative composition grammar for the Product family and compact grouped nav is recorded in [uds-5-plan.md](planning/ux-design-system/uds-5-plan.md) (**complete** on `main`). The [Admin Page Frame Program](planning/admin-page-frame/README.md) (Slice 1 **Implemented on `apf-development`**) is the shared page-frame API for migrated Admin pages. Do not copy inspirational sidebar or Cmd/Ctrl+K chrome.
+Status: Implemented (Phase 2.2 architecture; **Warm Parchment palette via UDS-1**). Administrative composition grammar for the Product family and compact grouped nav is recorded in [uds-5-plan.md](planning/ux-design-system/uds-5-plan.md) (**complete** on `main`). The [Admin Page Frame Program](planning/admin-page-frame/README.md) (Slice 1 + Customer core **Implemented on `main`**) is the shared page-frame API for migrated Admin pages. Do not copy inspirational sidebar or Cmd/Ctrl+K chrome.
 
 Concise conventions for ShelfSense server-rendered admin screens. Prefer these patterns over inventing parallel markup or CSS.
 
@@ -118,7 +118,7 @@ Phase 2.2 **architecture** (shells, shared partials, money UX, Hotwire boundarie
 Authority:
 
 - [UX design system](planning/ux-design-system/README.md) — Warm Parchment, adoption program (UDS-0–UDS-5), migration matrix
-- [Admin Page Frame Program](planning/admin-page-frame/README.md) — Accepted shared Admin page-frame contract (Slice 1 **Implemented on `apf-development`**; further family adoption not authorized)
+- [Admin Page Frame Program](planning/admin-page-frame/README.md) — Accepted shared Admin page-frame contract (Slice 1 + Customer core **Implemented on `main`**; further family adoption not authorized)
 - [Warm Parchment](planning/ux-design-system/warm-parchment.md) — tokens, typography, density (WCAG AA baseline)
 - [Button and action semantics](planning/ux-design-system/button-action-semantics.md) — wording, intent, style, size, review dialogs
 - [UDS-1 implementation plan](planning/ux-design-system/uds-1-plan.md) — foundation delivery (complete through UDS-1d)

@@ -2,7 +2,7 @@
 
 **Program name:** Admin Page Frame Program (not UDS-6, UDS-7, or UDS-8)
 
-**Status:** **Accepted.** Slice 0 complete. Slice 1 **Implemented on `apf-development`**.
+**Status:** **Accepted.** Slice 0 complete. Slice 1 **Implemented on `main`**.
 
 Authority: [plan.md](plan.md), [change-allowlist.md](change-allowlist.md), [choices.md](choices.md). A UDS change may add visual or accessibility assertions but must not delete, relax, rename, or rewrite existing workflow assertions to make the slice pass.
 

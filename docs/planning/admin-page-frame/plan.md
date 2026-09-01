@@ -2,7 +2,7 @@
 
 **Program name:** Admin Page Frame Program (not UDS-6, UDS-7, or UDS-8)
 
-**Status:** **Accepted.** Slice 0 complete. Slice 1 **Implemented on `apf-development`** (PR [#133](https://github.com/BankEncore/ShelfSense-v1/pull/133)). [Customer core](customer-core.md) **Implemented on `apf-development`**. Not on `main` until this sprint’s closeout merge. Further family adoption beyond Customer core is not authorized.
+**Status:** **Accepted.** Slice 0 complete. Slice 1 **Implemented on `main`** (PR [#133](https://github.com/BankEncore/ShelfSense-v1/pull/133)). [Customer core](customer-core.md) **Implemented on `main`** (PR [#136](https://github.com/BankEncore/ShelfSense-v1/pull/136)). Further family adoption beyond Customer core is not authorized.
 
 Companions: [choices.md](choices.md), [slice-0.md](slice-0.md), [change-allowlist.md](change-allowlist.md), [test-matrix.md](test-matrix.md), [UDS-5](../ux-design-system/uds-5-plan.md), [ux-conventions.md](../../ux-conventions.md).
 
@@ -179,7 +179,7 @@ Adjacent surfaces must express distinct semantic regions. A surface may not be a
 
 ### Slice 1 — Foundation and reference gate
 
-**Implemented on `apf-development`** (PR [#133](https://github.com/BankEncore/ShelfSense-v1/pull/133)). Not on `main`. See [slice-1.md](slice-1.md) and [change-allowlist.md](change-allowlist.md).
+**Implemented on `main`** (PR [#133](https://github.com/BankEncore/ShelfSense-v1/pull/133)). See [slice-1.md](slice-1.md) and [change-allowlist.md](change-allowlist.md).
 
 - `application.html.erb` applies the width capture with `class_names` onto `main.app-content`
 - `admin/shared/page` orchestrates existing shared partials
@@ -192,7 +192,7 @@ No disposable fixture. Non-regression: Users, Customers, Products, and Store wit
 
 ### Closeout gate (after Slice 1)
 
-**Complete.** The frame is accepted for Adjustment Reasons on `apf-development` (PR [#133](https://github.com/BankEncore/ShelfSense-v1/pull/133)), not on `main`. Product consuming the frame is a **separately approved** later slice, not leftover Slice 1 work. Width rem values for `wide` / `workspace` remain provisional (APF-003). [customer-core.md](customer-core.md) is **Implemented on `apf-development`**. Merge `apf-development` to `main` and retire it. Do not add another family to `apf-development`. Do not begin [adoption-outlook.md](adoption-outlook.md) work from this packet.
+**Complete.** The frame is accepted for Adjustment Reasons on `main` (PR [#133](https://github.com/BankEncore/ShelfSense-v1/pull/133)). Product consuming the frame is a **separately approved** later slice, not leftover Slice 1 work. Width rem values for `wide` / `workspace` remain provisional (APF-003). [customer-core.md](customer-core.md) is **Implemented on `main`** (PR [#136](https://github.com/BankEncore/ShelfSense-v1/pull/136)). The temporary sprint branch is retired. Do not begin [adoption-outlook.md](adoption-outlook.md) work from this packet.
 
 ## Principles
 
