@@ -2,7 +2,7 @@
 
 **Program name:** Admin Page Frame Program (not UDS-6, UDS-7, or UDS-8)
 
-**Status:** **Proposed.** Slice 0 evidence incomplete. **No implementation authority.**
+**Status:** **Accepted.** Slice 0 complete. Slice 1 authorized only within [change-allowlist.md](change-allowlist.md).
 
 This is a UDS-adjacent administrative composition program, not a numbered domain phase and not a numbered UDS slice. UDS-6 (staff history) and UDS-7 (sidebar / Cmd+K) remain parked.
 
@@ -11,17 +11,18 @@ This is a UDS-adjacent administrative composition program, not a numbered domain
 1. **ShelfSense needs a shared Admin page-frame contract** — width modes, region order, and orchestration of existing shared partials.
 2. **ShelfSense does not yet authorize a page-by-page restyle** — remaining surfaces adopt through separately approved family or feature slices after the Slice 1 closeout gate.
 
-Do not start `admin/page` or migrate templates from this packet until Slice 0 evidence is complete and [slice-0.md](slice-0.md) records a locked Slice 1 allowlist.
+Slice 0 choices: [choices.md](choices.md) (APF-001–APF-008).
 
 ## Document map
 
 | Document | Purpose |
 |---|---|
 | [plan.md](plan.md) | Program authority: goal, UDS-5.5 amendment, locked decisions, families, width, regions, Slice 0/1, closeout |
-| [slice-0.md](slice-0.md) | Inventory, evidence set vs implementation set, open decisions, Slice 0 completion bar |
-| [slice-0-evidence.md](slice-0-evidence.md) | Viewport and route observations (incomplete; no evidence recorded yet) |
-| [change-allowlist.md](change-allowlist.md) | Slice 0 docs only; Slice 1 provisional and frozen until Slice 0 completes |
-| [user-stories.md](user-stories.md) | Issue-ready stories for Slice 0 and Slice 1 |
+| [choices.md](choices.md) | Slice 0 accepted choices APF-001–APF-008 |
+| [slice-0.md](slice-0.md) | Inventory, evidence set vs implementation set, completion bar |
+| [slice-0-evidence.md](slice-0-evidence.md) | Route reconciliation, composition, CSS viewport geometry |
+| [change-allowlist.md](change-allowlist.md) | Slice 1 **locked** file and selector list |
+| [user-stories.md](user-stories.md) | Issue-ready stories for Slice 0 (complete) and Slice 1 |
 | [test-matrix.md](test-matrix.md) | Frozen suites, viewport gates, non-regression surfaces |
 | [adoption-outlook.md](adoption-outlook.md) | Former family-migration slices — **not authorized** |
 
@@ -29,15 +30,15 @@ Do not start `admin/page` or migrate templates from this packet until Slice 0 ev
 
 | Slice | Authority | Production code |
 |---|---|---|
-| **Slice 0** — Inventory, evidence, and contract | Authorized | None |
-| **Slice 1** — Frame + Adjustment Reasons | Authorized only after Slice 0 completes | Bounded allowlist |
+| **Slice 0** — Inventory, evidence, and contract | **Complete** | None |
+| **Slice 1** — Frame + Adjustment Reasons | Authorized within the locked allowlist | Bounded allowlist |
 | **Closeout gate** | Required before any further adoption | None in this packet |
 
 [adoption-outlook.md](adoption-outlook.md) is not a delivery plan.
 
 ## Next action
 
-[slice-0-evidence.md](slice-0-evidence.md) records route reconciliation, evidence-set composition, and CSS viewport geometry. Still open before Slice 1: headed Chromium (optional if that pass is accepted), page-frame API shape, width-escape mechanism, and the locked Slice 1 allowlist. Do not start `admin/page`.
+Implement Slice 1 within [change-allowlist.md](change-allowlist.md): `admin/shared/page`, width helper + `content_for` on `main.app-content`, Adjustment Reasons index/show `standard` and new/edit `narrow`. Do not migrate other families.
 
 ## Does not reopen
 

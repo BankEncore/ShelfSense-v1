@@ -2,26 +2,23 @@
 
 **Program name:** Admin Page Frame Program (not UDS-6, UDS-7, or UDS-8)
 
-**Status:** **Proposed.** Slice 0 evidence incomplete. **No implementation authority.**
+**Status:** **Accepted.** Slice 0 complete. Slice 1 authorized only within [change-allowlist.md](change-allowlist.md).
 
-Authority: [plan.md](plan.md), [change-allowlist.md](change-allowlist.md). A UDS change may add visual or accessibility assertions but must not delete, relax, rename, or rewrite existing workflow assertions to make the slice pass.
+Authority: [plan.md](plan.md), [change-allowlist.md](change-allowlist.md), [choices.md](choices.md). A UDS change may add visual or accessibility assertions but must not delete, relax, rename, or rewrite existing workflow assertions to make the slice pass.
 
 ## Slice 0
 
-No automated application tests. Documentation only. Manual evidence protocol is [slice-0-evidence.md](slice-0-evidence.md).
+Complete. Documentation only. Evidence: [slice-0-evidence.md](slice-0-evidence.md). Choices: [choices.md](choices.md).
 
 ## Slice 1 — tests to add
 
-There is no dedicated Adjustment Reasons admin integration suite today. Slice 1 must add composition coverage rather than overloading unrelated authz tests.
+There is no dedicated Adjustment Reasons admin integration suite today. Slice 1 must add composition coverage rather than overloading unrelated authz tests. No fixture tests.
 
 | Layer | Suggested location | Asserts |
 |---|---|---|
-| View / request | New `test/integration/admin_page_frame_test.rb` (name may vary) | `admin/page` region order; breadcrumbs and page header come from shared partials; width mode class or equivalent present on Adjustment Reasons; unmigrated page still constrained by `.app-content` / `72rem` |
-| Request | Same or `test/integration/admin_adjustment_reasons_composition_test.rb` | Index/show/new/edit render through the frame; validation redisplay; cancel targets unchanged |
+| View / request | New `test/integration/admin_page_frame_test.rb` (name may vary) | `admin/shared/page` region order; breadcrumbs and page header come from shared partials; empty tools omitted; `standard` / `narrow` modifier on Adjustment Reasons; unmigrated page has no `.app-content--*` modifier and stays at `72rem` |
+| Request | Same or `test/integration/admin_adjustment_reasons_composition_test.rb` | Index/show/new/edit render through the frame; index/show `standard`; new/edit `narrow`; validation redisplay; cancel targets unchanged |
 | System | New system test if keyboard/zoom cannot be proven at request layer | 320px / 200% zoom: title visible, actions reachable, no two-dimensional page scroll except table overflow |
-| Fixture | Only if Slice 0 records that a fixture is required | Width modes Adjustment Reasons cannot exercise; route absent after closeout |
-
-Do not add a standing catalog destination for a prototype.
 
 ## Slice 1 — frozen non-regression
 

@@ -2,9 +2,9 @@
 
 **Program name:** Admin Page Frame Program (not UDS-6, UDS-7, or UDS-8)
 
-**Status:** **Proposed.** Slice 0 evidence incomplete. **No implementation authority.**
+**Status:** **Accepted.** Slice 0 complete. Slice 1 authorized only within [change-allowlist.md](change-allowlist.md).
 
-Companions: [slice-0.md](slice-0.md), [change-allowlist.md](change-allowlist.md), [test-matrix.md](test-matrix.md), [UDS-5](../ux-design-system/uds-5-plan.md), [ux-conventions.md](../../ux-conventions.md).
+Companions: [choices.md](choices.md), [slice-0.md](slice-0.md), [change-allowlist.md](change-allowlist.md), [test-matrix.md](test-matrix.md), [UDS-5](../ux-design-system/uds-5-plan.md), [ux-conventions.md](../../ux-conventions.md).
 
 ## Two decisions
 
@@ -33,27 +33,29 @@ This program supersedes that rule only for establishing the shared page-frame AP
 
 ## Locked decisions
 
-1. **Unmigrated default stays `72rem`.** `.app-content` must not become `wide` globally. Pages that have not opted into the frame keep today’s computed width. Making `wide` the authenticated default is a post–Slice 1 decision, not a Slice 1 implication.
+Slice 0 choices APF-001–APF-008 are recorded in [choices.md](choices.md). Summary:
 
-2. **`admin/page` orchestrates existing partials.** The frame owns region order and width. It renders `shared/breadcrumbs` and `shared/page_header`. It does not introduce a second page-header, a second breadcrumb implementation, alternative data-table markup, new form-section semantics, or a new technical-details component.
+1. **Unmigrated default stays `72rem`.** Do not change `:root --content-max`. `.app-content` must not become `wide` globally. Making `wide` the authenticated default is a later recorded choice (APF-003).
+
+2. **`admin/shared/page` orchestrates existing partials** (APF-001). The frame owns region order and width. It renders `shared/breadcrumbs` and `shared/page_header`. Empty optional regions are omitted (APF-005). It does not replace form section, data table, empty state, definition list, or technical details.
 
    ```text
-   admin/page
+   admin/shared/page
    ├── renders shared/breadcrumbs
    ├── renders shared/page_header
-   ├── provides page-tools region
+   ├── optional page-tools region (omit if unused)
    └── yields page body
    ```
 
-3. **Width escape is opt-in on the Admin layout.** Nested yield inside `.app-content` cannot exceed `--content-max` (`72rem`) today. Slice 0 must record the mechanism (`content_for`, a `main` modifier, or an equivalent explicit slot). Do not use `100vw` or negative margins to punch out of the container. Ops `.ops-content` stays untouched.
+3. **Width escape is a modifier on `main.app-content`** (APF-002). A helper invoked from the page partial `content_for`s a validated class; the application layout applies it. No `100vw`, negative margins, transforms, or inner wrapper wider than `.app-content`. Ops `.ops-content` stays untouched.
 
-4. **Slice 1 production set is Adjustment Reasons only.** `index`, `show`, `new`, `edit`, and `_form`. Users, Customers, Products, and Store are Slice 0 evidence surfaces and Slice 1 **non-regression** surfaces, not migrations.
+4. **Slice 1 production set is Adjustment Reasons only** (APF-004). Index/show `standard`; new/edit `narrow`. `_form` does not declare width. Users, Customers, Products, and Store are non-regression surfaces.
 
-5. **Disposable fixture only if needed.** If Adjustment Reasons cannot exercise `wide`, `workspace`, or the tools region, Slice 1 may add a test-only fixture or a route that Slice 1 closeout retires. Do not repeat `GET /admin/uds5_composition_prototype`. Do not wrap Product to prove missing regions.
+5. **No disposable fixture** (APF-004). The helper still accepts `wide` and `workspace`. Do not wrap Product.
 
-6. **Fully consumes the frame** means a migrated page uses `admin/page` for identity, breadcrumbs, width, and body. It does not mean adding metric strips, tools, or technical details the flow does not already have.
+6. **Fully consumes the frame** means a migrated page uses `admin/shared/page` for identity, breadcrumbs, width, and body. It does not mean adding metric strips, tools, or technical details the flow does not already have.
 
-7. **No fourth wrapper generation.** A page is either unmigrated (today’s assembly) or fully consumes the accepted frame. Migrated pages must not also carry local page-level `max-width`, a second `h1`, or a parallel header.
+7. **No fourth wrapper generation.** A page is either unmigrated or fully consumes the accepted frame. Migrated pages must not also carry local page-level `max-width`, a second `h1`, or a parallel header.
 
 8. **Closeout gate after Slice 1** before any further adoption, including Product consuming the frame.
 
@@ -76,7 +78,7 @@ Views that opt in select a width mode through the page-frame API. They do not ad
 | `wide` | Searchable indexes, records with related collections, long configuration | `min(100% - gutters, 90rem)` |
 | `workspace` | Hubs, comparisons, reconciliation, management workspaces | Full available width with bounded responsive gutters |
 
-Exact maximums are provisional until Slice 0 viewport evidence. Semantic modes are the contract; rem values may be tuned before Slice 1 locks them.
+Semantic modes are locked (APF-003). Rem measurements stay provisional. `standard` resolves to 72rem in Slice 1. Finalizing `wide` / `workspace` rem values or changing the inherited default requires a later recorded choice.
 
 ## Page families
 
@@ -150,7 +152,7 @@ Admin page
     └── Subordinate technical details
 ```
 
-Proposed structural class names (provisional until Slice 1): `.admin-page`, `.admin-page__context`, `.admin-page__header`, `.admin-page__tools`, `.admin-page__body`. Optional composition primitives: `.section-stack`, `.cluster`, `.content-grid` and modifiers. These are layout primitives, not domain components.
+Optional empty regions are omitted rather than rendered as empty wrappers (APF-005). Proposed structural class names (provisional until Slice 1): `.admin-page`, `.admin-page__context`, `.admin-page__header`, `.admin-page__tools`, `.admin-page__body`. Optional composition primitives: `.section-stack`, `.cluster`, `.content-grid` and modifiers. These are layout primitives, not domain components.
 
 ## Canvas and surface rules
 
@@ -173,25 +175,20 @@ Adjacent surfaces must express distinct semantic regions. A surface may not be a
 
 ### Slice 0 — Inventory, evidence, and contract
 
-No production changes. See [slice-0.md](slice-0.md).
-
-Deliverables: live-route/view reconciliation; rendered evidence; locked page families and width semantics; locked region order and canvas/surface rules; page-frame API decision; width-escape mechanism; exact Slice 1 allowlist; policy amendment (this document); test inventory.
+**Complete.** No production changes. See [slice-0.md](slice-0.md), [slice-0-evidence.md](slice-0-evidence.md), [choices.md](choices.md).
 
 ### Slice 1 — Foundation and reference gate
 
-Production scope remains bounded. **Do not start until Slice 0 is complete.**
+**Authorized** within [change-allowlist.md](change-allowlist.md):
 
-Likely scope (provisional; lock in [change-allowlist.md](change-allowlist.md) at Slice 0 closeout):
+- `application.html.erb` applies the width `content_for` onto `main.app-content`
+- `admin/shared/page` orchestrates existing shared partials
+- `AdminPageHelper` validates all four modes; production call sites use `standard` / `narrow`
+- narrowly scoped Admin composition CSS (no Ops, POS, or print selector changes; do not change `:root --content-max`)
+- tests for the frame, including an unmigrated page with no modifier
+- Adjustment Reasons index/show (`standard`) and new/edit (`narrow`)
 
-- application layout opt-in width hook only
-- one `admin/page` layout partial that orchestrates existing shared partials
-- minimal helper support if the API requires it
-- narrowly scoped Admin composition CSS (no Ops, POS, or print selector changes)
-- tests for the frame
-- Adjustment Reasons index/show/new/edit
-- optional disposable fixture for width modes Adjustment Reasons cannot exercise
-
-Non-regression: observe Users, Customers, Products, and Store without migrating them.
+No disposable fixture. Non-regression: Users, Customers, Products, and Store without migrating them.
 
 ### Closeout gate (after Slice 1)
 

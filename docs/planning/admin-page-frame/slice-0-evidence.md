@@ -2,9 +2,9 @@
 
 **Program name:** Admin Page Frame Program (not UDS-6, UDS-7, or UDS-8)
 
-**Status:** **Observations recorded; Slice 0 not complete.** Headed Chromium screenshots were not captured. Page-frame API, width-escape mechanism, and Slice 1 allowlist remain **open**. **No implementation authority.**
+**Status:** **Accepted.** Slice 0 complete. CSS geometry is the width gate (APF-008). Slice 1 authorized only within [change-allowlist.md](change-allowlist.md).
 
-Authority: [plan.md](plan.md), [slice-0.md](slice-0.md). Do not treat this file as a Slice 1 start signal.
+Authority: [plan.md](plan.md), [slice-0.md](slice-0.md), [choices.md](choices.md). Do not treat this file as a restyle sweep.
 
 ## Capture context
 
@@ -198,37 +198,32 @@ Because every evidence page shares `.app-content`, leftover canvas at large CSS 
 | Can Adjustment Reasons exercise `wide` (index) and `standard`/`narrow` (show/form) without a fixture? | **`standard` and `narrow` yes; `wide` not meaningfully.** Index is four columns. Show is a short dl. Form is already 40rem. Assign Slice 1 **index/show `standard`, new/edit `narrow`** (or standard page + existing `.form` cap). Do not force `wide` onto this flow. |
 | Is a disposable fixture required for `workspace` or tools? | **No production fixture.** Ship optional tools/`workspace` slots in the API unused, or defer those primitives until a later approved consumer. Do not add `GET /admin/uds5_composition_prototype`-style routes. Do not wrap Product. |
 
-## Recommendations (not locked)
+## Recommendations (superseded by choices)
 
-These inform Slice 0 closeout; they do not authorize Slice 1.
+The 31 August 2026 recommendations were accepted as [choices.md](choices.md) APF-001–APF-008, with the locked path `admin/shared/page` (not `admin/page`) and no fixture.
 
-| Topic | Recommendation |
-|---|---|
-| Page-frame API | Layout partial `admin/page` with locals (title, width, breadcrumbs, actions, optional tools slot, yield body) that **renders** `shared/breadcrumbs` and `shared/page_header`. `content_for` only for the layout width hook. |
-| Width-escape | Opt-in on `application.html.erb`: e.g. `content_for(:admin_page_width)` sets a class on `main.app-content` (or a wrapper) so only opted-in pages leave 72rem. Default markup unchanged. No `100vw`. Ops `.ops-content` untouched. |
-| Fixture | Not needed if Slice 1 does not require a live `workspace` or tools demo. |
-| Rem values | Leave provisional until a headed pass or Slice 1 implementation review. Do not make `wide` the authenticated default. |
-| Slice 1 allowlist | Still provisional in [change-allowlist.md](change-allowlist.md). Do not lock until API and width-escape are written into this table as chosen, not recommended. |
+## Decisions
 
-## Decisions to record here when taken
-
-| Decision | Choice | Date / commit |
+| Decision | Choice | Date |
 |---|---|---|
-| Page-frame API shape | _open_ (recommendation: layout partial + layout `content_for` width hook) | |
-| Width-escape mechanism | _open_ (recommendation: opt-in class on `main.app-content`) | |
-| Fixture needed | **Recommended no** pending lock | 31 Aug 2026 evidence pass |
-| Rem values locked or still provisional | **Still provisional** | 31 Aug 2026 evidence pass |
+| Page-frame API shape | APF-001 — `admin/shared/page` + helper; `content_for` is layout plumbing | 31 Aug 2026 |
+| Width-escape mechanism | APF-002 — modifier on `main.app-content`; do not change `:root --content-max` | 31 Aug 2026 |
+| Fixture needed | APF-004 — **no** | 31 Aug 2026 |
+| Rem values | APF-003 — semantic modes locked; rem values provisional; `standard` = 72rem in Slice 1 | 31 Aug 2026 |
+| Region order / canvas | APF-005, APF-006 — accepted as in plan.md | 31 Aug 2026 |
+| Inventory widths | APF-007 — hypotheses only; Slice 1 widths are the four Adjustment Reasons rows | 31 Aug 2026 |
+| Evidence gate | APF-008 — CSS geometry sufficient; headed Chromium optional | 31 Aug 2026 |
 
 ## Slice 1 allowlist lock
 
-**Not locked.** [change-allowlist.md](change-allowlist.md) Slice 1 table stays provisional. Until API shape and width-escape are decided, Slice 1 has **no implementation authority**.
+**Locked.** [change-allowlist.md](change-allowlist.md). Slice 1 has implementation authority only inside that table.
 
-## Remaining before Slice 0 complete
+## Slice 0 complete
 
 - [x] Reconcile inventory to live templates/routes
 - [x] Record evidence-set composition and CSS viewport geometry
-- [ ] Headed Chromium captures at the named viewports (optional if this geometry pass is accepted as the width gate)
-- [ ] Choose and record page-frame API shape
-- [ ] Choose and record width-escape mechanism
-- [ ] Lock Slice 1 file/test list in the allowlist
-- [ ] Accept region order and canvas/surface rules as-is (they matched the evidence set)
+- [x] Headed Chromium deferred as optional (APF-008)
+- [x] Page-frame API shape (APF-001)
+- [x] Width-escape mechanism (APF-002)
+- [x] Slice 1 file/test list locked
+- [x] Region order and canvas/surface rules accepted

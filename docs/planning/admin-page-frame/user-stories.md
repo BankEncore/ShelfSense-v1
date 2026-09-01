@@ -2,13 +2,15 @@
 
 **Program name:** Admin Page Frame Program (not UDS-6, UDS-7, or UDS-8)
 
-**Status:** **Proposed.** Slice 0 evidence incomplete. **No implementation authority.**
+**Status:** **Accepted.** Slice 0 complete. Slice 1 authorized only within [change-allowlist.md](change-allowlist.md).
 
-Thin stories for later GitHub issues. Do not file these as issues solely because this file exists. Authority: [plan.md](plan.md).
+Thin stories for later GitHub issues. Authority: [plan.md](plan.md), [choices.md](choices.md).
 
 ---
 
 ## Slice 0 — Inventory, evidence, and contract
+
+**Complete.**
 
 ### US-APF-0-1 — Establish program authority
 
@@ -16,12 +18,12 @@ As an implementer, I need a program packet so later slices cite one plan instead
 
 **Acceptance**
 
-- [ ] `docs/planning/admin-page-frame/` exists with README, plan, slice-0, evidence stub, allowlist, stories, test-matrix, and adoption-outlook
-- [ ] Status is Proposed; Slice 0 evidence incomplete; no implementation authority
-- [ ] UDS-5.5 policy amendment uses the three-row authority table
-- [ ] Cross-links from roadmap, planning README, UDS README, program-plan, ux-conventions, ux-adoption-template, migration-matrix, and docs/README
-- [ ] The drafts file is a stub pointing here
-- [ ] No production CSS, view, or route changes
+- [x] `docs/planning/admin-page-frame/` exists with README, plan, choices, slice-0, evidence, allowlist, stories, test-matrix, and adoption-outlook
+- [x] Status is Accepted; Slice 0 complete; Slice 1 allowlisted
+- [x] UDS-5.5 policy amendment uses the three-row authority table
+- [x] Cross-links from roadmap, planning README, UDS README, program-plan, ux-conventions, ux-adoption-template, migration-matrix, and docs/README
+- [x] The drafts file is a stub pointing here
+- [x] No production CSS, view, or route changes in Slice 0
 
 ### US-APF-0-2 — Reconcile inventory to live routes
 
@@ -29,40 +31,40 @@ As a reviewer, I need every user-facing administrative flow matched to a live ro
 
 **Acceptance**
 
-- [ ] [slice-0.md](slice-0.md) inventory checked against the repository
-- [ ] Extras, missing templates, and renamed paths recorded in [slice-0-evidence.md](slice-0-evidence.md)
-- [ ] Home remains deferred; audit/history remain coordinated with UDS-6
-- [ ] No production changes
+- [x] [slice-0.md](slice-0.md) inventory checked against the repository
+- [x] Extras, missing templates, and renamed paths recorded in [slice-0-evidence.md](slice-0-evidence.md)
+- [x] Home remains deferred; audit/history remain coordinated with UDS-6
+- [x] No production changes
 
 ### US-APF-0-3 — Record viewport evidence
 
-As a reviewer, I need Chromium observations of the evidence set so width modes are not guessed in Slice 1.
+As a reviewer, I need observations of the evidence set so width modes are not guessed in Slice 1.
 
 **Acceptance**
 
-- [ ] Users index, Customers index, Products index, Adjustment Reason show/form, and Store show observed at 1920×1080, 1440×900, 1280×720, 200% at 1280, and 768px
-- [ ] Observations live in [slice-0-evidence.md](slice-0-evidence.md)
-- [ ] Unmigrated `72rem` default is confirmed or an explicit defect is recorded
-- [ ] No production changes
+- [x] Users index, Customers index, Products index, Adjustment Reason show/form, and Store show observed via CSS geometry and templates (APF-008)
+- [x] Observations live in [slice-0-evidence.md](slice-0-evidence.md)
+- [x] Unmigrated `72rem` default confirmed
+- [x] No production changes
 
 ### US-APF-0-4 — Lock Slice 1 API and allowlist
 
-As an implementer, I need the page-frame API, width-escape mechanism, and file list before writing `admin/page`.
+As an implementer, I need the page-frame API, width-escape mechanism, and file list before writing `admin/shared/page`.
 
 **Acceptance**
 
-- [ ] API shape recorded (layout partial / `content_for` / combination) and it orchestrates existing breadcrumbs and page header
-- [ ] Width-escape mechanism recorded; no `100vw` punch-out; Ops `.ops-content` untouched
-- [ ] Fixture needed or not needed is recorded, with retirement if needed
-- [ ] [change-allowlist.md](change-allowlist.md) Slice 1 table locked
-- [ ] Open decisions that still block Slice 1 are none, or explicitly deferred without blocking the foundation
-- [ ] No production changes
+- [x] API shape recorded (APF-001): `admin/shared/page` orchestrates breadcrumbs and page header
+- [x] Width-escape recorded (APF-002): modifier on `main.app-content`; no `100vw`; Ops untouched
+- [x] Fixture: none (APF-004)
+- [x] [change-allowlist.md](change-allowlist.md) Slice 1 table locked
+- [x] APF-001–APF-008 recorded in [choices.md](choices.md)
+- [x] No production changes
 
 ---
 
 ## Slice 1 — Foundation and Adjustment Reasons
 
-Do not start these stories until Slice 0 acceptance is checked.
+Authorized within the locked allowlist.
 
 ### US-APF-1-1 — Ship the orchestrating page frame
 
@@ -70,9 +72,11 @@ As a staff user on Adjustment Reasons, I need the page to declare a semantic wid
 
 **Acceptance**
 
-- [ ] `admin/page` renders `shared/breadcrumbs` and `shared/page_header`
-- [ ] Unmigrated pages keep `72rem` `.app-content` behavior
-- [ ] Opted-in pages select `narrow` / `standard` / `wide` / `workspace` through the locked API
+- [ ] `admin/shared/page` renders `shared/breadcrumbs` and `shared/page_header`
+- [ ] Width helper runs from the page partial; layout reads `content_for` onto `main.app-content`
+- [ ] Unmigrated pages keep `72rem` `.app-content` behavior (no modifier class; `:root --content-max` unchanged)
+- [ ] Helper accepts `narrow` / `standard` / `wide` / `workspace`; production call sites use `standard` / `narrow` only
+- [ ] Empty tools region is omitted
 - [ ] No Ops, Register, print, or NavigationCatalog changes
 - [ ] Frozen suites in [test-matrix.md](test-matrix.md) pass without rewritten workflow assertions
 
@@ -82,8 +86,9 @@ As a staff user, I need Adjustment Reasons index, show, new, and edit to fully c
 
 **Acceptance**
 
-- [ ] Those five templates go through `admin/page` for identity, breadcrumbs, width, and body
-- [ ] No metric strip or technical-details block is added solely for completeness
+- [ ] Index/show/new/edit go through `admin/shared/page` for identity, breadcrumbs, width, and body
+- [ ] Index and show use `standard`; new and edit use `narrow`; `_form` does not declare width
+- [ ] No metric strip, tools region, or technical-details block is added solely for completeness
 - [ ] Create/edit submit the same parameters and redisplay validation as today
 - [ ] Deactivate/reactivate and system-protected behavior unchanged
 - [ ] New composition tests cover the frame on this flow
@@ -95,9 +100,10 @@ As a reviewer, I need Users, Customers, Products, and Store to look and behave a
 **Acceptance**
 
 - [ ] Those templates are not migrated
+- [ ] An unmigrated page has no `.app-content--*` width modifier
 - [ ] Product composition tests, customer admin, store admin, and grouped-nav tests pass
 - [ ] Viewport spot-check recorded for those surfaces
-- [ ] Any disposable fixture is retired or scheduled in Slice 1 closeout with no standing extra Admin destination
+- [ ] No disposable fixture exists
 
 ### US-APF-1-4 — Closeout gate
 

@@ -195,7 +195,7 @@ These contracts need an explicit class, a deliberately scoped rule, or a documen
 | UDS-2 native review dialogs | **verified-automated** | Shared contract module; consumers do not inherit status automatically |
 | UDS-3 Register | **verified-automated** | Shortcuts, scanning, focus, layout smoke, PERF correctness in CI; **conforming** requires PERF-HUMAN and SR-MANUAL |
 | UDS-5 administrative composition | **complete on `main`** | Compact grouped nav; Product index/show/search/form/review composition; serif adopted for display roles; feature-led adoption recorded. Not a conforming a11y gate. See [uds-5-plan.md](uds-5-plan.md) and [uds-5.5-closeout-evidence.md](uds-5.5-closeout-evidence.md). |
-| Admin Page Frame Program | **Proposed** | Packet only. No surfaces migrated. Shared Admin page-frame API and Adjustment Reasons are not authorized until Slice 0 evidence completes. See [admin-page-frame/README.md](../admin-page-frame/README.md). |
+| Admin Page Frame Program | **Accepted** (Slice 0); Slice 1 not yet Implemented | Packet complete. No surfaces migrated yet. Slice 1 may add `admin/shared/page` and Adjustment Reasons only. See [admin-page-frame/README.md](../admin-page-frame/README.md). |
 | Printed receipts/reports | conforming / locked | Continue to satisfy their separate print contract; never infer Warm Parchment conformance from screen tokens |
 
 No family not explicitly marked **conforming** here should be described as migrated merely because it inherits new UDS-1 tokens.

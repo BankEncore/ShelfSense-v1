@@ -2,9 +2,9 @@
 
 **Program name:** Admin Page Frame Program (not UDS-6, UDS-7, or UDS-8)
 
-**Status:** **Proposed.** Slice 0 evidence incomplete. **No implementation authority.**
+**Status:** **Accepted.** Slice 0 complete. Slice 1 authorized only within [change-allowlist.md](change-allowlist.md).
 
-Authority: [plan.md](plan.md). Observations: [slice-0-evidence.md](slice-0-evidence.md) (composition and CSS geometry recorded; API / width-escape / allowlist still open; headed Chromium not captured).
+Authority: [plan.md](plan.md), [choices.md](choices.md). Observations: [slice-0-evidence.md](slice-0-evidence.md).
 
 ## Purpose
 
@@ -33,16 +33,16 @@ Render and study at the viewports in [slice-0-evidence.md](slice-0-evidence.md):
 
 Viewports: 1920×1080, 1440×900, 1280×720, 200% zoom at 1280 CSS pixels, 768px wide. Use 320px where the existing administrative support contract requires it.
 
-### Slice 1 implementation set (not executable until this slice completes)
+### Slice 1 implementation set (authorized; see [change-allowlist.md](change-allowlist.md))
 
-- Admin layout opt-in width hook
-- `admin/page` layout partial
+- Admin layout opt-in width modifier on `main.app-content`
+- `admin/shared/page` layout partial
+- `AdminPageHelper`
 - Narrowly scoped Admin composition CSS
-- Adjustment Reasons `index`, `show`, `new`, `edit`, `_form`
-- Frame and Adjustment Reasons composition tests
-- Optional disposable fixture if Adjustment Reasons cannot exercise `wide` / `workspace` / tools
+- Adjustment Reasons `index` / `show` (`standard`), `new` / `edit` (`narrow`), `_form` (body only)
+- Frame and Adjustment Reasons composition tests, including an unmigrated page
 
-Users, Customers, Products, and Store are **non-regression** surfaces in Slice 1, not migrations.
+No disposable fixture. Users, Customers, Products, and Store are **non-regression** surfaces, not migrations.
 
 ## Current layout facts
 
@@ -81,15 +81,13 @@ Three visible generations of administrative UI:
 
 Slice 1 must compose these, not replace them.
 
-## Proposed view API (provisional)
-
-Prefer a layout partial with locals over handwritten page-level classes. Final shape is a Slice 0 open decision.
+## View API (APF-001)
 
 ```erb
-<%= render layout: "admin/page",
+<%= render layout: "admin/shared/page",
       locals: {
         title: "Adjustment reasons",
-        width: :wide,
+        width: :standard,
         breadcrumbs: [
           { name: "Home", path: root_path },
           { name: "Adjustment reasons" }
@@ -100,7 +98,7 @@ Prefer a layout partial with locals over handwritten page-level classes. Final s
 <% end %>
 ```
 
-The API may use named slots or `content_for`, but it must keep structural policy out of feature templates and must render `shared/breadcrumbs` and `shared/page_header` internally.
+The page partial renders `shared/breadcrumbs` and `shared/page_header`, omits unused tools, and invokes the width helper. Views must not `content_for` the layout width capture themselves.
 
 ## Surface-family inventory
 
@@ -209,44 +207,33 @@ Purchasing Ops views remain under the Ops shell. Do not make Admin and Ops compo
 | Stored-value reporting | `stored_value_reports/show` | Hub/report | `workspace` | **Deferred**; may later align with reporting |
 | Account activity partial | `stored_value/_account_activity` | Supporting history region | Inherits record | Align with canonical history/activity region; do not create a second page frame |
 
-## Open decisions that block Slice 1
+## Slice 0 decisions
 
-Resolved in [plan.md](plan.md) and not reopened:
+Resolved in [choices.md](choices.md). None remain blocking.
 
 - Program name is **Admin Page Frame Program** (not UDS-6, UDS-7, or UDS-8).
-- First production reference flow is **Adjustment Reasons**.
-- Unmigrated default remains `72rem`; `wide` is not the Slice 1 default.
+- API is `admin/shared/page` plus width helper / `content_for` plumbing (APF-001).
+- Width escape is a modifier on `main.app-content`; `:root --content-max` unchanged (APF-002).
+- Slice 1 widths: index/show `standard`, new/edit `narrow` (APF-002).
+- Semantic modes locked; rem values provisional (APF-003).
+- No disposable fixture (APF-004).
+- Region order and canvas/surface rules accepted (APF-005, APF-006).
+- Inventory likely-widths remain hypotheses (APF-007).
+- CSS geometry is the width gate (APF-008).
+- Home landing purpose is deferred.
 - Stylesheet extraction is a separately sequenced maintenance program.
-- Home landing purpose is deferred and is not a Slice 1 blocker.
 
-Still required before Slice 1 code:
-
-1. **Page-frame API shape** — layout partial with locals/slots, helper plus `content_for`, or a small combination. Must orchestrate `shared/breadcrumbs` and `shared/page_header`.
-2. **Width-escape mechanism** — how opted-in pages exceed or replace `.app-content`’s `72rem` without changing unmigrated pages. Record the chosen `content_for` / `main` modifier / equivalent. No `100vw` punch-out.
-3. **Whether a disposable fixture is needed** to prove `wide`, `workspace`, or tools. If yes, name retirement in the Slice 1 allowlist.
-4. **Lock rem values** for `narrow` / `standard` / `wide` / `workspace` after viewport evidence, or explicitly keep the provisional values.
-5. **Exact Slice 1 file and test list** in [change-allowlist.md](change-allowlist.md) (currently provisional).
-
-Reconcile every inventory row to a live route before marking this slice complete. Missing or extra templates are evidence, not permission to expand Slice 1.
-
-## Slice 0 work remaining
+## Slice 0 work
 
 - [x] Confirm every user-facing administrative route against this inventory ([slice-0-evidence.md](slice-0-evidence.md))
-- [x] Capture evidence-set composition and CSS viewport geometry (headed Chromium still optional)
-- [ ] Confirm page family and width mode for each flow (provisional assignments above; evidence set reviewed)
-- [ ] Accept region order and canvas/surface rules in [plan.md](plan.md)
-- [ ] Record width-escape and API decisions
-- [ ] Identify selectors with Admin, Ops, Register, print, or shared ownership where global CSS will change
-- [ ] Lock the Slice 1 allowlist and test inventory
-- [ ] Make no production behavior or presentation changes
+- [x] Capture evidence-set composition and CSS viewport geometry (headed Chromium optional per APF-008)
+- [x] Confirm page family and width mode for the Slice 1 flow; remaining inventory widths stay provisional (APF-007)
+- [x] Accept region order and canvas/surface rules (APF-005, APF-006)
+- [x] Record width-escape and API decisions (APF-001, APF-002)
+- [x] Selector ownership: Admin page-frame and `.app-content` modifiers only; Ops/POS/print frozen ([change-allowlist.md](change-allowlist.md))
+- [x] Lock the Slice 1 allowlist and test inventory
+- [x] No production behavior or presentation changes in Slice 0
 
 ## Definition of Slice 0 complete
 
-- The route/view inventory is verified against the live repository
-- Every user-facing administrative flow has a page-family and provisional width assignment
-- Representative rendered evidence has tested the semantic width modes
-- Page-frame region order and canvas/surface rules are accepted
-- Width-escape mechanism and page-frame API are recorded
-- Slice 1 has a bounded file/test ownership list
-- Remaining open decisions are resolved or explicitly deferred without blocking the foundation
-- No production behavior has changed
+Met. See [choices.md](choices.md) and [change-allowlist.md](change-allowlist.md).

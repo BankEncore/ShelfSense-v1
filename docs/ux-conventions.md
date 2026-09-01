@@ -105,7 +105,7 @@ Composition utilities: `.metric-strip`, `.data-table td.cell-primary` / `.cell-s
 - New interaction patterns still need their own specification ([deferred-patterns.md](planning/ux-design-system/deferred-patterns.md)).
 - Update [migration-matrix.md](planning/ux-design-system/migration-matrix.md) in the same change as the feature.
 
-**Proposed exception (not Implemented):** the [Admin Page Frame Program](planning/admin-page-frame/README.md) supersedes this feature-led-only rule only for establishing the shared page-frame API, semantic width modes, and the bounded reference migrations that packet explicitly authorizes. It does not authorize a general restyle of unrelated templates. Slice 0 evidence is incomplete; that packet currently has **no implementation authority**. After its frame gate, remaining surfaces still adopt through separately approved family or feature slices.
+**Accepted exception (frame not yet Implemented):** the [Admin Page Frame Program](planning/admin-page-frame/README.md) supersedes this feature-led-only rule only for establishing the shared page-frame API, semantic width modes, and the bounded reference migrations that packet explicitly authorizes ([choices.md](planning/admin-page-frame/choices.md), [change-allowlist.md](planning/admin-page-frame/change-allowlist.md)). Slice 0 is complete. Slice 1 may implement the allowlisted frame and Adjustment Reasons only. It does not authorize a general restyle of unrelated templates. After the Slice 1 closeout gate, remaining surfaces still adopt through separately approved family or feature slices.
 
 Staff history composition is UDS-6. Persistent sidebar and Cmd/Ctrl+K remain parked (UDS-7). Do not number the Admin Page Frame Program as UDS-6, UDS-7, or UDS-8.
 
@@ -116,7 +116,7 @@ Phase 2.2 **architecture** (shells, shared partials, money UX, Hotwire boundarie
 Authority:
 
 - [UX design system](planning/ux-design-system/README.md) — Warm Parchment, adoption program (UDS-0–UDS-5), migration matrix
-- [Admin Page Frame Program](planning/admin-page-frame/README.md) — Proposed shared Admin page-frame contract (Slice 0 evidence incomplete; no implementation authority)
+- [Admin Page Frame Program](planning/admin-page-frame/README.md) — Accepted shared Admin page-frame contract (Slice 0 complete; Slice 1 allowlisted)
 - [Warm Parchment](planning/ux-design-system/warm-parchment.md) — tokens, typography, density (WCAG AA baseline)
 - [Button and action semantics](planning/ux-design-system/button-action-semantics.md) — wording, intent, style, size, review dialogs
 - [UDS-1 implementation plan](planning/ux-design-system/uds-1-plan.md) — foundation delivery (complete through UDS-1d)
