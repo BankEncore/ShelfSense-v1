@@ -2,7 +2,7 @@
 
 **Program name:** Admin Page Frame Program (not UDS-6, UDS-7, or UDS-8)
 
-**Status:** **Accepted.** Slice 0 complete. Slice 1 **Implemented on `apf-development`** (PR [#133](https://github.com/BankEncore/ShelfSense-v1/pull/133)); not on `main` until a later closeout merge. Further family adoption is not authorized by this packet.
+**Status:** **Accepted.** Slice 0 complete. Slice 1 **Implemented on `apf-development`** (PR [#133](https://github.com/BankEncore/ShelfSense-v1/pull/133)). [Customer core](customer-core.md) **Accepted** (not yet implemented). Not on `main` until this sprint’s closeout merge. [adoption-outlook.md](adoption-outlook.md) is not authorized.
 
 This is a UDS-adjacent administrative composition program, not a numbered domain phase and not a numbered UDS slice. UDS-6 (staff history) and UDS-7 (sidebar / Cmd+K) remain parked.
 
@@ -25,7 +25,7 @@ Slice 0 choices: [choices.md](choices.md) (APF-001–APF-008).
 | [user-stories.md](user-stories.md) | Issue-ready stories for Slice 0 (complete) and Slice 1 (complete) |
 | [test-matrix.md](test-matrix.md) | Slice 1 tests, frozen suites, viewport gates |
 | [slice-1.md](slice-1.md) | Slice 1 completion and viewport/CSS sign-off |
-| [customer-core.md](customer-core.md) | Proposed Customer core family packet — **not authorized** until Accepted |
+| [customer-core.md](customer-core.md) | Customer core family packet — **Accepted**; implement on `apf-development`, then merge to `main` |
 | [adoption-outlook.md](adoption-outlook.md) | Former family-migration slices — **not authorized** |
 
 ## Authorized program
@@ -35,15 +35,13 @@ Slice 0 choices: [choices.md](choices.md) (APF-001–APF-008).
 | **Slice 0** — Inventory, evidence, and contract | **Complete** | None |
 | **Slice 1** — Frame + Adjustment Reasons | **Implemented on `apf-development`** (PR [#133](https://github.com/BankEncore/ShelfSense-v1/pull/133)) | Frame API + Adjustment Reasons only |
 | **Closeout gate** | **Complete** | Product consuming the frame is a separately approved later slice |
-| **Customer core** | **Proposed** ([customer-core.md](customer-core.md)) | None until Accepted |
+| **Customer core** | **Accepted** ([customer-core.md](customer-core.md)) | None until the implementation PR |
 
 [adoption-outlook.md](adoption-outlook.md) is not a delivery plan.
 
 ## Next action
 
-Do not start family restyles from leftover Slice 1 energy. Remaining Admin surfaces adopt `admin/shared/page` through a separately approved family or feature slice on `apf-development`. Product consuming the frame is **not** implied. [adoption-outlook.md](adoption-outlook.md) remains non-authoritative.
-
-The next candidate family packet is [customer-core.md](customer-core.md) (**Proposed**). Do not implement it until that packet is Accepted.
+Implement [customer-core.md](customer-core.md) on a feature branch targeting `apf-development`. After that implementation is validated, merge `apf-development` to `main` and retire the branch. Do not add another Admin family to `apf-development`. Product consuming the frame is **not** implied. [adoption-outlook.md](adoption-outlook.md) remains non-authoritative.
 
 ## Does not reopen
 

@@ -12,7 +12,7 @@ Authority for what may ship now: [plan.md](plan.md), [change-allowlist.md](chang
 
 After Slice 1 closeout, choose **feature-led adoption** (UDS-5.5, remaining the default for domain chrome) or write a **new bounded family packet**. Do not start the work below from leftover energy in this program.
 
-A Proposed Customer core packet lives at [customer-core.md](customer-core.md). Until that packet is **Accepted**, it has no implementation authority and does not authorize the Index or Record family rows below.
+[customer-core.md](customer-core.md) is **Accepted** as a bounded family packet (index/show/new/edit at `standard`). It does not authorize the Index or Record family rows below, merge review, or any other family on `apf-development`.
 
 ## Possible later family packets
 
