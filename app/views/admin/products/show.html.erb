@@ -31,82 +31,63 @@
        method: :delete
      ) %>
 <% end %>
-<% if @single_stock_orderable %>
-  <% actions << action_link_to("Order stock", order_stock_path_for(@single_stock_orderable), style: :solid, intent: :brand) %>
-<% end %>
-<% if @single_requestable %>
-  <% actions << action_link_to(
-       "Create customer request",
-       create_customer_request_path_for(@single_requestable),
-       style: :outline,
-       intent: :neutral
-     ) %>
-<% end %>
 
 <% contributor_credits = product_contributor_credits(@product) %>
-<% subtitle = if contributor_credits.any?
+<% creator_metadata = if contributor_credits.any?
      tag.span(truncated_product_contributor_credits(contributor_credits).join(", "), class: "product-identity__contributors")
    end %>
 <% cover_url = @product.cover_image.attached? ? url_for(@product.cover_image) : https_image_url(@product.try(:cover_image_url)) %>
-<% header_actions = [] %>
-<% if cover_url %>
-  <% header_actions << image_tag(cover_url, alt: "Cover", class: "product-cover") %>
-<% end %>
-<% header_actions.concat(actions) %>
-<% metadata_parts = [
-     "Primary identifier #{@product.primary_identifier}",
-     ("Industry #{@product.industry_identifier}" if @product.industry_identifier.present?),
-     ("Lookup #{@product.lookup_code}" if @product.lookup_code.present?)
-   ].compact %>
-<% bibliographic_rows = compact_definition_rows([
-     ["List price", format_money_cents(@product.list_price_cents)],
-     ["Industry identifier (GTIN / ISBN / UPC)", @product.industry_identifier],
-     ["Lookup code", (
-       if @product.lookup_code.present?
-         shared = Product.where(lookup_code: @product.lookup_code).where.not(id: @product.id).count
-         if shared.positive?
-           safe_join([@product.lookup_code, tag.span(" · shared with #{shared} other #{"product".pluralize(shared)}; scan and add will require product selection", class: "muted")])
-         else
-           @product.lookup_code
-         end
-       end
-     )],
+<% lookup_value = if @product.lookup_code.present?
+     shared = Product.where(lookup_code: @product.lookup_code).where.not(id: @product.id).count
+     if shared.positive?
+       safe_join([@product.lookup_code, tag.span(" · shared with #{shared} other #{"product".pluralize(shared)}; scan and add will require product selection", class: "muted")])
+     else
+       @product.lookup_code
+     end
+   end %>
+<% identity_rows = compact_definition_rows([
+     ["ShelfSense ID", @product.primary_identifier],
+     ["ISBN / EAN / UPC", @product.industry_identifier],
+     ["Lookup code", lookup_value]
+   ]) %>
+<% catalog_rows = compact_definition_rows([
+     ["List price", (@product.list_price_cents.present? ? format_money_cents(@product.list_price_cents) : nil)],
+     [@product.brand_name_label, @product.brand_name],
+     ["Imprint", @product.imprint],
      ["Merchandise category", (
        admin_merchandise_category_link(@product.merchandise_category) ||
          @product.merchandise_category&.admin_label
      )],
-     ["Subtitle", @product.subtitle],
-     ["Publisher / brand / manufacturer", @product.brand_name],
+     ["Format", @product.product_form&.name],
      ["Edition / model", @product.product_model],
-     ["Product form", @product.product_form&.name],
-     ["Binding (legacy)", @product.try(:binding_legacy)],
-     ["Variant options", [ @product.variant_option_name_1, @product.variant_option_name_2 ].compact_blank.join(" · ").presence],
-     ["Imprint", @product.imprint],
      ["Language", @product.language_code],
-     ["Pages", @product.page_count],
-     ["Series", [ @product.series_name, @product.series_position ].compact_blank.join(" · ").presence],
+     ["Page count", @product.page_count],
      ["Release date", (
        if @product.release_date.present?
          text = format_date(@product.release_date)
          @product.release_date_approximate? ? "#{text} (approximate)" : text
        end
-     )]
+     )],
+     ["Series", @product.series_name],
+     ["Series position", @product.series_position],
+     ["Variant option 1 label", @product.variant_option_name_1],
+     ["Variant option 2 label", @product.variant_option_name_2]
    ]) %>
 <% can_refresh = effective_permissions.include?("products.update") &&
      (@product.industry_identifier.present? || @product.bibliographic_provider_key.present?) %>
 <% subject_names = @product.product_subject_assignments.filter_map { |row|
      row.subject_heading&.name.to_s.strip.presence
    } %>
-<% rail_present = @show_inventory || @product.description.present? || subject_names.any? || contributor_credits.any? %>
+<% show_external = @product.bibliographic_provider.present? || can_refresh %>
 
 <%= render layout: "admin/shared/page", locals: {
   width: :wide,
   eyebrow: "Product",
   title: @product.name,
-  subtitle: subtitle,
-  metadata: metadata_parts.join(" · "),
+  subtitle: @product.subtitle.presence,
+  metadata: creator_metadata,
   status: status_badge(@product.status, scheme: :product_variant),
-  actions: safe_join(header_actions, " "),
+  actions: safe_join(actions, " "),
   crumbs: [
     { name: "Home", path: root_path },
     { name: "Products", path: admin_products_path },
@@ -114,21 +95,171 @@
   ]
 } do %>
   <div class="product-show">
-    <div class="product-columns">
-      <div class="product-main">
-        <section class="section surface product-biblio">
-          <h2 class="section__title type-section-title">Bibliographic definition</h2>
-          <% if bibliographic_rows.any? %>
-            <%= render "shared/definition_list", rows: bibliographic_rows %>
-          <% end %>
-          <% if @product.bibliographic_provider.present? %>
-            <p class="product-provenance muted">
-              <%= @product.bibliographic_provider %>
-              · <%= @product.bibliographic_provider_key %>
-              <% if @product.bibliographic_fetched_at.present? %>
-                · fetched <%= format_timestamp(@product.bibliographic_fetched_at) %>
+    <section class="product-identity-strip" aria-label="Identifiers">
+      <div class="product-identity-strip__facts">
+        <% if identity_rows.any? %>
+          <%= render "shared/definition_list", rows: identity_rows %>
+        <% end %>
+      </div>
+      <% if cover_url %>
+        <%= image_tag cover_url, alt: "#{@product.name} cover", class: "product-cover" %>
+      <% end %>
+    </section>
+
+    <% if catalog_rows.any? %>
+      <section class="section surface product-catalog">
+        <h2 class="section__title type-section-title">Catalog details</h2>
+        <%= render "shared/definition_list", rows: catalog_rows %>
+      </section>
+    <% end %>
+
+    <section class="section surface product-variants">
+      <div class="product-section-head">
+        <h2 class="section__title type-section-title">Variants</h2>
+        <% if effective_permissions.include?("product_variants.create") %>
+          <div class="actions">
+            <%= action_link_to(
+                  "New variant",
+                  new_admin_product_product_variant_path(@product),
+                  style: :solid,
+                  intent: :brand
+                ) %>
+          </div>
+        <% end %>
+      </div>
+      <p class="section__help type-help">SKU, name, type, class, and price identify the sellable unit.</p>
+
+      <% if @product_variants.empty? %>
+        <%= render "shared/empty_state",
+              title: "No variants yet",
+              body: "Add a standard or used variant to make this product sellable." %>
+      <% else %>
+        <% can_order = effective_permissions.include?("orders.manage") && current_store.present? %>
+        <% can_request = effective_permissions.include?("customer_requests.manage") && current_store.present? %>
+        <% rows = @product_variants.map { |variant|
+             tracking = variant.derived_inventory_tracking
+             inventory_dash = tracking.blank? || tracking == "non_inventory"
+             available_cell =
+               if !@show_inventory
+                 nil
+               elsif inventory_dash
+                 "—"
+               else
+                 @available_by_variant_id[variant.id].to_i
+               end
+             on_hand_cell =
+               if !@show_inventory
+                 nil
+               elsif inventory_dash
+                 "—"
+               else
+                 balance = @balances_by_variant_id[variant.id]
+                 qty = balance&.on_hand_quantity || 0
+                 if balance
+                   admin_inventory_balance_link(balance, label: qty.to_s) || qty
+                 else
+                   qty
+                 end
+               end
+             on_order_cell =
+               if !@show_inventory
+                 nil
+               elsif inventory_dash || variant.used?
+                 variant.used? && !inventory_dash ? 0 : "—"
+               else
+                 @on_order_by_variant_id[variant.id].to_i
+               end
+             purchasing_actions = []
+             if can_order && stock_orderable_variant?(variant)
+               purchasing_actions << link_to("Order stock", order_stock_path_for(variant))
+             end
+             if can_request && customer_requestable_variant?(variant, store: current_store)
+               purchasing_actions << link_to("Request", create_customer_request_path_for(variant))
+             end
+             row = [
+               variant.variant_type.humanize,
+               variant.sku,
+               link_to(variant.name.presence || "Unnamed", admin_product_variant_path(variant)),
+               status_badge(variant.status, scheme: :product_variant),
+               variant.merchandise_class ? variant.merchandise_class.admin_label : missing_value,
+               format_money_cents(variant.regular_price_cents)
+             ]
+             if @show_inventory
+               row << available_cell
+               row << on_hand_cell
+               row << on_order_cell
+             end
+             if can_order || can_request
+               row << (purchasing_actions.empty? ? "—" : safe_join(purchasing_actions, " · "))
+             end
+             row
+           } %>
+        <% headers = [
+             { text: "Type", cell_class: "cell-operational" },
+             { text: "SKU", cell_class: "cell-identifier" },
+             { text: "Name", cell_class: "cell-primary" },
+             { text: "Status", cell_class: "cell-operational" },
+             { text: "Class", cell_class: "cell-operational" },
+             { text: "Price", class: "numeric", cell_class: "cell-operational" }
+           ] %>
+        <% if @show_inventory %>
+          <% headers << { text: "Available", class: "numeric", cell_class: "cell-operational" } %>
+          <% headers << { text: "On hand", class: "numeric", cell_class: "cell-operational" } %>
+          <% headers << { text: "On order", class: "numeric", cell_class: "cell-operational" } %>
+        <% end %>
+        <% headers << { text: "Actions", cell_class: "cell-operational" } if can_order || can_request %>
+        <%= render "shared/data_table",
+              headers: headers,
+              rows: rows %>
+        <% if current_store.blank? && (effective_permissions.include?("orders.manage") || effective_permissions.include?("customer_requests.manage")) %>
+          <p class="muted">Select a store to order stock or create customer requests from this product.</p>
+        <% end %>
+      <% end %>
+    </section>
+
+    <% if @product.description.present? %>
+      <section class="section product-description">
+        <h2 class="section__title type-section-title">Description</h2>
+        <%= simple_format(@product.description) %>
+      </section>
+    <% end %>
+
+    <% if contributor_credits.any? || subject_names.any? %>
+      <div class="product-supporting">
+        <% if contributor_credits.any? %>
+          <section class="section product-creators">
+            <h2 class="section__title type-section-title">Creators</h2>
+            <ul class="product-supporting__list">
+              <% contributor_credits.each do |credit| %>
+                <li><%= credit %></li>
               <% end %>
-            </p>
+            </ul>
+          </section>
+        <% end %>
+        <% if subject_names.any? %>
+          <section class="section product-subjects">
+            <h2 class="section__title type-section-title">Subjects</h2>
+            <ul class="product-supporting__list">
+              <% subject_names.each do |name| %>
+                <li><%= name %></li>
+              <% end %>
+            </ul>
+          </section>
+        <% end %>
+      </div>
+    <% end %>
+
+    <% if show_external %>
+      <details class="technical-details product-external">
+        <summary>External data</summary>
+        <div class="section">
+          <% if @product.bibliographic_provider.present? %>
+            <%= render "shared/definition_list", rows: compact_definition_rows([
+                  ["External data provider", @product.bibliographic_provider],
+                  ["External data retrieved at", (@product.bibliographic_fetched_at.present? ? format_timestamp(@product.bibliographic_fetched_at) : nil)],
+                  ["External data refreshed at", (@product.bibliographic_applied_at.present? ? format_timestamp(@product.bibliographic_applied_at) : nil)],
+                  ["External provider key", @product.bibliographic_provider_key]
+                ]) %>
           <% end %>
           <% if can_refresh %>
             <div class="product-refresh">
@@ -141,176 +272,41 @@
               <% end %>
             </div>
           <% end %>
-        </section>
+        </div>
+      </details>
+    <% end %>
 
-        <section class="section surface product-variants">
-          <div class="product-section-head">
-            <h2 class="section__title type-section-title">Variants</h2>
-            <% if effective_permissions.include?("product_variants.create") %>
-              <div class="actions">
-                <%= action_link_to(
-                      "New variant",
-                      new_admin_product_product_variant_path(@product),
-                      style: :solid,
-                      intent: :brand
-                    ) %>
-              </div>
-            <% end %>
-          </div>
-          <p class="section__help type-help">SKU, name, type, class, and price identify the sellable unit.</p>
+    <%= render "shared/technical_details", rows: [
+          ["Record ID", @product.id],
+          ["Created", format_timestamp(@product.created_at)],
+          ["Updated", format_timestamp(@product.updated_at)],
+          ["Lock version", @product.lock_version]
+        ] %>
 
-          <% if @product_variants.empty? %>
-            <%= render "shared/empty_state",
-                  title: "No variants yet",
-                  body: "Add a standard or used variant to make this product sellable." %>
-          <% else %>
-            <% can_order = effective_permissions.include?("orders.manage") && current_store.present? %>
-            <% can_request = effective_permissions.include?("customer_requests.manage") && current_store.present? %>
-            <% rows = @product_variants.map { |variant|
-                 tracking = variant.derived_inventory_tracking
-                 inventory_dash = tracking.blank? || tracking == "non_inventory"
-                 on_hand_cell =
-                   if !@show_inventory
-                     nil
-                   elsif inventory_dash
-                     "—"
-                   else
-                     balance = @balances_by_variant_id[variant.id]
-                     qty = balance&.on_hand_quantity || 0
-                     if balance
-                       admin_inventory_balance_link(balance, label: qty.to_s) || qty
-                     else
-                       qty
-                     end
-                   end
-                 on_order_cell =
-                   if !@show_inventory
-                     nil
-                   elsif inventory_dash || variant.used?
-                     variant.used? && !inventory_dash ? 0 : "—"
-                   else
-                     @on_order_by_variant_id[variant.id].to_i
-                   end
-                 purchasing_actions = []
-                 if can_order && stock_orderable_variant?(variant)
-                   purchasing_actions << link_to("Order stock", order_stock_path_for(variant))
-                 end
-                 if can_request && customer_requestable_variant?(variant, store: current_store)
-                   purchasing_actions << link_to("Request", create_customer_request_path_for(variant))
-                 end
-                 row = [
-                   variant.variant_type.humanize,
-                   variant.sku,
-                   link_to(variant.name.presence || "Unnamed", admin_product_variant_path(variant)),
-                   status_badge(variant.status, scheme: :product_variant),
-                   variant.merchandise_class ? variant.merchandise_class.admin_label : missing_value,
-                   format_money_cents(variant.regular_price_cents)
-                 ]
-                 row << on_hand_cell if @show_inventory
-                 row << on_order_cell if @show_inventory
-                 if can_order || can_request
-                   row << (purchasing_actions.empty? ? "—" : safe_join(purchasing_actions, " · "))
-                 end
-                 row
-               } %>
-            <% headers = [
-                 { text: "Type", cell_class: "cell-operational" },
-                 { text: "SKU", cell_class: "cell-identifier" },
-                 { text: "Name", cell_class: "cell-primary" },
-                 { text: "Status", cell_class: "cell-operational" },
-                 { text: "Class", cell_class: "cell-operational" },
-                 { text: "Price", class: "numeric", cell_class: "cell-operational" }
-               ] %>
-            <% headers << { text: "On hand", class: "numeric", cell_class: "cell-operational" } if @show_inventory %>
-            <% headers << { text: "On order", class: "numeric", cell_class: "cell-operational" } if @show_inventory %>
-            <% headers << { text: "Actions", cell_class: "cell-operational" } if can_order || can_request %>
-            <%= render "shared/data_table",
-                  headers: headers,
-                  rows: rows %>
-            <% if current_store.blank? && (effective_permissions.include?("orders.manage") || effective_permissions.include?("customer_requests.manage")) %>
-              <p class="muted">Select a store to order stock or create customer requests from this product.</p>
-            <% end %>
+    <% if @recent_audit_events.present? %>
+      <details class="technical-details product-activity">
+        <summary>Recent activity · <%= @recent_audit_events.size %> <%= "event".pluralize(@recent_audit_events.size) %></summary>
+        <div class="section">
+          <%= render "shared/data_table",
+                headers: [
+                  { text: "When", cell_class: "cell-secondary" },
+                  { text: "Activity", cell_class: "cell-primary" },
+                  { text: "Result", cell_class: "cell-operational" },
+                  { text: "Staff member", cell_class: "cell-secondary" }
+                ],
+                rows: @recent_audit_events.map { |event|
+                  [
+                    format_timestamp(event.occurred_at),
+                    event.action.to_s.tr(".", " ").humanize,
+                    event.outcome.to_s.humanize,
+                    event.actor_label
+                  ]
+                } %>
+          <% if effective_permissions.include?("audit_events.view") %>
+            <p><%= link_to "View audit events", admin_audit_events_path(subject_type: "Product") %></p>
           <% end %>
-        </section>
-
-        <%= render "shared/technical_details", rows: [
-              ["ID", @product.id],
-              ["Created", format_timestamp(@product.created_at)],
-              ["Updated", format_timestamp(@product.updated_at)],
-              ["Lock version", @product.lock_version]
-            ] %>
-
-        <% if @recent_audit_events.present? %>
-          <section class="section surface product-activity">
-            <h2 class="section__title">Recent activity</h2>
-            <ul>
-              <% @recent_audit_events.each do |event| %>
-                <li>
-                  <%= format_timestamp(event.occurred_at) %> ·
-                  <%= event.action %> ·
-                  <%= event.outcome %> ·
-                  <%= event.actor_label %>
-                </li>
-              <% end %>
-            </ul>
-            <% if effective_permissions.include?("audit_events.view") %>
-              <p><%= link_to "View audit events", admin_audit_events_path(subject_type: "Product") %></p>
-            <% end %>
-          </section>
-        <% end %>
-      </div>
-
-      <% if rail_present %>
-        <aside class="product-rail">
-          <% if @show_inventory %>
-            <section class="section surface product-availability" aria-label="Availability">
-              <h2 class="section__title type-section-title">Availability</h2>
-              <% if current_store.present? %>
-                <p class="section__help type-help"><%= current_store.name %></p>
-              <% end %>
-              <%= render "shared/data_table",
-                    headers: [
-                      { text: "Type", cell_class: "cell-primary" },
-                      { text: "On hand", class: "numeric", cell_class: "cell-operational" },
-                      { text: "On order", class: "numeric", cell_class: "cell-operational" }
-                    ],
-                    rows: [
-                      ["Standard", @on_hand_by_type["standard"], @on_order_by_type["standard"]],
-                      ["Used", @on_hand_by_type["used"], @on_order_by_type["used"]]
-                    ] %>
-            </section>
-          <% end %>
-
-          <% if @product.description.present? %>
-            <section class="section surface product-description">
-              <h2 class="section__title type-section-title">Description</h2>
-              <%= simple_format(@product.description) %>
-            </section>
-          <% end %>
-
-          <% if subject_names.any? %>
-            <section class="section surface product-subjects">
-              <h2 class="section__title type-section-title">Subjects</h2>
-              <ul class="product-rail__list">
-                <% subject_names.each do |name| %>
-                  <li><%= name %></li>
-                <% end %>
-              </ul>
-            </section>
-          <% end %>
-
-          <% if contributor_credits.any? %>
-            <section class="section surface product-creators">
-              <h2 class="section__title type-section-title">Creators</h2>
-              <ul class="product-rail__list">
-                <% contributor_credits.each do |credit| %>
-                  <li><%= credit %></li>
-                <% end %>
-              </ul>
-            </section>
-          <% end %>
-        </aside>
-      <% end %>
-    </div>
+        </div>
+      </details>
+    <% end %>
   </div>
 <% end %>

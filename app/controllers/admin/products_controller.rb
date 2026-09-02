@@ -35,16 +35,8 @@ module Admin
         variant_ids = @product_variants.map(&:id)
         @balances_by_variant_id = load_variant_balances(variant_ids)
         @on_order_by_variant_id = load_variant_on_order_quantities(variant_ids)
-        @on_hand_by_type = Hash.new(0)
-        @on_order_by_type = { "standard" => 0, "used" => 0 }
-        @product_variants.each do |variant|
-          @on_hand_by_type[variant.variant_type] += @balances_by_variant_id[variant.id]&.on_hand_quantity.to_i
-          next unless variant.standard?
-
-          @on_order_by_type["standard"] += @on_order_by_variant_id[variant.id].to_i
-        end
+        @available_by_variant_id = load_variant_available_quantities(variant_ids)
       end
-      load_product_purchasing_actions
     end
 
     def new
@@ -565,21 +557,21 @@ module Admin
       lines.group_by(&:product_variant_id).transform_values { |group| group.sum(&:open_quantity) }
     end
 
-    def load_product_purchasing_actions
-      @stock_orderable_variants = []
-      @requestable_variants = []
-      return if current_store.blank?
+    # Batched equivalent of Inventory::Availability.available for every variant on the page.
+    def load_variant_available_quantities(variant_ids)
+      return {} if variant_ids.empty? || current_store.blank?
 
-      if effective_permissions.include?("orders.manage")
-        @stock_orderable_variants = @product_variants.select { |v| stock_orderable_variant?(v) }
+      reserved_by_variant_id = CustomerRequestAllocation
+        .joins(:customer_request)
+        .reserved
+        .standard_quantity
+        .where(customer_requests: { store_id: current_store.id, product_variant_id: variant_ids })
+        .group("customer_requests.product_variant_id")
+        .sum(:quantity)
+
+      variant_ids.index_with do |id|
+        @balances_by_variant_id[id]&.on_hand_quantity.to_i - reserved_by_variant_id[id].to_i
       end
-      if effective_permissions.include?("customer_requests.manage")
-        @requestable_variants = @product_variants.select { |v|
-          customer_requestable_variant?(v, store: current_store)
-        }
-      end
-      @single_stock_orderable = @stock_orderable_variants.one? ? @stock_orderable_variants.first : nil
-      @single_requestable = @requestable_variants.one? ? @requestable_variants.first : nil
     end
   end
 end

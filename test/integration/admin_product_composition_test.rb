@@ -42,7 +42,7 @@ class AdminProductCompositionTest < ActionDispatch::IntegrationTest
     assert_select "main[class='app-content']"
   end
 
-  test "show uses the page frame bibliographic grid rail and variants table" do
+  test "show uses the page frame identity catalog and full-width variants table" do
     sign_in_as("admin")
     get admin_product_path(@product)
     assert_response :success
@@ -51,15 +51,19 @@ class AdminProductCompositionTest < ActionDispatch::IntegrationTest
     assert_select "main.app-content.app-content--wide"
     assert_select ".page-header__eyebrow", text: "Product"
     assert_select ".page-header__title", text: "Example Book"
-    assert_select ".page-header__metadata", text: /#{Regexp.escape(@product.primary_identifier)}/
     assert_select ".page-header__status", text: /Draft/
+    assert_select ".page-header__actions", text: /Order stock/, count: 0
+    assert_select ".page-header__actions", text: /Create customer request/, count: 0
     assert_select ".metric-strip", count: 0
+    assert_select ".product-rail", count: 0
     assert_select ".product-panels", count: 0
     assert_select "img.product-cover", count: 0
-    assert_select ".product-biblio h2", text: "Bibliographic definition"
-    assert_select ".product-biblio dt", text: "List price"
-    assert_select ".product-biblio dd", text: "$19.99"
-    assert_select ".product-biblio dt", text: "Merchandise category"
+    assert_select ".product-identity-strip dt", text: "ShelfSense ID"
+    assert_select ".product-identity-strip dd", text: @product.primary_identifier
+    assert_select ".product-catalog h2", text: "Catalog details"
+    assert_select ".product-catalog dt", text: "List price"
+    assert_select ".product-catalog dd", text: "$19.99"
+    assert_select ".product-catalog dt", text: "Merchandise category"
     assert_select ".product-variants"
     assert_select ".product-variants th", text: "Type"
     assert_select ".product-variants th", text: "SKU"

@@ -11,17 +11,18 @@ class AdminProductPageFrameTest < ActionDispatch::IntegrationTest
     )
   end
 
-  test "show uses the page frame at wide width without a metric strip" do
+  test "show uses the page frame at wide width without a rail" do
     sign_in_as("admin")
     get admin_product_path(@product)
     assert_response :success
     assert_page_frame modifier: "wide"
     assert_select ".admin-page__tools", count: 0
     assert_select ".metric-strip", count: 0
-    assert_select ".product-biblio"
-    assert_select ".product-availability"
-    assert_select ".product-availability th", text: "On hand"
-    assert_select ".product-availability th", text: "On order"
+    assert_select ".product-rail", count: 0
+    assert_select ".product-identity-strip dt", text: "ShelfSense ID"
+    assert_select ".product-catalog h2", text: "Catalog details"
+    assert_select ".page-header__actions", text: /Order stock/, count: 0
+    assert_select ".page-header__actions", text: /Create customer request/, count: 0
   end
 
   test "new uses the page frame at wide width and keeps form sections" do
@@ -35,7 +36,8 @@ class AdminProductPageFrameTest < ActionDispatch::IntegrationTest
       assert_select ".product-form h2", text: title
     end
     assert_select ".admin-form-footer", text: /Create Product/
-    assert_select ".product-availability", count: 0
+    assert_select ".product-rail", count: 0
+    assert_select ".product-identity-strip", count: 0
     assert_select ".metric-strip", count: 0
   end
 
@@ -47,7 +49,8 @@ class AdminProductPageFrameTest < ActionDispatch::IntegrationTest
     assert_select ".page-header__metadata", text: /#{Regexp.escape(@product.primary_identifier)}/
     assert_select "form.product-form.surface"
     assert_select ".admin-form-footer", text: /Save Product/
-    assert_select ".product-availability", count: 0
+    assert_select ".product-rail", count: 0
+    assert_select ".product-identity-strip", count: 0
   end
 
   test "failed create redisplays wide with retained values" do
@@ -71,8 +74,12 @@ class AdminProductPageFrameTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_page_frame modifier: "wide"
     assert_select ".product-variants th", text: "On order"
+    assert_select ".product-variants th", text: "Available"
+    assert_select ".product-variants th", text: "On hand"
     assert_select ".product-variants td", text: "13"
-    assert_select ".product-availability td", text: "13"
+    assert_select ".product-variants", text: /Order stock/
+    assert_select ".page-header__actions", text: /Order stock/, count: 0
+    assert_select ".product-rail", count: 0
   end
 
   test "draft purchase order open quantity is not on-order" do
@@ -85,7 +92,6 @@ class AdminProductPageFrameTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select ".product-variants th", text: "On order"
     assert_select ".product-variants td", text: "11", count: 0
-    assert_select ".product-availability td", text: "11", count: 0
   end
 
   test "unmigrated customers and users keep their width contracts" do
