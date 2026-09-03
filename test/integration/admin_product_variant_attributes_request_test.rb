@@ -110,6 +110,212 @@ class AdminProductVariantAttributesRequestTest < ActionDispatch::IntegrationTest
     assert_redirected_to admin_product_variant_path(variant)
   end
 
+  test "new standard form materializes category class defaults" do
+    list_klass = merchandise_class(
+      code: "pva_list",
+      department: @dept,
+      default_tax_class: @tax,
+      pricing_method: "list_price",
+      inventory_mode: "inventory",
+      target_margin_bps: 4000,
+      default_supplier_returnable: true
+    )
+    category = merchandise_category(name: "PVA List Cat", default_standard_merchandise_class: list_klass)
+    product = Products::Create.call(
+      attributes: { name: "Materialize Std", status: "active", merchandise_category: category, list_price_cents: 2499 },
+      actor: @actor
+    )
+
+    get new_admin_product_product_variant_path(product)
+    assert_response :success
+    assert_select "select#product_variant_merchandise_class_id option[selected][value=?]", list_klass.id
+    assert_select "select#product_variant_inventory_mode option[selected][value=inventory]"
+    assert_select "select#product_variant_pricing_method option[selected][value=list_price]"
+    assert_select "input#product_variant_target_margin_bps[value=?]", "4000"
+    assert_select "select#product_variant_supplier_returnable option[selected][value=?]", "true"
+    assert_select "select#product_variant_tax_class_override_id option[value='']", text: /Inherit —/
+    assert_select "select#product_variant_status option[selected]", text: "Active"
+    assert_select "input#product_variant_regular_price[value=?]", "24.99"
+    assert_select ".product-variant-context", text: /Class:/, count: 0
+    assert_select "select#product_variant_merchandise_class_id option", text: /Resolve default/, count: 0
+    assert_select "select#product_variant_inventory_mode option", text: /Use class default/, count: 0
+  end
+
+  test "new used form materializes used class and refreshes price on condition" do
+    used_klass = merchandise_class(
+      code: "pva_used",
+      department: @dept,
+      default_tax_class: @tax,
+      pricing_method: "list_price",
+      used_merchandise_allowed: true,
+      inventory_mode: "inventory",
+      target_margin_bps: 2500
+    )
+    category = merchandise_category(
+      name: "PVA Used Cat",
+      default_standard_merchandise_class: @klass,
+      default_used_merchandise_class: used_klass
+    )
+    condition = merchandise_condition(code: "pva_good", name: "Good", price_adjustment_bps: 5000)
+    product = Products::Create.call(
+      attributes: { name: "Materialize Used", status: "active", merchandise_category: category, list_price_cents: 2000 },
+      actor: @actor
+    )
+
+    get new_admin_product_product_variant_path(product), params: {
+      product_variant: { variant_type: "used", status: "active" },
+      refresh_fields: "1",
+      refresh_source: "variant_type"
+    }
+    assert_response :success
+    assert_select "select#product_variant_variant_type option[selected][value=used]"
+    assert_select "select#product_variant_merchandise_class_id option[selected][value=?]", used_klass.id
+    assert_select "select#product_variant_merchandise_condition_id", count: 1
+    assert_select "select#product_variant_inventory_mode option[selected][value=inventory]"
+    assert_select "input#product_variant_target_margin_bps[value=?]", "2500"
+    assert_select "input#product_variant_regular_price[value]", count: 0
+    assert_select "input#product_variant_regular_price:not([value])", count: 1
+
+    get new_admin_product_product_variant_path(product), params: {
+      product_variant: {
+        variant_type: "used",
+        status: "active",
+        merchandise_class_id: used_klass.id,
+        inventory_mode: "inventory",
+        pricing_method: "list_price",
+        target_margin_bps: 2500,
+        supplier_returnable: true,
+        merchandise_condition_id: condition.id
+      },
+      refresh_fields: "1",
+      refresh_source: "condition"
+    }
+    assert_response :success
+    assert_select "input#product_variant_regular_price[value=?]", "10.00"
+  end
+
+  test "changing merchandise class on refresh reapplies that class defaults" do
+    other = merchandise_class(
+      code: "pva_other",
+      department: @dept,
+      default_tax_class: @tax,
+      pricing_method: "cost_based",
+      inventory_mode: "non_inventory",
+      target_margin_bps: 1500,
+      default_supplier_returnable: false
+    )
+    product = Products::Create.call(
+      attributes: { name: "Class Change", status: "active", merchandise_category: @category, list_price_cents: 1000 },
+      actor: @actor
+    )
+
+    get new_admin_product_product_variant_path(product), params: {
+      product_variant: {
+        variant_type: "standard",
+        status: "active",
+        merchandise_class_id: other.id
+      },
+      refresh_fields: "1",
+      refresh_source: "merchandise_class"
+    }
+    assert_response :success
+    assert_select "select#product_variant_merchandise_class_id option[selected][value=?]", other.id
+    assert_select "select#product_variant_inventory_mode option[selected][value=non_inventory]"
+    assert_select "select#product_variant_pricing_method option[selected][value=cost_based]"
+    assert_select "input#product_variant_target_margin_bps[value=?]", "1500"
+    assert_select "select#product_variant_supplier_returnable option[selected][value=?]", "false"
+  end
+
+  test "product without category default requires class selection" do
+    product = Products::Create.call(
+      attributes: { name: "No Cat", status: "active", list_price_cents: 1000 },
+      actor: @actor
+    )
+    get new_admin_product_product_variant_path(product)
+    assert_response :success
+    assert_select "select#product_variant_merchandise_class_id option[selected]", count: 0
+    assert_select "select#product_variant_merchandise_class_id option[value='']", text: /Select merchandise class/
+    assert_select "select#product_variant_inventory_mode option[selected]", count: 0
+    assert_select "select#product_variant_tax_class_override_id option[value='']", text: /Select tax class/
+    assert_select "select#product_variant_tax_class_override_id option[value='']", text: /Inherit —/, count: 0
+  end
+
+  test "create persists materialized form values" do
+    list_klass = merchandise_class(
+      code: "pva_persist",
+      department: @dept,
+      default_tax_class: @tax,
+      pricing_method: "list_price",
+      target_margin_bps: 4000
+    )
+    category = merchandise_category(name: "PVA Persist", default_standard_merchandise_class: list_klass)
+    product = Products::Create.call(
+      attributes: { name: "Persist Defaults", status: "active", merchandise_category: category, list_price_cents: 1999 },
+      actor: @actor
+    )
+
+    assert_difference -> { ProductVariant.count }, 1 do
+      post admin_product_product_variants_path(product), params: {
+        product_variant: {
+          variant_type: "standard",
+          status: "active",
+          merchandise_class_id: list_klass.id,
+          inventory_mode: "inventory",
+          pricing_method: "list_price",
+          target_margin_bps: 4000,
+          supplier_returnable: true,
+          regular_price: "19.99"
+        }
+      }
+    end
+    variant = ProductVariant.order(:created_at).last
+    assert_equal list_klass.id, variant.merchandise_class_id
+    assert_equal "inventory", variant.inventory_mode
+    assert_equal "list_price", variant.pricing_method
+    assert_equal 4000, variant.target_margin_bps
+    assert_equal true, variant.supplier_returnable
+    assert_equal 1999, variant.regular_price_cents
+    assert_nil variant.tax_class_override_id
+  end
+
+  test "edit form shows stored sticky values without reapplying class defaults" do
+    list_klass = merchandise_class(
+      code: "pva_edit_cls",
+      department: @dept,
+      default_tax_class: @tax,
+      pricing_method: "list_price",
+      target_margin_bps: 4000,
+      default_supplier_returnable: true
+    )
+    product = Products::Create.call(
+      attributes: { name: "Edit Sticky", status: "active", merchandise_category: @category, list_price_cents: 1000 },
+      actor: @actor
+    )
+    variant = ProductVariants::Create.call(
+      product: product,
+      attributes: {
+        variant_type: "standard",
+        status: "active",
+        merchandise_class: list_klass,
+        inventory_mode: "inventory",
+        pricing_method: "fixed",
+        target_margin_bps: 1111,
+        supplier_returnable: false,
+        regular_price_cents: 555
+      },
+      actor: @actor
+    )
+    # Change class defaults after create — edit must not pick these up
+    list_klass.update!(target_margin_bps: 9999, default_pricing_method: "cost_based")
+
+    get edit_admin_product_variant_path(variant)
+    assert_response :success
+    assert_select "select#product_variant_pricing_method option[selected][value=fixed]"
+    assert_select "input#product_variant_target_margin_bps[value=?]", "1111"
+    assert_select "select#product_variant_supplier_returnable option[selected][value=?]", "false"
+    assert_select "input#product_variant_regular_price[value=?]", "5.55"
+  end
+
   test "tax inherit blank option appears when class has default tax" do
     product = Products::Create.call(
       attributes: { name: "Inherit Tax", status: "active", merchandise_category: @category, list_price_cents: 1000 },

@@ -35,6 +35,11 @@ module Admin
     def new
       attrs = redisplay_variant_attrs
       @product_variant = @product.product_variants.build(attrs)
+      if params[:refresh_fields].present?
+        apply_new_variant_defaults!(@product_variant, mode: refresh_source_mode)
+      elsif params[:product_variant].blank?
+        apply_new_variant_defaults!(@product_variant, mode: :initial)
+      end
       load_form_options
     end
 
@@ -42,6 +47,7 @@ module Admin
       if params[:refresh_fields].present?
         attrs = redisplay_variant_attrs
         @product_variant = @product.product_variants.build(attrs)
+        apply_new_variant_defaults!(@product_variant, mode: refresh_source_mode)
         load_form_options
         render :new, status: :ok
         return
@@ -163,28 +169,81 @@ module Admin
       @merchandise_conditions = MerchandiseCondition.assignable.admin_ordered
       @merchandise_classes = MerchandiseClass.assignable.admin_ordered.includes(:department)
       @tax_classes = TaxClass.assignable.admin_ordered
-      @effective_merchandise_class = effective_merchandise_class_for_form
       @tax_inherit_label = tax_inherit_label_for_form
     end
 
-    def effective_merchandise_class_for_form
-      variant = @product_variant
-      return variant.merchandise_class if variant&.merchandise_class.present?
-      return unless @product
-
-      type = variant&.variant_type.presence || "standard"
-      category = @product.merchandise_category
-      return unless category
-
-      type == "used" ? category.default_used_merchandise_class : category.default_standard_merchandise_class
-    end
-
     def tax_inherit_label_for_form
-      klass = @effective_merchandise_class
+      klass = @product_variant&.merchandise_class
       tax = klass&.default_tax_class
       return unless tax&.assignable?
 
       "Inherit — #{tax.admin_label}"
+    end
+
+    def refresh_source_mode
+      case params[:refresh_source].to_s
+      when "merchandise_class" then :merchandise_class
+      when "condition" then :condition
+      else :variant_type
+      end
+    end
+
+    # Materialize DefaultResolver results onto an unsaved new-variant form object.
+    # mode:
+    #   :initial / :variant_type / :merchandise_class — reapply class sticky defaults + price
+    #   :condition — keep sticky fields; refresh suggested price only
+    def apply_new_variant_defaults!(variant, mode:)
+      type = variant.variant_type.presence || "standard"
+      condition = variant.merchandise_condition
+
+      case mode
+      when :condition
+        resolved = ProductVariants::DefaultResolver.resolve(
+          product: @product,
+          variant_type: type,
+          condition: condition,
+          merchandise_class: variant.merchandise_class,
+          inventory_mode: variant.inventory_mode,
+          pricing_method: variant.pricing_method,
+          target_margin_bps: variant.target_margin_bps.nil? ? :omitted : variant.target_margin_bps,
+          supplier_returnable: variant.supplier_returnable.nil? ? :omitted : variant.supplier_returnable,
+          tax_class_override: variant.tax_class_override_id.nil? ? :omitted : variant.tax_class_override,
+          regular_price_cents: nil
+        )
+        variant.regular_price_cents = suggested_price_for_form(type, condition, resolved.suggested_price_cents)
+      else
+        # :initial, :variant_type, :merchandise_class
+        klass =
+          if mode == :merchandise_class
+            variant.merchandise_class
+          else
+            nil
+          end
+
+        resolved = ProductVariants::DefaultResolver.resolve(
+          product: @product,
+          variant_type: type,
+          condition: condition,
+          merchandise_class: klass,
+          regular_price_cents: nil
+        )
+
+        variant.assign_attributes(
+          merchandise_class_id: resolved.merchandise_class&.id,
+          inventory_mode: resolved.inventory_mode,
+          pricing_method: resolved.pricing_method,
+          target_margin_bps: resolved.target_margin_bps,
+          supplier_returnable: resolved.supplier_returnable,
+          tax_class_override_id: nil,
+          regular_price_cents: suggested_price_for_form(type, condition, resolved.suggested_price_cents)
+        )
+      end
+    end
+
+    def suggested_price_for_form(variant_type, condition, suggested_cents)
+      return nil if variant_type.to_s == "used" && condition.blank?
+
+      suggested_cents
     end
 
     def redisplay_variant_attrs
@@ -198,10 +257,24 @@ module Admin
         :industry_identifier, :status
       ).to_h.symbolize_keys
 
+      if permitted.key?(:regular_price) || params[:product_variant]&.key?(:regular_price)
+        raw = permitted.delete(:regular_price)
+        raw = params.dig(:product_variant, :regular_price) if raw.nil?
+        begin
+          permitted[:regular_price_cents] = Money::ParseCents.call(raw) if raw.present?
+          permitted[:regular_price_cents] = nil if raw.blank?
+        rescue Money::ParseCents::Error
+          permitted.delete(:regular_price_cents)
+        end
+      end
+
       %i[option_value_1 option_value_2 merchandise_condition_id merchandise_class_id
          tax_class_override_id inventory_mode pricing_method regular_price_cents
          industry_identifier target_margin_bps supplier_returnable].each do |key|
         permitted[key] = nil if permitted[key].blank?
+      end
+      if permitted.key?(:supplier_returnable) && !permitted[:supplier_returnable].nil?
+        permitted[:supplier_returnable] = ActiveModel::Type::Boolean.new.cast(permitted[:supplier_returnable])
       end
       permitted[:status] = permitted[:status].to_s.strip.presence || "active"
       permitted[:variant_type] = permitted[:variant_type].presence || "standard"

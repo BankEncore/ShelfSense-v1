@@ -1,3 +1,4 @@
+<% new_record = !product_variant.persisted? %>
 <%= form_with model: product_variant.persisted? ? [:admin, product_variant] : [:admin, product, product_variant],
              class: "form",
              data: { controller: "variant-preview", "variant-preview-has-labels-value": product.variant_option_name_1.to_s.strip.present? } do |form| %>
@@ -8,7 +9,6 @@
     <div><strong><%= product.name %></strong></div>
     <div><code><%= product.primary_identifier %></code></div>
     <div>Category: <%= product.merchandise_category&.admin_label.presence || "No category assigned" %></div>
-    <div>Class: <%= (@effective_merchandise_class&.admin_label).presence || "No merchandise class assigned" %></div>
   </section>
 
   <%= render layout: "shared/form_section", locals: { title: "Identity" } do %>
@@ -27,6 +27,7 @@
         <div><%= product_variant_label(product_variant) %></div>
       </div>
     <% else %>
+      <%= hidden_field_tag :refresh_source, "variant_type", id: "variant_refresh_source" %>
       <div class="form-field">
         <%= form.label :variant_type %>
         <%= form.select :variant_type,
@@ -34,12 +35,12 @@
               {},
               {
                 data: { "variant-preview-target": "variantType", action: "change->variant-preview#recompute" },
-                onchange: "document.getElementById('variant_type_refresh').click()"
+                onchange: "document.getElementById('variant_refresh_source').value='variant_type'; document.getElementById('variant_defaults_refresh').click()"
               } %>
         <%= form.button "Refresh fields",
               name: "refresh_fields",
               value: "1",
-              id: "variant_type_refresh",
+              id: "variant_defaults_refresh",
               formaction: new_admin_product_product_variant_path(product),
               formmethod: :get,
               hidden: true,
@@ -73,19 +74,29 @@
 
   <%= render layout: "shared/form_section", locals: {
         title: "Classification",
-        help: "Department comes from the merchandise class. Tax blank inherits the class default when available. Inventory mode and pricing are stored on the variant."
+        help: "Department comes from the merchandise class. Tax blank inherits the class default when available. Inventory mode, pricing, margin, and supplier returnability are stored on the variant."
       } do %>
     <% if product_variant.used? %>
       <div class="form-field">
         <%= form.label :merchandise_condition_id, "Condition" %>
-        <%= form.select :merchandise_condition_id, MerchandiseCondition.options_for_select(@merchandise_conditions), { include_blank: true }, { required: true, data: { "variant-preview-target": "conditionSelect", action: "change->variant-preview#recompute" } } %>
+        <%= form.select :merchandise_condition_id,
+              MerchandiseCondition.options_for_select(@merchandise_conditions),
+              { include_blank: true },
+              {
+                required: true,
+                data: { "variant-preview-target": "conditionSelect", action: "change->variant-preview#recompute" },
+                onchange: (new_record ? "document.getElementById('variant_refresh_source').value='condition'; document.getElementById('variant_defaults_refresh').click()" : nil)
+              }.compact %>
       </div>
     <% end %>
     <div class="form-field">
       <%= form.label :merchandise_class_id, "Merchandise class" %>
       <%= form.select :merchandise_class_id,
             MerchandiseClass.options_for_select(@merchandise_classes),
-            include_blank: product_variant.persisted? ? false : "Resolve default" %>
+            { include_blank: new_record ? "Select merchandise class" : false },
+            new_record ? {
+              onchange: "document.getElementById('variant_refresh_source').value='merchandise_class'; document.getElementById('variant_defaults_refresh').click()"
+            } : {} %>
     </div>
     <% if product_variant.persisted? && product_variant.department %>
       <div class="form-field">
@@ -95,7 +106,7 @@
     <% end %>
     <div class="form-field">
       <%= form.label :tax_class_override_id, "Tax class" %>
-      <% tax_blank = @tax_inherit_label.presence || (product_variant.persisted? ? nil : "Select tax class") %>
+      <% tax_blank = @tax_inherit_label.presence || (new_record ? "Select tax class" : nil) %>
       <%= form.select :tax_class_override_id,
             TaxClass.options_for_select(@tax_classes),
             include_blank: tax_blank %>
@@ -107,28 +118,23 @@
       <%= form.label :inventory_mode %>
       <%= form.select :inventory_mode,
             ProductVariant::INVENTORY_MODES.map { |m| [m.humanize, m] },
-            include_blank: product_variant.persisted? ? false : "Use class default" %>
+            include_blank: new_record && product_variant.inventory_mode.blank? %>
     </div>
     <div class="form-field">
       <%= form.label :pricing_method %>
       <%= form.select :pricing_method,
             ProductVariant::PRICING_METHODS.map { |m| [m.humanize, m] },
-            include_blank: product_variant.persisted? ? false : "Use class default" %>
+            include_blank: new_record && product_variant.pricing_method.blank? %>
     </div>
     <div class="form-field">
       <%= form.label :target_margin_bps, "Target margin (basis points)" %>
       <%= form.number_field :target_margin_bps %>
-      <% unless product_variant.persisted? %>
-        <span class="field-help">Leave blank to copy the merchandise-class default.</span>
-      <% end %>
     </div>
     <div class="form-field">
       <%= form.label :supplier_returnable, "Supplier returnable" %>
-      <% if product_variant.persisted? %>
-        <%= form.select :supplier_returnable, [ [ "Yes", true ], [ "No", false ] ] %>
-      <% else %>
-        <%= form.select :supplier_returnable, [ [ "Yes", true ], [ "No", false ] ], include_blank: "Use class default" %>
-      <% end %>
+      <%= form.select :supplier_returnable,
+            [ [ "Yes", true ], [ "No", false ] ],
+            include_blank: new_record && product_variant.supplier_returnable.nil? %>
     </div>
   <% end %>
 
