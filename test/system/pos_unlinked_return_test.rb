@@ -54,8 +54,7 @@ class PosUnlinkedReturnTest < ApplicationSystemTestCase
     start_cash_refund_via_plus
     assert_text "REFUND"
     field = find("#pos-command-field")
-    field.send_keys :enter
-    send_keys :enter
+    complete_tender_after_amount(field)
     assert_text "Transaction complete", wait: 10
     assert_text "Cash refund"
     assert_text "Unlinked return"
@@ -72,8 +71,7 @@ class PosUnlinkedReturnTest < ApplicationSystemTestCase
     start_cash_tender_via_plus
     field = find("#pos-command-field")
     field.fill_in with: "20.00"
-    field.send_keys :enter
-    send_keys :enter
+    complete_tender_after_amount(field)
     assert_text "Transaction complete", wait: 10
     assert unit.reload.removed?
 
@@ -91,8 +89,7 @@ class PosUnlinkedReturnTest < ApplicationSystemTestCase
 
     start_cash_refund_via_plus
     field = find("#pos-command-field")
-    field.send_keys :enter
-    send_keys :enter
+    complete_tender_after_amount(field)
     assert_text "Transaction complete", wait: 10
     assert unit.reload.on_hand?
   end

@@ -34,8 +34,7 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     assert_text "CASH TENDER"
     field = find("#pos-command-field")
     field.fill_in with: "50.00"
-    field.send_keys :enter
-    send_keys :enter
+    complete_tender_after_amount(field)
 
     assert_text "Transaction complete", wait: 10
     assert_equal 1, PosTransaction.completed.where(register: @register).count
@@ -84,8 +83,7 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     assert_selector "[data-register-workspace-target='fieldLabel']", text: /Cash presented/
     field = find("#pos-command-field")
     field.fill_in with: "50.00"
-    field.send_keys :enter
-    send_keys :enter
+    complete_tender_after_amount(field, tender_count: 2)
 
     assert_text "Transaction complete", wait: 10
     assert_text "External Card"
@@ -195,16 +193,17 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     send_keys :f2
     field = find("#pos-command-field")
     field.fill_in with: "5.00"
-    field.send_keys :enter
-    send_keys :f2
+    submit_command_field_once
+    wait_for_tender_rows(count: 1)
+    send_keys_to_command_field(:f2)
     field = find("#pos-command-field")
     field.fill_in with: "5.00"
-    field.send_keys :enter
+    submit_command_field_once
+    assert_selector ".pos-tenders__item", count: 2, wait: 10
 
     first = find(".pos-tenders__item.is-selected")
     first_id = first["data-tender-id"]
-    field = find("#pos-command-field")
-    field.send_keys :arrow_down
+    send_keys_to_command_field(:arrow_down)
     assert_equal "pos-command-field", page.evaluate_script("document.activeElement && document.activeElement.id")
     assert_equal first_id, find(".pos-tenders__item.is-selected")["data-tender-id"]
 
@@ -783,8 +782,7 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     start_cash_tender_via_plus
     field = find("#pos-command-field")
     field.fill_in with: "100.00"
-    field.send_keys :enter
-    send_keys :enter
+    complete_tender_after_amount(field)
 
     assert_text "Transaction complete", wait: 10
     assert_text unit.unit_identifier
@@ -800,8 +798,7 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     start_cash_tender_via_plus
     field = find("#pos-command-field")
     field.fill_in with: "50.00"
-    field.send_keys :enter
-    send_keys :enter
+    complete_tender_after_amount(field)
     assert_text "Transaction complete", wait: 10
     completed = PosTransaction.completed.find_by!(register: @register)
     counts = {
@@ -1330,8 +1327,7 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
       start_cash_tender_via_plus
       field = find("#pos-command-field")
       field.fill_in with: "25.00"
-      field.send_keys :enter
-      send_keys :enter
+      complete_tender_after_amount(field)
       assert_text "Transaction complete", wait: 10
       click_on "New transaction"
       assert_text "SALE ENTRY", wait: 10
@@ -1368,8 +1364,7 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
       start_cash_tender_via_plus
       field = find("#pos-command-field")
       field.fill_in with: "25.00"
-      field.send_keys :enter
-      send_keys :enter
+      complete_tender_after_amount(field)
       assert_text "Transaction complete", wait: 10
       click_on "New transaction"
       assert_text "SALE ENTRY", wait: 10
@@ -1477,8 +1472,7 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     start_cash_tender_via_plus
     field = find("#pos-command-field")
     field.fill_in with: "25.00"
-    field.send_keys :enter
-    send_keys :enter
+    complete_tender_after_amount(field)
     assert_text "Transaction complete", wait: 10
     sale = PosTransaction.completed.find_by!(register: @register)
     click_on "New transaction"
@@ -1615,11 +1609,12 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     send_keys :f2
     field = find("#pos-command-field")
     field.fill_in with: "5.00"
-    field.send_keys :enter
-    send_keys :f2
+    submit_command_field_once
+    wait_for_tender_rows(count: 1)
+    send_keys_to_command_field(:f2)
     field = find("#pos-command-field")
     field.fill_in with: "5.00"
-    field.send_keys :enter
+    submit_command_field_once
     assert_selector ".pos-tenders__item", minimum: 2, wait: 10
 
     rows = all(".pos-tenders__item")
@@ -1641,11 +1636,12 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     send_keys :f2
     field = find("#pos-command-field")
     field.fill_in with: "5.00"
-    field.send_keys :enter
-    send_keys :f2
+    submit_command_field_once
+    wait_for_tender_rows(count: 1)
+    send_keys_to_command_field(:f2)
     field = find("#pos-command-field")
     field.fill_in with: "5.00"
-    field.send_keys :enter
+    submit_command_field_once
     assert_selector ".pos-tenders__item", minimum: 2, wait: 10
 
     rows = all(".pos-tenders__item")
@@ -1707,8 +1703,7 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
     start_cash_tender_via_plus
     field = find("#pos-command-field")
     field.fill_in with: "25.00"
-    field.send_keys :enter
-    send_keys :enter
+    complete_tender_after_amount(field)
     assert_text "Transaction complete", wait: 10
     sale = PosTransaction.completed.find_by!(register: @register)
     click_on "New transaction"

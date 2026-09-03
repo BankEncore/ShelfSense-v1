@@ -87,6 +87,55 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
     field.click
   end
 
+  # After a command-field submit that replaces the Register workspace, wait for the
+  # resulting tender row(s). Do not reuse a pre-morph field node for the next key.
+  def wait_for_tender_rows(count: nil, minimum: 1)
+    if count
+      assert_selector ".pos-tenders__item", count: count, wait: 10
+    else
+      assert_selector ".pos-tenders__item", minimum: minimum, wait: 10
+    end
+  end
+
+  # Submit the current command-field value once. Do not retry: a second Enter can
+  # create a duplicate tender or complete the sale unexpectedly.
+  def submit_command_field_once
+    find("#pos-command-field", wait: 10).send_keys :enter
+  end
+
+  # Re-find #pos-command-field and send keys. Retries only when the node is replaced
+  # mid-interaction — safe for F-keys and completion Enter after a tender wait.
+  def send_keys_to_command_field(*keys)
+    deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + 10
+    begin
+      find("#pos-command-field", wait: 10).send_keys(*keys)
+    rescue Selenium::WebDriver::Error::StaleElementReferenceError,
+           Selenium::WebDriver::Error::ElementNotInteractableError
+      raise if Process.clock_gettime(Process::CLOCK_MONOTONIC) >= deadline
+
+      retry
+    end
+  end
+
+  # Submit the presented amount once, wait for tender row(s), then complete on the
+  # replacement command field. Ignore a held field node from before the morph.
+  def complete_tender_after_amount(_field = nil, tender_count: 1)
+    submit_command_field_once
+    wait_for_tender_rows(count: tender_count)
+
+    deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + 10
+    begin
+      find("#pos-command-field", wait: 10).send_keys :enter
+    rescue Selenium::WebDriver::Error::StaleElementReferenceError,
+           Selenium::WebDriver::Error::ElementNotInteractableError,
+           Capybara::ElementNotFound
+      return if page.has_text?("Transaction complete", wait: 0.5)
+      raise if Process.clock_gettime(Process::CLOCK_MONOTONIC) >= deadline
+
+      retry
+    end
+  end
+
   def focus_workspace_background_for_shortcuts
     page.execute_script(<<~JS)
       const root = document.querySelector("[data-register-workspace-target='background']")

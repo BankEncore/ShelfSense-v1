@@ -27,8 +27,7 @@ class PosLinkedReturnTest < ApplicationSystemTestCase
     start_cash_tender_via_plus
     field = find("#pos-command-field")
     field.fill_in with: "25.00"
-    field.send_keys :enter
-    send_keys :enter
+    complete_tender_after_amount(field)
     assert_text "Transaction complete", wait: 10
 
     sale = PosTransaction.completed.find_by!(register: @register)
@@ -50,8 +49,7 @@ class PosLinkedReturnTest < ApplicationSystemTestCase
     send_keys :f1
     assert_selector "[data-register-workspace-target='fieldLabel']", text: /Refund amount/
     field = find("#pos-command-field")
-    field.send_keys :enter
-    send_keys :enter
+    complete_tender_after_amount(field)
 
     assert_text "Transaction complete", wait: 10
     assert_text "Cash refund"
@@ -88,8 +86,7 @@ class PosLinkedReturnTest < ApplicationSystemTestCase
     start_cash_tender_via_plus
     field = find("#pos-command-field")
     field.fill_in with: "25.00"
-    field.send_keys :enter
-    send_keys :enter
+    complete_tender_after_amount(field)
     assert_text "Transaction complete", wait: 10
 
     sale = PosTransaction.completed.find_by!(register: @register)

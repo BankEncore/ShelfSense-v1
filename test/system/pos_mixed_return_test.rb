@@ -28,8 +28,7 @@ class PosMixedReturnTest < ApplicationSystemTestCase
     start_cash_tender_via_plus
     field = find("#pos-command-field")
     field.fill_in with: "10.00"
-    field.send_keys :enter
-    send_keys :enter
+    complete_tender_after_amount(field)
     assert_text "Transaction complete", wait: 10
     completed = PosTransaction.completed.find_by!(register: @register)
     assert completed.signed_net_cents.positive?
@@ -53,13 +52,11 @@ class PosMixedReturnTest < ApplicationSystemTestCase
     assert_selector "[data-register-workspace-target='fieldLabel']", text: /External Card/
     field = find("#pos-command-field")
     field.fill_in with: "4.00"
-    field.send_keys :enter
-    field = find("#pos-command-field")
-    field.send_keys :f1
+    submit_command_field_once
+    wait_for_tender_rows(count: 1)
+    send_keys_to_command_field(:f1)
     assert_selector "[data-register-workspace-target='fieldLabel']", text: /Refund amount/
-    field = find("#pos-command-field")
-    field.send_keys :enter
-    send_keys :enter
+    complete_tender_after_amount(tender_count: 2)
     assert_text "Transaction complete", wait: 10
     assert_text "Cash refund"
     assert_text "External Card refund"
