@@ -50,7 +50,7 @@ This directory contains the project’s technical authority, development guidanc
 | [Canonical roadmap](planning/roadmap.md) | Implemented milestones, forward phases 11–14, UDS, Terminal program |
 | [Planning packets](planning/README.md) | Phase and UX packet index |
 | [UX design system](planning/ux-design-system/README.md) | Warm Parchment UDS-1–3 operationally complete; UDS-4.0–4.2 and UDS-5 on `main` |
-| [Admin Page Frame Program](planning/admin-page-frame/README.md) | **Accepted.** Slice 1 + Customer core **Implemented on `main`** |
+| [Admin Page Frame Program](planning/admin-page-frame/README.md) | **Accepted.** Slice 1 + Customer core **Implemented on `main`**; [Product show](planning/admin-page-frame/product-show.md) Accepted |
 | [POS Phases 4–6 plan](planning/phase4-6-point-of-sale/spec.md) | Multi-phase POS sequencing (foundation → cash register → MVP); §6 deferred to the Phase 6 packet |
 | [Glossary](glossary.md) | Canonical domain terms (stored value and project-wide) |
 | [UX conventions](ux-conventions.md) | Shared admin page anatomy, partials, currency boundaries, and Warm Parchment tokens |

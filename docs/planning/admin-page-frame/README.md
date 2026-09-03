@@ -2,7 +2,7 @@
 
 **Program name:** Admin Page Frame Program (not UDS-6, UDS-7, or UDS-8)
 
-**Status:** **Accepted.** Slice 0 complete. Slice 1 **Implemented on `main`** (PR [#133](https://github.com/BankEncore/ShelfSense-v1/pull/133)). [Customer core](customer-core.md) **Implemented on `main`** (PR [#136](https://github.com/BankEncore/ShelfSense-v1/pull/136)). Temporary sprint branch `apf-development` is retired. [adoption-outlook.md](adoption-outlook.md) is not authorized.
+**Status:** **Accepted.** Slice 0 complete. Slice 1 **Implemented on `main`** (PR [#133](https://github.com/BankEncore/ShelfSense-v1/pull/133)). [Customer core](customer-core.md) **Implemented on `main`** (PR [#136](https://github.com/BankEncore/ShelfSense-v1/pull/136)). [Product show](product-show.md) **Accepted** (show/new/edit/`_form` at `wide`). Temporary sprint branch `apf-development` is retired. [adoption-outlook.md](adoption-outlook.md) is not authorized.
 
 This is a UDS-adjacent administrative composition program, not a numbered domain phase and not a numbered UDS slice. UDS-6 (staff history) and UDS-7 (sidebar / Cmd+K) remain parked.
 
@@ -26,6 +26,7 @@ Slice 0 choices: [choices.md](choices.md) (APF-001–APF-008).
 | [test-matrix.md](test-matrix.md) | Slice 1 tests, frozen suites, viewport gates |
 | [slice-1.md](slice-1.md) | Slice 1 completion and viewport/CSS sign-off |
 | [customer-core.md](customer-core.md) | Customer core family packet — **Implemented on `main`** |
+| [product-show.md](product-show.md) | Product show family packet — **Accepted** (show/new/edit/`_form` at `wide`) |
 | [adoption-outlook.md](adoption-outlook.md) | Former family-migration slices — **not authorized** |
 
 ## Authorized program
@@ -34,14 +35,15 @@ Slice 0 choices: [choices.md](choices.md) (APF-001–APF-008).
 |---|---|---|
 | **Slice 0** — Inventory, evidence, and contract | **Complete** | None |
 | **Slice 1** — Frame + Adjustment Reasons | **Implemented on `main`** (PR [#133](https://github.com/BankEncore/ShelfSense-v1/pull/133)) | Frame API + Adjustment Reasons only |
-| **Closeout gate** | **Complete** | Product consuming the frame is a separately approved later slice |
+| **Closeout gate** | **Complete** | Product show is a separately approved packet ([product-show.md](product-show.md)) |
 | **Customer core** | **Implemented on `main`** (PR [#136](https://github.com/BankEncore/ShelfSense-v1/pull/136)) | Customers index/show/new/edit at `standard` + tools |
+| **Product show** | **Accepted** ([product-show.md](product-show.md)) | Product show/new/edit/`_form` at `wide`; index, bibliographic review, and catalog search stay unmigrated |
 
 [adoption-outlook.md](adoption-outlook.md) is not a delivery plan.
 
 ## Next action
 
-Further Admin surfaces adopt `admin/shared/page` through separately approved family or feature slices. Product consuming the frame is **not** implied. [adoption-outlook.md](adoption-outlook.md) remains non-authoritative.
+Further Admin surfaces adopt `admin/shared/page` through separately approved family or feature slices. Product **index**, bibliographic review, and catalog search are **not** implied. [adoption-outlook.md](adoption-outlook.md) remains non-authoritative.
 
 ## Does not reopen
 

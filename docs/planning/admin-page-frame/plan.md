@@ -2,7 +2,7 @@
 
 **Program name:** Admin Page Frame Program (not UDS-6, UDS-7, or UDS-8)
 
-**Status:** **Accepted.** Slice 0 complete. Slice 1 **Implemented on `main`** (PR [#133](https://github.com/BankEncore/ShelfSense-v1/pull/133)). [Customer core](customer-core.md) **Implemented on `main`** (PR [#136](https://github.com/BankEncore/ShelfSense-v1/pull/136)). Further family adoption beyond Customer core is not authorized.
+**Status:** **Accepted.** Slice 0 complete. Slice 1 **Implemented on `main`** (PR [#133](https://github.com/BankEncore/ShelfSense-v1/pull/133)). [Customer core](customer-core.md) **Implemented on `main`** (PR [#136](https://github.com/BankEncore/ShelfSense-v1/pull/136)). [Product show](product-show.md) is a separately approved family packet. [adoption-outlook.md](adoption-outlook.md) is not authorized.
 
 Companions: [choices.md](choices.md), [slice-0.md](slice-0.md), [change-allowlist.md](change-allowlist.md), [test-matrix.md](test-matrix.md), [UDS-5](../ux-design-system/uds-5-plan.md), [ux-conventions.md](../../ux-conventions.md).
 
@@ -192,7 +192,7 @@ No disposable fixture. Non-regression: Users, Customers, Products, and Store wit
 
 ### Closeout gate (after Slice 1)
 
-**Complete.** The frame is accepted for Adjustment Reasons on `main` (PR [#133](https://github.com/BankEncore/ShelfSense-v1/pull/133)). Product consuming the frame is a **separately approved** later slice, not leftover Slice 1 work. Width rem values for `wide` / `workspace` remain provisional (APF-003). [customer-core.md](customer-core.md) is **Implemented on `main`** (PR [#136](https://github.com/BankEncore/ShelfSense-v1/pull/136)). The temporary sprint branch is retired. Do not begin [adoption-outlook.md](adoption-outlook.md) work from this packet.
+**Complete.** The frame is accepted for Adjustment Reasons on `main` (PR [#133](https://github.com/BankEncore/ShelfSense-v1/pull/133)). [customer-core.md](customer-core.md) is **Implemented on `main`** (PR [#136](https://github.com/BankEncore/ShelfSense-v1/pull/136)). [product-show.md](product-show.md) is the separately approved Product family packet (show/new/edit/`_form` at `wide`). Width rem values for `wide` / `workspace` remain provisional (APF-003). The temporary sprint branch is retired. Do not begin [adoption-outlook.md](adoption-outlook.md) work from this packet.
 
 ## Principles
 

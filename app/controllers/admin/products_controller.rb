@@ -32,10 +32,11 @@ module Admin
       @recent_audit_events = recent_product_audit_events
       @show_inventory = inventory_display_enabled?
       if @show_inventory
-        @balances_by_variant_id = load_variant_balances(@product_variants.map(&:id))
-        @product_on_hand_total = @balances_by_variant_id.values.sum { |balance| balance.on_hand_quantity.to_i }
+        variant_ids = @product_variants.map(&:id)
+        @balances_by_variant_id = load_variant_balances(variant_ids)
+        @on_order_by_variant_id = load_variant_on_order_quantities(variant_ids)
+        @available_by_variant_id = load_variant_available_quantities(variant_ids)
       end
-      load_product_purchasing_actions
     end
 
     def new
@@ -541,21 +542,36 @@ module Admin
       InventoryBalance.where(store_id: current_store.id, product_variant_id: variant_ids).index_by(&:product_variant_id)
     end
 
-    def load_product_purchasing_actions
-      @stock_orderable_variants = []
-      @requestable_variants = []
-      return if current_store.blank?
+    def load_variant_on_order_quantities(variant_ids)
+      return {} if variant_ids.empty? || current_store.blank?
 
-      if effective_permissions.include?("orders.manage")
-        @stock_orderable_variants = @product_variants.select { |v| stock_orderable_variant?(v) }
+      lines = PurchaseOrderLine
+        .with_positive_open_quantity
+        .joins(:purchase_order)
+        .where(
+          product_variant_id: variant_ids,
+          purchase_orders: { store_id: current_store.id, status: "sent" }
+        )
+        .includes(:cancellations, purchase_receipt_lines: [ :purchase_receipt, :corrections ])
+
+      lines.group_by(&:product_variant_id).transform_values { |group| group.sum(&:open_quantity) }
+    end
+
+    # Batched equivalent of Inventory::Availability.available for every variant on the page.
+    def load_variant_available_quantities(variant_ids)
+      return {} if variant_ids.empty? || current_store.blank?
+
+      reserved_by_variant_id = CustomerRequestAllocation
+        .joins(:customer_request)
+        .reserved
+        .standard_quantity
+        .where(customer_requests: { store_id: current_store.id, product_variant_id: variant_ids })
+        .group("customer_requests.product_variant_id")
+        .sum(:quantity)
+
+      variant_ids.index_with do |id|
+        @balances_by_variant_id[id]&.on_hand_quantity.to_i - reserved_by_variant_id[id].to_i
       end
-      if effective_permissions.include?("customer_requests.manage")
-        @requestable_variants = @product_variants.select { |v|
-          customer_requestable_variant?(v, store: current_store)
-        }
-      end
-      @single_stock_orderable = @stock_orderable_variants.one? ? @stock_orderable_variants.first : nil
-      @single_requestable = @requestable_variants.one? ? @requestable_variants.first : nil
     end
   end
 end

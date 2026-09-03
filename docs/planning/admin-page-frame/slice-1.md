@@ -69,7 +69,7 @@ Optional headed Chromium at 1440, 768, and remaining gates was not required to c
 - Frame accepted for Adjustment Reasons.
 - Merged to `apf-development` as PR [#133](https://github.com/BankEncore/ShelfSense-v1/pull/133) (merge commit `8a4542c`), then to `main` with the sprint closeout. GitHub CI on that PR: lint, scan_js, scan_ruby, test (~13m), test_system (~5m), uds_accessibility — all success.
 - No GitHub issue existed for Slice 1 (nothing to close).
-- Product consuming the frame is a separately approved later slice.
+- Product consuming the frame is a separately approved later slice ([product-show.md](product-show.md)).
 - Customer core followed on the same sprint branch ([customer-core.md](customer-core.md)).
 - [adoption-outlook.md](adoption-outlook.md) remains **not authorized**.
 - Do not rename this program to UDS-6/7/8.

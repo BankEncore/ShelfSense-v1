@@ -97,7 +97,7 @@ Apply type through role classes and tokens. Do not set `font-family` in Product 
 
 Serif is limited to brand, page title, and record title. Controls, navigation, tables, labels, badges, and ordinary body stay sans. **UDS-5.5 adopted** Source Serif 4 for those display roles ([uds-5.5-closeout-evidence.md](planning/ux-design-system/uds-5.5-closeout-evidence.md)).
 
-Composition utilities: `.metric-strip`, `.data-table td.cell-primary` / `.cell-secondary` / `.cell-identifier` / `.cell-operational`, `.admin-form-footer` (admin forms; sticky). The Product family (index, show, catalog search, form, bibliographic review) consumes them. Content-role table classes apply to `<td>` only (`cell_class`); table chrome stays sans. Compact grouped nav uses a utility strip plus the current-area row; other groups stay in native `<details>`. At `max-width: 40rem` the area catalog collapses under one Areas disclosure and the current destination remains visible.
+Composition utilities: `.metric-strip`, `.data-table td.cell-primary` / `.cell-secondary` / `.cell-identifier` / `.cell-operational`, `.admin-form-footer` (admin forms; sticky). Product index, catalog search, and bibliographic review still consume them. Product show/new/edit consume `admin/shared/page` at `wide` ([product-show.md](planning/admin-page-frame/product-show.md)); show is a full-width document with a compact overview, no persistent rail, and no `.metric-strip`. Content-role table classes apply to `<td>` only (`cell_class`); table chrome stays sans. Compact grouped nav uses a utility strip plus the current-area row; other groups stay in native `<details>`. At `max-width: 40rem` the area catalog collapses under one Areas disclosure and the current destination remains visible.
 
 ## Feature-led adoption (UDS-5.5)
 
@@ -118,7 +118,7 @@ Phase 2.2 **architecture** (shells, shared partials, money UX, Hotwire boundarie
 Authority:
 
 - [UX design system](planning/ux-design-system/README.md) — Warm Parchment, adoption program (UDS-0–UDS-5), migration matrix
-- [Admin Page Frame Program](planning/admin-page-frame/README.md) — Accepted shared Admin page-frame contract (Slice 1 + Customer core **Implemented on `main`**; further family adoption not authorized)
+- [Admin Page Frame Program](planning/admin-page-frame/README.md) — Accepted shared Admin page-frame contract (Slice 1 + Customer core **Implemented on `main`**; [Product show](planning/admin-page-frame/product-show.md) Accepted; [adoption-outlook.md](planning/admin-page-frame/adoption-outlook.md) not authorized)
 - [Warm Parchment](planning/ux-design-system/warm-parchment.md) — tokens, typography, density (WCAG AA baseline)
 - [Button and action semantics](planning/ux-design-system/button-action-semantics.md) — wording, intent, style, size, review dialogs
 - [UDS-1 implementation plan](planning/ux-design-system/uds-1-plan.md) — foundation delivery (complete through UDS-1d)

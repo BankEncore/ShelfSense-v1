@@ -1,40 +1,43 @@
 <% content_for :title, "New product" %>
 
-<%= render "shared/breadcrumbs", crumbs: [
-  { name: "Home", path: root_path },
-  { name: "Products", path: admin_products_path },
-  { name: "New" }
-] %>
+<% lookup_action = if effective_permissions.include?("products.create")
+     action_link_to("Look up a book first", new_admin_product_catalog_search_path, style: :outline, intent: :neutral)
+   end %>
 
-<%= render "shared/page_header",
-      eyebrow: "Product",
-      title: "New product",
-      subtitle: "Create a catalog product with a primary identifier" %>
-<% if effective_permissions.include?("products.create") %>
-  <p class="muted"><%= link_to "Look up a book first", new_admin_product_catalog_search_path %></p>
+<%= render layout: "admin/shared/page", locals: {
+  width: :wide,
+  eyebrow: "Product",
+  title: "New product",
+  subtitle: "Create a catalog product with a primary identifier",
+  actions: lookup_action,
+  crumbs: [
+    { name: "Home", path: root_path },
+    { name: "Products", path: admin_products_path },
+    { name: "New" }
+  ]
+} do %>
+  <% if @possible_matches && (@possible_matches.strong.any? || @possible_matches.weak.any? || @possible_matches.exact_products.any?) %>
+    <section class="section surface" aria-label="Possible matches">
+      <h2 class="section__title">Possible matches in ShelfSense</h2>
+      <p>Review existing products before creating a separate record. Duplicate merge is not available.</p>
+      <% if @possible_matches.exact_products.any? %>
+        <h3 class="section__title">Exact identifier</h3>
+        <%= render "admin/product_catalog_searches/matches", products: @possible_matches.exact_products, industry: true %>
+      <% end %>
+      <% if @possible_matches.strong.any? %>
+        <h3 class="section__title">Strong possible matches</h3>
+        <%= render "admin/product_catalog_searches/matches", products: @possible_matches.strong, industry: true %>
+      <% end %>
+      <% if @possible_matches.weak.any? %>
+        <h3 class="section__title">Weak possible matches</h3>
+        <%= render "admin/product_catalog_searches/matches", products: @possible_matches.weak, industry: true %>
+      <% end %>
+    </section>
+  <% end %>
+
+  <%= render "form",
+        product: @product,
+        creating: true,
+        candidate: @candidate,
+        require_create_confirmation: @possible_matches && (@possible_matches.strong.any? || @possible_matches.weak.any? || @possible_matches.exact_products.any?) %>
 <% end %>
-
-<% if @possible_matches && (@possible_matches.strong.any? || @possible_matches.weak.any? || @possible_matches.exact_products.any?) %>
-  <section class="section surface" aria-label="Possible matches">
-    <h2 class="section__title">Possible matches in ShelfSense</h2>
-    <p>Review existing products before creating a separate record. Duplicate merge is not available.</p>
-    <% if @possible_matches.exact_products.any? %>
-      <h3 class="section__title">Exact identifier</h3>
-      <%= render "admin/product_catalog_searches/matches", products: @possible_matches.exact_products, industry: true %>
-    <% end %>
-    <% if @possible_matches.strong.any? %>
-      <h3 class="section__title">Strong possible matches</h3>
-      <%= render "admin/product_catalog_searches/matches", products: @possible_matches.strong, industry: true %>
-    <% end %>
-    <% if @possible_matches.weak.any? %>
-      <h3 class="section__title">Weak possible matches</h3>
-      <%= render "admin/product_catalog_searches/matches", products: @possible_matches.weak, industry: true %>
-    <% end %>
-  </section>
-<% end %>
-
-<%= render "form",
-      product: @product,
-      creating: true,
-      candidate: @candidate,
-      require_create_confirmation: @possible_matches && (@possible_matches.strong.any? || @possible_matches.weak.any? || @possible_matches.exact_products.any?) %>

@@ -1,16 +1,17 @@
 <% content_for :title, "Edit product" %>
 
-<%= render "shared/breadcrumbs", crumbs: [
-  { name: "Home", path: root_path },
-  { name: "Products", path: admin_products_path },
-  { name: @product.name, path: admin_product_path(@product) },
-  { name: "Edit" }
-] %>
-
-<%= render "shared/page_header",
-      eyebrow: "Product",
-      title: "Edit product",
-      subtitle: @product.name,
-      metadata: "Primary identifier #{@product.primary_identifier}" %>
-
-<%= render "form", product: @product, creating: false %>
+<%= render layout: "admin/shared/page", locals: {
+  width: :wide,
+  eyebrow: "Product",
+  title: "Edit product",
+  subtitle: @product.name,
+  metadata: "Primary identifier #{@product.primary_identifier}",
+  crumbs: [
+    { name: "Home", path: root_path },
+    { name: "Products", path: admin_products_path },
+    { name: @product.name, path: admin_product_path(@product) },
+    { name: "Edit" }
+  ]
+} do %>
+  <%= render "form", product: @product, creating: false %>
+<% end %>
