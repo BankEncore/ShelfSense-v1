@@ -25,9 +25,8 @@ class PosLinkedReturnTest < ApplicationSystemTestCase
     open_register
     add_current_sku
     start_cash_tender_via_plus
-    field = find("#pos-command-field")
-    field.fill_in with: "25.00"
-    complete_tender_after_amount(field)
+    fill_command_field("25.00")
+    complete_tender_after_amount
     assert_text "Transaction complete", wait: 10
 
     sale = PosTransaction.completed.find_by!(register: @register)
@@ -48,8 +47,7 @@ class PosLinkedReturnTest < ApplicationSystemTestCase
     assert_selector "[data-register-workspace-target='fieldLabel']", text: /External Card/
     send_keys :f1
     assert_selector "[data-register-workspace-target='fieldLabel']", text: /Refund amount/
-    field = find("#pos-command-field")
-    complete_tender_after_amount(field)
+    complete_tender_after_amount
 
     assert_text "Transaction complete", wait: 10
     assert_text "Cash refund"
@@ -84,9 +82,8 @@ class PosLinkedReturnTest < ApplicationSystemTestCase
     open_register
     add_current_sku
     start_cash_tender_via_plus
-    field = find("#pos-command-field")
-    field.fill_in with: "25.00"
-    complete_tender_after_amount(field)
+    fill_command_field("25.00")
+    complete_tender_after_amount
     assert_text "Transaction complete", wait: 10
 
     sale = PosTransaction.completed.find_by!(register: @register)

@@ -26,9 +26,8 @@ class PosMixedReturnTest < ApplicationSystemTestCase
     add_unlinked_return(@twenty.sku, price: "20.00")
     assert_text "Balance due"
     start_cash_tender_via_plus
-    field = find("#pos-command-field")
-    field.fill_in with: "10.00"
-    complete_tender_after_amount(field)
+    fill_command_field("10.00")
+    complete_tender_after_amount
     assert_text "Transaction complete", wait: 10
     completed = PosTransaction.completed.find_by!(register: @register)
     assert completed.signed_net_cents.positive?
@@ -50,8 +49,7 @@ class PosMixedReturnTest < ApplicationSystemTestCase
     assert_text "REFUND"
     send_keys :f2
     assert_selector "[data-register-workspace-target='fieldLabel']", text: /External Card/
-    field = find("#pos-command-field")
-    field.fill_in with: "4.00"
+    fill_command_field("4.00")
     submit_command_field_once
     wait_for_tender_rows(count: 1)
     send_keys_to_command_field(:f1)
