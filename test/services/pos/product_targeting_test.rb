@@ -47,8 +47,17 @@ class PosProductTargetingTest < ActiveSupport::TestCase
   end
 
   test "a unique lookup code with several POS-eligible variants uses the variant chooser" do
-    first = pos_sellable_variant(actor: @actor, tax_class: @tax, name: "Two Variants", lookup_code: "TWO")
-    second = pos_sellable_variant(actor: @actor, tax_class: @tax, product: first.product)
+    product = Products::Create.call(
+      attributes: {
+        name: "Two Variants",
+        status: "active",
+        variant_option_name_1: "Edition"
+      },
+      actor: @actor,
+      lookup_code: "TWO"
+    )
+    first = pos_sellable_variant(actor: @actor, tax_class: @tax, product: product, option_value_1: "HC")
+    second = pos_sellable_variant(actor: @actor, tax_class: @tax, product: product, option_value_1: "PB")
     open_quantity_stock(store: @store, variant: first, actor: @actor, quantity: 2)
     open_quantity_stock(store: @store, variant: second, actor: @actor, quantity: 2)
 
@@ -56,7 +65,7 @@ class PosProductTargetingTest < ActiveSupport::TestCase
 
     assert_equal :variant_choice_required, result.outcome
     assert_equal [ first.id, second.id ].sort, result.variants.map(&:id).sort
-    assert_equal first.product.id, result.product.id
+    assert_equal product.id, result.product.id
   end
 
   test "a unique lookup code whose variant is individually tracked uses the unit chooser" do

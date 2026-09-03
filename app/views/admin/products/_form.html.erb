@@ -35,12 +35,15 @@
       <%= form.label :product_model, "Edition / model" %>
       <%= form.text_field :product_model %>
     </div>
+  <% end %>
+
+  <%= render layout: "shared/form_section", locals: { title: "Variant attributes" } do %>
     <div class="form-field">
-      <%= form.label :variant_option_name_1, "Variant option name 1" %>
+      <%= form.label :variant_option_name_1, "Attribute 1 label" %>
       <%= form.text_field :variant_option_name_1 %>
     </div>
     <div class="form-field">
-      <%= form.label :variant_option_name_2, "Variant option name 2" %>
+      <%= form.label :variant_option_name_2, "Attribute 2 label" %>
       <%= form.text_field :variant_option_name_2 %>
     </div>
   <% end %>

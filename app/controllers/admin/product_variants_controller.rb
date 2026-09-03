@@ -33,11 +33,20 @@ module Admin
     end
 
     def new
-      @product_variant = @product.product_variants.build(status: "draft", variant_type: "standard")
+      attrs = redisplay_variant_attrs
+      @product_variant = @product.product_variants.build(attrs)
       load_form_options
     end
 
     def create
+      if params[:refresh_fields].present?
+        attrs = redisplay_variant_attrs
+        @product_variant = @product.product_variants.build(attrs)
+        load_form_options
+        render :new, status: :ok
+        return
+      end
+
       attrs = variant_attributes
       if @money_error
         @product_variant = @product.product_variants.build(attrs)
@@ -154,17 +163,65 @@ module Admin
       @merchandise_conditions = MerchandiseCondition.assignable.admin_ordered
       @merchandise_classes = MerchandiseClass.assignable.admin_ordered.includes(:department)
       @tax_classes = TaxClass.assignable.admin_ordered
+      @effective_merchandise_class = effective_merchandise_class_for_form
+      @tax_inherit_label = tax_inherit_label_for_form
+    end
+
+    def effective_merchandise_class_for_form
+      variant = @product_variant
+      return variant.merchandise_class if variant&.merchandise_class.present?
+      return unless @product
+
+      type = variant&.variant_type.presence || "standard"
+      category = @product.merchandise_category
+      return unless category
+
+      type == "used" ? category.default_used_merchandise_class : category.default_standard_merchandise_class
+    end
+
+    def tax_inherit_label_for_form
+      klass = @effective_merchandise_class
+      tax = klass&.default_tax_class
+      return unless tax&.assignable?
+
+      "Inherit — #{tax.admin_label}"
+    end
+
+    def redisplay_variant_attrs
+      base = { status: "active", variant_type: "standard" }
+      return base unless params[:product_variant].present?
+
+      permitted = params.require(:product_variant).permit(
+        :variant_type, :option_value_1, :option_value_2, :merchandise_condition_id,
+        :merchandise_class_id, :tax_class_override_id, :inventory_mode, :pricing_method,
+        :target_margin_bps, :supplier_returnable, :regular_price, :regular_price_cents,
+        :industry_identifier, :status
+      ).to_h.symbolize_keys
+
+      %i[option_value_1 option_value_2 merchandise_condition_id merchandise_class_id
+         tax_class_override_id inventory_mode pricing_method regular_price_cents
+         industry_identifier target_margin_bps supplier_returnable].each do |key|
+        permitted[key] = nil if permitted[key].blank?
+      end
+      permitted[:status] = permitted[:status].to_s.strip.presence || "active"
+      permitted[:variant_type] = permitted[:variant_type].presence || "standard"
+      if permitted[:variant_type].to_s == "standard"
+        permitted[:merchandise_condition_id] = nil
+      end
+      base.merge(permitted.except(:regular_price, :name))
     end
 
     def variant_attributes
-      product_variant_params.except(:lock_version, :sku).to_h.symbolize_keys
+      product_variant_params.except(:lock_version, :sku, :name).to_h.symbolize_keys.tap do |attrs|
+        attrs[:status] = attrs[:status].to_s.strip.presence || "active"
+      end
     end
 
     def product_variant_params
       @money_error = nil
       @regular_price_raw = params.dig(:product_variant, :regular_price)
       permitted = params.require(:product_variant).permit(
-        :variant_type, :name, :option_value_1, :option_value_2, :merchandise_condition_id,
+        :variant_type, :option_value_1, :option_value_2, :merchandise_condition_id,
         :merchandise_class_id, :tax_class_override_id, :inventory_mode, :pricing_method,
         :target_margin_bps, :supplier_returnable, :regular_price, :regular_price_cents,
         :industry_identifier, :status, :lock_version
@@ -181,9 +238,13 @@ module Admin
         end
       end
 
-      %i[name option_value_1 option_value_2 merchandise_condition_id merchandise_class_id tax_class_override_id
+      %i[option_value_1 option_value_2 merchandise_condition_id merchandise_class_id tax_class_override_id
          inventory_mode pricing_method regular_price_cents industry_identifier].each do |key|
         permitted[key] = nil if permitted[key].blank?
+      end
+      permitted[:status] = permitted[:status].to_s.strip.presence || "active"
+      if permitted[:variant_type].to_s == "standard"
+        permitted[:merchandise_condition_id] = nil
       end
 
       # Blank means "use class default" on create: omit the key so DefaultResolver copies.

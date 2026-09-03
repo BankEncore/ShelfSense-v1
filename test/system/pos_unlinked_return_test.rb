@@ -204,22 +204,39 @@ class PosUnlinkedReturnTest < ApplicationSystemTestCase
   end
 
   test "unlinked variant picker Back label returns to item lookup" do
-    ProductVariants::Create.call(
-      product: @variant.product,
+    product = Products::Create.call(
+      attributes: { name: "Picker Product", status: "active", variant_option_name_1: "Size" },
+      actor: @actor
+    )
+    first = ProductVariants::Create.call(
+      product: product,
       attributes: {
         variant_type: "standard",
         status: "active",
         merchandise_class_id: @variant.merchandise_class_id,
+        option_value_1: "S",
         regular_price_cents: 1500
       },
       actor: @actor
     )
-    open_quantity_stock(store: @store, variant: @variant.product.product_variants.order(:created_at).last, actor: @actor, quantity: 2)
+    second = ProductVariants::Create.call(
+      product: product,
+      attributes: {
+        variant_type: "standard",
+        status: "active",
+        merchandise_class_id: @variant.merchandise_class_id,
+        option_value_1: "M",
+        regular_price_cents: 1500
+      },
+      actor: @actor
+    )
+    open_quantity_stock(store: @store, variant: first, actor: @actor, quantity: 2)
+    open_quantity_stock(store: @store, variant: second, actor: @actor, quantity: 2)
 
     open_register_as("admin")
     open_unlinked_overlay
     identifier = find("#pos-unlinked-identifier")
-    identifier.fill_in with: @variant.product.primary_identifier
+    identifier.fill_in with: product.primary_identifier
     identifier.send_keys :enter
     assert_selector "#pos_variant_overlay", visible: true, wait: 5
     assert_button "Back to Item Lookup"

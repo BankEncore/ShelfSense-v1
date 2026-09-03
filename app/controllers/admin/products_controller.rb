@@ -40,7 +40,7 @@ module Admin
     end
 
     def new
-      @product = Product.new(status: "draft")
+      @product = Product.new(status: "active")
       @candidate = Bibliographic::CandidateLoader.call(
         candidate_id: params[:candidate_id],
         isbn13: params[:isbn13],
@@ -112,7 +112,12 @@ module Admin
             lookup_code: attrs[:lookup_code]
           )
         end
-      redirect_to admin_product_path(@product), notice: "Product created."
+      if @product.attributed?
+        redirect_to new_admin_product_product_variant_path(@product),
+                    notice: "Product created. Create the first attributed variant next."
+      else
+        redirect_to admin_product_path(@product), notice: "Product created."
+      end
     rescue Products::Create::Error, Products::CreateFromCandidate::Error => e
       @product = Product.new(attrs)
       @candidate = candidate
@@ -321,7 +326,7 @@ module Admin
 
     def product_attributes
       attrs = product_params.except(:lock_version).to_h.symbolize_keys
-      attrs[:status] = "draft" if attrs[:status].blank?
+      attrs[:status] = "active" if attrs[:status].blank?
       attrs
     end
 

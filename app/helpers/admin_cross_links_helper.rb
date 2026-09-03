@@ -16,7 +16,7 @@ module AdminCrossLinksHelper
     return unless variant
     return unless effective_permissions.include?("product_variants.view")
 
-    link_to(label || (variant.name.presence || variant.sku), admin_product_variant_path(variant))
+    link_to(label || product_variant_label(variant).presence || variant.sku, admin_product_variant_path(variant))
   end
 
   def admin_merchandise_category_link(category, label: nil)

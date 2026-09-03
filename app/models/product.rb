@@ -20,6 +20,7 @@ class Product < ApplicationRecord
   has_one_attached :cover_image
 
   before_validation :normalize_lookup_code
+  before_validation :normalize_variant_option_labels
 
   validates :name, :primary_identifier, :status, presence: true
   validates :primary_identifier, uniqueness: true, format: { with: /\A\d{13}\z/ }
@@ -37,7 +38,13 @@ class Product < ApplicationRecord
   validate :lookup_code_not_gift_card_shape
   validate :identifier_write_rules
   validate :validate_field_sources
+  validate :validate_variant_option_labels
+  validate :validate_variant_option_structure, on: :update
   after_save { self.identifier_writes_enabled = false }
+
+  def attributed?
+    variant_option_name_1.to_s.strip.present?
+  end
 
   scope :active, -> { where(status: "active") }
   scope :draft, -> { where(status: "draft") }
@@ -77,6 +84,36 @@ class Product < ApplicationRecord
 
   def normalize_lookup_code
     self.lookup_code = self.class.canonical_lookup_code(lookup_code)
+  end
+
+  def normalize_variant_option_labels
+    self.variant_option_name_1 = ProductVariants::NameComposer.trim_display(variant_option_name_1)
+    self.variant_option_name_2 = ProductVariants::NameComposer.trim_display(variant_option_name_2)
+  end
+
+  def validate_variant_option_labels
+    if variant_option_name_2.present? && variant_option_name_1.blank?
+      errors.add(:variant_option_name_2, "requires Attribute 1")
+    end
+
+    n1 = ProductVariants::NameComposer.normalize_label(variant_option_name_1)
+    n2 = ProductVariants::NameComposer.normalize_label(variant_option_name_2)
+    return if n1.blank? || n2.blank?
+    return unless n1 == n2
+
+    errors.add(:variant_option_name_2, "must differ from Attribute 1")
+  end
+
+  def validate_variant_option_structure
+    return unless product_variants.exists?
+
+    was1 = ProductVariants::NameComposer.trim_display(attribute_in_database(:variant_option_name_1)).present?
+    was2 = ProductVariants::NameComposer.trim_display(attribute_in_database(:variant_option_name_2)).present?
+    now1 = variant_option_name_1.present?
+    now2 = variant_option_name_2.present?
+    return if was1 == now1 && was2 == now2
+
+    errors.add(:base, "cannot add or remove variant attributes after variants exist")
   end
 
   def validate_changed_category

@@ -59,6 +59,23 @@ module ApplicationHelper
     date.to_date.iso8601
   end
 
+  def product_variant_label(variant)
+    return "" if variant.blank?
+
+    variant.name.presence || ProductVariants::NameComposer.name_for_variant(variant)
+  end
+
+  def product_and_variant_label(variant)
+    return "" if variant.blank?
+
+    product_name = variant.product&.name.to_s
+    variant_name = product_variant_label(variant)
+    return product_name if variant_name.blank?
+    return variant_name if product_name.blank?
+
+    "#{product_name} — #{variant_name}"
+  end
+
   # scheme: :product_variant or :configuration
   def status_badge(status, scheme:)
     mapping = STATUS_SCHEMES.fetch(scheme.to_sym)

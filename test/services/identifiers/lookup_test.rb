@@ -60,7 +60,13 @@ class Identifiers::LookupTest < ActiveSupport::TestCase
     draft = ProductVariants::Create.call(
       product: @product,
       actor: @actor,
-      attributes: { variant_type: "standard", name: "Draft", merchandise_class_id: @klass.id }
+      attributes: {
+        status: "draft",
+        variant_type: "used",
+        merchandise_condition_id: @like_new.id,
+        merchandise_class_id: @used_klass.id,
+        regular_price_cents: 1_200
+      }
     )
     assert_not draft.sellable?
 

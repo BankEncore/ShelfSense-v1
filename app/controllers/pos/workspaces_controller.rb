@@ -1090,10 +1090,12 @@ module Pos
     def serialize_variant(variant)
       tracking = variant.derived_inventory_tracking
       open_price = variant.pricing_method == "open_price"
+      variant_name = ProductVariants::NameComposer.name_for_variant(variant)
       {
         id: variant.id,
         sku: variant.sku,
         name: variant.product.name,
+        variant_name: variant_name,
         condition: variant.merchandise_condition&.name,
         price_cents: variant.regular_price_cents,
         price_label: open_price ? "Open price" : nil,
@@ -1143,6 +1145,7 @@ module Pos
         id: row.variant.id,
         sku: row.sku,
         name: row.product_name,
+        variant_name: row.variant_name,
         condition: row.condition_name,
         price_label: row.price_label,
         available: row.available,

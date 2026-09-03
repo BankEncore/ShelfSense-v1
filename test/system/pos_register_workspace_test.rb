@@ -999,18 +999,35 @@ class PosRegisterWorkspaceTest < ApplicationSystemTestCase
   test "product then variant Escape restores the product stage" do
     other = pos_sellable_variant(actor: @actor, tax_class: @tax, name: "Beta Shared")
     open_quantity_stock(store: @store, variant: other, actor: @actor, quantity: 3)
-    ProductVariants::Create.call(
-      product: @variant.product,
+    product = Products::Create.call(
+      attributes: { name: "Example Book", status: "active", variant_option_name_1: "Size" },
+      actor: @actor
+    )
+    first = ProductVariants::Create.call(
+      product: product,
       attributes: {
         variant_type: "standard",
         status: "active",
         merchandise_class_id: @variant.merchandise_class_id,
+        option_value_1: "S",
+        regular_price_cents: 1999
+      },
+      actor: @actor
+    )
+    second = ProductVariants::Create.call(
+      product: product,
+      attributes: {
+        variant_type: "standard",
+        status: "active",
+        merchandise_class_id: @variant.merchandise_class_id,
+        option_value_1: "M",
         regular_price_cents: 1500
       },
       actor: @actor
     )
-    open_quantity_stock(store: @store, variant: @variant.product.product_variants.order(:created_at).last, actor: @actor, quantity: 3)
-    @variant.product.update!(lookup_code: "NESTED")
+    open_quantity_stock(store: @store, variant: first, actor: @actor, quantity: 3)
+    open_quantity_stock(store: @store, variant: second, actor: @actor, quantity: 3)
+    product.update!(lookup_code: "NESTED")
     other.product.update!(lookup_code: "NESTED")
 
     open_register

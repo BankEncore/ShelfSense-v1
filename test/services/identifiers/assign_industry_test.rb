@@ -57,14 +57,15 @@ class Identifiers::AssignIndustryTest < ActiveSupport::TestCase
       actor: @actor,
       attributes: {
         industry_identifier: @replacement,
-        name: "Renamed",
+        regular_price_cents: 1_500,
         lock_version: @variant.lock_version
       }
     )
 
     @variant.reload
     assert_equal @replacement, @variant.industry_identifier
-    assert_equal "Renamed", @variant.name
+    assert_equal "Standard", @variant.name
+    assert_equal 1_500, @variant.regular_price_cents
     assert IdentifierRegistry.find_by!(value: @industry).retired_at.present?
     assert_operator AuditEvent.where(
       action: "product_variants.update",
@@ -95,7 +96,7 @@ class Identifiers::AssignIndustryTest < ActiveSupport::TestCase
     Identifiers::AssignIndustry.call(variant: @variant, raw_value: @industry)
     @variant.reload
     stale = @variant.lock_version
-    @variant.update!(name: "Concurrent edit")
+    @variant.update!(regular_price_cents: 999)
 
     assert_raises(ActiveRecord::StaleObjectError) do
       ProductVariants::Update.call(

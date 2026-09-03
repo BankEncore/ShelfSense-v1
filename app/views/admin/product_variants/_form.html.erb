@@ -1,9 +1,19 @@
-<%= form_with model: product_variant.persisted? ? [:admin, product_variant] : [:admin, product, product_variant], class: "form" do |form| %>
+<%= form_with model: product_variant.persisted? ? [:admin, product_variant] : [:admin, product, product_variant],
+             class: "form",
+             data: { controller: "variant-preview", "variant-preview-has-labels-value": product.variant_option_name_1.to_s.strip.present? } do |form| %>
   <%= render "shared/form_errors", record: product_variant, attribute_ids: { regular_price: "product_variant_regular_price" } %>
   <%= form.hidden_field :lock_version %>
 
+  <section class="product-variant-context" aria-label="Product context">
+    <div><strong><%= product.name %></strong></div>
+    <div><code><%= product.primary_identifier %></code></div>
+    <div>Category: <%= product.merchandise_category&.admin_label.presence || "No category assigned" %></div>
+    <div>Class: <%= (@effective_merchandise_class&.admin_label).presence || "No merchandise class assigned" %></div>
+  </section>
+
   <%= render layout: "shared/form_section", locals: { title: "Identity" } do %>
     <% if product_variant.persisted? %>
+      <%= hidden_field_tag :_variant_type_hint, product_variant.variant_type, data: { "variant-preview-target": "variantType" } %>
       <div class="form-field">
         <span class="muted">SKU</span>
         <div><code><%= product_variant.sku %></code> (immutable)</div>
@@ -12,42 +22,70 @@
         <span class="muted">Type</span>
         <div><%= product_variant.variant_type.humanize %></div>
       </div>
+      <div class="form-field">
+        <span class="muted">Name</span>
+        <div><%= product_variant_label(product_variant) %></div>
+      </div>
     <% else %>
       <div class="form-field">
         <%= form.label :variant_type %>
-        <%= form.select :variant_type, ProductVariant::VARIANT_TYPES.map { |t| [t.humanize, t] } %>
+        <%= form.select :variant_type,
+              ProductVariant::VARIANT_TYPES.map { |t| [t.humanize, t] },
+              {},
+              {
+                data: { "variant-preview-target": "variantType", action: "change->variant-preview#recompute" },
+                onchange: "document.getElementById('variant_type_refresh').click()"
+              } %>
+        <%= form.button "Refresh fields",
+              name: "refresh_fields",
+              value: "1",
+              id: "variant_type_refresh",
+              formaction: new_admin_product_product_variant_path(product),
+              formmethod: :get,
+              hidden: true,
+              style: "display: none" %>
       </div>
     <% end %>
-    <div class="form-field">
-      <%= form.label :name %>
-      <%= form.text_field :name %>
-      <span class="field-help">Leave blank on create to use Standard or the used condition name.</span>
-    </div>
-    <div class="form-field">
-      <%= form.label :option_value_1 %>
-      <%= form.text_field :option_value_1 %>
-    </div>
-    <div class="form-field">
-      <%= form.label :option_value_2 %>
-      <%= form.text_field :option_value_2 %>
-    </div>
+
+    <% if product.variant_option_name_1.present? %>
+      <div class="form-field">
+        <%= form.label :option_value_1, product.variant_option_name_1 %>
+        <%= form.text_field :option_value_1, required: true, data: { "variant-preview-target": "optionValue1", action: "input->variant-preview#recompute" } %>
+      </div>
+    <% end %>
+    <% if product.variant_option_name_2.present? %>
+      <div class="form-field">
+        <%= form.label :option_value_2, product.variant_option_name_2 %>
+        <%= form.text_field :option_value_2, required: true, data: { "variant-preview-target": "optionValue2", action: "input->variant-preview#recompute" } %>
+      </div>
+    <% end %>
+
     <div class="form-field">
       <%= form.label :industry_identifier, "Industry identifier" %>
       <%= form.text_field :industry_identifier %>
+    </div>
+
+    <div class="form-field">
+      <span class="muted">Derived name preview</span>
+      <div data-variant-preview-target="preview" class="muted">Fill in fields above to preview</div>
     </div>
   <% end %>
 
   <%= render layout: "shared/form_section", locals: {
         title: "Classification",
-        help: "Department comes from the merchandise class. Tax blank = use class default (live). Inventory mode and pricing are stored on the variant."
+        help: "Department comes from the merchandise class. Tax blank inherits the class default when available. Inventory mode and pricing are stored on the variant."
       } do %>
-    <div class="form-field">
-      <%= form.label :merchandise_condition_id, "Condition (used variants only)" %>
-      <%= form.select :merchandise_condition_id, MerchandiseCondition.options_for_select(@merchandise_conditions), include_blank: true %>
-    </div>
+    <% if product_variant.used? %>
+      <div class="form-field">
+        <%= form.label :merchandise_condition_id, "Condition" %>
+        <%= form.select :merchandise_condition_id, MerchandiseCondition.options_for_select(@merchandise_conditions), { include_blank: true }, { required: true, data: { "variant-preview-target": "conditionSelect", action: "change->variant-preview#recompute" } } %>
+      </div>
+    <% end %>
     <div class="form-field">
       <%= form.label :merchandise_class_id, "Merchandise class" %>
-      <%= form.select :merchandise_class_id, MerchandiseClass.options_for_select(@merchandise_classes), include_blank: "Resolve default" %>
+      <%= form.select :merchandise_class_id,
+            MerchandiseClass.options_for_select(@merchandise_classes),
+            include_blank: product_variant.persisted? ? false : "Resolve default" %>
     </div>
     <% if product_variant.persisted? && product_variant.department %>
       <div class="form-field">
@@ -56,19 +94,26 @@
       </div>
     <% end %>
     <div class="form-field">
-      <%= form.label :tax_class_override_id, "Tax class override" %>
-      <%= form.select :tax_class_override_id, TaxClass.options_for_select(@tax_classes), include_blank: "Use merchandise-class default" %>
+      <%= form.label :tax_class_override_id, "Tax class" %>
+      <% tax_blank = @tax_inherit_label.presence || (product_variant.persisted? ? nil : "Select tax class") %>
+      <%= form.select :tax_class_override_id,
+            TaxClass.options_for_select(@tax_classes),
+            include_blank: tax_blank %>
       <% if product_variant.persisted? && product_variant.effective_tax_class %>
         <span class="field-help">Effective now: <%= product_variant.effective_tax_class.admin_label %><%= product_variant.tax_class_override_id.present? ? " (override)" : " (inherited)" %>.</span>
       <% end %>
     </div>
     <div class="form-field">
       <%= form.label :inventory_mode %>
-      <%= form.select :inventory_mode, ProductVariant::INVENTORY_MODES.map { |m| [m.humanize, m] }, include_blank: product_variant.persisted? ? false : "Use class default" %>
+      <%= form.select :inventory_mode,
+            ProductVariant::INVENTORY_MODES.map { |m| [m.humanize, m] },
+            include_blank: product_variant.persisted? ? false : "Use class default" %>
     </div>
     <div class="form-field">
       <%= form.label :pricing_method %>
-      <%= form.select :pricing_method, ProductVariant::PRICING_METHODS.map { |m| [m.humanize, m] }, include_blank: product_variant.persisted? ? false : "Use class default" %>
+      <%= form.select :pricing_method,
+            ProductVariant::PRICING_METHODS.map { |m| [m.humanize, m] },
+            include_blank: product_variant.persisted? ? false : "Use class default" %>
     </div>
     <div class="form-field">
       <%= form.label :target_margin_bps, "Target margin (basis points)" %>

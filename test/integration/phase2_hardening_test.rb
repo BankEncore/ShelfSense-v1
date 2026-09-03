@@ -21,7 +21,7 @@ class Phase2HardeningTest < ActionDispatch::IntegrationTest
     variant = ProductVariants::Create.call(
       product: product,
       actor: @actor,
-      attributes: { variant_type: "standard" }
+      attributes: { status: "draft",  variant_type: "standard" }
     )
 
     error = assert_raises(Products::Create::Error) do
@@ -141,7 +141,7 @@ class Phase2HardeningTest < ActionDispatch::IntegrationTest
       ProductVariants::Create.call(
         product: product,
         actor: @actor,
-        attributes: {
+        attributes: { status: "draft",
           variant_type: "used",
           merchandise_condition_id: inactive_condition.id,
           merchandise_class_id: merchandise_class(
@@ -157,7 +157,7 @@ class Phase2HardeningTest < ActionDispatch::IntegrationTest
     variant = ProductVariants::Create.call(
       product: product,
       actor: @actor,
-      attributes: { variant_type: "standard" }
+      attributes: { status: "draft",  variant_type: "standard" }
     )
 
     variant.merchandise_class = inactive_class

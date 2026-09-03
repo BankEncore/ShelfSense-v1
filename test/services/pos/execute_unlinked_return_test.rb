@@ -155,29 +155,46 @@ class PosExecuteUnlinkedReturnTest < ActiveSupport::TestCase
   end
 
   test "product-primary identifier with multiple variants requires selecting a variant" do
-    ProductVariants::Create.call(
-      product: @variant.product,
+    product = Products::Create.call(
+      attributes: { name: "Multi Variant", status: "active", variant_option_name_1: "Size" },
+      actor: @admin
+    )
+    first = ProductVariants::Create.call(
+      product: product,
       attributes: {
         variant_type: "standard",
         status: "active",
         merchandise_class_id: @variant.merchandise_class_id,
+        option_value_1: "S",
+        regular_price_cents: 1999
+      },
+      actor: @admin
+    )
+    ProductVariants::Create.call(
+      product: product,
+      attributes: {
+        variant_type: "standard",
+        status: "active",
+        merchandise_class_id: @variant.merchandise_class_id,
+        option_value_1: "M",
         regular_price_cents: 1500
       },
       actor: @admin
     )
+    open_quantity_stock(store: @store, variant: first, actor: @admin, quantity: 5, unit_cost_cents: 100)
     transaction = start_transaction(@manager)
     error = assert_raises(Pos::Error) do
-      add_unlinked!(transaction, @manager, identifier: @variant.product.primary_identifier)
+      add_unlinked!(transaction, @manager, identifier: product.primary_identifier)
     end
     assert_match(/select a product, variant, or unit/i, error.message)
 
     line = add_unlinked!(
       transaction.reload,
       @manager,
-      identifier: @variant.product.primary_identifier,
-      product_variant_id: @variant.id
+      identifier: product.primary_identifier,
+      product_variant_id: first.id
     )
-    assert_equal @variant.id, line.product_variant_id
+    assert_equal first.id, line.product_variant_id
   end
 
   test "product industry identifier and unique lookup code reach the same variant" do

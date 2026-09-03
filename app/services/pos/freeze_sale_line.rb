@@ -84,6 +84,8 @@ module Pos
         "description" => variant.product.name,
         "tax_class_code" => @line.tax_class.code
       }
+      detail = ProductVariants::NameComposer.detail_for_variant(variant)
+      snapshot["variant_detail"] = detail if detail.present?
       return snapshot if unit.nil?
 
       condition_code = variant.merchandise_condition&.code

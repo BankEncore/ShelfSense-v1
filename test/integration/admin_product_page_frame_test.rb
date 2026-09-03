@@ -33,7 +33,7 @@ class AdminProductPageFrameTest < ActionDispatch::IntegrationTest
     assert_page_frame modifier: "wide"
     assert_select "a", text: "Look up a book first"
     assert_select "form.product-form.surface"
-    %w[Identity Identifiers Publication Cover Classification Pricing Lifecycle].each do |title|
+    %w[Identity Variant\ attributes Identifiers Publication Cover Classification Pricing Lifecycle].each do |title|
       assert_select ".product-form h2", text: title
     end
     assert_select ".admin-form-footer", text: /Create Product/
