@@ -44,6 +44,7 @@ Phases 12–14 and the Terminal program are sequenced in [roadmap.md](roadmap.md
 | [UDS-4 plan](ux-design-system/uds-4-plan.md) | Grouped navigation and non-purchasing adoption |
 | [UDS-5 plan](ux-design-system/uds-5-plan.md) | Administrative composition; 5.0–5.5 complete on `main`; 5.0 gate **Passed**; serif adopted |
 | [Admin Page Frame Program](admin-page-frame/README.md) | **Accepted.** Slice 1 + Customer core **Implemented on `main`**; [Product show](admin-page-frame/product-show.md) Accepted. Not a restyle sweep |
+| [Product variant attributes](product-variant-attributes/README.md) | **Proposed.** Existing option labels/values, derived names, inheritance UX, receipt snapshots, active-by-default create. Not a numbered domain phase |
 
 Further screen migration belongs to the feature phase that materially changes the screen, except the bounded frame infrastructure and Adjustment Reasons reference in the [Admin Page Frame Program](admin-page-frame/README.md) locked allowlist. That program does not authorize a general restyle.
 
