@@ -170,6 +170,20 @@ module Admin
       @merchandise_classes = MerchandiseClass.assignable.admin_ordered.includes(:department)
       @tax_classes = TaxClass.assignable.admin_ordered
       @tax_inherit_label = tax_inherit_label_for_form
+      assign_regular_price_field_value
+    end
+
+    # Refresh uses the resolved cents. Validation rerenders keep the raw submitted text.
+    def assign_regular_price_field_value
+      @regular_price_field_value =
+        if params[:refresh_fields].present?
+          helpers.money_field_value(@product_variant.regular_price_cents)
+        elsif @money_error.present?
+          @regular_price_raw
+        else
+          params.dig(:product_variant, :regular_price).presence ||
+            helpers.money_field_value(@product_variant.regular_price_cents)
+        end
     end
 
     def tax_inherit_label_for_form

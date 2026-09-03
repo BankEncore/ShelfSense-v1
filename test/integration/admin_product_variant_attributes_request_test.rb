@@ -163,7 +163,7 @@ class AdminProductVariantAttributesRequestTest < ActionDispatch::IntegrationTest
     )
 
     get new_admin_product_product_variant_path(product), params: {
-      product_variant: { variant_type: "used", status: "active" },
+      product_variant: { variant_type: "used", status: "active", regular_price: "20.00" },
       refresh_fields: "1",
       refresh_source: "variant_type"
     }
@@ -185,7 +185,8 @@ class AdminProductVariantAttributesRequestTest < ActionDispatch::IntegrationTest
         pricing_method: "list_price",
         target_margin_bps: 2500,
         supplier_returnable: true,
-        merchandise_condition_id: condition.id
+        merchandise_condition_id: condition.id,
+        regular_price: "20.00"
       },
       refresh_fields: "1",
       refresh_source: "condition"
@@ -213,7 +214,8 @@ class AdminProductVariantAttributesRequestTest < ActionDispatch::IntegrationTest
       product_variant: {
         variant_type: "standard",
         status: "active",
-        merchandise_class_id: other.id
+        merchandise_class_id: other.id,
+        regular_price: "10.00"
       },
       refresh_fields: "1",
       refresh_source: "merchandise_class"
@@ -224,6 +226,8 @@ class AdminProductVariantAttributesRequestTest < ActionDispatch::IntegrationTest
     assert_select "select#product_variant_pricing_method option[selected][value=cost_based]"
     assert_select "input#product_variant_target_margin_bps[value=?]", "1500"
     assert_select "select#product_variant_supplier_returnable option[selected][value=?]", "false"
+    assert_select "input#product_variant_regular_price[value]", count: 0
+    assert_select "input#product_variant_regular_price:not([value])", count: 1
   end
 
   test "product without category default requires class selection" do
@@ -314,6 +318,26 @@ class AdminProductVariantAttributesRequestTest < ActionDispatch::IntegrationTest
     assert_select "input#product_variant_target_margin_bps[value=?]", "1111"
     assert_select "select#product_variant_supplier_returnable option[selected][value=?]", "false"
     assert_select "input#product_variant_regular_price[value=?]", "5.55"
+  end
+
+  test "validation failure keeps raw regular price text" do
+    product = Products::Create.call(
+      attributes: { name: "Raw Price", status: "active", merchandise_category: @category, list_price_cents: 1000 },
+      actor: @actor
+    )
+    post admin_product_product_variants_path(product), params: {
+      product_variant: {
+        variant_type: "standard",
+        status: "active",
+        merchandise_class_id: @klass.id,
+        inventory_mode: "inventory",
+        pricing_method: "fixed",
+        supplier_returnable: true,
+        regular_price: "abc"
+      }
+    }
+    assert_response :unprocessable_entity
+    assert_select "input#product_variant_regular_price[value=?]", "abc"
   end
 
   test "tax inherit blank option appears when class has default tax" do

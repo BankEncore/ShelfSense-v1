@@ -143,7 +143,7 @@
           name: "product_variant[regular_price]",
           id: "product_variant_regular_price",
           label: "Regular price",
-          value: params.dig(:product_variant, :regular_price).presence || money_field_value(product_variant.regular_price_cents),
+          value: @regular_price_field_value,
           help: "Enter a currency amount such as 12.50. CSV import continues to use integer cents.",
           error: product_variant.errors[:regular_price].presence&.to_sentence %>
   <% end %>
