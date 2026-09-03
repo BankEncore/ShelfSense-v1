@@ -77,6 +77,25 @@ module ApplicationHelper
     rows.select { |_label, value| value.present? }
   end
 
+  def product_fact_grid(rows, html_class: nil, aria_label: nil)
+    return if rows.blank?
+
+    options = { class: [ "product-fact-grid", html_class ].compact }
+    options[:aria] = { label: aria_label } if aria_label.present?
+    tag.dl(**options) do
+      safe_join(
+        rows.map { |label, value|
+          tag.div {
+            safe_join([
+              tag.dt(label),
+              tag.dd(value.nil? || value == "" ? missing_value : value)
+            ])
+          }
+        }
+      )
+    end
+  end
+
   def https_image_url(url)
     text = url.to_s.strip
     text if text.match?(%r{\Ahttps://}i)

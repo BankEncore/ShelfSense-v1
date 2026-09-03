@@ -19,8 +19,9 @@ class AdminProductPageFrameTest < ActionDispatch::IntegrationTest
     assert_select ".admin-page__tools", count: 0
     assert_select ".metric-strip", count: 0
     assert_select ".product-rail", count: 0
-    assert_select ".product-identity-strip dt", text: "ShelfSense ID"
-    assert_select ".product-catalog h2", text: "Catalog details"
+    assert_select ".product-overview .product-identifiers dt", text: "ShelfSense ID"
+    assert_select ".product-overview .product-facts dt", text: "List price"
+    assert_select "h2", text: "Catalog details", count: 0
     assert_select ".page-header__actions", text: /Order stock/, count: 0
     assert_select ".page-header__actions", text: /Create customer request/, count: 0
   end
@@ -37,6 +38,7 @@ class AdminProductPageFrameTest < ActionDispatch::IntegrationTest
     end
     assert_select ".admin-form-footer", text: /Create Product/
     assert_select ".product-rail", count: 0
+    assert_select ".product-overview", count: 0
     assert_select ".product-identity-strip", count: 0
     assert_select ".metric-strip", count: 0
   end
@@ -50,6 +52,7 @@ class AdminProductPageFrameTest < ActionDispatch::IntegrationTest
     assert_select "form.product-form.surface"
     assert_select ".admin-form-footer", text: /Save Product/
     assert_select ".product-rail", count: 0
+    assert_select ".product-overview", count: 0
     assert_select ".product-identity-strip", count: 0
   end
 

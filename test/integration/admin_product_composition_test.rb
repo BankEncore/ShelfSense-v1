@@ -42,7 +42,7 @@ class AdminProductCompositionTest < ActionDispatch::IntegrationTest
     assert_select "main[class='app-content']"
   end
 
-  test "show uses the page frame identity catalog and full-width variants table" do
+  test "show uses the page frame compact overview and full-width variants table" do
     sign_in_as("admin")
     get admin_product_path(@product)
     assert_response :success
@@ -57,13 +57,14 @@ class AdminProductCompositionTest < ActionDispatch::IntegrationTest
     assert_select ".metric-strip", count: 0
     assert_select ".product-rail", count: 0
     assert_select ".product-panels", count: 0
+    assert_select "h2", text: "Catalog details", count: 0
     assert_select "img.product-cover", count: 0
-    assert_select ".product-identity-strip dt", text: "ShelfSense ID"
-    assert_select ".product-identity-strip dd", text: @product.primary_identifier
-    assert_select ".product-catalog h2", text: "Catalog details"
-    assert_select ".product-catalog dt", text: "List price"
-    assert_select ".product-catalog dd", text: "$19.99"
-    assert_select ".product-catalog dt", text: "Merchandise category"
+    assert_select ".product-overview .product-identifiers dt", text: "ShelfSense ID"
+    assert_select ".product-overview .product-identifiers dd", text: @product.primary_identifier
+    assert_select ".product-overview .product-facts dt", text: "List price"
+    assert_select ".product-overview .product-facts dd", text: "$19.99"
+    assert_select ".product-overview .product-facts dt", text: "Merchandise category"
+    assert_select ".product-record-information__title", text: "Record information"
     assert_select ".product-variants"
     assert_select ".product-variants th", text: "Type"
     assert_select ".product-variants th", text: "SKU"

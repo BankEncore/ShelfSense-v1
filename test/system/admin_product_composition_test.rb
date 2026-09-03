@@ -21,9 +21,9 @@ class AdminProductCompositionSystemTest < ApplicationSystemTestCase
     visit admin_product_path(@product)
     assert_selector ".page-header__eyebrow", text: /product/i
     assert_selector ".admin-page"
-    assert_selector ".product-identity-strip", text: "ShelfSense ID"
-    assert_selector ".product-catalog", text: "Catalog details"
-    assert_selector ".product-catalog", text: "$18.99"
+    assert_selector ".product-overview", text: "ShelfSense ID"
+    assert_selector ".product-facts", text: "$18.99"
+    assert_no_selector "h2", text: "Catalog details"
     assert_no_selector ".metric-strip"
     assert_no_selector ".product-rail"
     assert_selector ".product-cover", visible: :all, count: 0
@@ -40,7 +40,7 @@ class AdminProductCompositionSystemTest < ApplicationSystemTestCase
     with_viewport(width: 320, height: 568) do
       visit admin_product_path(@product)
       assert_selector ".page-header__title", text: "Composition Book"
-      assert_selector ".product-catalog", text: "$18.99"
+      assert_selector ".product-facts", text: "$18.99"
       assert_layout_usable(surface: "products-show-320")
 
       visit new_admin_product_path
@@ -56,7 +56,7 @@ class AdminProductCompositionSystemTest < ApplicationSystemTestCase
 
     with_viewport(width: 1280, height: 720, zoom: 2) do
       visit admin_product_path(@product)
-      assert_selector ".product-catalog", text: "Catalog details"
+      assert_selector ".product-overview", text: "ShelfSense ID"
       assert_layout_usable(surface: "products-show-200-percent")
 
       visit new_admin_product_path

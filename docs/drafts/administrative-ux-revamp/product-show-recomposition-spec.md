@@ -2,7 +2,7 @@
 
 **Status:** **Superseded.** Do not implement from this draft.
 
-Authority is the amended [product-show.md](../../planning/admin-page-frame/product-show.md) packet (full-width document at `wide` / 90rem; no persistent rail). The suggestions accepted for that amendment include: variants above description; no Phosphor/tooltips/description clamp; no creator/subject search links; batched `Inventory::Availability` for Available; identity strip = identifiers + cover only; existing timestamp helpers; type rollups retired; forms frozen; row labels remain Order stock / Request.
+Authority is the amended [product-show.md](../../planning/admin-page-frame/product-show.md) packet (full-width document at `wide` / 90rem; no persistent rail; compact overview; editorial region with description filling its panel; stacked record information). Do not implement identity-strip plus Catalog details bands, a page-level rail, description clamp, or side-by-side disclosures from this draft.
 
 ---
 

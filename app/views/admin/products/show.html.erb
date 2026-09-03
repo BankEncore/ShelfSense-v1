@@ -79,6 +79,8 @@
      row.subject_heading&.name.to_s.strip.presence
    } %>
 <% show_external = @product.bibliographic_provider.present? || can_refresh %>
+<% show_overview = cover_url.present? || identity_rows.any? || catalog_rows.any? %>
+<% show_editorial = @product.description.present? || contributor_credits.any? || subject_names.any? %>
 
 <%= render layout: "admin/shared/page", locals: {
   width: :wide,
@@ -95,21 +97,15 @@
   ]
 } do %>
   <div class="product-show">
-    <section class="product-identity-strip" aria-label="Identifiers">
-      <div class="product-identity-strip__facts">
-        <% if identity_rows.any? %>
-          <%= render "shared/definition_list", rows: identity_rows %>
+    <% if show_overview %>
+      <section class="product-overview" aria-label="Product overview">
+        <% if cover_url %>
+          <%= image_tag cover_url, alt: "#{@product.name} cover", class: "product-cover" %>
         <% end %>
-      </div>
-      <% if cover_url %>
-        <%= image_tag cover_url, alt: "#{@product.name} cover", class: "product-cover" %>
-      <% end %>
-    </section>
-
-    <% if catalog_rows.any? %>
-      <section class="section surface product-catalog">
-        <h2 class="section__title type-section-title">Catalog details</h2>
-        <%= render "shared/definition_list", rows: catalog_rows %>
+        <div class="product-overview__body">
+          <%= product_fact_grid(identity_rows, html_class: "product-identifiers", aria_label: "Identifiers") %>
+          <%= product_fact_grid(catalog_rows, html_class: "product-facts", aria_label: "Catalog facts") %>
+        </div>
       </section>
     <% end %>
 
@@ -127,7 +123,6 @@
           </div>
         <% end %>
       </div>
-      <p class="section__help type-help">SKU, name, type, class, and price identify the sellable unit.</p>
 
       <% if @product_variants.empty? %>
         <%= render "shared/empty_state",
@@ -217,96 +212,102 @@
       <% end %>
     </section>
 
-    <% if @product.description.present? %>
-      <section class="section product-description">
-        <h2 class="section__title type-section-title">Description</h2>
-        <%= simple_format(@product.description) %>
-      </section>
-    <% end %>
-
-    <% if contributor_credits.any? || subject_names.any? %>
-      <div class="product-supporting">
-        <% if contributor_credits.any? %>
-          <section class="section product-creators">
-            <h2 class="section__title type-section-title">Creators</h2>
-            <ul class="product-supporting__list">
-              <% contributor_credits.each do |credit| %>
-                <li><%= credit %></li>
-              <% end %>
-            </ul>
+    <% if show_editorial %>
+      <div class="product-editorial">
+        <% if @product.description.present? %>
+          <section class="section product-description">
+            <h2 class="section__title type-section-title">Description</h2>
+            <%= simple_format(@product.description) %>
           </section>
         <% end %>
-        <% if subject_names.any? %>
-          <section class="section product-subjects">
-            <h2 class="section__title type-section-title">Subjects</h2>
-            <ul class="product-supporting__list">
-              <% subject_names.each do |name| %>
-                <li><%= name %></li>
-              <% end %>
-            </ul>
-          </section>
+        <% if contributor_credits.any? || subject_names.any? %>
+          <div class="product-editorial__aside">
+            <% if contributor_credits.any? %>
+              <section class="section product-creators">
+                <h2 class="section__title type-section-title">Creators</h2>
+                <ul class="product-editorial__list">
+                  <% contributor_credits.each do |credit| %>
+                    <li><%= credit %></li>
+                  <% end %>
+                </ul>
+              </section>
+            <% end %>
+            <% if subject_names.any? %>
+              <section class="section product-subjects">
+                <h2 class="section__title type-section-title">Subjects</h2>
+                <ul class="product-editorial__list">
+                  <% subject_names.each do |name| %>
+                    <li><%= name %></li>
+                  <% end %>
+                </ul>
+              </section>
+            <% end %>
+          </div>
         <% end %>
       </div>
     <% end %>
 
-    <% if show_external %>
-      <details class="technical-details product-external">
-        <summary>External data</summary>
-        <div class="section">
-          <% if @product.bibliographic_provider.present? %>
-            <%= render "shared/definition_list", rows: compact_definition_rows([
-                  ["External data provider", @product.bibliographic_provider],
-                  ["External data retrieved at", (@product.bibliographic_fetched_at.present? ? format_timestamp(@product.bibliographic_fetched_at) : nil)],
-                  ["External data refreshed at", (@product.bibliographic_applied_at.present? ? format_timestamp(@product.bibliographic_applied_at) : nil)],
-                  ["External provider key", @product.bibliographic_provider_key]
-                ]) %>
-          <% end %>
-          <% if can_refresh %>
-            <div class="product-refresh">
-              <h3 class="type-help">Refresh bibliographic data</h3>
-              <p class="muted">Fetch a candidate and review each field before applying. Nothing is overwritten until you confirm.</p>
-              <%= form_with url: refresh_bibliography_admin_product_path(@product), method: :post, class: "form" do |form| %>
-                <div class="actions">
-                  <%= action_submit(form, "Review bibliographic update", style: :outline, intent: :neutral) %>
-                </div>
-              <% end %>
-            </div>
-          <% end %>
-        </div>
-      </details>
-    <% end %>
+    <div class="product-record-information">
+      <h2 class="product-record-information__title">Record information</h2>
+      <% if show_external %>
+        <details class="technical-details product-external">
+          <summary>External data</summary>
+          <div class="section">
+            <% if @product.bibliographic_provider.present? %>
+              <%= render "shared/definition_list", rows: compact_definition_rows([
+                    ["External data provider", @product.bibliographic_provider],
+                    ["External data retrieved at", (@product.bibliographic_fetched_at.present? ? format_timestamp(@product.bibliographic_fetched_at) : nil)],
+                    ["External data refreshed at", (@product.bibliographic_applied_at.present? ? format_timestamp(@product.bibliographic_applied_at) : nil)],
+                    ["External provider key", @product.bibliographic_provider_key]
+                  ]) %>
+            <% end %>
+            <% if can_refresh %>
+              <div class="product-refresh">
+                <h3 class="type-help">Refresh bibliographic data</h3>
+                <p class="muted">Fetch a candidate and review each field before applying. Nothing is overwritten until you confirm.</p>
+                <%= form_with url: refresh_bibliography_admin_product_path(@product), method: :post, class: "form" do |form| %>
+                  <div class="actions">
+                    <%= action_submit(form, "Review bibliographic update", style: :outline, intent: :neutral) %>
+                  </div>
+                <% end %>
+              </div>
+            <% end %>
+          </div>
+        </details>
+      <% end %>
 
-    <%= render "shared/technical_details", rows: [
-          ["Record ID", @product.id],
-          ["Created", format_timestamp(@product.created_at)],
-          ["Updated", format_timestamp(@product.updated_at)],
-          ["Lock version", @product.lock_version]
-        ] %>
+      <%= render "shared/technical_details", rows: [
+            ["Record ID", @product.id],
+            ["Created", format_timestamp(@product.created_at)],
+            ["Updated", format_timestamp(@product.updated_at)],
+            ["Lock version", @product.lock_version]
+          ] %>
 
-    <% if @recent_audit_events.present? %>
-      <details class="technical-details product-activity">
-        <summary>Recent activity · <%= @recent_audit_events.size %> <%= "event".pluralize(@recent_audit_events.size) %></summary>
-        <div class="section">
-          <%= render "shared/data_table",
-                headers: [
-                  { text: "When", cell_class: "cell-secondary" },
-                  { text: "Activity", cell_class: "cell-primary" },
-                  { text: "Result", cell_class: "cell-operational" },
-                  { text: "Staff member", cell_class: "cell-secondary" }
-                ],
-                rows: @recent_audit_events.map { |event|
-                  [
-                    format_timestamp(event.occurred_at),
-                    event.action.to_s.tr(".", " ").humanize,
-                    event.outcome.to_s.humanize,
-                    event.actor_label
-                  ]
-                } %>
-          <% if effective_permissions.include?("audit_events.view") %>
-            <p><%= link_to "View audit events", admin_audit_events_path(subject_type: "Product") %></p>
-          <% end %>
-        </div>
-      </details>
-    <% end %>
+      <% if @recent_audit_events.present? %>
+        <details class="technical-details product-activity">
+          <summary>Recent activity · <%= @recent_audit_events.size %> <%= "event".pluralize(@recent_audit_events.size) %></summary>
+          <div class="section">
+            <%= render "shared/data_table",
+                  headers: [
+                    { text: "When", cell_class: "cell-secondary" },
+                    { text: "Activity", cell_class: "cell-primary" },
+                    { text: "Result", cell_class: "cell-operational" },
+                    { text: "Staff member", cell_class: "cell-secondary" }
+                  ],
+                  rows: @recent_audit_events.map { |event|
+                    [
+                      format_timestamp(event.occurred_at),
+                      event.action.to_s.tr(".", " ").humanize,
+                      event.outcome.to_s.humanize,
+                      event.actor_label
+                    ]
+                  } %>
+            <% if effective_permissions.include?("audit_events.view") %>
+              <p><%= link_to "View audit events", admin_audit_events_path(subject_type: "Product") %></p>
+            <% end %>
+          </div>
+        </details>
+      <% end %>
+    </div>
   </div>
 <% end %>
