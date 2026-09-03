@@ -162,7 +162,7 @@ class Merchandise::CsvImporterTest < ActiveSupport::TestCase
     variant = ProductVariants::Create.call(
       product: product,
       actor: @actor,
-      attributes: {
+      attributes: { status: "draft",
         variant_type: "standard",
         name: "First",
         industry_identifier: industry
@@ -174,14 +174,14 @@ class Merchandise::CsvImporterTest < ActiveSupport::TestCase
       #{product.primary_identifier},With variants,#{variant.sku},By SKU
     CSV
     assert_equal 1, by_sku.updated_variants
-    assert_equal "By SKU", variant.reload.name
+    assert_equal "Standard", variant.reload.name
 
     by_industry = import_csv(<<~CSV)
       product_primary_identifier,name,industry_identifier,variant_name
       #{product.primary_identifier},With variants,#{industry},By Industry
     CSV
     assert_equal 1, by_industry.updated_variants
-    assert_equal "By Industry", variant.reload.name
+    assert_equal "Standard", variant.reload.name
   end
 
   test "insufficient identity error when variant fields lack type and match keys" do
@@ -224,8 +224,8 @@ class Merchandise::CsvImporterTest < ActiveSupport::TestCase
     )
 
     result = import_csv(<<~CSV)
-      product_primary_identifier,name,variant_type,variant_condition_code,merchandise_class_code,regular_price_cents
-      #{product.primary_identifier},Typed,used,like_new,used_book,1200
+      product_primary_identifier,name,variant_type,variant_condition_code,merchandise_class_code,regular_price_cents,status
+      #{product.primary_identifier},Typed,used,like_new,used_book,1200,draft
     CSV
     assert_empty result.errors
     assert_equal 1, result.created_variants
@@ -241,8 +241,8 @@ class Merchandise::CsvImporterTest < ActiveSupport::TestCase
     )
 
     result = import_csv(<<~CSV)
-      product_primary_identifier,name,variant_type,merchandise_class_code,pricing_method,target_margin_bps,supplier_returnable,tax_class_override_code,regular_price_cents
-      #{product.primary_identifier},Ops,standard,book,list_price,4200,false,override_tax,1500
+      product_primary_identifier,name,variant_type,merchandise_class_code,pricing_method,target_margin_bps,supplier_returnable,tax_class_override_code,regular_price_cents,status
+      #{product.primary_identifier},Ops,standard,book,list_price,4200,false,override_tax,1500,draft
     CSV
 
     assert_empty result.errors
@@ -260,8 +260,8 @@ class Merchandise::CsvImporterTest < ActiveSupport::TestCase
     )
 
     result = import_csv(<<~CSV)
-      product_primary_identifier,name,variant_type,merchandise_class_code,tax_class_override_code,regular_price_cents
-      #{product.primary_identifier},Inherit,standard,book,,1500
+      product_primary_identifier,name,variant_type,merchandise_class_code,tax_class_override_code,regular_price_cents,status
+      #{product.primary_identifier},Inherit,standard,book,,1500,draft
     CSV
 
     assert_empty result.errors
@@ -277,9 +277,9 @@ class Merchandise::CsvImporterTest < ActiveSupport::TestCase
     )
 
     result = import_csv(<<~CSV)
-      product_primary_identifier,name,variant_type,variant_condition_code,merchandise_class_code,regular_price_cents
-      #{product.primary_identifier},Grouped Renamed,standard,,book,1500
-      #{product.primary_identifier},Grouped Renamed,used,,book,900
+      product_primary_identifier,name,variant_type,variant_condition_code,merchandise_class_code,regular_price_cents,status
+      #{product.primary_identifier},Grouped Renamed,standard,,book,1500,draft
+      #{product.primary_identifier},Grouped Renamed,used,,book,900,draft
     CSV
 
     assert_equal 1, result.errors.size
@@ -297,8 +297,8 @@ class Merchandise::CsvImporterTest < ActiveSupport::TestCase
     )
 
     result = import_csv(<<~CSV)
-      product_primary_identifier,name,variant_type,merchandise_class_code,regular_price_cents
-      #{product.primary_identifier},Refs,standard,missing_class,1500
+      product_primary_identifier,name,variant_type,merchandise_class_code,regular_price_cents,status
+      #{product.primary_identifier},Refs,standard,missing_class,1500,draft
     CSV
 
     assert_equal 1, result.errors.size

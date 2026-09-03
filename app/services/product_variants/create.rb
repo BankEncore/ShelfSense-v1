@@ -72,15 +72,12 @@ module ProductVariants
           end
         raise Error, "industry identifier cannot equal SKU" if normalized_industry.present? && normalized_industry == sku
 
-        resolved_name = @attributes[:name].presence || default_variant_name(variant_type, condition)
-
         variant = @product.product_variants.new(
           @attributes.except(
             :industry_identifier, :sku, :department_id, :tax_class_id, :tax_class_override_id,
-            :inventory_mode, :pricing_method, :target_margin_bps, :supplier_returnable
+            :inventory_mode, :pricing_method, :target_margin_bps, :supplier_returnable, :name
           ).merge(
             variant_type: variant_type,
-            name: resolved_name,
             sku: sku,
             industry_identifier: normalized_industry,
             merchandise_condition: condition,
@@ -91,7 +88,7 @@ module ProductVariants
             supplier_returnable: resolved.supplier_returnable,
             tax_class_override: resolved.tax_class_override,
             regular_price_cents: resolved.suggested_price_cents,
-            status: @attributes[:status].presence || "draft"
+            status: normalize_status(@attributes[:status])
           )
         )
         variant.identifier_writes_enabled = true
@@ -122,11 +119,16 @@ module ProductVariants
 
         variant
       end
-    rescue Identifiers::NormalizationError, Identifiers::Registry::ConflictError, Identifiers::Generator::ExhaustedError, ActiveRecord::RecordInvalid, ActiveRecord::RecordNotFound => e
+    rescue Identifiers::NormalizationError, Identifiers::Registry::ConflictError, Identifiers::Generator::ExhaustedError,
+           ActiveRecord::RecordInvalid, ActiveRecord::RecordNotFound, ActiveRecord::RecordNotUnique => e
       raise Error, e.message
     end
 
     private
+
+    def normalize_status(raw)
+      raw.to_s.strip.presence || "active"
+    end
 
     def validate_class_for_type!(variant_type, klass)
       return if klass.blank?
@@ -156,14 +158,6 @@ module ProductVariants
       rescue Identifiers::Registry::ConflictError
         retry if attempts < 5
         raise
-      end
-    end
-
-    def default_variant_name(variant_type, condition)
-      if variant_type == "used"
-        condition.name
-      else
-        "Standard"
       end
     end
   end

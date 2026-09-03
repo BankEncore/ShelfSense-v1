@@ -119,7 +119,7 @@ module Merchandise
       end
 
       created = Products::Create.call(
-        attributes: { name: row.fetch("name"), status: row["status"].presence || "draft" },
+        attributes: { name: row.fetch("name"), status: row["status"].presence || "active" },
         actor: @actor,
         industry_identifier: row["product_industry_identifier"].presence,
         lookup_code: row["product_lookup_code"].presence,
@@ -173,12 +173,6 @@ module Merchandise
         raise Error, "caller-assigned SKU is not accepted for new variants; SKU not found for update" unless variant
         raise Error, "SKU belongs to a different product" unless variant.product_id == product.id
 
-        ProductVariants::Update.call(
-          variant: variant,
-          actor: @actor,
-          source: @source,
-          attributes: { name: row["variant_name"].presence || variant.name }
-        )
         return [ variant, :updated ]
       end
 
@@ -190,14 +184,6 @@ module Merchandise
         if (variant = matches.first)
           raise Error, "industry identifier belongs to a different product" unless variant.product_id == product.id
 
-          if row["variant_name"].present?
-            ProductVariants::Update.call(
-              variant: variant,
-              actor: @actor,
-              source: @source,
-              attributes: { name: row["variant_name"] }
-            )
-          end
           return [ variant, :updated ]
         end
       end
@@ -217,9 +203,9 @@ module Merchandise
     def variant_create_attributes!(row, variant_type)
       attributes = {
         variant_type: variant_type,
-        name: row["variant_name"],
         industry_identifier: row["industry_identifier"],
-        regular_price_cents: row["regular_price_cents"].presence&.to_i
+        regular_price_cents: row["regular_price_cents"].presence&.to_i,
+        status: row["status"].presence || "active"
       }
       attributes.merge!(resolve_reference_ids!(row))
       attributes.merge!(resolve_operational_values!(row))

@@ -46,12 +46,13 @@ Conditional detail:
 
 - Quantity and unit price when quantity > 1
 - Regular price and discount when `manual_discount_cents` > 0
-- Used unit identifier and condition
+- Merchandise detail from frozen `variant_detail` when present (composed at sale from type, condition, and attribute values; omit for unattributed Standard)
+- Historical lines without `variant_detail`: Used unit identifier with exact legacy `Used {condition_name|code}` when `unit_identifier` is present
 - Linked-return original reference
 - `[UNLINKED RETURN]` badge for unlinked returns
 - Tax indicator letters (receipt-local, not persisted)
 
-Do **not** print: internal reference-price variance, manager username, approval reason, Tax Class name, internal operation IDs.
+Do **not** print: internal reference-price variance, manager username, approval reason, Tax Class name, internal operation IDs. Live `product_variants.name` is never consulted after the sale.
 
 ### Stored-value issuance
 

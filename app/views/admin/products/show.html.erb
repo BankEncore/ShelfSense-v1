@@ -174,7 +174,7 @@
              row = [
                variant.variant_type.humanize,
                variant.sku,
-               link_to(variant.name.presence || "Unnamed", admin_product_variant_path(variant)),
+               link_to(product_variant_label(variant).presence || "Unnamed", admin_product_variant_path(variant)),
                status_badge(variant.status, scheme: :product_variant),
                variant.merchandise_class ? variant.merchandise_class.admin_label : missing_value,
                format_money_cents(variant.regular_price_cents)

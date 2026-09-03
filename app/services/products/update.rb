@@ -29,6 +29,9 @@ module Products
       @cover_download = attrs[:cover_download]
       @provenance_changes = provenance_changes
       @attributes = attrs.except(:primary_identifier, :lock_version, *VIRTUAL_KEYS, *REJECT_KEYS)
+      if @attributes.key?(:status)
+        @attributes[:status] = @attributes[:status].to_s.strip.presence || "active"
+      end
       @actor = actor
       @source = source
       @store = store

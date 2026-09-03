@@ -101,7 +101,7 @@ class Identifiers::GeneratorAndRegistryTest < ActiveSupport::TestCase
     variant = ProductVariants::Create.call(
       product: product,
       actor: @actor,
-      attributes: { variant_type: "standard" }
+      attributes: { status: "draft",  variant_type: "standard" }
     )
 
     row = IdentifierRegistry.new(
@@ -148,7 +148,7 @@ class Identifiers::GeneratorAndRegistryTest < ActiveSupport::TestCase
     variant = ProductVariants::Create.call(
       product: product,
       actor: @actor,
-      attributes: { variant_type: "standard" }
+      attributes: { status: "draft",  variant_type: "standard" }
     )
     assert_raises(ActiveRecord::RecordInvalid) do
       variant.update!(industry_identifier: Identifiers::Ean13.complete("978", "999999999"))

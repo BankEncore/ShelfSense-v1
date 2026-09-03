@@ -56,10 +56,8 @@ class PosCloseZTest < ApplicationSystemTestCase
     add_current_sku
     assert_no_button "Close Session"
     start_cash_tender_via_plus
-    field = find("#pos-command-field")
-    field.fill_in with: "25.00"
-    field.send_keys :enter
-    send_keys :enter
+    fill_command_field("25.00")
+    complete_tender_after_amount
 
     assert_text "Transaction complete", wait: 10
     assert_button "Print receipt"
@@ -118,10 +116,8 @@ class PosCloseZTest < ApplicationSystemTestCase
 
     start_cash_tender_via_plus
     assert_text "CASH TENDER"
-    field = find("#pos-command-field")
-    field.fill_in with: "25.00"
-    field.send_keys :enter
-    send_keys :enter
+    fill_command_field("25.00")
+    complete_tender_after_amount
 
     assert_text "Transaction complete", wait: 10
     assert_text "Change"

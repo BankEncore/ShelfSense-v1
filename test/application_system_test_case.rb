@@ -75,6 +75,7 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
     click_on "Tender (+)"
     choose_tender_from_overlay("Cash")
     assert_text "CASH TENDER", wait: 10
+    await_interactable_command_field
   end
 
   def start_cash_refund_via_plus
@@ -82,9 +83,76 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
     click_on "Refund (+)"
     choose_tender_from_overlay("Cash")
     assert_text "REFUND"
-    field = find("#pos-command-field")
+    field = await_interactable_command_field
     refute_equal "", field.value
     field.click
+  end
+
+  # After a command-field submit that replaces the Register workspace, wait for the
+  # resulting tender row(s). Do not reuse a pre-morph field node for the next key.
+  def wait_for_tender_rows(count: nil, minimum: 1)
+    if count
+      assert_selector ".pos-tenders__item", count: count, wait: 10
+    else
+      assert_selector ".pos-tenders__item", minimum: minimum, wait: 10
+    end
+  end
+
+  # Command field can be in the DOM while disabled (locked / completion_pending) or while
+  # a blocking overlay is still tearing down after a Turbo morph.
+  def await_interactable_command_field
+    assert_no_selector "[data-register-blocking-overlay]:not([hidden])", wait: 10
+    find("#pos-command-field:not([disabled])", visible: true, wait: 10)
+  end
+
+  def fill_command_field(value)
+    deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + 10
+    begin
+      await_interactable_command_field.fill_in with: value
+    rescue Selenium::WebDriver::Error::StaleElementReferenceError,
+           Selenium::WebDriver::Error::ElementNotInteractableError,
+           Capybara::ElementNotFound
+      raise if Process.clock_gettime(Process::CLOCK_MONOTONIC) >= deadline
+
+      retry
+    end
+  end
+
+  # Submit the current command-field value once. Do not retry after send: a second Enter
+  # can create a duplicate tender or complete the sale unexpectedly.
+  def submit_command_field_once
+    await_interactable_command_field.send_keys :enter
+  end
+
+  # Re-find an enabled #pos-command-field and send keys. Retries only when the node is
+  # replaced mid-interaction — safe for F-keys after a tender wait.
+  def send_keys_to_command_field(*keys)
+    deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + 10
+    begin
+      await_interactable_command_field.send_keys(*keys)
+    rescue Selenium::WebDriver::Error::StaleElementReferenceError,
+           Selenium::WebDriver::Error::ElementNotInteractableError,
+           Capybara::ElementNotFound
+      raise if Process.clock_gettime(Process::CLOCK_MONOTONIC) >= deadline
+
+      retry
+    end
+  end
+
+  # Submit the presented amount once. Exact settlement auto-completes (completion_pending
+  # + Stimulus submitComplete); do not send another Enter to #pos-command-field — it is
+  # disabled during that race and raises ElementNotInteractableError under CI load.
+  def complete_tender_after_amount(_field = nil, tender_count: 1)
+    submit_command_field_once
+    return if page.has_text?("Transaction complete", wait: 3)
+
+    begin
+      wait_for_tender_rows(count: tender_count)
+    rescue Minitest::Assertion
+      return if page.has_text?("Transaction complete", wait: 1)
+
+      raise
+    end
   end
 
   def focus_workspace_background_for_shortcuts

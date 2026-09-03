@@ -12,7 +12,10 @@ module ProductVariants
       @variant = variant
       attrs = attributes.to_h.symbolize_keys
       @lock_version = attrs[:lock_version]
-      @attributes = attrs.except(:sku, :lock_version, :department_id, :tax_class_id)
+      @attributes = attrs.except(:sku, :lock_version, :department_id, :tax_class_id, :name)
+      if @attributes.key?(:status)
+        @attributes[:status] = @attributes[:status].to_s.strip.presence || "active"
+      end
       @actor = actor
       @source = source
       @store = store
@@ -50,7 +53,7 @@ module ProductVariants
 
         @variant
       end
-    rescue Identifiers::AssignIndustry::Error, ActiveRecord::RecordInvalid => e
+    rescue Identifiers::AssignIndustry::Error, ActiveRecord::RecordInvalid, ActiveRecord::RecordNotUnique => e
       raise Error, e.message
     end
 

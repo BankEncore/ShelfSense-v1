@@ -67,7 +67,7 @@ class ProductVariants::CreateAndActivationTest < ActiveSupport::TestCase
       ProductVariants::Create.call(
         product: @product,
         actor: @actor,
-        attributes: { variant_type: "used", merchandise_class_id: @used_klass.id }
+        attributes: { status: "draft",  variant_type: "used", merchandise_class_id: @used_klass.id }
       )
     end
     assert_match(/merchandise_condition_id is required for used/i, error.message)
@@ -76,7 +76,7 @@ class ProductVariants::CreateAndActivationTest < ActiveSupport::TestCase
       ProductVariants::Create.call(
         product: @product,
         actor: @actor,
-        attributes: {
+        attributes: { status: "draft",
           variant_type: "standard",
           merchandise_condition_id: @like_new.id
         }
@@ -134,7 +134,7 @@ class ProductVariants::CreateAndActivationTest < ActiveSupport::TestCase
       ProductVariants::Create.call(
         product: @product,
         actor: @actor,
-        attributes: {
+        attributes: { status: "draft",
           variant_type: "used",
           merchandise_condition_id: @like_new.id,
           merchandise_class_id: @klass.id,
@@ -150,7 +150,7 @@ class ProductVariants::CreateAndActivationTest < ActiveSupport::TestCase
       ProductVariants::Create.call(
         product: @product,
         actor: @actor,
-        attributes: {
+        attributes: { status: "draft",
           variant_type: "used",
           merchandise_condition_id: @like_new.id,
           merchandise_class_id: @service_klass.id,
@@ -165,7 +165,7 @@ class ProductVariants::CreateAndActivationTest < ActiveSupport::TestCase
     variant = ProductVariants::Create.call(
       product: @product,
       actor: @actor,
-      attributes: { variant_type: "standard" }
+      attributes: { status: "draft",  variant_type: "standard" }
     )
     original = variant.sku
     variant.sku = Identifiers::Ean13.complete("221", "999999999")
@@ -178,7 +178,7 @@ class ProductVariants::CreateAndActivationTest < ActiveSupport::TestCase
     standard = ProductVariants::Create.call(
       product: @product,
       actor: @actor,
-      attributes: { variant_type: "standard" }
+      attributes: { status: "draft",  variant_type: "standard" }
     )
 
     assert_equal @klass.id, standard.merchandise_class_id
@@ -191,7 +191,7 @@ class ProductVariants::CreateAndActivationTest < ActiveSupport::TestCase
     used = ProductVariants::Create.call(
       product: @product,
       actor: @actor,
-      attributes: {
+      attributes: { status: "draft",
         variant_type: "used",
         merchandise_condition_id: @like_new.id,
         merchandise_class_id: @used_klass.id
@@ -207,7 +207,7 @@ class ProductVariants::CreateAndActivationTest < ActiveSupport::TestCase
     variant = ProductVariants::Create.call(
       product: @product,
       actor: @actor,
-      attributes: {
+      attributes: { status: "draft",
         variant_type: "standard",
         merchandise_class_id: @klass.id,
         regular_price_cents: nil
@@ -233,7 +233,7 @@ class ProductVariants::CreateAndActivationTest < ActiveSupport::TestCase
     variant = ProductVariants::Create.call(
       product: product,
       actor: @actor,
-      attributes: { variant_type: "standard" }
+      attributes: { status: "draft",  variant_type: "standard" }
     )
     assert_nil variant.regular_price_cents
   end
@@ -243,7 +243,7 @@ class ProductVariants::CreateAndActivationTest < ActiveSupport::TestCase
     variant = ProductVariants::Create.call(
       product: @product,
       actor: @actor,
-      attributes: { variant_type: "standard" }
+      attributes: { status: "draft",  variant_type: "standard" }
     )
     original = variant.slice("inventory_mode", "pricing_method", "target_margin_bps", "supplier_returnable")
 
@@ -269,8 +269,12 @@ class ProductVariants::CreateAndActivationTest < ActiveSupport::TestCase
       actor: @actor,
       attributes: { variant_type: "standard", status: "active", regular_price_cents: 2_000 }
     )
+    other_product = Products::Create.call(
+      attributes: { name: "Override Host", status: "active", merchandise_category: @category, list_price_cents: 2_000 },
+      actor: @actor
+    )
     overridden = ProductVariants::Create.call(
-      product: @product,
+      product: other_product,
       actor: @actor,
       attributes: {
         variant_type: "standard",
@@ -361,8 +365,9 @@ class ProductVariants::CreateAndActivationTest < ActiveSupport::TestCase
     variant.reload
 
     assert_not variant.sellable?
-    assert variant.update(name: "Still editable")
-    assert_equal "Still editable", variant.reload.name
+    assert variant.update(regular_price_cents: 1_150)
+    assert_equal 1_150, variant.reload.regular_price_cents
+    assert_equal @like_new.name, variant.name
 
     retired_condition = merchandise_condition(code: "fair", active: false)
     assert_not variant.update(merchandise_condition: retired_condition)

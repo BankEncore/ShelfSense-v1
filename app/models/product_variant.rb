@@ -15,6 +15,8 @@ class ProductVariant < ApplicationRecord
   has_many :supplier_variant_sources, dependent: :restrict_with_exception
   has_many :store_supplier_source_preferences, dependent: :restrict_with_exception
 
+  before_validation :prepare_attribute_identity
+
   validates :sku, :status, :variant_type, presence: true
   validates :sku, uniqueness: true, format: { with: /\A\d{13}\z/ }
   validates :industry_identifier, uniqueness: true, allow_nil: true, format: { with: /\A\d{13}\z/ }
@@ -31,6 +33,8 @@ class ProductVariant < ApplicationRecord
   validate :identifier_write_rules
   validate :tracking_immutability_after_history
   validate :block_class_reclassification_after_history
+  validate :configured_option_values_present
+  validate :unique_logical_identity
   validate :activation_requirements, if: -> { status == "active" }
   after_save { self.identifier_writes_enabled = false }
 
@@ -135,6 +139,45 @@ class ProductVariant < ApplicationRecord
   end
 
   private
+
+  def prepare_attribute_identity
+    self.merchandise_condition_id = nil if standard?
+
+    label1 = product&.variant_option_name_1.to_s.strip.present?
+    label2 = product&.variant_option_name_2.to_s.strip.present?
+    self.option_value_1 = label1 ? ProductVariants::NameComposer.trim_display(option_value_1) : nil
+    self.option_value_2 = label2 ? ProductVariants::NameComposer.trim_display(option_value_2) : nil
+    self.option_value_1_normalized = ProductVariants::NameComposer.normalize_option_value(option_value_1)
+    self.option_value_2_normalized = ProductVariants::NameComposer.normalize_option_value(option_value_2)
+    self.name = ProductVariants::NameComposer.name_for_variant(self)
+  end
+
+  def configured_option_values_present
+    return if product.blank?
+
+    if product.variant_option_name_1.to_s.strip.present? && option_value_1.blank?
+      errors.add(:option_value_1, "is required")
+    end
+    if product.variant_option_name_2.to_s.strip.present? && option_value_2.blank?
+      errors.add(:option_value_2, "is required")
+    end
+  end
+
+  def unique_logical_identity
+    return if product_id.blank? || variant_type.blank?
+
+    scope = self.class.where(
+      product_id: product_id,
+      variant_type: variant_type,
+      merchandise_condition_id: merchandise_condition_id,
+      option_value_1_normalized: option_value_1_normalized,
+      option_value_2_normalized: option_value_2_normalized
+    )
+    scope = scope.where.not(id: id) if persisted?
+    return unless scope.exists?
+
+    errors.add(:base, "a variant with this type, condition, and attribute values already exists")
+  end
 
   def identifier_write_rules
     if new_record?

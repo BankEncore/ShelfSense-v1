@@ -103,7 +103,7 @@ Do not rename **Order stock** to **Order**. Do not add `Available on order`. Do 
 
 ### PS-006 — Forms
 
-**Accepted** (unchanged). Wrap new/edit in `admin/shared/page` at `wide`. Keep `_form` section titles/order, sticky footer, possible-matches / create-confirmation on new, and candidate hidden fields. Do not put a show overview, editorial grid, or identity-strip/catalog document on the form. This amendment does not restyle the form again.
+**Accepted** (amended for Product variant attributes). Wrap new/edit in `admin/shared/page` at `wide`. Form section titles/order: Identity, **Variant attributes**, Identifiers, Publication, Cover, Classification, Pricing, Lifecycle. Sticky footer, possible-matches / create-confirmation on new, and candidate hidden fields remain. Do not put a show overview, editorial grid, or identity-strip/catalog document on the form. Attribute label fields live under **Variant attributes** (not Identity).
 
 ### PS-007 — Presentation vs domain
 

@@ -263,8 +263,10 @@ module PosHelper
 
   def pos_snapshot_basket_metadata(snapshot)
     parts = []
-    condition = snapshot["condition_code"].presence || snapshot["condition_name"].presence
-    parts << { text: condition, mono: false } if condition.present?
+    detail = snapshot["variant_detail"].presence ||
+      snapshot["condition_code"].presence ||
+      snapshot["condition_name"].presence
+    parts << { text: detail, mono: false } if detail.present?
     if snapshot["unit_identifier"].present?
       parts << { text: snapshot["unit_identifier"], mono: true }
     elsif snapshot["sku"].present?
@@ -278,9 +280,14 @@ module PosHelper
     return [] if variant.nil?
 
     parts = []
-    if line.unit_line?
+    detail = ProductVariants::NameComposer.detail_for_variant(variant)
+    if detail.present?
+      parts << { text: detail, mono: false }
+    elsif line.unit_line?
       code = variant.merchandise_condition&.code
       parts << { text: code, mono: false } if code.present?
+    end
+    if line.unit_line?
       unit_id = line.inventory_unit&.unit_identifier
       parts << { text: unit_id, mono: true } if unit_id.present?
     elsif variant.sku.present?

@@ -300,7 +300,7 @@ Stores shared catalog identity and descriptive information. A product may exist 
 | merchandise_category_id | uuid | FK: `merchandise_categories`; nullable | Descriptive classification |
 | list_price_cents | bigint | nullable; check `>= 0` | Publisher or manufacturer list price |
 | release_date | date | | Publication, release, or on-sale date |
-| status | varchar | null: false; default `draft`; check enum | `draft`, `active`, `discontinued` |
+| status | varchar | null: false; default `active`; check enum | `draft`, `active`, `discontinued` |
 | variant_option_name_1 | varchar | | Example: `size`, `format`, `color` |
 | variant_option_name_2 | varchar | | Optional second distinguishing dimension |
 | lock_version | integer | null: false; default `0` | Optimistic concurrency |
@@ -345,15 +345,17 @@ Represents the actual sellable SKU used by later inventory, purchasing, customer
 | variant_type | varchar | null: false; check enum | `standard` or `used` |
 | sku | char(13) | null: false; unique; immutable | System-generated `221` EAN-13-compatible SKU |
 | industry_identifier | char(13) | unique when present; nullable | Trade identifier belonging specifically to this variant |
-| name | varchar | | Optional distinguishing display name |
-| option_value_1 | varchar | | Corresponds to `products.variant_option_name_1` |
-| option_value_2 | varchar | | Corresponds to `products.variant_option_name_2` |
+| name | varchar | | Persisted projection of type, condition, and attribute values (not independently editable) |
+| option_value_1 | varchar | | Corresponds to `products.variant_option_name_1`; required when that label is set |
+| option_value_2 | varchar | | Corresponds to `products.variant_option_name_2`; required when that label is set |
+| option_value_1_normalized | varchar | nullable | Trim + casefold + collapsed whitespace for uniqueness |
+| option_value_2_normalized | varchar | nullable | Trim + casefold + collapsed whitespace for uniqueness |
 | merchandise_condition_id | uuid | FK: `merchandise_conditions`; nullable | Required for used variants; must be null for standard variants |
 | merchandise_class_id | uuid | FK: `merchandise_classes`; nullable in draft; required when active | Approved operational behavior |
 | department_id | uuid | FK: `departments`; nullable in draft; required when active | Stored financial and reporting classification |
 | tax_class_id | uuid | FK: `tax_classes`; nullable in draft; required when active | Stored tax classification |
 | regular_price_cents | bigint | nullable; check `>= 0` | Activation requirements depend on merchandise class pricing method |
-| status | varchar | null: false; default `draft`; check enum | `draft`, `active`, `discontinued` |
+| status | varchar | null: false; default `active`; check enum | `draft`, `active`, `discontinued` |
 | lock_version | integer | null: false; default `0` | Optimistic concurrency |
 | created_at | timestamptz | null: false | |
 | updated_at | timestamptz | null: false | |
@@ -366,6 +368,13 @@ CHECK (
   OR
   (variant_type = 'used' AND merchandise_condition_id IS NOT NULL)
 )
+```
+
+Logical identity uniqueness (PostgreSQL `NULLS NOT DISTINCT`):
+
+```sql
+UNIQUE (product_id, variant_type, merchandise_condition_id,
+        option_value_1_normalized, option_value_2_normalized)
 ```
 
 ### SKU rules

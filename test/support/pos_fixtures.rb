@@ -10,7 +10,10 @@ module PosFixtures
     inventory_mode: "inventory",
     name: "Example Book",
     industry_identifier: nil,
-    lookup_code: nil
+    lookup_code: nil,
+    option_value_1: nil,
+    option_value_2: nil,
+    merchandise_condition_id: nil
   )
     department = department(code: "pos_#{SecureRandom.hex(3)}")
     klass = merchandise_class(
@@ -31,10 +34,12 @@ module PosFixtures
       variant_type: variant_type,
       status: "active",
       merchandise_class_id: klass.id,
-      regular_price_cents: pricing_method == "open_price" ? nil : 1999
+      regular_price_cents: pricing_method == "open_price" ? nil : 1999,
+      option_value_1: option_value_1,
+      option_value_2: option_value_2
     }
     if variant_type == "used"
-      attributes[:merchandise_condition_id] = merchandise_condition(code: "pos_#{SecureRandom.hex(3)}").id
+      attributes[:merchandise_condition_id] = merchandise_condition_id || merchandise_condition(code: "pos_#{SecureRandom.hex(3)}").id
       attributes[:regular_price_cents] = 1200 unless pricing_method == "open_price"
     end
     ProductVariants::Create.call(

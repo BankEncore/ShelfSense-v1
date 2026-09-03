@@ -38,12 +38,16 @@ module Admin
 
     def update
       rescue_stale do
+        before_name = @merchandise_condition.name
         if save_and_audit!(
           @merchandise_condition,
           attrs: merchandise_condition_params.except(:code),
           action: "merchandise_conditions.update",
           before_keys: %w[name description price_adjustment_bps display_order]
         )
+          if @merchandise_condition.name != before_name
+            MerchandiseConditions::RefreshVariantNames.call(condition: @merchandise_condition)
+          end
           redirect_to admin_merchandise_condition_path(@merchandise_condition), notice: "Merchandise condition updated."
         else
           render :edit, status: :unprocessable_entity

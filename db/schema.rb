@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_27_000000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_03_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -1252,12 +1252,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_27_000000) do
     t.uuid "merchandise_condition_id"
     t.string "name"
     t.string "option_value_1"
+    t.string "option_value_1_normalized"
     t.string "option_value_2"
+    t.string "option_value_2_normalized"
     t.string "pricing_method"
     t.uuid "product_id", null: false
     t.bigint "regular_price_cents"
     t.string "sku", limit: 13, null: false
-    t.string "status", default: "draft", null: false
+    t.string "status", default: "active", null: false
     t.boolean "supplier_returnable"
     t.integer "target_margin_bps"
     t.uuid "tax_class_override_id"
@@ -1267,6 +1269,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_27_000000) do
     t.index ["merchandise_class_id"], name: "index_product_variants_on_merchandise_class_id"
     t.index ["merchandise_condition_id"], name: "index_product_variants_on_merchandise_condition_id"
     t.index ["product_id", "status"], name: "index_product_variants_on_product_id_and_status"
+    t.index ["product_id", "variant_type", "merchandise_condition_id", "option_value_1_normalized", "option_value_2_normalized"], name: "index_product_variants_on_logical_identity", unique: true, nulls_not_distinct: true
     t.index ["product_id", "variant_type"], name: "index_product_variants_on_product_id_and_variant_type"
     t.index ["sku"], name: "index_product_variants_on_sku", unique: true
     t.index ["tax_class_override_id"], name: "index_product_variants_on_tax_class_override_id"
@@ -1307,7 +1310,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_27_000000) do
     t.boolean "release_date_approximate", default: false, null: false
     t.string "series_name"
     t.decimal "series_position", precision: 8, scale: 3
-    t.string "status", default: "draft", null: false
+    t.string "status", default: "active", null: false
     t.string "subtitle"
     t.timestamptz "updated_at", null: false
     t.string "variant_option_name_1"

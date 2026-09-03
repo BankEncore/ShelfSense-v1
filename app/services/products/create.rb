@@ -26,6 +26,7 @@ module Products
       )
       map_legacy_publisher!(attrs)
       @attributes[:release_date_approximate] = ActiveModel::Type::Boolean.new.cast(@attributes[:release_date_approximate]) == true
+      @attributes[:status] = @attributes[:status].to_s.strip.presence || "active"
       @actor = actor
       @source = source
       @attached_blob = nil

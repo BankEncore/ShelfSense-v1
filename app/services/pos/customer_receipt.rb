@@ -345,7 +345,7 @@ module Pos
         tax_indicators: tax_indicators_for(line),
         identifier_label: identifier_label,
         identifier_value: identifier_value,
-        condition: used_condition(snapshot),
+        condition: merchandise_detail(snapshot),
         quantity: line.quantity,
         unit_price_cents: line.selling_unit_price_cents,
         show_quantity_detail: line.quantity > 1,
@@ -378,7 +378,10 @@ module Pos
       nil
     end
 
-    def used_condition(snapshot)
+    def merchandise_detail(snapshot)
+      detail = snapshot["variant_detail"].presence
+      return detail if detail.present?
+
       return if snapshot["unit_identifier"].blank?
 
       name = snapshot["condition_name"].presence || snapshot["condition_code"].presence

@@ -60,7 +60,7 @@ class Pos::CustomerReceiptTest < ActiveSupport::TestCase
     refute_match(/override|open price|reference price/i, text)
   end
 
-  test "used freeze snapshots include condition_name on meta line" do
+  test "used freeze snapshots include condition_name and variant_detail without Used prefix" do
     _variant, unit = pos_on_hand_unit(store: @store, actor: @actor, tax_class: @tax)
     transaction = Pos::StartTransaction.call(session: @context[:session], actor: @actor)
     Pos::AddMerchandise.call(
@@ -71,10 +71,12 @@ class Pos::CustomerReceiptTest < ActiveSupport::TestCase
     )
     cash_and_complete!(transaction.reload)
     snapshot = transaction.reload.pos_transaction_lines.first.merchandise_snapshot
+    condition_name = unit.product_variant.merchandise_condition.name
 
-    assert_equal unit.product_variant.merchandise_condition.name, snapshot.fetch("condition_name")
+    assert_equal condition_name, snapshot.fetch("condition_name")
+    assert_equal condition_name, snapshot.fetch("variant_detail")
     receipt = Pos::CustomerReceipt.build(transaction)
-    assert_equal "Used #{snapshot.fetch("condition_name")}", receipt.merchandise_lines.first.condition
+    assert_equal condition_name, receipt.merchandise_lines.first.condition
   end
 
   test "code 128 encodes the compact reference" do
@@ -84,7 +86,7 @@ class Pos::CustomerReceiptTest < ActiveSupport::TestCase
     assert_includes svg, "S001-R01-T0000001"
   end
 
-  test "old used snapshot with only condition_code prints Used code" do
+  test "old used snapshot without variant_detail keeps exact legacy Used condition output" do
     _variant, unit = pos_on_hand_unit(store: @store, actor: @actor, tax_class: @tax)
     transaction = Pos::StartTransaction.call(session: @context[:session], actor: @actor)
     Pos::AddMerchandise.call(
@@ -97,10 +99,50 @@ class Pos::CustomerReceiptTest < ActiveSupport::TestCase
     line = transaction.reload.pos_transaction_lines.first
     snapshot = line.merchandise_snapshot.merge("condition_code" => "VG")
     snapshot.delete("condition_name")
+    snapshot.delete("variant_detail")
     PosTransactionLine.where(id: line.id).update_all(merchandise_snapshot: snapshot)
 
     receipt = Pos::CustomerReceipt.build(transaction.reload)
     assert_equal "Used VG", receipt.merchandise_lines.first.condition
+  end
+
+  test "attributed standard freezes variant_detail and omits unattributed Standard detail" do
+    product = Products::Create.call(
+      attributes: {
+        name: "Tee",
+        status: "active",
+        variant_option_name_1: "Size"
+      },
+      actor: @actor
+    )
+    attributed = ProductVariants::Create.call(
+      product: product,
+      actor: @actor,
+      attributes: {
+        variant_type: "standard",
+        status: "active",
+        merchandise_class_id: @variant.merchandise_class_id,
+        option_value_1: "XL",
+        regular_price_cents: 1999
+      }
+    )
+    open_quantity_stock(store: @store, variant: attributed, actor: @actor, quantity: 2)
+    transaction = Pos::StartTransaction.call(session: @context[:session], actor: @actor)
+    Pos::AddMerchandise.call(
+      transaction: transaction,
+      actor: @actor,
+      expected_lock_version: transaction.lock_version,
+      identifier: attributed.sku
+    )
+    cash_and_complete!(transaction.reload)
+    snapshot = transaction.reload.pos_transaction_lines.first.merchandise_snapshot
+    assert_equal "XL", snapshot.fetch("variant_detail")
+    assert_equal "XL", Pos::CustomerReceipt.build(transaction).merchandise_lines.first.condition
+
+    plain = complete_sale!
+    plain_snapshot = plain.pos_transaction_lines.first.merchandise_snapshot
+    refute plain_snapshot.key?("variant_detail")
+    assert_nil Pos::CustomerReceipt.build(plain).merchandise_lines.first.condition
   end
 
   test "tax groups use persisted store tax names" do

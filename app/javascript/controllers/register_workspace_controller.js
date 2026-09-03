@@ -1243,7 +1243,8 @@ export default class extends Controller {
 
   variantLabel(variant) {
     if (!variant) return "Open price"
-    const parts = [variant.sku, variant.name, variant.condition].filter(Boolean)
+    const identity = variant.variant_name || variant.condition
+    const parts = [variant.sku, variant.name, identity].filter(Boolean)
     return parts.join(" · ") || "Open price"
   }
 
@@ -1358,7 +1359,7 @@ export default class extends Controller {
       item.dataset.reason = row.reason || ""
       const availability = row.available == null ? "" : ` · ${row.available}`
       const reason = row.disabled && row.reason ? ` — ${row.reason}` : ""
-      item.textContent = [row.sku, row.name, row.condition, row.price_label].filter(Boolean).join(" · ") + availability + reason
+      item.textContent = [row.sku, row.name, row.variant_name || row.condition, row.price_label].filter(Boolean).join(" · ") + availability + reason
       const selected = !row.disabled && firstEnabled == null
       if (selected) firstEnabled = item
       this.decoratePickerItem(item, { selected, disabled: Boolean(row.disabled) })
@@ -1897,7 +1898,7 @@ export default class extends Controller {
       item.dataset.variantId = variant.id
       const price = variant.price_label || this.formatCents(variant.price_cents)
       const availability = variant.available == null ? "" : ` · ${variant.available}`
-      item.textContent = [variant.sku, variant.name, variant.condition, price].filter(Boolean).join(" · ") + availability
+      item.textContent = [variant.sku, variant.name, variant.variant_name || variant.condition, price].filter(Boolean).join(" · ") + availability
       this.decoratePickerItem(item, { selected: index === 0 })
       item.addEventListener("click", () => this.onPickerItemClick(this.variantListTarget, item))
       this.variantListTarget.append(item)

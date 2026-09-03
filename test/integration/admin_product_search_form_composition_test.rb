@@ -45,7 +45,7 @@ class AdminProductSearchFormCompositionTest < ActionDispatch::IntegrationTest
 
     assert_select ".page-header__eyebrow", text: "Product"
     assert_select "form.product-form.surface"
-    %w[Identity Identifiers Publication Cover Classification Pricing Lifecycle].each do |title|
+    %w[Identity Variant\ attributes Identifiers Publication Cover Classification Pricing Lifecycle].each do |title|
       assert_select ".product-form h2", text: title
     end
     assert_select ".product-form .form-section__grid"

@@ -53,9 +53,7 @@ class PosUnlinkedReturnTest < ApplicationSystemTestCase
 
     start_cash_refund_via_plus
     assert_text "REFUND"
-    field = find("#pos-command-field")
-    field.send_keys :enter
-    send_keys :enter
+    complete_tender_after_amount
     assert_text "Transaction complete", wait: 10
     assert_text "Cash refund"
     assert_text "Unlinked return"
@@ -70,10 +68,8 @@ class PosUnlinkedReturnTest < ApplicationSystemTestCase
     field.send_keys :enter
     assert_text used_variant.product.name
     start_cash_tender_via_plus
-    field = find("#pos-command-field")
-    field.fill_in with: "20.00"
-    field.send_keys :enter
-    send_keys :enter
+    fill_command_field("20.00")
+    complete_tender_after_amount
     assert_text "Transaction complete", wait: 10
     assert unit.reload.removed?
 
@@ -90,9 +86,7 @@ class PosUnlinkedReturnTest < ApplicationSystemTestCase
     assert_text "Unlinked return", wait: 10
 
     start_cash_refund_via_plus
-    field = find("#pos-command-field")
-    field.send_keys :enter
-    send_keys :enter
+    complete_tender_after_amount
     assert_text "Transaction complete", wait: 10
     assert unit.reload.on_hand?
   end
@@ -204,22 +198,39 @@ class PosUnlinkedReturnTest < ApplicationSystemTestCase
   end
 
   test "unlinked variant picker Back label returns to item lookup" do
-    ProductVariants::Create.call(
-      product: @variant.product,
+    product = Products::Create.call(
+      attributes: { name: "Picker Product", status: "active", variant_option_name_1: "Size" },
+      actor: @actor
+    )
+    first = ProductVariants::Create.call(
+      product: product,
       attributes: {
         variant_type: "standard",
         status: "active",
         merchandise_class_id: @variant.merchandise_class_id,
+        option_value_1: "S",
         regular_price_cents: 1500
       },
       actor: @actor
     )
-    open_quantity_stock(store: @store, variant: @variant.product.product_variants.order(:created_at).last, actor: @actor, quantity: 2)
+    second = ProductVariants::Create.call(
+      product: product,
+      attributes: {
+        variant_type: "standard",
+        status: "active",
+        merchandise_class_id: @variant.merchandise_class_id,
+        option_value_1: "M",
+        regular_price_cents: 1500
+      },
+      actor: @actor
+    )
+    open_quantity_stock(store: @store, variant: first, actor: @actor, quantity: 2)
+    open_quantity_stock(store: @store, variant: second, actor: @actor, quantity: 2)
 
     open_register_as("admin")
     open_unlinked_overlay
     identifier = find("#pos-unlinked-identifier")
-    identifier.fill_in with: @variant.product.primary_identifier
+    identifier.fill_in with: product.primary_identifier
     identifier.send_keys :enter
     assert_selector "#pos_variant_overlay", visible: true, wait: 5
     assert_button "Back to Item Lookup"

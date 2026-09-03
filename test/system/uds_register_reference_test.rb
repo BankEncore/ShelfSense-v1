@@ -53,10 +53,8 @@ class UdsRegisterReferenceTest < ApplicationSystemTestCase
     assert_selector "tr.is-selected[data-quantity='2']", wait: 5
 
     start_cash_tender_via_plus
-    field = find("#pos-command-field")
-    field.fill_in with: "50.00"
-    field.send_keys :enter
-    send_keys :enter
+    fill_command_field("50.00")
+    complete_tender_after_amount
 
     assert_text "Transaction complete", wait: 10
     assert_equal 1, PosTransaction.completed.where(register: @register).count

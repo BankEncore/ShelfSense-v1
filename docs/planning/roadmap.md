@@ -48,7 +48,7 @@ Several roadmap goals are **not greenfield**. The forward phases below describe 
 | Register / POS | Session opening, cash sales, mixed tenders, returns, blind close, Z reporting, transaction history |
 | Stored value | Store credit, trade credit, gift-card instruments, POS issuance and redemption, cash-out |
 | Financial | GL classifications, tax calculation, inventory valuation, immutable POS facts |
-| Product / catalog | Strong identifiers, classification, pricing, Used units, unified lookup, CSV import, bibliographic facts, local covers, subjects, reviewed ISBNdb apply. Attribute labels exist but are not yet operable ([product-variant-attributes](product-variant-attributes/README.md) **Proposed**) |
+| Product / catalog | Strong identifiers, classification, pricing, Used units, unified lookup, CSV import, bibliographic facts, local covers, subjects, reviewed ISBNdb apply. Attribute labels operable under [product-variant-attributes](product-variant-attributes/README.md) (**Accepted**; implemented on `product-variant-attributes-impl`) |
 | Layout / UX | Warm Parchment tokens, grouped navigation, ActionButtonHelper on reference and non-purchasing screens; remaining migration belongs to the feature phase that changes the screen |
 | Buyback (inventory side) | Individually tracked Used units and valuation ledger as the acquisition destination |
 
@@ -106,13 +106,13 @@ Authoritative packet: [admin-page-frame/](admin-page-frame/README.md). Follow-on
 
 ### Product variant attributes
 
-**Status:** **Proposed.** Not a numbered domain phase and not UDS-6, UDS-7, or UDS-8. Do not implement until [product-variant-attributes/](product-variant-attributes/README.md) is **Accepted**.
+**Status:** **Accepted.** Not a numbered domain phase and not UDS-6, UDS-7, or UDS-8. Implementation on `product-variant-attributes-impl`.
 
-Authoritative packet: [product-variant-attributes/](product-variant-attributes/README.md). Focused merchandise correction (Phase 6.1 spirit): make existing `variant_option_name_*` / `option_value_*` operable, derive variant names, distinguish Inherit vs sticky defaults, snapshot receipt detail, default new products/variants to `active`. Does not add a second product model or an attribute matrix. Implementation (later) amends [receipts-and-reports content-contract](receipts-and-reports-revamp/content-contract.md) merchandise detail grammar and [Product show](admin-page-frame/product-show.md) form **semantics** (not chrome).
+Authoritative packet: [product-variant-attributes/](product-variant-attributes/README.md). Focused merchandise correction (Phase 6.1 spirit): make existing `variant_option_name_*` / `option_value_*` operable, derive variant names, distinguish Inherit vs sticky defaults, snapshot receipt detail, default new products/variants to `active`. Does not add a second product model or an attribute matrix. Implementation amends [receipts-and-reports content-contract](receipts-and-reports-revamp/content-contract.md) merchandise detail grammar and [Product show](admin-page-frame/product-show.md) form **semantics** (not chrome).
 
 **Deliverable:**
 
-> Authorized staff can configure up to two ordered product attribute labels, create distinguishable Standard and Used variants whose names and receipt details follow a shared composition rule, see only applicable variant fields and true inheritance, and have new products and variants default to active — without a second product model or an attribute matrix.
+> Authorized staff can configure up to two ordered product attribute labels (before variants exist), create distinguishable Standard and Used variants whose names and receipt details follow a shared composition rule, see only applicable variant fields and true class-based inheritance, and have new products and variants default to active — without a second product model, an attribute matrix, or incomplete placeholder variants.
 
 ### Register workspace consolidation
 
