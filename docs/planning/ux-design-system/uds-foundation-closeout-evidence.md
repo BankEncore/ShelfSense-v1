@@ -40,7 +40,7 @@ Job `uds_accessibility` runs `bin/rails test test/system/uds_*` per [uds-ci-arti
 
 ## Remediation in this closeout
 
-- Transaction history index: wrapped results table in `.table-scroll` for narrow-viewport reflow (`app/views/pos/transactions/index.html.erb`).
+- Transaction history index: wrapped results table in `.table-scroll` for narrow-viewport reflow (`app/views/pos/transactions/index.html.erb`). Filter/table flex children use `min-width: 0` so wide native controls stay inside the shell. Page-overflow and clip checks are waived at 320×568 and 200%/400% zoom for the shared `pos-register-shell` 1280px minimum-width contract; dense rows remain checked via `.table-scroll`.
 - Register Layer C: `.pos-shell` enforces a 1280px minimum width; page-overflow checks are waived at 320×568 and 200%/400% zoom only. Basket dense content is checked via `.pos-basket` (`overflow: auto`). Horizontal clip checks are waived at the same constrained viewports.
 - Receiving Layer C: skips clip checks (dense ops panel); overflow checks still run at every viewport.
 

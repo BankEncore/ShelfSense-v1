@@ -2913,14 +2913,21 @@ body.is-authorized-print .pos-shift-end-tape {
 
 .pos-history__filters {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)) auto;
+  grid-template-columns: repeat(auto-fit, minmax(min(11rem, 100%), 1fr)) auto;
   gap: var(--space-3);
   align-items: end;
   margin: 0;
   padding: var(--space-4);
+  min-width: 0;
+  max-width: 100%;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
+}
+
+.pos-history__filters .form-field {
+  margin-bottom: 0;
+  min-width: 0;
 }
 
 .pos-history__filters .form-field label {
@@ -2936,6 +2943,8 @@ body.is-authorized-print .pos-shift-end-tape {
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
   overflow: auto;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .pos-history__table {
