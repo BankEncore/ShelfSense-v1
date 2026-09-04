@@ -38,7 +38,7 @@
         <%= action_submit(form, "Return to draft", style: :outline, intent: :neutral, **(@error_action == :return_to_draft ? { autofocus: true, "aria-describedby": "po_return_error" } : {})) %>
         <%= render "ops/shared/inline_row_error", action: :return_to_draft, id: "po_return_error" %>
       <% end %>
-      <div data-controller="review-dialog" <%= 'data-review-dialog-open-value="true"' if @error_action == :send_po %>>
+      <div data-controller="review-dialog" data-review-dialog-open-value="<%= @error_action == :send_po %>">
         <%= action_button("Review send", style: :outline, intent: :neutral, data: { review_dialog_target: "trigger", action: "review-dialog#open" }) %>
         <dialog class="review-dialog review-dialog--warning" data-review-dialog-target="dialog" data-action="close->review-dialog#restoreFocus">
           <div class="review-dialog__body">

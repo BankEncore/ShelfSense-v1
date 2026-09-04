@@ -18,10 +18,7 @@ module Admin
     end
 
     def show
-      @lines = @purchase_order.purchase_order_lines
-        .includes(:line_state, :cancellations, order: :customer_request, product_variant: :product)
-        .order(:created_at)
-      @suppliers = Supplier.active.admin_ordered
+      load_show
     end
 
     def cancel_line
@@ -47,7 +44,7 @@ module Admin
       end
       redirect_to admin_purchase_order_path(@purchase_order), notice: notice
     rescue Purchasing::Error, Money::ParseCents::Error, ActiveRecord::RecordInvalid, ActiveRecord::RecordNotFound => e
-      redirect_to admin_purchase_order_path(@purchase_order), alert: e.message
+      render_line_failure(:cancel, e)
     end
 
     def acknowledge_line
@@ -62,14 +59,36 @@ module Admin
         expected_lock_version: params[:lock_version]
       )
       redirect_to admin_purchase_order_path(@purchase_order), notice: "Acknowledgment saved."
-    rescue Purchasing::Error, ActiveRecord::RecordInvalid => e
-      redirect_to admin_purchase_order_path(@purchase_order), alert: e.message
+    rescue Purchasing::Error, ActiveRecord::RecordInvalid, ArgumentError => e
+      render_line_failure(:acknowledgment, e)
     rescue ActiveRecord::StaleObjectError
-      redirect_to admin_purchase_order_path(@purchase_order),
-                  alert: "This acknowledgment was changed by someone else. Reload and try again."
+      render_line_failure(
+        :acknowledgment,
+        Purchasing::Error.new("This acknowledgment was changed by someone else. Review the current values and try again."),
+        stale: true
+      )
     end
 
     private
+
+    def load_show
+      @lines = @purchase_order.purchase_order_lines
+        .includes(
+          :line_state,
+          :cancellations,
+          { purchase_receipt_lines: [ :purchase_receipt, :corrections ] },
+          { order: :customer_request },
+          { product_variant: :product }
+        )
+        .order(:created_at)
+      @line_details = @lines.to_h do |line|
+        [ line.id, {
+          open_quantity: line.open_quantity,
+          cancellations: line.cancellations.sort_by(&:occurred_at)
+        } ]
+      end
+      @suppliers = Supplier.active.admin_ordered
+    end
 
     def set_purchase_order
       @purchase_order = PurchaseOrder.find(params[:id])
@@ -90,6 +109,19 @@ module Admin
       return if value.blank?
 
       Money::ParseCents.call(value)
+    end
+
+    def render_line_failure(action, exception, stale: false)
+      @line_error_action = action
+      @line_error_id = @line.id
+      @line_errors = [ exception.message ]
+      @conflict = stale
+      @submitted = params.to_unsafe_h.slice(
+        "confirmed_quantity", "backordered_quantity", "expected_on", "supplier_reference", "notes",
+        "quantity", "source", "reason", "re_source", "replacement_supplier_id", "expected_unit_cost_cents"
+      )
+      load_show
+      render :show, status: :unprocessable_entity
     end
   end
 end

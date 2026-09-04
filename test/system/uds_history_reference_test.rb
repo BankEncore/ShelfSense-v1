@@ -28,7 +28,20 @@ class UdsHistoryReferenceTest < ApplicationSystemTestCase
     visit pos_transactions_path
     assert_text @transaction.transaction_reference
     assert_axe_clean(surface: :transaction_history)
-    uds_layout_smoke(surface: :transaction_history, scroll_selector: ".table-scroll")
+    # History uses pos-register-shell (1280px min-width contract). Page-overflow and
+    # clip checks are waived at the same constrained viewports as Register Layer C;
+    # wide table content is still covered via .table-scroll.
+    uds_layout_smoke(
+      surface: :transaction_history,
+      scroll_selector: ".table-scroll",
+      layout_options: {
+        per_viewport: {
+          "320x568" => { check_clipped: false, check_overflow: false },
+          "zoom-2x" => { check_clipped: false, check_overflow: false },
+          "zoom-4x" => { check_clipped: false, check_overflow: false }
+        }
+      }
+    )
     assert_reduced_motion_smoke(surface: :transaction_history)
     assert_forced_colors_smoke(surface: :transaction_history)
   end
