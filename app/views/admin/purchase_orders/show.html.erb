@@ -118,7 +118,7 @@
               <td class="numeric"><%= format_money_cents(line.expected_unit_cost_cents_snapshot) %></td>
               <td class="purchase-order-lines__actions">
                 <% if state && effective_permissions.include?("purchase_orders.send") && (@purchase_order.sent? || @purchase_order.closed?) %>
-                  <div data-controller="review-dialog" <%= 'data-review-dialog-open-value="true"' if acknowledgment_open %>>
+                  <div data-controller="review-dialog" data-review-dialog-open-value="<%= acknowledgment_open %>">
                     <%= action_button("Edit acknowledgment", style: :outline, intent: :neutral, size: :small,
                           aria: { haspopup: "dialog", controls: "acknowledgment-dialog-#{line.id}" },
                           data: { review_dialog_target: "trigger", action: "review-dialog#open" }) %>
@@ -146,7 +146,7 @@
                 <% end %>
 
                 <% if effective_permissions.include?("purchase_orders.cancel") && @purchase_order.sent? && line_open_quantity.positive? %>
-                  <div data-controller="review-dialog" <%= 'data-review-dialog-open-value="true"' if cancel_open %>>
+                  <div data-controller="review-dialog" data-review-dialog-open-value="<%= cancel_open %>">
                     <%= action_button("Review cancellation", style: :outline, intent: :danger, size: :small,
                           aria: { haspopup: "dialog", controls: "cancellation-dialog-#{line.id}" },
                           data: { review_dialog_target: "trigger", action: "review-dialog#open" }) %>

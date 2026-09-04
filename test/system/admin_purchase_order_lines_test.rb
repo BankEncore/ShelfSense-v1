@@ -67,9 +67,14 @@ class AdminPurchaseOrderLinesTest < ApplicationSystemTestCase
     with_viewport(width: 320, height: 568) do
       region = find(".purchase-order-lines .table-scroll")
       dimensions = page.evaluate_script(<<~JS, region.native)
-        const region = arguments[0]
-        ({ regionClient: region.clientWidth, regionScroll: region.scrollWidth,
-           pageClient: document.documentElement.clientWidth, pageScroll: document.documentElement.scrollWidth })
+        (function(region) {
+          return {
+            regionClient: region.clientWidth,
+            regionScroll: region.scrollWidth,
+            pageClient: document.documentElement.clientWidth,
+            pageScroll: document.documentElement.scrollWidth
+          }
+        })(arguments[0])
       JS
       assert_operator dimensions["regionScroll"], :>, dimensions["regionClient"]
       assert_operator dimensions["pageScroll"], :<=, dimensions["pageClient"] + 1
