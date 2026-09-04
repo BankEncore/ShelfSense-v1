@@ -73,8 +73,20 @@ module Admin
 
     def load_show
       @lines = @purchase_order.purchase_order_lines
-        .includes(:line_state, :cancellations, order: :customer_request, product_variant: :product)
+        .includes(
+          :line_state,
+          :cancellations,
+          { purchase_receipt_lines: [ :purchase_receipt, :corrections ] },
+          { order: :customer_request },
+          { product_variant: :product }
+        )
         .order(:created_at)
+      @line_details = @lines.to_h do |line|
+        [ line.id, {
+          open_quantity: line.open_quantity,
+          cancellations: line.cancellations.sort_by(&:occurred_at)
+        } ]
+      end
       @suppliers = Supplier.active.admin_ordered
     end
 

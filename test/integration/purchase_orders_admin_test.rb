@@ -133,6 +133,32 @@ class PurchaseOrdersAdminTest < ActionDispatch::IntegrationTest
     assert_select "#acknowledgment-dialog-#{line.id}", text: /changed by someone else/
   end
 
+  test "show preloads receipt and cancellation graphs without per-line queries" do
+    po, first_line, = sent_multi_line_purchase_order
+    Purchasing::CancelPurchaseOrderQuantity.call(
+      purchase_order_line: first_line,
+      actor: @actor,
+      quantity: 1,
+      source: "buyer",
+      reason: "Query regression history"
+    )
+    sign_in_as("admin")
+    select_store
+    sql = []
+    callback = lambda do |_name, _started, _finished, _id, payload|
+      statement = payload[:sql].to_s
+      sql << statement if statement.match?(/FROM "(?:purchase_receipt_lines|purchase_receipts|purchase_receipt_line_corrections|purchase_order_line_cancellations)"/)
+    end
+
+    ActiveSupport::Notifications.subscribed(callback, "sql.active_record") do
+      get admin_purchase_order_path(po)
+    end
+
+    assert_response :success
+    assert_operator sql.size, :<=, 4, "expected one preload query per receipt/cancellation association, got:\n#{sql.join("\n")}"
+    assert_select ".purchase-order-lines__history", text: /Query regression history/
+  end
+
   private
 
   def sign_in_as(username)

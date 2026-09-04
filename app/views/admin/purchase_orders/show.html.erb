@@ -26,10 +26,10 @@
 <% end %>
 <div class="actions"><%= header_actions %></div>
 
-<% open_quantity = @lines.sum(&:open_quantity) %>
+<% open_quantity = @line_details.sum { |_line_id, details| details[:open_quantity] } %>
 <% confirmed_quantity = @lines.filter_map { |line| line.line_state&.confirmed_quantity }.sum %>
 <% backordered_quantity = @lines.sum { |line| line.line_state&.backordered_quantity.to_i } %>
-<% overdue_lines = @lines.count { |line| line.open_quantity.positive? && line.line_state&.confirmed_quantity.present? && line.line_state.expected_on.present? && line.line_state.expected_on < Date.current } %>
+<% overdue_lines = @lines.count { |line| @line_details.fetch(line.id)[:open_quantity].positive? && line.line_state&.confirmed_quantity.present? && line.line_state.expected_on.present? && line.line_state.expected_on < Date.current } %>
 <% expected_value_cents = @lines.sum { |line| line.ordered_quantity * line.expected_unit_cost_cents_snapshot } %>
 
 <section aria-labelledby="purchase-order-summary-heading">
@@ -82,6 +82,8 @@
           <% @lines.each do |line| %>
             <% order = line.order %>
             <% state = line.line_state %>
+            <% details = @line_details.fetch(line.id) %>
+            <% line_open_quantity = details[:open_quantity] %>
             <% acknowledgment_open = @line_error_id == line.id && @line_error_action == :acknowledgment %>
             <% cancel_open = @line_error_id == line.id && @line_error_action == :cancel %>
             <% acknowledged = state&.confirmed_quantity.present? %>
@@ -94,7 +96,7 @@
                 <% end %>
               </th>
               <td class="numeric"><%= line.ordered_quantity %></td>
-              <td class="numeric"><%= line.open_quantity %></td>
+              <td class="numeric"><%= line_open_quantity %></td>
               <td class="numeric"><%= line.cancelled_quantity %></td>
               <td>
                 <% if acknowledged %>
@@ -108,7 +110,7 @@
               <td>
                 <% if state&.expected_on.present? %>
                   <%= state.expected_on.to_fs(:long) %>
-                  <% if acknowledged && line.open_quantity.positive? && state.expected_on < Date.current %><span class="status-badge status-badge--warning">Overdue</span><% end %>
+                  <% if acknowledged && line_open_quantity.positive? && state.expected_on < Date.current %><span class="status-badge status-badge--warning">Overdue</span><% end %>
                 <% else %>
                   <span class="missing-value">Not provided</span>
                 <% end %>
@@ -143,7 +145,7 @@
                   </div>
                 <% end %>
 
-                <% if effective_permissions.include?("purchase_orders.cancel") && @purchase_order.sent? && line.open_quantity.positive? %>
+                <% if effective_permissions.include?("purchase_orders.cancel") && @purchase_order.sent? && line_open_quantity.positive? %>
                   <div data-controller="review-dialog" <%= 'data-review-dialog-open-value="true"' if cancel_open %>>
                     <%= action_button("Review cancellation", style: :outline, intent: :danger, size: :small,
                           aria: { haspopup: "dialog", controls: "cancellation-dialog-#{line.id}" },
@@ -153,7 +155,7 @@
                         <h3 id="cancellation-title-<%= line.id %>">Review cancellation for <%= line.product_variant.product.name %></h3>
                         <% if cancel_open %><p class="field-error" role="alert"><%= @line_errors.to_sentence %></p><% end %>
                         <dl class="review-dialog__facts">
-                          <dt>Open quantity</dt><dd><%= line.open_quantity %></dd>
+                          <dt>Open quantity</dt><dd><%= line_open_quantity %></dd>
                           <dt>Customer impact</dt><dd><%= order.customer_request ? "Customer request ##{order.customer_request.number} remains linked to any replacement; without one, later receipt will not fulfill it." : "Stock order; no customer request is linked." %></dd>
                           <dt>Original supplier</dt><dd><%= @purchase_order.supplier.admin_label %></dd>
                           <dt>Expected cost</dt><dd><%= format_money_cents(line.expected_unit_cost_cents_snapshot) %></dd>
@@ -161,7 +163,7 @@
                         <p class="review-dialog__consequences">The cancelled quantity immediately stops being open on the original PO. Re-sourcing atomically creates a linked replacement order and draft PO line; history is not rewritten.</p>
                         <%= form_with url: cancel_line_admin_purchase_order_path(@purchase_order, line_id: line.id), method: :post, local: true do |form| %>
                           <% cancel_value = ->(key, fallback) { cancel_open && @submitted.key?(key.to_s) ? @submitted[key.to_s] : fallback } %>
-                          <label>Quantity <input type="number" name="quantity" value="<%= cancel_value.call(:quantity, line.open_quantity) %>" min="1" max="<%= line.open_quantity %>" required data-review-dialog-target="initialFocus"></label>
+                          <label>Quantity <input type="number" name="quantity" value="<%= cancel_value.call(:quantity, line_open_quantity) %>" min="1" max="<%= line_open_quantity %>" required data-review-dialog-target="initialFocus"></label>
                           <label>Source <select name="source"><% %w[buyer supplier].each do |source| %><option value="<%= source %>" <%= 'selected' if cancel_value.call(:source, 'buyer') == source %>><%= source %></option><% end %></select></label>
                           <label>Reason <input type="text" name="reason" value="<%= cancel_value.call(:reason, nil) %>" required></label>
                           <label><input type="checkbox" name="re_source" value="1" <%= 'checked' if ActiveModel::Type::Boolean.new.cast(cancel_value.call(:re_source, false)) %>> Re-source to replacement supplier</label>
@@ -178,9 +180,9 @@
                 <% end %>
               </td>
             </tr>
-            <% if line.cancellations.any? %>
+            <% if details[:cancellations].any? %>
               <tr class="purchase-order-lines__history">
-                <td colspan="8"><strong>Cancellation history:</strong> <%= line.cancellations.order(:occurred_at).map { |c| "#{c.quantity} (#{c.source}) — #{c.reason}, #{c.occurred_at}" }.to_sentence %></td>
+                <td colspan="8"><strong>Cancellation history:</strong> <%= details[:cancellations].map { |c| "#{c.quantity} (#{c.source}) — #{c.reason}, #{c.occurred_at}" }.to_sentence %></td>
               </tr>
             <% end %>
           <% end %>
