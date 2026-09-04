@@ -13,4 +13,6 @@ Builds on implemented [Phase 7](../phase7-orders-and-receiving/README.md). Forwa
 
 Phase 7.1 closes **Phase 7 purchasing operability** (hub, admin presentation, and ops interaction closeout)—not supplier returns, request expiration, PO consolidation, multi-quantity requests, or AP/accounting.
 
+The completed admin purchase-order detail presents line identity, quantities, acknowledgment state, expected date, and expected unit cost in a horizontally contained compact table. Page metrics summarize open, confirmed, backordered, overdue acknowledged, and expected merchandise values. Permission-gated acknowledgment and cancellation/re-source forms open from their affected line and preserve that line's dialog and focus context after validation or concurrency conflicts.
+
 **Naming note:** this packet is distinct from inspirational Warm Parchment drafts under [docs/drafts/phase-7.1-ux-refactor/](../../drafts/phase-7.1-ux-refactor/README.md) (cross-phase UX exploration; folder name retained for path stability).
